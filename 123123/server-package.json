@@ -1,0 +1,13 @@
+{
+  "name": "aliyun-proxy-server",
+  "version": "1.0.0",
+  "description": "阿里云百炼 API 代理服务器",
+  "main": "server.cjs",
+  "scripts": {
+    "start": "node server.cjs",
+    "dev": "nodemon server.cjs"
+  },
+  "keywords": ["aliyun", "proxy", "cors"],
+  "author": "",
+  "license": "MIT"
+}

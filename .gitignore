@@ -1,0 +1,8 @@
+node_modules
+npm-cache
+*.msi
+.DS_Store
+*.log
+.vscode/settings.json
+123123/npm-cache
+123123/node_modules
