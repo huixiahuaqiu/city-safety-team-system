@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导入数据到Supabase</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; background: #f5f7fa; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 600px; width: 100%; }
+        h1 { color: #165DFF; margin-bottom: 20px; text-align: center; font-size: 24px; }
+        .desc { color: #666; margin-bottom: 30px; line-height: 1.6; text-align: center; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-card .number { font-size: 28px; font-weight: bold; color: #165DFF; }
+        .stat-card .label { font-size: 12px; color: #666; margin-top: 5px; }
+        .btn-group { display: flex; flex-direction: column; gap: 12px; }
+        .btn { padding: 14px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s; }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-all { background: #8A2BE2; color: white; }
+        .btn-all:hover { background: #7B1FD4; }
+        .btn-patent { background: #165DFF; color: white; }
+        .btn-patent:hover { background: #0E42D2; }
+        .btn-paper { background: #00B42A; color: white; }
+        .btn-paper:hover { background: #009A22; }
+        .status { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; line-height: 1.6; white-space: pre-wrap; }
+        .status.success { background: #E8FFEA; color: #009A22; border: 1px solid #B3F0BE; }
+        .status.info { background: #E8F3FF; color: #165DFF; border: 1px solid #B3D9FF; }
+        .status.error { background: #FFE8E8; color: #D32F2F; border: 1px solid #FFB3B3; }
+        .status.show { display: block; }
+        .progress { width: 100%; height: 6px; background: #e9ecef; border-radius: 3px; margin-top: 15px; overflow: hidden; display: none; }
+        .progress.show { display: block; }
+        .progress-fill { height: 100%; background: #165DFF; border-radius: 3px; transition: width 0.3s; width: 0%; }
+        .back-link { margin-top: 20px; text-align: center; }
+        .back-link a { color: #165DFF; text-decoration: none; }
+        .back-link a:hover { text-decoration: underline; }
+        .test-btn { background: #666; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>团队成果数据导入</h1>
+        <p class="desc">将Excel中的专利和论文数据导入到Supabase云端数据库<br>导入后所有用户都能通过浏览器看到数据</p>
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button class="test-btn" onclick="testConnection()">测试Supabase连接</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card"><div class="number">66</div><div class="label">专利数据</div></div>
+            <div class="stat-card"><div class="number">22</div><div class="label">论文数据</div></div>
+        </div>
+        
+        <div class="btn-group">
+            <button class="btn btn-all" id="btnAll" onclick="importAll()">一键导入全部数据</button>
+            <button class="btn btn-patent" id="btnPatent" onclick="importPatents()">仅导入专利数据</button>
+            <button class="btn btn-paper" id="btnPaper" onclick="importPapers()">仅导入论文数据</button>
+        </div>
+        
+        <div class="progress" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="status" id="statusMessage"></div>
+        
+        <div class="back-link">
+            <a href="index.html">返回团队管理系统</a>
+        </div>
+    </div>
+
+    <script>
+        var SUPABASE_URL = 'https://havxlphglhjgcfgwowae.supabase.co';
+        var SUPABASE_KEY = 'sb_publishable_jhRxljv8ocdnXBknablKiA_kRBzlEnC';
+
+        var patentData = [{"name": "一种可更换式预埋地锚件", "patentNumber": "CN111424731B", "applicant": "罗文文；王丽萍；赵帅；郑振欣；秦宇坤；雷成；陈刚；何亚蔺；刘自尊；蒋利成；杨仕建；张伟", "unit": "罗文文", "classification": "", "applicationDate": "2021-01-22", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "具有可拼接多角度测试的位移计支撑装置", "patentNumber": "CN109237226B", "applicant": "王丽萍；罗文文；杨仕建；蒋利成；张伟；刘思危；何亚蔺；刘自尊", "unit": "王丽萍", "classification": "", "applicationDate": "2021-01-29", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "一种预埋反力地锚整体定位装置及施工方法", "patentNumber": "CN113006288B", "applicant": "罗文文；彭双庆；雷成；应中凌；聂登攀；沈洁；朱伶俐；李港；张宛静；黄庆铃；赵帅；郑振欣；秦宇坤；陈刚；王丽萍；蒋利成；张伟", "unit": "罗文文", "classification": "", "applicationDate": "2022-09-23", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "一种测量结构梁被动产生轴力的装置及方法", "patentNumber": "CN106644228B", "applicant": "王丽萍；田颖；罗文文；李桂臣；刘思危；张伟；卜长明", "unit": "王丽萍", "classification": "", "applicationDate": "2022-10-18", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "基于受压屈服或屈曲变形控制的耗能装置及工作方法", "patentNumber": "CN113027211B", "applicant": "罗文文；袁康；刘奕彤；雷成；彭双庆；应中凌；聂登攀；沈洁；朱伶俐；李港；张宛静；黄庆铃；赵帅；郑振欣；秦宇坤；陈刚；王丽萍；蒋利成；张伟", "unit": "罗文文", "classification": "", "applicationDate": "2022-11-25", "status": "审查中", "summary": "发明人: 装配式结构", "remark": ""}, {"name": "一种抗滑移地锚连接系统", "patentNumber": "CN114719130B", "applicant": "罗文文；聂登攀；李港；王丽萍；罗钧；彭双庆；沈洁；朱伶俐；张宛静；应中凌；黄庆铃；王康；武文杰；李海东；蔡欣宇；肖文慧；宋丽炜；邹静颐；黄任宁；陈刚；秦宇坤；赵帅；郑振欣；雷成", "unit": "罗文文", "classification": "", "applicationDate": "2023-07-25", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "一种断层上覆土层位错概率危险性分析方法", "patentNumber": "CN114692090B", "applicant": "罗文文；聂登攀；沈洁；彭双庆；王丽萍；程印；罗钧；李港；朱伶俐；张宛静；应中凌；黄庆铃；王康；武文杰；李海东；蔡欣宇；肖文慧；宋丽炜；邹静颐；黄任宁；陈刚；秦宇坤；赵帅；郑振欣；雷成", "unit": "罗文文", "classification": "", "applicationDate": "2024-05-31", "status": "审查中", "summary": "发明人: 跨断层", "remark": ""}, {"name": "一种基于地质条件划分斜坡单元的方法", "patentNumber": "CN114971935B", "applicant": "罗文文；陈刚；王丽萍；宁超列；张伟；彭双庆；应中凌；罗钧；雷成；聂登攀；李港", "unit": "罗文文", "classification": "", "applicationDate": "2024-08-20", "status": "审查中", "summary": "发明人: 地质灾害", "remark": ""}, {"name": "基于贝叶斯网络的地铁隧道施工诱发临近建筑损伤预测模型构建方法", "patentNumber": "CN118627174B", "applicant": "汪洪星；李海东；王丽萍；李安琪；阮俊浩；罗文文；罗均；巫尚蔚；刘伟；杨航；吴康", "unit": "汪洪星", "classification": "", "applicationDate": "2025-01-24", "status": "审查中", "summary": "发明人: 地铁隧道", "remark": ""}, {"name": "一种在给定精度条件下的三维扫描距离及范围确定方法", "patentNumber": "CN119251395B", "applicant": "王丽萍；罗钧；陈嘉鑫；罗文文；马骉；张培君；施军；张旭昌；张宛静", "unit": "王丽萍", "classification": "", "applicationDate": "2025-07-11", "status": "审查中", "summary": "发明人: 三维扫描", "remark": ""}, {"name": "一种基于降雨阈值的区域滑坡危险性预警方法", "patentNumber": "CN116543528B", "applicant": "王丽萍；彭双庆；罗文文；刘东升；张天友；宁超列；罗钧；张伟；陈刚；景熙亮", "unit": "王丽萍", "classification": "", "applicationDate": "2025-11-11", "status": "审查中", "summary": "发明人: 地质灾害", "remark": ""}, {"name": "一种考虑不确定性的供水管道渗漏诊断方法", "patentNumber": "CN116658832B", "applicant": "王丽萍；罗钧；张宛静；罗文文；刘东升；宁超列；黄任宁；陈嘉兴", "unit": "王丽萍", "classification": "", "applicationDate": "2025-12-16", "status": "审查中", "summary": "发明人: 供水管网", "remark": ""}, {"name": "一种装配式混凝土框架的梁柱连接结构", "patentNumber": "CN208733811U", "applicant": "罗文文；王丽萍；蒋利成；张伟；刘思危；杨仕建；何亚蔺；刘自尊", "unit": "罗文文", "classification": "", "applicationDate": "2019-04-12", "status": "审查中", "summary": "发明人: 装配式结构", "remark": ""}, {"name": "一种便携式建筑结构地震平面振动演示装置", "patentNumber": "CN209843041U", "applicant": "罗文文；王丽萍；何亚蔺；刘自尊；蒋利成；张伟；刘思危；杨仕建", "unit": "罗文文", "classification": "", "applicationDate": "2019-12-24", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "反力地锚", "patentNumber": "CN214090036U", "applicant": "罗文文；应中凌；郑振欣；赵帅；王丽萍；彭双庆；朱伶俐；沈洁；张宛静；聂登攀；李港；黄庆铃", "unit": "罗文文", "classification": "", "applicationDate": "2021-08-31", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "一种削弱式翼缘连接盖板承压装置", "patentNumber": "CN217460961U", "applicant": "罗文文；蔡欣宇；王丽萍；罗钧；王康；张伟；应中凌；朱伶俐；张宛静；李港；黄庆铃；聂登攀；彭双庆；沈洁；肖文慧", "unit": "罗文文", "classification": "", "applicationDate": "2022-09-20", "status": "审查中", "summary": "发明人: 装配式结构", "remark": ""}, {"name": "专利名称", "patentNumber": "授权公共号", "applicant": "发明人", "unit": "发明人", "classification": "", "applicationDate": "授权日", "status": "审查中", "summary": "发明人: 专利所属类别", "remark": ""}, {"name": "一种可更换式预埋地锚件", "patentNumber": "ZL111424731B", "applicant": "罗文文；王丽萍；赵帅；郑振欣；秦宇坤；雷成；陈刚；何亚蔺；刘自尊；蒋利成；杨仕建；张伟", "unit": "罗文文", "classification": "", "applicationDate": "2021-01-22", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "一种预埋反力地锚整体定位装置及施工方法", "patentNumber": "ZL113006288B", "applicant": "罗文文；彭双庆；雷成；应中凌；聂登攀；沈洁；朱伶俐；李港；张宛静；黄庆铃；赵帅；郑振欣；秦宇坤；陈刚；王丽萍；蒋利成；张伟", "unit": "罗文文", "classification": "", "applicationDate": "2022-09-23", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "基于受压屈服或屈曲变形控制的耗能装置及工作方法", "patentNumber": "ZL113027211B", "applicant": "罗文文；袁康；刘奕彤；雷成；彭双庆；应中凌；聂登攀；沈洁；朱伶俐；李港；张宛静；黄庆铃；赵帅；郑振欣；秦宇坤；陈刚；王丽萍；蒋利成；张伟", "unit": "罗文文", "classification": "", "applicationDate": "2022-11-25", "status": "审查中", "summary": "发明人: 装配式结构", "remark": ""}, {"name": "一种抗滑移地锚连接系统", "patentNumber": "ZL114719130B", "applicant": "罗文文；聂登攀；李港；王丽萍；罗钧；彭双庆；沈洁；朱伶俐；张宛静；应中凌；黄庆铃；王康；武文杰；李海东；蔡欣宇；肖文慧；宋丽炜；邹静颐；黄任宁；陈刚；秦宇坤；赵帅；郑振欣；雷成", "unit": "罗文文", "classification": "", "applicationDate": "2023-07-25", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "一种基于地质条件划分斜坡单元的方法", "patentNumber": "ZL114971935B", "applicant": "罗文文；陈刚；王丽萍；宁超列；张伟；彭双庆；应中凌；罗钧；雷成；聂登攀；李港", "unit": "罗文文", "classification": "", "applicationDate": "2024-08-20", "status": "审查中", "summary": "发明人: 地质灾害", "remark": ""}, {"name": "基于贝叶斯网络的地铁隧道施工诱发临近建筑损伤预测模型构建方法", "patentNumber": "ZL118627174B", "applicant": "汪洪星；李海东；王丽萍；李安琪；阮俊浩；罗文文；罗均；巫尚蔚；刘伟；杨航；吴康", "unit": "汪洪星", "classification": "", "applicationDate": "2025-01-24", "status": "审查中", "summary": "发明人: 地铁隧道", "remark": ""}, {"name": "一种装配式混凝土框架的梁柱连接结构", "patentNumber": "ZL208733811U", "applicant": "罗文文；王丽萍；蒋利成；张伟；刘思危；杨仕建；何亚蔺；刘自尊", "unit": "罗文文", "classification": "", "applicationDate": "2019-04-12", "status": "审查中", "summary": "发明人: 装配式结构", "remark": ""}, {"name": "一种便携式建筑结构地震平面振动演示装置", "patentNumber": "ZL209843041U", "applicant": "罗文文；王丽萍；何亚蔺；刘自尊；蒋利成；张伟；刘思危；杨仕建", "unit": "罗文文", "classification": "", "applicationDate": "2019-12-24", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "反力地锚", "patentNumber": "ZL214090036U", "applicant": "罗文文；应中凌；郑振欣；赵帅；王丽萍；彭双庆；朱伶俐；沈洁；张宛静；聂登攀；李港；黄庆铃", "unit": "罗文文", "classification": "", "applicationDate": "2021-08-31", "status": "审查中", "summary": "发明人: 工程结构", "remark": ""}, {"name": "一种削弱式翼缘连接盖板承压装置", "patentNumber": "ZL217460961U", "applicant": "罗文文；蔡欣宇；王丽萍；罗钧；王康；张伟；应中凌；朱伶俐；张宛静；李港；黄庆铃；聂登攀；彭双庆；沈洁；肖文慧", "unit": "罗文文", "classification": "", "applicationDate": "2022-09-20", "status": "审查中", "summary": "发明人: 装配式结构", "remark": ""}, {"name": "一种断层上覆土层位错概率危险性分析方法", "patentNumber": "CN114692090B", "applicant": "罗文文；聂登攀；沈洁；彭双庆；王丽萍；程印；罗钧；李港；朱伶俐；张宛静；应中凌；黄庆铃；王康；武文杰；李海东；蔡欣宇；肖文慧；宋丽炜；邹静颐；黄任宁；陈刚；秦宇坤；赵帅；郑振欣；雷成", "unit": "罗文文", "classification": "", "applicationDate": "2024-05-31", "status": "审查中", "summary": "发明人: 跨断层", "remark": ""}, {"name": "一种圆管竖向加载试验系统", "patentNumber": "ZL2022104733400", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "供水管网", "applicationDate": "2022-04-29", "status": "审查中", "summary": "发明人: 罗文文；沈洁；赵帅；王丽萍；罗钧；宋丽炜；黄任宁；张伟；张宛静；雷成；黄庆铃；朱伶俐；李港；应中凌；彭双庆；聂登攀；李海东；肖文慧；邹静颐；武文杰；蔡欣宇；王康", "remark": ""}, {"name": "基于三维地质模型的山地城市地铁隧道地表沉降预测方法", "patentNumber": "ZL2023109168577", "applicant": "重庆科技学院；重庆轨道十八号线建设运营有限公司；中铁十五局集团有限公司", "unit": "重庆科技学院", "classification": "地铁隧道", "applicationDate": "2023-07-25", "status": "审查中", "summary": "发明人: 胡石权；王丽萍；罗文文；罗钧；杨航；吴康；李港；邱泽刚；张万克；王超；张浩；张伟", "remark": ""}, {"name": "一种地铁隧道暗挖施工上覆土层横向沉降预测方法", "patentNumber": "ZL2023109635061", "applicant": "重庆科技学院；中铁十五局集团有限公司", "unit": "重庆科技学院", "classification": "地铁隧道", "applicationDate": "2023-08-02", "status": "审查中", "summary": "发明人: 杨航；田国文；吴康；王丽萍；罗文文；罗钧；陈晨；李港；张伟；刘朝祥；张国庆；陈诚", "remark": ""}, {"name": "装配式混凝土梁柱自复位拼接节点结构", "patentNumber": "ZL2023111624811", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "装配式结构", "applicationDate": "2023-09-08", "status": "审查中", "summary": "发明人: 罗文文；王丽萍；王康；余周；邱金明；陈国甫；沈琪雯；蔡欣宇；刘正炜；应中凌", "remark": ""}, {"name": "城市内涝监测预警与交通信号灯联动系统及方法", "patentNumber": "ZL2023117741289", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "城市内涝", "applicationDate": "2023-12-21", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；贾旭春；张皓；周军；刘烁宇；段海；张伟；应中凌", "remark": ""}, {"name": "基于生土改性的碱激发生土材料及其制备方法", "patentNumber": "ZL2025113906506", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "材料试验", "applicationDate": "2025-09-26", "status": "审查中", "summary": "发明人: 罗文文；王丽萍；陈佩圆；武文杰；刘毅樊；饶顺；冯杨；杨松；应中凌；王康；汤锐；陈嘉鑫；余倪；董武生", "remark": ""}, {"name": "竖向荷载下承插式球墨铸铁管道接口力学性能评估方法", "patentNumber": "ZL2025115044104", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "供水管网", "applicationDate": "2025-10-21", "status": "审查中", "summary": "发明人: 罗钧；罗文文；王丽萍；黄任宁；曹海燕；王康；应中凌；陈嘉鑫；汤锐；邹浪；李金荣", "remark": ""}, {"name": "基于优化XGBoost回归模型的建筑震害指数预测方法", "patentNumber": "ZL2025117185588", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "工程结构", "applicationDate": "2025-11-21", "status": "审查中", "summary": "发明人: 罗文文；王丽萍；汪洪星；罗钧；邹静颐；王康；应中凌；陈嘉鑫；汤锐；张维涛；张晓桦；蔺宇轩", "remark": ""}, {"name": "一种一体式多档位排水井盖", "patentNumber": "ZL2025220043889", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "城市内涝", "applicationDate": "2025-09-18", "status": "审查中", "summary": "发明人: 罗文文；王丽萍；刘烁宇；罗钧；周军；应中凌；王康；邹浪；雷本杰；段海", "remark": ""}, {"name": "一种圆管竖向加载试验系统", "patentNumber": "ZL2022104733400", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "供水管网", "applicationDate": "2022-04-29", "status": "审查中", "summary": "发明人: 罗文文；沈洁；赵帅；王丽萍；罗钧；宋丽炜；黄任宁；张伟；张宛静；雷成；黄庆铃；朱伶俐；李港；应中凌；彭双庆；聂登攀；李海东；肖文慧；邹静颐；武文杰；蔡欣宇；王康", "remark": ""}, {"name": "一种基于降雨阈值的区域滑坡危险性预警方法", "patentNumber": "ZL2023105694412", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "地质灾害", "applicationDate": "2023-05-19", "status": "审查中", "summary": "发明人: 王丽萍；彭双庆；罗文文；刘东升；张天友；宁超列；罗钧；张伟；陈刚；景熙亮", "remark": ""}, {"name": "仅渗漏状态探地雷达图像已知的供水管道渗漏诊断方法", "patentNumber": "ZL2023106460173", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "供水管网", "applicationDate": "2023-06-01", "status": "审查中", "summary": "发明人: 王丽萍；罗钧；张宛静；罗文文；刘东升；宁超列；黄任宁；陈嘉兴", "remark": ""}, {"name": "基于渗漏前后雷达信息和图像相关系数的不确定性供水管道渗漏诊断方法", "patentNumber": "ZL2023106455048", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "供水管网", "applicationDate": "2023-06-01", "status": "审查中", "summary": "发明人: 王丽萍；罗钧；张宛静；罗文文；刘东升；宁超列；黄任宁；陈嘉兴", "remark": ""}, {"name": "一种工贸企业动态风险评估系统及方法", "patentNumber": "ZL2023107290644", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "安全生产", "applicationDate": "2023-06-19", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；朱伶俐；沈洁；宋丽炜；肖文慧；汤锐；应中凌", "remark": ""}, {"name": "基于三维地质模型的山地城市地铁隧道地表沉降预测方法", "patentNumber": "ZL2023109168577", "applicant": "重庆科技学院；重庆轨道十八号线建设运营有限公司；中铁十五局集团有限公司", "unit": "重庆科技学院", "classification": "地铁隧道", "applicationDate": "2023-07-25", "status": "审查中", "summary": "发明人: 胡石权；王丽萍；罗文文；罗钧；杨航；吴康；李港；邱泽刚；张万克；王超；张浩；张伟", "remark": "代理优审"}, {"name": "一种地铁隧道暗挖施工上覆土层横向沉降预测方法", "patentNumber": "ZL2023109635061", "applicant": "重庆科技学院；中铁十五局集团有限公司", "unit": "重庆科技学院", "classification": "地铁隧道", "applicationDate": "2023-08-02", "status": "审查中", "summary": "发明人: 杨航；田国文；吴康；王丽萍；罗文文；罗钧；陈晨；李港；张伟；刘朝祥；张国庆；陈诚", "remark": "代理优审"}, {"name": "装配式混凝土梁柱自复位拼接节点结构", "patentNumber": "ZL2023111624811", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "装配式结构", "applicationDate": "2023-09-08", "status": "审查中", "summary": "发明人: 罗文文；王丽萍；王康；余周；邱金明；陈国甫；沈琪雯；蔡欣宇；刘正炜；应中凌", "remark": ""}, {"name": "城市内涝监测预警与交通信号灯联动系统及方法", "patentNumber": "ZL2023117741289", "applicant": "重庆科技学院", "unit": "重庆科技学院", "classification": "城市内涝", "applicationDate": "2023-12-21", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；贾旭春；张皓；周军；刘烁宇；段海；张伟；应中凌", "remark": ""}, {"name": "一种基于静-动态的建筑施工现场安全风险评估方法及系统", "patentNumber": "ZL2024107527442", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "安全生产", "applicationDate": "2024-06-12", "status": "审查中", "summary": "发明人: 王丽萍；王国胜；马小永；罗文文；宋丽炜；汤锐；应中凌；周笑寒；张莉萍", "remark": "代理优审"}, {"name": "一种基于隐患数据库的施工现场安全巡检方法及设备", "patentNumber": "ZL2024107527457", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "安全生产", "applicationDate": "2024-06-12", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；宋丽炜；吴志勇；尹浩；汤锐；应中凌；周笑寒；张莉萍", "remark": "代理优审"}, {"name": "基于PCL库的平面多边形点云一体化处理及边缘尺寸计算方法", "patentNumber": "ZL2024111071930", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "三维扫描", "applicationDate": "2024-08-13", "status": "审查中", "summary": "发明人: 王丽萍；罗钧；陈嘉鑫；罗文文；马骉；张培君；施军；张旭昌", "remark": ""}, {"name": "一种基于遗传算法的高精度可控三维扫描站点优化方法", "patentNumber": "ZL2025105812850", "applicant": "重庆科技大学；新疆交通建设集团股份有限公司；上海市政工程设计研究总院（集团）有限公司", "unit": "重庆科技大学", "classification": "三维扫描", "applicationDate": "2025-05-07", "status": "审查中", "summary": "发明人: 王丽萍；施军；陈嘉鑫；罗钧；罗文文；马骉；张培君；张春雷；刘志国；张旭昌；尹强；王梦梦；辛军；耿雨龙", "remark": ""}, {"name": "基于动态贝叶斯网络的隧道施工安全风险评价及管控方法", "patentNumber": "ZL2025110297578", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "地铁隧道", "applicationDate": "2025-7-25", "status": "审查中", "summary": "发明人: 王丽萍,汤锐,罗钧,汪洪星,罗文文,应中凌,王康,张莉萍,周笑寒,陈嘉鑫", "remark": "优审"}, {"name": "一种考虑尺寸偏差与混凝土材料变异性的随机模拟方法", "patentNumber": "ZL2025110490221", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "工程结构", "applicationDate": "2025-07-29", "status": "审查中", "summary": "发明人:  王丽萍；王康；罗文文；宁超列；罗钧；刘烁宇；雷成；张伟；应中凌；蔡欣宇；刘正炜；段海；杨松", "remark": "代理优审"}, {"name": "基于生土改性的碱激发生土材料及其制备方法", "patentNumber": "ZL2025113906506", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "材料试验", "applicationDate": "2025-09-26", "status": "审查中", "summary": "发明人: 罗文文；王丽萍；陈佩圆；武文杰；刘毅樊；饶顺；冯杨；杨松；应中凌；王康；汤锐；陈嘉鑫；余倪；董武生", "remark": "优审"}, {"name": "一种预测地表峰值加速度放大系数的方法及系统", "patentNumber": "ZL2025113900919", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "地震工程", "applicationDate": "2025-09-26", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；刘烁宇；罗钧；贾旭春；应中凌；雷成；王康；陈嘉鑫；汤锐；雷本杰；廖能聪", "remark": "优审"}, {"name": "基于融合地质信息的隧道不良地质体识别系统及方法", "patentNumber": "ZL2025113933804", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "地铁隧道", "applicationDate": "2025-09-28", "status": "审查中", "summary": "发明人: 王丽萍；刘洋；罗钧；罗文文；汪洪星；景熙亮；王康；应中凌；汤锐；陈嘉鑫；蒋学彬；聂清慧；廖能聪", "remark": "优审"}, {"name": "山地城市内涝积水深度预测方法及系统", "patentNumber": "ZL2025113933857", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "城市内涝", "applicationDate": "2025-09-28", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；刘烁宇；罗钧；张皓；应中凌；王康；段海；邹浪；雷本杰；陈嘉鑫；汤锐；余倪；董武生", "remark": "优审"}, {"name": "基于K2优化算法-SNA-贝叶斯网络的实验室安全风险预测方法", "patentNumber": "ZL2025114154446", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "安全生产", "applicationDate": "2025-09-30", "status": "审查中", "summary": "发明人: 王丽萍；汪洪星；罗钧；罗文文；肖文慧；汤锐；应中凌；王康；陈嘉鑫；周笑寒；张莉萍；蒋学彬；蔺宇轩；张晓桦", "remark": "优审"}, {"name": "基于机器学习的山地掉层结构震害预测方法", "patentNumber": "ZL2025114155966", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "工程结构", "applicationDate": "2025-09-30", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；刘烁宇；罗钧；周军；雷成；王康；应中凌；汤锐；陈嘉鑫；雷本杰；聂清慧", "remark": "优审"}, {"name": "竖向荷载下承插式球墨铸铁管道接口力学性能评估方法", "patentNumber": "ZL2025115044104", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "供水管网", "applicationDate": "2025-10-21", "status": "审查中", "summary": "发明人: 罗钧；罗文文；王丽萍；黄任宁；曹海燕；王康；应中凌；陈嘉鑫；汤锐；邹浪；李金荣", "remark": "优审"}, {"name": "基于优化XGBoost回归模型的建筑震害指数预测方法", "patentNumber": "ZL2025117185588", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "工程结构", "applicationDate": "2025-11-21", "status": "审查中", "summary": "发明人: 罗文文；王丽萍；汪洪星；罗钧；邹静颐；王康；应中凌；陈嘉鑫；汤锐；张维涛；张晓桦；蔺宇轩", "remark": "优审"}, {"name": "跨逆断层地铁隧道耦合损伤分析评估系统及方法", "patentNumber": "ZL2025117221391", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "地铁隧道", "applicationDate": "2025-11-21", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；刘烁宇；罗钧；汪洪星；张玉萧；应中凌；王康；陈嘉鑫；汤锐；张维涛；李金荣", "remark": "优审"}, {"name": "一种大型装配式预制构件尺寸检测三维扫描站点布设方法", "patentNumber": "ZL202610041129X", "applicant": " 新疆交通建设集团股份有限公司；重庆科技大学；上海市政工程设计研究总院(集团)有限公司", "unit": " 新疆交通建设集团股份有限公司", "classification": "三维扫描", "applicationDate": "2026-01-13", "status": "审查中", "summary": "发明人:  马莲霞；王丽萍；鲁传安；罗钧；王斌；张春雷；陈嘉鑫；罗文文", "remark": "优审"}, {"name": "一种自动排水篦子固定装置", "patentNumber": "ZL2024222095756", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "城市内涝", "applicationDate": "2024-09-10", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；贾旭春；周军；雷本杰；邹浪；罗钧；刘烁宇；张伟；应中凌", "remark": ""}, {"name": "一种通用型城市自动排水篦子装置", "patentNumber": "ZL202422209627X", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "城市内涝", "applicationDate": "2024-09-10", "status": "审查中", "summary": "发明人: 王丽萍；罗文文；贾旭春；周军；雷本杰；邹浪；罗钧；刘烁宇；张伟；应中凌", "remark": ""}, {"name": "一种试验构件模型", "patentNumber": "ZL2025215189999", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "三维扫描", "applicationDate": "2025-07-21", "status": "审查中", "summary": "发明人: 王丽萍；李耀业；鲁传安；罗钧；罗文文；陈嘉鑫；潘明江；李智博", "remark": ""}, {"name": "一种一体式多档位排水井盖", "patentNumber": "ZL2025220043889", "applicant": "重庆科技大学", "unit": "重庆科技大学", "classification": "城市内涝", "applicationDate": "2025-09-18", "status": "审查中", "summary": "发明人: 罗文文；王丽萍；刘烁宇；罗钧；周军；应中凌；王康；邹浪；雷本杰；段海", "remark": ""}];
+        var paperData = [{"title": "Liping Wang, Ying Tian, Wenwen Luo, Guichen Li, Wei Zhang, Siwei Liu. Effects of Axial Restraint on Seismic Performance of R/C Frame Beams and Beam-Co", "author": "李桂臣", "journal": "", "unit": "重庆科技大学", "index": "EI", "publishDate": "2017-01-01", "year": "2017", "status": "已通过", "remark": "题目: 地震作用下考虑轴向约束效应的RC梁抗弯性能试验研究"}, {"title": "王丽萍, 张伟, 罗文文. 地震作用下RC梁受弯损伤轴向伸长机理及分析模型. 第264场中国工程院科技论坛暨第十届防震减灾工程技术研讨会. 2018.4.", "author": "李桂臣", "journal": "", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2018-01-01", "year": "2018", "status": "已通过", "remark": "题目: 地震作用下考虑轴向约束效应的RC梁抗弯性能试验研究"}, {"title": "王丽萍, 张伟, 罗文文. RC梁受弯损伤轴向伸长效应对框架结构抗震性能影响研究进展. 第十届全国地震工程会议. 2018.5.", "author": "李桂臣", "journal": "", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2018-01-01", "year": "2018", "status": "已通过", "remark": "题目: 地震作用下考虑轴向约束效应的RC梁抗弯性能试验研究"}, {"title": "Liping Wang, Ying Tian, Wenwen Luo, Guichen Li, Wei Zhang, Siwei Liu, Chunyu Zhang. Seismic Performance of Axially Restrained Reinforced Concrete Fram", "author": "李桂臣", "journal": ". Journal of Structure Engineering. 2019", "unit": "重庆科技大学", "index": "SCI", "publishDate": "2019-01-01", "year": "2019", "status": "已通过", "remark": "题目: 地震作用下考虑轴向约束效应的RC梁抗弯性能试验研究"}, {"title": "王丽萍，张伟，罗文文.结构实验室反力墙系统设计方法及应用[J],建筑结构，第49卷，第5期,117-124,2019/    2019,49(5):117-124(CSCD:6441968)", "author": "李桂臣", "journal": "建筑结构，第49卷，第5期", "unit": "重庆科技大学", "index": "CSCD", "publishDate": "2019-01-01", "year": "2019", "status": "已通过", "remark": "题目: 地震作用下考虑轴向约束效应的RC梁抗弯性能试验研究"}, {"title": "王丽萍，张伟，罗文文.地震作用下RC梁受弯损伤轴向伸长效应研究 [J],建筑结构，第49卷，第13期,98-105,2019/   2019,49(13):98-105(CSCD:6534657)", "author": "李桂臣", "journal": "建筑结构，第49卷，第13期", "unit": "重庆科技大学", "index": "CSCD", "publishDate": "2019-01-01", "year": "2019", "status": "已通过", "remark": "题目: 地震作用下考虑轴向约束效应的RC梁抗弯性能试验研究"}, {"title": "王丽萍，罗文文，刘思危，张伟，蒋利成，杨仕建.考虑梁轴向约束效应的RC梁柱节点受力机理及抗震性能试验研究[J],工程力学，2020，37（2）：159-167+191（EI：20200808202099）", "author": "李桂臣", "journal": "工程力学，2020，37（2）：159-167+191（EI：20200808202099）", "unit": "重庆科技大学", "index": "EI", "publishDate": "2020-01-01", "year": "2020", "status": "已通过", "remark": "题目: 地震作用下考虑轴向约束效应的RC梁抗弯性能试验研究"}, {"title": "Liping Wang ，Licheng Jiang, Shijian Yang, Wenwen Luo , Wei Zhang.Experimental investigation into the influence of slab restraint effect on flexural ca", "author": "李桂臣", "journal": "", "unit": "重庆科技大学", "index": "EI", "publishDate": "2020-01-01", "year": "2020", "status": "已通过", "remark": "题目: 地震作用下考虑轴向约束效应的RC梁抗弯性能试验研究"}, {"title": "Wenwen Luo, Licheng Jiang, Shijian Yang, Liping Wang, Wei Zhang.Experimental study on seismic behavior of RC beam-column joints considering axial rest", "author": "李桂臣", "journal": "", "unit": "重庆科技大学", "index": "EI", "publishDate": "2020-01-01", "year": "2020", "status": "已通过", "remark": "题目: 地震作用下考虑轴向约束效应的RC梁抗弯性能试验研究"}, {"title": "罗文文,聂登攀,王丽萍,等.考虑倾滑断层上覆土层影响的地表位移概率地震危险性分析[J].自然灾害学报,2023,32(05):108-116.", "author": "何亚蔺", "journal": ".自然灾害学报", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2023-01-01", "year": "2023", "status": "已通过", "remark": "题目: 考虑断层上覆土层影响的地表位错概率危险性分析方法"}, {"title": "王丽萍，刘自尊，赵帅，宁超列.市政聚乙烯供水管材温度拉伸试验研究[J],给水排水，2021，47卷增刊.", "author": "刘自尊", "journal": "给水排水，2021，47卷增刊.", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2021-01-01", "year": "2021", "status": "已通过", "remark": "题目: 供水管道结构运行安全温度效应研究"}, {"title": "王丽萍，赵帅，张宛静，宁超列.温度影响下供水管道力学行为数值模拟研究[J],防灾减灾工程学报，2023,43（5）：1141-1150.", "author": "刘自尊", "journal": "防灾减灾工程学报，2023", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2023-01-01", "year": "2023", "status": "已通过", "remark": "题目: 供水管道结构运行安全温度效应研究"}, {"title": "Wenwen Luo, Licheng Jiang, Cheng Lei, Liping Wang*, Ying Tian, Shijian Yang & Wei Zhang. Effects of Axial Restraints on Beam Flexural and Joint Shear ", "author": "雷成", "journal": "Journal of Earthquake Engineering", "unit": "重庆科技大学", "index": "EI", "publishDate": "2023-01-01", "year": "2023", "status": "已通过", "remark": "题目: 考虑梁轴向约束效应的RC框架结构强震破坏模式研究"}, {"title": "王丽萍，张宛静，赵帅，宁超列.竖向荷载作用下承插式球墨铸铁供水管道接口破损试验与数值模拟研究[J],防灾减灾工程学报，2023，43（2）：232-239.", "author": "赵帅", "journal": "防灾减灾工程学报，2023，43（2）：232-239.", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2023-01-01", "year": "2023", "status": "已通过", "remark": "题目: 竖向荷载作用下承插式球墨铸铁供水管道接口破坏机理研究"}, {"title": "初稿：带悬臂梁段屈曲约束拼接的可更换钢框架梁柱节点抗震性能研究", "author": "秦宇坤", "journal": "", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2020-01-01", "year": "2020", "status": "已通过", "remark": "题目: 带悬臂梁段屈曲约束拼接的钢框架梁柱节点抗震性能试验研究"}, {"title": "陈刚,程光军,彭双庆,等.一种基于地貌—斜坡结构划分斜坡单元的区域滑坡易发性评价研究[J].地质论评,2024,70(S1):231-235.", "author": "陈刚", "journal": ".地质论评", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2024-01-01", "year": "2024", "status": "已通过", "remark": "题目: 基于地质条件划分斜坡单元的区域滑坡易发性评价研究"}, {"title": "沈洁,朱伶俐,宋丽炜,等.2012—2020年中国危险化学品仓储事故统计分析及防控措施[J].化工管理,2022,(19):125-128.DOI:10.19900/j.cnki.ISSN1008-4800.2022.19.035.", "author": "沈洁", "journal": ".化工管理", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2012-01-01", "year": "2012", "status": "已通过", "remark": "题目: 物流仓储园区安全动态综合风险评估方法研究及应用"}, {"title": "沈洁,王丽萍,肖文慧,等.基于N-K和SNA模型的物流仓储安全风险因素分析[J].安全,2024,45(04):35-41.DOI:10.19737/j.cnki.issn1002-3631.2024.04.007.", "author": "沈洁", "journal": ".安全", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2024-01-01", "year": "2024", "status": "已通过", "remark": "题目: 物流仓储园区安全动态综合风险评估方法研究及应用"}, {"title": "初稿：基于角钢单边连接的装配式钢框架梁柱节点抗震性能研究", "author": "应中凌", "journal": "", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2020-01-01", "year": "2020", "status": "已通过", "remark": "题目: 基于角钢单边连接的装配式钢框架梁柱节点抗震性能研究"}, {"title": "彭双庆,刘朋飞,陈刚,等.信息量法与随机森林耦合模型和临界月平均降雨阈值的区域滑坡危险性评价与区划——以重庆市涪陵区为例[J].中国地质灾害与防治学报,2025,36(01):131-145.", "author": "彭双庆", "journal": ".中国地质灾害与防治学报", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2025-01-01", "year": "2025", "status": "已通过", "remark": "题目: 基于易发性与连续概率降雨阈值的区域滑坡危险性预警模型研究"}, {"title": "Wanjing Zhang, Jun Luo, Wenwen Luo, Liping Wang, Leakage diagnostic method for water supply pipeline based on ground penetrating radar and image corre", "author": "张宛静", "journal": "", "unit": "重庆科技大学", "index": "中文核心", "publishDate": "2024-01-01", "year": "2024", "status": "已通过", "remark": "题目: 基于探地雷达的城市浅埋供水管道漏损范围诊断方法研究"}, {"title": "Luo W, Wang K, Ning C L. Uncertainty quantification of reinforced concrete\n columns under axial loading by experimental testing[C]//Structures.Elsevie", "author": "王康", "journal": "", "unit": "重庆科技大学", "index": "EI", "publishDate": "2025-01-01", "year": "2025", "status": "已通过", "remark": "题目: 弯曲与弯剪失效模式下RC柱随机力学行为试验与数值模拟研究"}];
+
+        function showStatus(msg, type) {
+            var el = document.getElementById('statusMessage');
+            el.innerHTML = msg;
+            el.className = 'status ' + type + ' show';
+        }
+
+        function setProgress(pct) {
+            var bar = document.getElementById('progressBar');
+            var fill = document.getElementById('progressFill');
+            bar.classList.add('show');
+            fill.style.width = pct + '%';
+        }
+
+        function disableAll(disabled) {
+            document.getElementById('btnAll').disabled = disabled;
+            document.getElementById('btnPatent').disabled = disabled;
+            document.getElementById('btnPaper').disabled = disabled;
+        }
+
+        // 测试Supabase连接
+        function testConnection() {
+            showStatus('正在测试连接...', 'info');
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', SUPABASE_URL + '/rest/v1/patents?select=id&limit=1', true);
+            xhr.setRequestHeader('apikey', SUPABASE_KEY);
+            xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.status === 206) {
+                        showStatus('连接成功！Supabase数据库已连通。', 'success');
+                    } else {
+                        showStatus('连接失败：HTTP ' + xhr.status + '\n' + xhr.responseText, 'error');
+                    }
+                }
+            };
+            xhr.onerror = function() { showStatus('连接失败：网络错误，请检查网络连接', 'error'); };
+            xhr.send();
+        }
+
+        function apiInsert(table, records) {
+            return new Promise(function(resolve, reject) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', SUPABASE_URL + '/rest/v1/' + table, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('apikey', SUPABASE_KEY);
+                xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+                xhr.setRequestHeader('Prefer', 'return=minimal');
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve();
+                        } else {
+                            reject(new Error('HTTP ' + xhr.status + ': ' + xhr.responseText));
+                        }
+                    }
+                };
+                xhr.onerror = function() { reject(new Error('网络错误')); };
+                xhr.send(JSON.stringify(records));
+            });
+        }
+
+        function mapPatents() {
+            var statusMap = {
+                '实审': '实质审查',
+                '初审合格': '初审',
+                '受理': '受理',
+                '一通': '实质审查',
+                '已授权': '授权',
+                '审查中': '实质审查'
+            };
+            return patentData.map(function(p) {
+                var newStatus = statusMap[p.status] || p.status;
+                return {
+                    name: p.name,
+                    patent_number: p.patentNumber,
+                    applicant: p.applicant,
+                    unit: p.unit,
+                    classification: p.classification,
+                    application_date: p.applicationDate,
+                    status: newStatus,
+                    summary: p.summary,
+                    remark: p.remark
+                };
+            });
+        }
+
+        function mapPapers() {
+            return paperData.map(function(p) {
+                return {
+                    title: p.title,
+                    author: p.author,
+                    journal: p.journal,
+                    unit: p.unit,
+                    index: p.index,
+                    publish_date: p.publishDate,
+                    year: p.year,
+                    status: p.status,
+                    remark: p.remark
+                };
+            });
+        }
+
+        async function importPatents() {
+            if (!confirm('确定要导入66条专利数据吗？')) return;
+            disableAll(true);
+            showStatus('正在导入专利数据...', 'info');
+            setProgress(0);
+            try {
+                var records = mapPatents();
+                var batchSize = 10;
+                for (var i = 0; i < records.length; i += batchSize) {
+                    var batch = records.slice(i, i + batchSize);
+                    await apiInsert('patents', batch);
+                    setProgress(Math.min(100, Math.round(((i + batch.length) / records.length) * 100)));
+                }
+                showStatus('成功导入 ' + patentData.length + ' 条专利数据！\n请点击"返回团队管理系统"查看。', 'success');
+            } catch (e) {
+                showStatus('导入失败：' + e.message, 'error');
+            }
+            disableAll(false);
+        }
+
+        async function importPapers() {
+            if (!confirm('确定要导入22条论文数据吗？')) return;
+            disableAll(true);
+            showStatus('正在导入论文数据...', 'info');
+            setProgress(0);
+            try {
+                var records = mapPapers();
+                var batchSize = 10;
+                for (var i = 0; i < records.length; i += batchSize) {
+                    var batch = records.slice(i, i + batchSize);
+                    await apiInsert('papers', batch);
+                    setProgress(Math.min(100, Math.round(((i + batch.length) / records.length) * 100)));
+                }
+                showStatus('成功导入 ' + paperData.length + ' 条论文数据！\n请点击"返回团队管理系统"查看。', 'success');
+            } catch (e) {
+                showStatus('导入失败：' + e.message, 'error');
+            }
+            disableAll(false);
+        }
+
+        async function importAll() {
+            if (!confirm('确定要导入全部数据吗？\n专利：66条\n论文：22条')) return;
+            disableAll(true);
+            showStatus('正在导入全部数据...', 'info');
+            setProgress(0);
+            try {
+                await apiInsert('patents', mapPatents());
+                setProgress(50);
+                showStatus('专利导入完成，正在导入论文...', 'info');
+                await apiInsert('papers', mapPapers());
+                setProgress(100);
+                showStatus('全部数据导入成功！\n专利 ' + patentData.length + ' 条，论文 ' + paperData.length + ' 条。\n请点击"返回团队管理系统"查看。', 'success');
+            } catch (e) {
+                showStatus('导入失败：' + e.message, 'error');
+            }
+            disableAll(false);
+        }
+    </script>
+</body>
+</html>

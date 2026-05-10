@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -1797,7 +1797,7 @@
                                         <td>ZL202310015678.X</td>
                                         <td>科技公司A</td>
                                         <td>2023-01-15</td>
-                                        <td><span class="tag tag-success">已公开</span></td>
+                                        <td><span class="tag tag-success">授权</span></td>
                                         <td><button class="btn" style="padding: 6px 12px; font-size: 12px;">查看</button></td>
                                     </tr>
                                     <tr>
@@ -1805,7 +1805,7 @@
                                         <td>ZL202310034567.1</td>
                                         <td>机器人公司B</td>
                                         <td>2023-03-10</td>
-                                        <td><span class="tag tag-warning">审查中</span></td>
+                                        <td><span class="tag tag-warning">实质审查</span></td>
                                         <td><button class="btn" style="padding: 6px 12px; font-size: 12px;">查看</button></td>
                                     </tr>
                                     <tr>
@@ -1846,10 +1846,14 @@
                             <label>法律状态 *</label>
                             <select class="form-control">
                                 <option>请选择法律状态</option>
-                                <option>审查中</option>
-                                <option>已公开</option>
-                                <option>已授权</option>
-                                <option>已失效</option>
+                                <option>申请</option>
+                                <option>受理</option>
+                                <option>初审</option>
+                                <option>公布</option>
+                                <option>实质审查</option>
+                                <option>授权</option>
+                                <option>届满</option>
+                                <option>无效</option>
                             </select>
                         </div>
                         <button class="btn" onclick="alert('专利信息录入成功！')">➕ 提交</button>
@@ -1996,9 +2000,9 @@
                     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;" id="patentMgmtFilterTags">
                         <span class="filter-tag active" onclick="filterPatentMgmtByTag('all', this)">全部(<span id="patentMgmtCountAll">0</span>)</span>
                         <span class="filter-tag" onclick="filterPatentMgmtByTag('current_year', this)">当年申请(<span id="patentMgmtCountCurrentYear">0</span>)</span>
-                        <span class="filter-tag" onclick="filterPatentMgmtByTag('reviewing', this)">审查中(<span id="patentMgmtCountReviewing">0</span>)</span>
-                        <span class="filter-tag" onclick="filterPatentMgmtByTag('approved', this)">已授权(<span id="patentMgmtCountApproved">0</span>)</span>
-                        <span class="filter-tag" onclick="filterPatentMgmtByTag('rejected', this)">已失效(<span id="patentMgmtCountRejected">0</span>)</span>
+                        <span class="filter-tag" onclick="filterPatentMgmtByTag('reviewing', this)">实质审查(<span id="patentMgmtCountReviewing">0</span>)</span>
+                        <span class="filter-tag" onclick="filterPatentMgmtByTag('approved', this)">授权(<span id="patentMgmtCountApproved">0</span>)</span>
+                        <span class="filter-tag" onclick="filterPatentMgmtByTag('rejected', this)">无效(<span id="patentMgmtCountRejected">0</span>)</span>
                     </div>
                     
                     <!-- 查询条件区 -->
@@ -2029,10 +2033,14 @@
                                 <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">状态</label>
                                 <select id="patentMgmtFilterStatus" class="form-control">
                                     <option value="">全部</option>
-                                    <option value="审查中">审查中</option>
-                                    <option value="已公开">已公开</option>
-                                    <option value="已授权">已授权</option>
-                                    <option value="已失效">已失效</option>
+                                    <option value="申请">申请</option>
+                                <option value="受理">受理</option>
+                                <option value="初审">初审</option>
+                                <option value="公布">公布</option>
+                                <option value="实质审查">实质审查</option>
+                                <option value="授权">授权</option>
+                                <option value="届满">届满</option>
+                                <option value="无效">无效</option>
                                 </select>
                             </div>
                             <button class="btn" onclick="applyPatentMgmtFilters()" style="height: 38px;">🔍 快捷查询</button>
@@ -2117,13 +2125,7 @@
                         </div>
                         <div class="form-group">
                             <label>分类 *</label>
-                            <select id="patentMgmtClassification" class="form-control">
-                                <option value="">请选择分类</option>
-                                <option value="能源技术">能源技术</option>
-                                <option value="人工智能">人工智能</option>
-                                <option value="城市安全">城市安全</option>
-                                <option value="土木水利">土木水利</option>
-                            </select>
+                            <input type="text" id="patentMgmtClassification" class="form-control" placeholder="请输入分类">
                         </div>
                         <div class="form-group">
                             <label>申请日期 *</label>
@@ -2132,10 +2134,14 @@
                         <div class="form-group">
                             <label>状态</label>
                             <select id="patentMgmtStatus" class="form-control">
-                                <option value="审查中">审查中</option>
-                                <option value="已公开">已公开</option>
-                                <option value="已授权">已授权</option>
-                                <option value="已失效">已失效</option>
+                                <option value="申请">申请</option>
+                                <option value="受理">受理</option>
+                                <option value="初审">初审</option>
+                                <option value="公布">公布</option>
+                                <option value="实质审查">实质审查</option>
+                                <option value="授权">授权</option>
+                                <option value="届满">届满</option>
+                                <option value="无效">无效</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -3268,7 +3274,7 @@
                         <div class="form-group">
                             <label>阿里云百炼API密钥</label>
                             <div style="display: flex; gap: 10px;">
-                                <input type="password" id="openaiApiKey" class="form-control" placeholder="请输入阿里云百炼API密钥" value="sk-997a88dd8f274103a2e3d427bf29a873">
+                                <input type="password" id="openaiApiKey" class="form-control" placeholder="请输入阿里云百炼API密钥" value="sk-f21e4fb3971c4542a17aeadd08a0747c">
                                 <button class="btn" onclick="saveApiKey()">💾 保存</button>
                                 <button class="btn btn-secondary" onclick="testApiKey()">🔍 测试</button>
                             </div>
@@ -4769,6 +4775,48 @@
     </div>
 
     <script>
+        // ========== Supabase 配置 (REST API 模式，无需SDK) ==========
+        const SUPABASE_URL = 'https://havxlphglhjgcfgwowae.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_jhRxljv8ocdnXBknablKiA_kRBzlEnC';
+        
+        function supabaseRequest(method, table, data) {
+            return new Promise(function(resolve, reject) {
+                var xhr = new XMLHttpRequest();
+                var url = SUPABASE_URL + '/rest/v1/' + table;
+                if (method === 'GET' && data && data.select) {
+                    var params = [];
+                    if (data.select) params.push('select=' + encodeURIComponent(data.select));
+                    if (data.limit) params.push('limit=' + data.limit);
+                    if (data.order) params.push('order=' + encodeURIComponent(data.order));
+                    if (params.length) url += '?' + params.join('&');
+                }
+                xhr.open(method, url, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('apikey', SUPABASE_KEY);
+                xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+                xhr.setRequestHeader('Prefer', 'return=representation');
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                resolve(JSON.parse(xhr.responseText));
+                            } catch(e) {
+                                resolve(xhr.responseText ? null : []);
+                            }
+                        } else {
+                            reject(new Error('HTTP ' + xhr.status + ': ' + xhr.responseText));
+                        }
+                    }
+                };
+                xhr.onerror = function() { reject(new Error('网络错误')); };
+                if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+                    xhr.send(JSON.stringify(data || {}));
+                } else {
+                    xhr.send();
+                }
+            });
+        }
+
         // 显示模块
         function showModule(moduleId) {
             // 隐藏所有模块
@@ -4998,10 +5046,10 @@
         // 获取标签样式类
         function getTagClass(status) {
             switch(status) {
-                case '已公开': return 'tag-success';
-                case '审查中': return 'tag-warning';
-                case '已授权': return 'tag-primary';
-                case '已失效': return 'tag-danger';
+                case '授权': return 'tag-success';
+                case '实质审查': return 'tag-warning';
+                case '公布': return 'tag-primary';
+                case '无效': return 'tag-danger';
                 default: return 'tag-default';
             }
         }
@@ -10120,7 +10168,7 @@ ${outputRequirements}
                 }
                 
                 // 调用通义千问 API
-                const apiKey = 'sk-997a88dd8f274103a2e3d427bf29a873';
+                const apiKey = 'sk-f21e4fb3971c4542a17aeadd08a0747c';
                 const baseUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
                 
                 const systemPrompt = `你是一个专业的数据分析和可视化专家。用户上传了 Excel 文件，并提出了数据处理需求。
@@ -11579,30 +11627,30 @@ ${JSON.stringify(excelDataArray, null, 2)}
         var patentMgmtSortField = '';
         var patentMgmtSortOrder = 'asc';
         
-        function initPatentMgmtData() {
-            const saved = localStorage.getItem('patentMgmtData');
-            if (saved) {
-                patentMgmtData = JSON.parse(saved);
-            } else {
+        async function initPatentMgmtData() {
+            try {
+                const data = await supabaseRequest('GET', 'patents', { select: '*', order: 'id.asc' });
+                patentMgmtData = data || [];
+            } catch (e) {
+                console.error('加载专利数据失败:', e);
                 patentMgmtData = [];
-                localStorage.setItem('patentMgmtData', JSON.stringify(patentMgmtData));
             }
             filteredPatentMgmtData = [...patentMgmtData];
             updatePatentMgmtFilterCounts();
             renderPatentMgmtTable();
         }
         
-        function savePatentMgmtData() {
-            localStorage.setItem('patentMgmtData', JSON.stringify(patentMgmtData));
+        async function savePatentMgmtData() {
+            // Supabase 模式不需要此函数，数据直接写入数据库
         }
         
         function updatePatentMgmtFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
             document.getElementById('patentMgmtCountAll').textContent = patentMgmtData.length;
             document.getElementById('patentMgmtCountCurrentYear').textContent = patentMgmtData.filter(d => d.applicationDate && d.applicationDate.startsWith(currentYear)).length;
-            document.getElementById('patentMgmtCountReviewing').textContent = patentMgmtData.filter(d => d.status === '审查中').length;
-            document.getElementById('patentMgmtCountApproved').textContent = patentMgmtData.filter(d => d.status === '已授权').length;
-            document.getElementById('patentMgmtCountRejected').textContent = patentMgmtData.filter(d => d.status === '已失效').length;
+            document.getElementById('patentMgmtCountReviewing').textContent = patentMgmtData.filter(d => d.status === '实质审查').length;
+            document.getElementById('patentMgmtCountApproved').textContent = patentMgmtData.filter(d => d.status === '授权').length;
+            document.getElementById('patentMgmtCountRejected').textContent = patentMgmtData.filter(d => d.status === '无效').length;
         }
         
         function renderPatentMgmtTable() {
@@ -11617,18 +11665,19 @@ ${JSON.stringify(excelDataArray, null, 2)}
             filteredPatentMgmtData.forEach(item => {
                 const row = document.createElement('tr');
                 let statusClass = 'tag-warning';
-                if (item.status === '已授权') statusClass = 'tag-success';
-                else if (item.status === '已失效') statusClass = 'tag-danger';
-                else if (item.status === '已公开') statusClass = 'tag-primary';
+                if (item.status === '授权') statusClass = 'tag-success';
+                else if (item.status === '无效') statusClass = 'tag-danger';
+                else if (item.status === '公布') statusClass = 'tag-primary';
+                else if (item.status === '实质审查') statusClass = 'tag-warning';
                 row.innerHTML = `
                     <td><input type="checkbox" ${selectedPatentMgmtIds.has(item.id) ? 'checked' : ''} onchange="togglePatentMgmtSelect(${item.id}, this)"></td>
-                    <td>${item.applicationDate ? item.applicationDate.substring(0, 4) : '-'}</td>
-                    <td>${item.patentNumber || '-'}</td>
+                    <td>${item.application_date ? item.application_date.substring(0, 4) : '-'}</td>
+                    <td>${item.patent_number || '-'}</td>
                     <td>${item.name}</td>
                     <td>${item.classification || '-'}</td>
                     <td>${item.applicant || '-'}</td>
                     <td>${item.unit || '-'}</td>
-                    <td>${item.applicationDate || '-'}</td>
+                    <td>${item.application_date || '-'}</td>
                     <td><span class="tag ${statusClass}">${item.status}</span></td>
                     <td>
                         <button class="btn" style="padding: 4px 10px; font-size: 12px; margin-right: 5px;" onclick="editPatentMgmt(${item.id})">编辑</button>
@@ -11648,7 +11697,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('patentMgmtUnit').value = '';
             document.getElementById('patentMgmtClassification').value = '';
             document.getElementById('patentMgmtApplicationDate').value = '';
-            document.getElementById('patentMgmtStatus').value = '审查中';
+            document.getElementById('patentMgmtStatus').value = '实质审查';
             document.getElementById('patentMgmtFile').value = '';
             document.getElementById('patentMgmtSummary').value = '';
             document.getElementById('patentMgmtModal').style.display = 'flex';
@@ -11658,7 +11707,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('patentMgmtModal').style.display = 'none';
         }
         
-        function savePatentMgmt() {
+        async function savePatentMgmt() {
             const name = document.getElementById('patentMgmtName').value.trim();
             const patentNumber = document.getElementById('patentMgmtPatentNumber').value.trim();
             const applicant = document.getElementById('patentMgmtApplicant').value.trim();
@@ -11671,20 +11720,20 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 alert('请填写所有必填字段');
                 return;
             }
-            if (editingPatentMgmtId) {
-                const index = patentMgmtData.findIndex(d => d.id === editingPatentMgmtId);
-                if (index !== -1) {
-                    patentMgmtData[index] = { ...patentMgmtData[index], name, patentNumber, applicant, unit, classification, applicationDate, status, summary };
+            const record = { name, patent_number: patentNumber, applicant, unit, classification, application_date: applicationDate, status, summary };
+            try {
+                if (editingPatentMgmtId) {
+                    await supabaseRequest('PATCH', 'patents?id=eq.' + editingPatentMgmtId, record);
+                } else {
+                    await supabaseRequest('POST', 'patents', record);
                 }
-            } else {
-                const newId = patentMgmtData.length > 0 ? Math.max(...patentMgmtData.map(d => d.id)) + 1 : 1;
-                patentMgmtData.push({ id: newId, name, patentNumber, applicant, unit, classification, applicationDate, status, summary, fileName: '', remark: '' });
+                await initPatentMgmtData();
+                closePatentMgmtModal();
+                alert('保存成功！');
+            } catch (e) {
+                console.error('保存专利失败:', e);
+                alert('保存失败：' + e.message);
             }
-            savePatentMgmtData();
-            updatePatentMgmtFilterCounts();
-            applyPatentMgmtFilters();
-            closePatentMgmtModal();
-            alert('保存成功！');
         }
         
         function editPatentMgmt(id) {
@@ -11693,23 +11742,26 @@ ${JSON.stringify(excelDataArray, null, 2)}
             editingPatentMgmtId = id;
             document.getElementById('patentMgmtModalTitle').textContent = '编辑专利';
             document.getElementById('patentMgmtName').value = item.name;
-            document.getElementById('patentMgmtPatentNumber').value = item.patentNumber;
+            document.getElementById('patentMgmtPatentNumber').value = item.patent_number;
             document.getElementById('patentMgmtApplicant').value = item.applicant;
             document.getElementById('patentMgmtUnit').value = item.unit;
             document.getElementById('patentMgmtClassification').value = item.classification;
-            document.getElementById('patentMgmtApplicationDate').value = item.applicationDate;
+            document.getElementById('patentMgmtApplicationDate').value = item.application_date;
             document.getElementById('patentMgmtStatus').value = item.status;
             document.getElementById('patentMgmtSummary').value = item.summary || '';
             document.getElementById('patentMgmtModal').style.display = 'flex';
         }
         
-        function deletePatentMgmt(id) {
+        async function deletePatentMgmt(id) {
             if (!confirm('确定要删除这条专利记录吗？')) return;
-            patentMgmtData = patentMgmtData.filter(d => d.id !== id);
-            selectedPatentMgmtIds.delete(id);
-            savePatentMgmtData();
-            updatePatentMgmtFilterCounts();
-            applyPatentMgmtFilters();
+            try {
+                await supabaseRequest('DELETE', 'patents?id=eq.' + id);
+                selectedPatentMgmtIds.delete(id);
+                await initPatentMgmtData();
+            } catch (e) {
+                console.error('删除专利失败:', e);
+                alert('删除失败：' + e.message);
+            }
         }
         
         function togglePatentMgmtSelectAll(checkbox) {
@@ -11733,9 +11785,9 @@ ${JSON.stringify(excelDataArray, null, 2)}
             switch(tag) {
                 case 'all': filteredPatentMgmtData = [...patentMgmtData]; break;
                 case 'current_year': filteredPatentMgmtData = patentMgmtData.filter(d => d.applicationDate && d.applicationDate.startsWith(currentYear)); break;
-                case 'reviewing': filteredPatentMgmtData = patentMgmtData.filter(d => d.status === '审查中'); break;
-                case 'approved': filteredPatentMgmtData = patentMgmtData.filter(d => d.status === '已授权'); break;
-                case 'rejected': filteredPatentMgmtData = patentMgmtData.filter(d => d.status === '已失效'); break;
+                case 'reviewing': filteredPatentMgmtData = patentMgmtData.filter(d => d.status === '实质审查'); break;
+                case 'approved': filteredPatentMgmtData = patentMgmtData.filter(d => d.status === '授权'); break;
+                case 'rejected': filteredPatentMgmtData = patentMgmtData.filter(d => d.status === '无效'); break;
             }
             renderPatentMgmtTable();
         }
@@ -11757,14 +11809,14 @@ ${JSON.stringify(excelDataArray, null, 2)}
             const dateTo = document.getElementById('patentMgmtFilterDateTo').value;
             filteredPatentMgmtData = patentMgmtData.filter(d => {
                 if (name && !d.name.toLowerCase().includes(name)) return false;
-                if (patentNumber && !d.patentNumber.toLowerCase().includes(patentNumber)) return false;
+                if (patentNumber && !(d.patent_number || '').toLowerCase().includes(patentNumber)) return false;
                 if (applicant && !d.applicant.toLowerCase().includes(applicant)) return false;
-                if (year && (!d.applicationDate || !d.applicationDate.startsWith(year))) return false;
+                if (year && (!d.application_date || !d.application_date.startsWith(year))) return false;
                 if (status && d.status !== status) return false;
                 if (classification && d.classification !== classification) return false;
                 if (unit && (!d.unit || !d.unit.toLowerCase().includes(unit))) return false;
-                if (dateFrom && (!d.applicationDate || d.applicationDate < dateFrom)) return false;
-                if (dateTo && (!d.applicationDate || d.applicationDate > dateTo)) return false;
+                if (dateFrom && (!d.application_date || d.application_date < dateFrom)) return false;
+                if (dateTo && (!d.application_date || d.application_date > dateTo)) return false;
                 return true;
             });
             renderPatentMgmtTable();
@@ -11795,8 +11847,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 patentMgmtSortOrder = 'asc';
             }
             filteredPatentMgmtData.sort((a, b) => {
-                let valA = a[field] || '';
-                let valB = b[field] || '';
+                const fieldMap = { patentNumber: 'patent_number', applicationDate: 'application_date' };
+                const mappedField = fieldMap[field] || field;
+                let valA = a[mappedField] || '';
+                let valB = b[mappedField] || '';
                 if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
                 if (valA < valB) return patentMgmtSortOrder === 'asc' ? -1 : 1;
                 if (valA > valB) return patentMgmtSortOrder === 'asc' ? 1 : -1;
@@ -11805,14 +11859,18 @@ ${JSON.stringify(excelDataArray, null, 2)}
             renderPatentMgmtTable();
         }
         
-        function batchDeletePatentMgmt() {
+        async function batchDeletePatentMgmt() {
             if (selectedPatentMgmtIds.size === 0) { alert('请先选择要删除的记录'); return; }
             if (!confirm(`确定要删除选中的 ${selectedPatentMgmtIds.size} 条记录吗？`)) return;
-            patentMgmtData = patentMgmtData.filter(d => !selectedPatentMgmtIds.has(d.id));
-            selectedPatentMgmtIds.clear();
-            savePatentMgmtData();
-            updatePatentMgmtFilterCounts();
-            applyPatentMgmtFilters();
+            try {
+                const ids = Array.from(selectedPatentMgmtIds);
+                await supabaseRequest('DELETE', 'patents?id=in.(' + ids.join(',') + ')');
+                selectedPatentMgmtIds.clear();
+                await initPatentMgmtData();
+            } catch (e) {
+                console.error('批量删除失败:', e);
+                alert('删除失败：' + e.message);
+            }
         }
         
         function batchAuditPatentMgmt() {
@@ -11823,7 +11881,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 <h3 style="margin-bottom:20px;color:#333;">批量审核</h3>
                 <div class="form-group"><label>新状态</label>
                     <select id="batchAuditStatusSelect" class="form-control">
-                        <option value="审查中">审查中</option><option value="已公开">已公开</option><option value="已授权">已授权</option><option value="已失效">已失效</option>
+                        <option value="申请">申请</option><option value="受理">受理</option><option value="初审">初审</option><option value="公布">公布</option><option value="实质审查">实质审查</option><option value="授权">授权</option><option value="届满">届满</option><option value="无效">无效</option>
                     </select>
                 </div>
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
@@ -11834,22 +11892,27 @@ ${JSON.stringify(excelDataArray, null, 2)}
             modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
         }
         
-        function confirmBatchAuditPatentMgmt(btn) {
+        async function confirmBatchAuditPatentMgmt(btn) {
             const newStatus = document.getElementById('batchAuditStatusSelect').value;
-            patentMgmtData.forEach(d => { if (selectedPatentMgmtIds.has(d.id)) d.status = newStatus; });
-            selectedPatentMgmtIds.clear();
-            savePatentMgmtData();
-            updatePatentMgmtFilterCounts();
-            applyPatentMgmtFilters();
-            btn.closest('div[style*="fixed"]').remove();
-            alert('批量审核完成！');
+            try {
+                const ids = Array.from(selectedPatentMgmtIds);
+                const record = { status: newStatus };
+                await supabaseRequest('PATCH', 'patents?id=in.(' + ids.join(',') + ')', record);
+                selectedPatentMgmtIds.clear();
+                await initPatentMgmtData();
+                btn.closest('div[style*="fixed"]').remove();
+                alert('批量审核完成！');
+            } catch (e) {
+                console.error('批量审核失败:', e);
+                alert('审核失败：' + e.message);
+            }
         }
         
         function exportPatentMgmt() {
             if (filteredPatentMgmtData.length === 0) { alert('没有可导出的数据'); return; }
             let csv = '\ufeff所属年度,专利号,专利名称,分类,申请人,所属单位,申请日期,状态\n';
             filteredPatentMgmtData.forEach(d => {
-                csv += `${d.applicationDate ? d.applicationDate.substring(0,4) : ''},${d.patentNumber},${d.name},${d.classification},${d.applicant},${d.unit},${d.applicationDate},${d.status}\n`;
+                csv += `${d.application_date ? d.application_date.substring(0,4) : ''},${d.patent_number},${d.name},${d.classification},${d.applicant},${d.unit},${d.application_date},${d.status}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -11895,11 +11958,11 @@ ${JSON.stringify(excelDataArray, null, 2)}
         function viewPatentMgmtStats() {
             const total = patentMgmtData.length;
             const currentYear = new Date().getFullYear().toString();
-            const thisYear = patentMgmtData.filter(d => d.applicationDate && d.applicationDate.startsWith(currentYear)).length;
-            const approved = patentMgmtData.filter(d => d.status === '已授权').length;
-            const reviewing = patentMgmtData.filter(d => d.status === '审查中').length;
-            const rejected = patentMgmtData.filter(d => d.status === '已失效').length;
-            const publicCount = patentMgmtData.filter(d => d.status === '已公开').length;
+            const thisYear = patentMgmtData.filter(d => d.application_date && d.application_date.startsWith(currentYear)).length;
+            const approved = patentMgmtData.filter(d => d.status === '授权').length;
+            const reviewing = patentMgmtData.filter(d => d.status === '实质审查').length;
+            const rejected = patentMgmtData.filter(d => d.status === '无效').length;
+            const publicCount = patentMgmtData.filter(d => d.status === '公布').length;
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
             modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:400px;">
@@ -11928,27 +11991,27 @@ ${JSON.stringify(excelDataArray, null, 2)}
         var paperSortField = '';
         var paperSortOrder = 'asc';
         
-        function initPaperData() {
-            const saved = localStorage.getItem('paperData');
-            if (saved) {
-                paperData = JSON.parse(saved);
-            } else {
+        async function initPaperData() {
+            try {
+                const data = await supabaseRequest('GET', 'papers', { select: '*', order: 'id.asc' });
+                paperData = data || [];
+            } catch (e) {
+                console.error('加载论文数据失败:', e);
                 paperData = [];
-                localStorage.setItem('paperData', JSON.stringify(paperData));
             }
             filteredPaperData = [...paperData];
             updatePaperFilterCounts();
             renderPaperTable();
         }
         
-        function savePaperData() {
-            localStorage.setItem('paperData', JSON.stringify(paperData));
+        async function savePaperData() {
+            // Supabase 模式不需要此函数
         }
         
         function updatePaperFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
             document.getElementById('paperCountAll').textContent = paperData.length;
-            document.getElementById('paperCountCurrentYear').textContent = paperData.filter(d => d.publishDate && d.publishDate.startsWith(currentYear)).length;
+            document.getElementById('paperCountCurrentYear').textContent = paperData.filter(d => d.publish_date && d.publish_date.startsWith(currentYear)).length;
             document.getElementById('paperCountReviewing').textContent = paperData.filter(d => d.status === '审核中').length;
             document.getElementById('paperCountApproved').textContent = paperData.filter(d => d.status === '已通过').length;
             document.getElementById('paperCountRejected').textContent = paperData.filter(d => d.status === '已驳回').length;
@@ -11967,13 +12030,13 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 else if (item.status === '已驳回') statusClass = 'tag-danger';
                 row.innerHTML = `
                     <td><input type="checkbox" ${selectedPaperIds.has(item.id) ? 'checked' : ''} onchange="togglePaperSelect(${item.id}, this)"></td>
-                    <td>${item.publishDate ? item.publishDate.substring(0, 4) : '-'}</td>
+                    <td>${item.publish_date ? item.publish_date.substring(0, 4) : '-'}</td>
                     <td>${item.title}</td>
                     <td>${item.author || '-'}</td>
                     <td>${item.journal || '-'}</td>
                     <td>${item.index || '-'}</td>
                     <td>${item.unit || '-'}</td>
-                    <td>${item.publishDate || '-'}</td>
+                    <td>${item.publish_date || '-'}</td>
                     <td><span class="tag ${statusClass}">${item.status}</span></td>
                     <td>
                         <button class="btn" style="padding: 4px 10px; font-size: 12px; margin-right: 5px;" onclick="editPaper(${item.id})">编辑</button>
@@ -12003,7 +12066,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('paperModal').style.display = 'none';
         }
         
-        function savePaper() {
+        async function savePaper() {
             const title = document.getElementById('paperTitle').value.trim();
             const author = document.getElementById('paperAuthor').value.trim();
             const journal = document.getElementById('paperJournal').value.trim();
@@ -12016,18 +12079,20 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 alert('请填写所有必填字段');
                 return;
             }
-            if (editingPaperId) {
-                const idx = paperData.findIndex(d => d.id === editingPaperId);
-                if (idx !== -1) paperData[idx] = { ...paperData[idx], title, author, journal, unit, index, publishDate, status, remark };
-            } else {
-                const newId = paperData.length > 0 ? Math.max(...paperData.map(d => d.id)) + 1 : 1;
-                paperData.push({ id: newId, title, author, journal, unit, index, publishDate, status, remark, fileName: '' });
+            const record = { title, author, journal, unit, index, publish_date: publishDate, status, remark };
+            try {
+                if (editingPaperId) {
+                    await supabaseRequest('PATCH', 'papers?id=eq.' + editingPaperId, record);
+                } else {
+                    await supabaseRequest('POST', 'papers', record);
+                }
+                await initPaperData();
+                closePaperModal();
+                alert('保存成功！');
+            } catch (e) {
+                console.error('保存论文失败:', e);
+                alert('保存失败：' + e.message);
             }
-            savePaperData();
-            updatePaperFilterCounts();
-            applyPaperFilters();
-            closePaperModal();
-            alert('保存成功！');
         }
         
         function editPaper(id) {
@@ -12040,19 +12105,22 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('paperJournal').value = item.journal;
             document.getElementById('paperUnit').value = item.unit;
             document.getElementById('paperIndex').value = item.index;
-            document.getElementById('paperPublishDate').value = item.publishDate;
+            document.getElementById('paperPublishDate').value = item.publish_date;
             document.getElementById('paperStatus').value = item.status;
             document.getElementById('paperRemark').value = item.remark || '';
             document.getElementById('paperModal').style.display = 'flex';
         }
         
-        function deletePaper(id) {
+        async function deletePaper(id) {
             if (!confirm('确定要删除这条论文记录吗？')) return;
-            paperData = paperData.filter(d => d.id !== id);
-            selectedPaperIds.delete(id);
-            savePaperData();
-            updatePaperFilterCounts();
-            applyPaperFilters();
+            try {
+                await supabaseRequest('DELETE', 'papers?id=eq.' + id);
+                selectedPaperIds.delete(id);
+                await initPaperData();
+            } catch (e) {
+                console.error('删除论文失败:', e);
+                alert('删除失败：' + e.message);
+            }
         }
         
         function togglePaperSelectAll(checkbox) {
@@ -12072,7 +12140,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
             const currentYear = new Date().getFullYear().toString();
             switch(tag) {
                 case 'all': filteredPaperData = [...paperData]; break;
-                case 'current_year': filteredPaperData = paperData.filter(d => d.publishDate && d.publishDate.startsWith(currentYear)); break;
+                case 'current_year': filteredPaperData = paperData.filter(d => d.publish_date && d.publish_date.startsWith(currentYear)); break;
                 case 'reviewing': filteredPaperData = paperData.filter(d => d.status === '审核中'); break;
                 case 'approved': filteredPaperData = paperData.filter(d => d.status === '已通过'); break;
                 case 'rejected': filteredPaperData = paperData.filter(d => d.status === '已驳回'); break;
@@ -12098,13 +12166,13 @@ ${JSON.stringify(excelDataArray, null, 2)}
             filteredPaperData = paperData.filter(d => {
                 if (title && !d.title.toLowerCase().includes(title)) return false;
                 if (author && !d.author.toLowerCase().includes(author)) return false;
-                if (journal && !d.journal.toLowerCase().includes(journal)) return false;
-                if (year && (!d.publishDate || !d.publishDate.startsWith(year))) return false;
+                if (journal && !(d.journal || '').toLowerCase().includes(journal)) return false;
+                if (year && (!d.publish_date || !d.publish_date.startsWith(year))) return false;
                 if (status && d.status !== status) return false;
                 if (index && d.index !== index) return false;
                 if (unit && (!d.unit || !d.unit.toLowerCase().includes(unit))) return false;
-                if (dateFrom && (!d.publishDate || d.publishDate < dateFrom)) return false;
-                if (dateTo && (!d.publishDate || d.publishDate > dateTo)) return false;
+                if (dateFrom && (!d.publish_date || d.publish_date < dateFrom)) return false;
+                if (dateTo && (!d.publish_date || d.publish_date > dateTo)) return false;
                 return true;
             });
             renderPaperTable();
@@ -12130,8 +12198,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
         function sortPaperTable(field) {
             if (paperSortField === field) paperSortOrder = paperSortOrder === 'asc' ? 'desc' : 'asc';
             else { paperSortField = field; paperSortOrder = 'asc'; }
+            const fieldMap = { publishDate: 'publish_date' };
+            const mappedField = fieldMap[field] || field;
             filteredPaperData.sort((a, b) => {
-                let valA = a[field] || ''; let valB = b[field] || '';
+                let valA = a[mappedField] || ''; let valB = b[mappedField] || '';
                 if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
                 if (valA < valB) return paperSortOrder === 'asc' ? -1 : 1;
                 if (valA > valB) return paperSortOrder === 'asc' ? 1 : -1;
@@ -12140,17 +12210,21 @@ ${JSON.stringify(excelDataArray, null, 2)}
             renderPaperTable();
         }
         
-        function batchDeletePapers() {
+        async function batchDeletePapers() {
             if (selectedPaperIds.size === 0) { alert('请先选择要删除的记录'); return; }
             if (!confirm(`确定要删除选中的 ${selectedPaperIds.size} 条记录吗？`)) return;
-            paperData = paperData.filter(d => !selectedPaperIds.has(d.id));
-            selectedPaperIds.clear();
-            savePaperData();
-            updatePaperFilterCounts();
-            applyPaperFilters();
+            try {
+                const ids = Array.from(selectedPaperIds);
+                await supabaseRequest('DELETE', 'papers?id=in.(' + ids.join(',') + ')');
+                selectedPaperIds.clear();
+                await initPaperData();
+            } catch (e) {
+                console.error('批量删除失败:', e);
+                alert('删除失败：' + e.message);
+            }
         }
         
-        function batchAuditPapers() {
+        async function batchAuditPapers() {
             if (selectedPaperIds.size === 0) { alert('请先选择要审核的记录'); return; }
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
@@ -12169,22 +12243,27 @@ ${JSON.stringify(excelDataArray, null, 2)}
             modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
         }
         
-        function confirmBatchAuditPapers(btn) {
+        async function confirmBatchAuditPapers(btn) {
             const newStatus = document.getElementById('batchAuditPaperStatusSelect').value;
-            paperData.forEach(d => { if (selectedPaperIds.has(d.id)) d.status = newStatus; });
-            selectedPaperIds.clear();
-            savePaperData();
-            updatePaperFilterCounts();
-            applyPaperFilters();
-            btn.closest('div[style*="fixed"]').remove();
-            alert('批量审核完成！');
+            try {
+                const ids = Array.from(selectedPaperIds);
+                const record = { status: newStatus };
+                await supabaseRequest('PATCH', 'papers?id=in.(' + ids.join(',') + ')', record);
+                selectedPaperIds.clear();
+                await initPaperData();
+                btn.closest('div[style*="fixed"]').remove();
+                alert('批量审核完成！');
+            } catch (e) {
+                console.error('批量审核失败:', e);
+                alert('审核失败：' + e.message);
+            }
         }
         
         function exportPapers() {
             if (filteredPaperData.length === 0) { alert('没有可导出的数据'); return; }
             let csv = '\ufeff所属年度,论文标题,作者,期刊名称,收录类型,所属单位,发表日期,状态\n';
             filteredPaperData.forEach(d => {
-                csv += `${d.publishDate ? d.publishDate.substring(0,4) : ''},${d.title},${d.author},${d.journal},${d.index},${d.unit},${d.publishDate},${d.status}\n`;
+                csv += `${d.publish_date ? d.publish_date.substring(0,4) : ''},${d.title},${d.author},${d.journal},${d.index},${d.unit},${d.publish_date},${d.status}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
