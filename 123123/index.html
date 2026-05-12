@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -2061,10 +2061,6 @@
                                     </select>
                                 </div>
                                 <div style="flex: 1; min-width: 150px;">
-                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">所属单位</label>
-                                    <input type="text" id="patentMgmtFilterUnit" class="form-control" placeholder="请输入所属单位">
-                                </div>
-                                <div style="flex: 1; min-width: 150px;">
                                     <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">申请日期范围</label>
                                     <div style="display: flex; gap: 10px; align-items: center;">
                                         <input type="date" id="patentMgmtFilterDateFrom" class="form-control" style="flex: 1;">
@@ -2087,7 +2083,6 @@
                                     <th onclick="sortPatentMgmtTable('name')" style="cursor: pointer;">专利名称 ⇅</th>
                                     <th onclick="sortPatentMgmtTable('classification')" style="cursor: pointer;">分类 ⇅</th>
                                     <th onclick="sortPatentMgmtTable('applicant')" style="cursor: pointer;">申请人 </th>
-                                    <th onclick="sortPatentMgmtTable('unit')" style="cursor: pointer;">所属单位 ⇅</th>
                                     <th onclick="sortPatentMgmtTable('applicationDate')" style="cursor: pointer;">申请日期 ⇅</th>
                                     <th onclick="sortPatentMgmtTable('status')" style="cursor: pointer;">状态 </th>
                                     <th>操作</th>
@@ -2118,10 +2113,6 @@
                         <div class="form-group">
                             <label>申请人 *</label>
                             <input type="text" id="patentMgmtApplicant" class="form-control" placeholder="请输入申请人">
-                        </div>
-                        <div class="form-group">
-                            <label>所属单位 *</label>
-                            <input type="text" id="patentMgmtUnit" class="form-control" placeholder="请输入所属单位">
                         </div>
                         <div class="form-group">
                             <label>分类 *</label>
@@ -11629,7 +11620,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
         
         async function initPatentMgmtData() {
             try {
-                const data = await supabaseRequest('GET', 'patents', { select: '*', order: 'id.asc' });
+                const data = await supabaseRequest('GET', 'patents', { select: '*', order: 'application_date.desc' });
                 patentMgmtData = data || [];
             } catch (e) {
                 console.error('加载专利数据失败:', e);
@@ -11676,7 +11667,6 @@ ${JSON.stringify(excelDataArray, null, 2)}
                     <td>${item.name}</td>
                     <td>${item.classification || '-'}</td>
                     <td>${item.applicant || '-'}</td>
-                    <td>${item.unit || '-'}</td>
                     <td>${item.application_date || '-'}</td>
                     <td><span class="tag ${statusClass}">${item.status}</span></td>
                     <td>
@@ -11694,7 +11684,6 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('patentMgmtName').value = '';
             document.getElementById('patentMgmtPatentNumber').value = '';
             document.getElementById('patentMgmtApplicant').value = '';
-            document.getElementById('patentMgmtUnit').value = '';
             document.getElementById('patentMgmtClassification').value = '';
             document.getElementById('patentMgmtApplicationDate').value = '';
             document.getElementById('patentMgmtStatus').value = '实质审查';
@@ -11711,16 +11700,15 @@ ${JSON.stringify(excelDataArray, null, 2)}
             const name = document.getElementById('patentMgmtName').value.trim();
             const patentNumber = document.getElementById('patentMgmtPatentNumber').value.trim();
             const applicant = document.getElementById('patentMgmtApplicant').value.trim();
-            const unit = document.getElementById('patentMgmtUnit').value.trim();
             const classification = document.getElementById('patentMgmtClassification').value;
             const applicationDate = document.getElementById('patentMgmtApplicationDate').value;
             const status = document.getElementById('patentMgmtStatus').value;
             const summary = document.getElementById('patentMgmtSummary').value.trim();
-            if (!name || !patentNumber || !applicant || !unit || !classification || !applicationDate) {
+            if (!name || !patentNumber || !applicant || !classification || !applicationDate) {
                 alert('请填写所有必填字段');
                 return;
             }
-            const record = { name, patent_number: patentNumber, applicant, unit, classification, application_date: applicationDate, status, summary };
+            const record = { name, patent_number: patentNumber, applicant, classification, application_date: applicationDate, status, summary };
             try {
                 if (editingPatentMgmtId) {
                     await supabaseRequest('PATCH', 'patents?id=eq.' + editingPatentMgmtId, record);
@@ -11744,7 +11732,6 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('patentMgmtName').value = item.name;
             document.getElementById('patentMgmtPatentNumber').value = item.patent_number;
             document.getElementById('patentMgmtApplicant').value = item.applicant;
-            document.getElementById('patentMgmtUnit').value = item.unit;
             document.getElementById('patentMgmtClassification').value = item.classification;
             document.getElementById('patentMgmtApplicationDate').value = item.application_date;
             document.getElementById('patentMgmtStatus').value = item.status;
@@ -11804,7 +11791,6 @@ ${JSON.stringify(excelDataArray, null, 2)}
             const year = document.getElementById('patentMgmtFilterYear').value;
             const status = document.getElementById('patentMgmtFilterStatus').value;
             const classification = document.getElementById('patentMgmtFilterClassification').value;
-            const unit = document.getElementById('patentMgmtFilterUnit').value.trim().toLowerCase();
             const dateFrom = document.getElementById('patentMgmtFilterDateFrom').value;
             const dateTo = document.getElementById('patentMgmtFilterDateTo').value;
             filteredPatentMgmtData = patentMgmtData.filter(d => {
@@ -11814,7 +11800,6 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 if (year && (!d.application_date || !d.application_date.startsWith(year))) return false;
                 if (status && d.status !== status) return false;
                 if (classification && d.classification !== classification) return false;
-                if (unit && (!d.unit || !d.unit.toLowerCase().includes(unit))) return false;
                 if (dateFrom && (!d.application_date || d.application_date < dateFrom)) return false;
                 if (dateTo && (!d.application_date || d.application_date > dateTo)) return false;
                 return true;
@@ -11829,7 +11814,6 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('patentMgmtFilterYear').value = '';
             document.getElementById('patentMgmtFilterStatus').value = '';
             document.getElementById('patentMgmtFilterClassification').value = '';
-            document.getElementById('patentMgmtFilterUnit').value = '';
             document.getElementById('patentMgmtFilterDateFrom').value = '';
             document.getElementById('patentMgmtFilterDateTo').value = '';
             document.getElementById('patentMgmtMoreFilters').style.display = 'none';
@@ -11910,9 +11894,9 @@ ${JSON.stringify(excelDataArray, null, 2)}
         
         function exportPatentMgmt() {
             if (filteredPatentMgmtData.length === 0) { alert('没有可导出的数据'); return; }
-            let csv = '\ufeff所属年度,专利号,专利名称,分类,申请人,所属单位,申请日期,状态\n';
+            let csv = '\ufeff所属年度,专利号,专利名称,分类,申请人,申请日期,状态\n';
             filteredPatentMgmtData.forEach(d => {
-                csv += `${d.application_date ? d.application_date.substring(0,4) : ''},${d.patent_number},${d.name},${d.classification},${d.applicant},${d.unit},${d.application_date},${d.status}\n`;
+                csv += `${d.application_date ? d.application_date.substring(0,4) : ''},${d.patent_number},${d.name},${d.classification},${d.applicant},${d.application_date},${d.status}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -11929,24 +11913,19 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = function(event) {
+                reader.onload = async function(event) {
                     const text = event.target.result;
                     const lines = text.split('\n');
                     let count = 0;
                     for (let i = 1; i < lines.length; i++) {
                         const cols = lines[i].split(',');
-                        if (cols.length >= 8) {
+                        if (cols.length >= 7) {
                             const newId = patentMgmtData.length > 0 ? Math.max(...patentMgmtData.map(d => d.id)) + 1 : 1;
-                            patentMgmtData.push({
-                                id: newId, name: cols[2] || '', patentNumber: cols[1] || '', classification: cols[3] || '',
-                                applicant: cols[4] || '', unit: cols[5] || '', applicationDate: cols[6] || '', status: cols[7] || '审查中',
-                                fileName: '', remark: ''
-                            });
+                            await supabaseRequest('POST', 'patents', { name: cols[2] || '', patent_number: cols[1] || '', classification: cols[3] || '', applicant: cols[4] || '', application_date: cols[5] || '', status: cols[6] || '实质审查', summary: '', remark: '' });
                             count++;
                         }
                     }
-                    savePatentMgmtData();
-                    updatePatentMgmtFilterCounts();
+                    await initPatentMgmtData();
                     applyPatentMgmtFilters();
                     alert(`成功导入 ${count} 条记录`);
                 };
@@ -11993,7 +11972,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
         
         async function initPaperData() {
             try {
-                const data = await supabaseRequest('GET', 'papers', { select: '*', order: 'id.asc' });
+                const data = await supabaseRequest('GET', 'papers', { select: '*', order: 'publish_date.desc' });
                 paperData = data || [];
             } catch (e) {
                 console.error('加载论文数据失败:', e);
