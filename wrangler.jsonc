@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "city-safety-team-system",
+  "compatibility_date": "2026-05-19",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "123123"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}
