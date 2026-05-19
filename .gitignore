@@ -6,3 +6,10 @@ npm-cache
 .vscode/settings.json
 123123/npm-cache
 123123/node_modules
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
