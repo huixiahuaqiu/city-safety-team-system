@@ -73,18 +73,26 @@ const server = http.createServer((req, res) => {
         req.on('data', chunk => { body += chunk.toString(); });
         req.on('end', async () => {
             try {
+                console.log('[百度OCR] 收到请求');
                 const { image } = JSON.parse(body);
+                console.log('[百度OCR] 图片Base64长度:', image ? image.length : 0);
                 const token = await getBaiduOcrToken();
-                const ocrUrl = `https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic?access_token=${token}`;
+                console.log('[百度OCR] Token获取成功');
+                const ocrUrl = `https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic?access_token=${token}`;
+                console.log('[百度OCR] 请求URL:', ocrUrl);
                 const response = await fetch(ocrUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `image=${encodeURIComponent(image)}`
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: image })
                 });
-                const data = await response.json();
+                console.log('[百度OCR] 响应状态:', response.status);
+                const responseText = await response.text();
+                console.log('[百度OCR] 响应内容:', responseText.substring(0, 500));
+                const data = JSON.parse(responseText);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(data));
             } catch (error) {
+                console.error('[百度OCR] 错误:', error);
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: error.message }));
             }
