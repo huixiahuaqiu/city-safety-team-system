@@ -34,6 +34,29 @@ function serveStaticFile(res, filePath) {
     });
 }
 
+// 百度 OCR 配置
+const BAIDU_OCR_API_KEY = 'oRABG7OrjSWqlB3zFidpzcaQ';
+const BAIDU_OCR_SECRET_KEY = 'f4VsRRzAf19lViqj57wRrEmcrGGPidWN';
+
+// 获取百度 OCR Access Token（带缓存）
+let baiduOcrToken = null;
+let baiduOcrTokenExpireTime = 0;
+
+async function getBaiduOcrToken() {
+    if (baiduOcrToken && Date.now() < baiduOcrTokenExpireTime) {
+        return baiduOcrToken;
+    }
+    const tokenUrl = `https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=${BAIDU_OCR_API_KEY}&client_secret=${BAIDU_OCR_SECRET_KEY}`;
+    const response = await fetch(tokenUrl);
+    const data = await response.json();
+    if (data.access_token) {
+        baiduOcrToken = data.access_token;
+        baiduOcrTokenExpireTime = Date.now() + (data.expires_in - 300) * 1000;
+        return baiduOcrToken;
+    }
+    throw new Error('Failed to get Baidu OCR token: ' + JSON.stringify(data));
+}
+
 const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -45,8 +68,28 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 代理 API 请求
-    if (req.method === 'POST' && req.url === '/api/aliyun') {
+    if (req.method === 'POST' && req.url === '/api/baidu-ocr') {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', async () => {
+            try {
+                const { image } = JSON.parse(body);
+                const token = await getBaiduOcrToken();
+                const ocrUrl = `https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic?access_token=${token}`;
+                const response = await fetch(ocrUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `image=${encodeURIComponent(image)}`
+                });
+                const data = await response.json();
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(data));
+            } catch (error) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: error.message }));
+            }
+        });
+    } else if (req.method === 'POST' && req.url === '/api/aliyun') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
         req.on('end', async () => {
