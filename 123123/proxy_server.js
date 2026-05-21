@@ -1,9 +1,73 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const https = require('https');
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import https from 'https';
 
 const PORT = 3000;
+const BAIDU_OCR_API_KEY = process.env.BAIDU_OCR_API_KEY || '';
+const BAIDU_OCR_SECRET_KEY = process.env.BAIDU_OCR_SECRET_KEY || '';
+
+function postJson(url, payload, headers = {}) {
+    return new Promise((resolve, reject) => {
+        const data = JSON.stringify(payload);
+        const requestUrl = new URL(url);
+        const options = {
+            hostname: requestUrl.hostname,
+            path: `${requestUrl.pathname}${requestUrl.search}`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data),
+                ...headers
+            }
+        };
+
+        const req = https.request(options, (resp) => {
+            let body = '';
+            resp.on('data', chunk => {
+                body += chunk.toString();
+            });
+            resp.on('end', () => {
+                resolve({ statusCode: resp.statusCode, body });
+            });
+        });
+
+        req.on('error', reject);
+        req.write(data);
+        req.end();
+    });
+}
+
+function fetchBaiduAccessToken() {
+    return new Promise((resolve, reject) => {
+        const tokenPath = `/oauth/2.0/token?grant_type=client_credentials&client_id=${encodeURIComponent(BAIDU_OCR_API_KEY)}&client_secret=${encodeURIComponent(BAIDU_OCR_SECRET_KEY)}`;
+        const req = https.request({
+            hostname: 'aip.baidubce.com',
+            path: tokenPath,
+            method: 'GET'
+        }, (resp) => {
+            let body = '';
+            resp.on('data', chunk => {
+                body += chunk.toString();
+            });
+            resp.on('end', () => {
+                try {
+                    const data = JSON.parse(body);
+                    if (!data.access_token) {
+                        reject(new Error(data.error_description || data.error || '获取百度 access_token 失败'));
+                        return;
+                    }
+                    resolve(data.access_token);
+                } catch (err) {
+                    reject(new Error(`解析百度 token 响应失败: ${err.message}`));
+                }
+            });
+        });
+
+        req.on('error', reject);
+        req.end();
+    });
+}
 
 const server = http.createServer((req, res) => {
     // 处理CORS
@@ -17,7 +81,45 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    if (req.method === 'POST' && req.url.startsWith('/api/aliyun')) {
+    if (req.method === 'POST' && req.url.startsWith('/api/baidu-ocr')) {
+        let body = '';
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+        req.on('end', async () => {
+            try {
+                if (!BAIDU_OCR_API_KEY || !BAIDU_OCR_SECRET_KEY) {
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ error: 'Baidu OCR credentials are not configured on server' }));
+                    return;
+                }
+
+                const requestData = JSON.parse(body || '{}');
+                const image = requestData.image;
+                if (!image) {
+                    res.statusCode = 400;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ error: 'image is required' }));
+                    return;
+                }
+
+                const accessToken = await fetchBaiduAccessToken();
+                const ocrResult = await postJson(
+                    `https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic?access_token=${encodeURIComponent(accessToken)}`,
+                    { image }
+                );
+
+                res.statusCode = ocrResult.statusCode || 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(ocrResult.body);
+            } catch (error) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: `Baidu OCR proxy error: ${error.message}` }));
+            }
+        });
+    } else if (req.method === 'POST' && req.url.startsWith('/api/aliyun')) {
         let body = '';
         req.on('data', chunk => {
             body += chunk.toString();
@@ -138,4 +240,5 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}/`);
     console.log(`API proxy available at http://localhost:${PORT}/api/aliyun`);
+    console.log(`OCR proxy available at http://localhost:${PORT}/api/baidu-ocr`);
 });

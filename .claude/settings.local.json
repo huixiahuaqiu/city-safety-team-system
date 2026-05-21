@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node \"c:/Users/Admin/Desktop/Team-System/123123/proxy_server.js\")"
+    ]
+  }
+}

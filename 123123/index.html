@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -2141,7 +2141,7 @@
                             <div id="patentImagePreview" style="display: none; margin-top: 10px; text-align: center;">
                                 <img id="patentImagePreviewImg" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #e9ecef;">
                                 <div style="margin-top: 10px;">
-                                    <button class="btn" style="background: #28a745;" onclick="recognizePatentCertificate()">📷 识别并自动填充</button>
+                                    <button class="btn" style="background: #28a745;" onclick="recognizePatentCertificate(this)">📷 识别并自动填充</button>
                                     <button class="btn btn-secondary" onclick="clearPatentImage()">清除图片</button>
                                 </div>
                             </div>
@@ -7011,7 +7011,8 @@
         }
         
         // OpenAI 功能
-        const PORT = 3000; // 代理服务器端口
+        const API_PROXY = 'https://dawn-night-d7ae.1970238795.workers.dev';
+        const PORT = 3000;
         
         // 更新 API Key 显示
         function updateApiKeyDisplay() {
@@ -7349,7 +7350,7 @@
             showApiKeyStatus('正在测试API密钥...', 'info');
             
             try {
-                const localProxy = `http://localhost:3000/api/aliyun`;
+                const localProxy = `${API_PROXY}/api/aliyun`;
                 
                 const response = await fetch(localProxy, {
                     method: 'POST',
@@ -7440,7 +7441,7 @@
             
             try {
                 // 使用本地代理服务器
-                const localProxy = `http://localhost:${PORT}/api/aliyun`;
+                const localProxy = `${API_PROXY}/api/aliyun`;
                 
                 console.log('发送消息到API:', message);
                 console.log('使用本地代理:', localProxy);
@@ -7636,7 +7637,7 @@
                 console.log('🔄 正在预处理文件:', excelItem.file.name);
                 
                 // 调用 AI 进行预处理
-                const localProxy = `http://localhost:${PORT}/api/aliyun`;
+                const localProxy = `${API_PROXY}/api/aliyun`;
                 const response = await fetch(localProxy, {
                     method: 'POST',
                     headers: {
@@ -9194,7 +9195,7 @@ ${jsonDataString}
                 console.log('数据大小:', JSON.stringify(excelDataForAI).length, '字节');
                 
                 // 调用阿里云百炼 API
-                const localProxy = `http://localhost:${PORT}/api/aliyun`;
+                const localProxy = `${API_PROXY}/api/aliyun`;
                 const response = await fetch(localProxy, {
                     method: 'POST',
                     headers: {
@@ -9716,7 +9717,7 @@ ${jsonDataString}
                 if (outputExcel) outputRequirements += '【可选】4. 提供可导出为 Excel 的数据格式\n';
                 
                 // 调用阿里云百炼 API
-                const localProxy = `http://localhost:${PORT}/api/aliyun`;
+                const localProxy = `${API_PROXY}/api/aliyun`;
                 const response = await fetch(localProxy, {
                     method: 'POST',
                     headers: {
@@ -10198,11 +10199,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
 请根据以上数据生成可视化图表。如果数据量太大，请只使用样本数据进行演示。`;
 
                 // 使用本地代理（如果有的话）
-                const localProxy = `http://localhost:3000/api/aliyun`;
+                const localProxy = `${API_PROXY}/api/aliyun`;
                 
                 let response;
                 try {
-                    // 尝试使用本地代理
                     response = await fetch(localProxy, {
                         method: 'POST',
                         headers: {
@@ -11728,45 +11728,45 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('patentImagePreviewImg').src = '';
         }
         
-        async function recognizePatentCertificate() {
+        async function recognizePatentCertificate(buttonEl) {
             if (!patentImageBase64) {
                 alert('请先上传专利证书图片');
                 return;
             }
-            
-            const recognizeBtn = event.target;
+
+            const recognizeBtn = buttonEl;
             const originalText = recognizeBtn.innerHTML;
             recognizeBtn.innerHTML = '⏳ 识别中...';
             recognizeBtn.disabled = true;
-            
+
             try {
                 console.log('开始 OCR 识别...');
-                const ocrResponse = await fetch('/api/baidu-ocr', {
+                const ocrResponse = await fetch(`${API_PROXY}/api/baidu-ocr`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ image: patentImageBase64 })
                 });
-                
+
                 console.log('OCR 响应状态:', ocrResponse.status);
                 if (!ocrResponse.ok) {
                     const errText = await ocrResponse.text();
                     console.error('OCR 错误:', errText);
                     throw new Error('OCR 识别失败: ' + ocrResponse.status);
                 }
-                
+
                 const ocrData = await ocrResponse.json();
                 console.log('OCR 返回数据:', JSON.stringify(ocrData).substring(0, 500));
-                
+
                 if (ocrData.words_result && ocrData.words_result.length > 0) {
                     const ocrText = ocrData.words_result.map(item => item.words).join('\n');
                     console.log('OCR 提取文本:', ocrText);
-                    
+
                     recognizeBtn.innerHTML = '🤖 AI 提取字段中...';
-                    
+
                     const apiKey = 'sk-997a88dd8f274103a2e3d427bf29a873';
-                    
+
                     console.log('开始调用 AI 提取字段...');
-                    const aiResponse = await fetch('/api/aliyun', {
+                    const aiResponse = await fetch(`${API_PROXY}/api/aliyun`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -11791,29 +11791,29 @@ ${ocrText}`
                             max_tokens: 500
                         })
                     });
-                    
+
                     console.log('AI 响应状态:', aiResponse.status);
                     const aiResponseText = await aiResponse.text();
                     console.log('AI 返回内容:', aiResponseText.substring(0, 1000));
-                    
+
                     if (!aiResponse.ok) {
                         throw new Error('AI 字段提取失败 (HTTP ' + aiResponse.status + '): ' + aiResponseText);
                     }
-                    
+
                     const aiData = JSON.parse(aiResponseText);
-                    
+
                     if (aiData.error) {
                         throw new Error('AI 错误: ' + aiData.error.message);
                     }
-                    
+
                     const aiContent = aiData.choices[0].message.content;
                     console.log('AI 提取内容:', aiContent);
-                    
+
                     const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
                         const extractedData = JSON.parse(jsonMatch[0]);
                         console.log('提取的字段数据:', extractedData);
-                        
+
                         if (extractedData.name) document.getElementById('patentMgmtName').value = extractedData.name;
                         if (extractedData.patentNumber) document.getElementById('patentMgmtPatentNumber').value = extractedData.patentNumber;
                         if (extractedData.applicant) document.getElementById('patentMgmtApplicant').value = extractedData.applicant;
@@ -11823,7 +11823,7 @@ ${ocrText}`
                             document.getElementById('patentMgmtApplicationDate').value = dateStr;
                         }
                         if (extractedData.summary) document.getElementById('patentMgmtSummary').value = extractedData.summary;
-                        
+
                         alert('识别成功！请检查并确认自动填充的信息。');
                     } else {
                         alert('AI 返回格式异常，请手动填写');
