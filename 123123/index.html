@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -2078,13 +2078,15 @@
                             <thead>
                                 <tr>
                                     <th style="width: 40px;"><input type="checkbox" id="patentMgmtSelectAll" onchange="togglePatentMgmtSelectAll(this)"></th>
-                                    <th onclick="sortPatentMgmtTable('year')" style="cursor: pointer;">所属年度 ⇅</th>
-                                    <th onclick="sortPatentMgmtTable('patentNumber')" style="cursor: pointer;">专利号 ⇅</th>
+                                    <th onclick="sortPatentMgmtTable('patentType')" style="cursor: pointer;">专利类型 </th>
                                     <th onclick="sortPatentMgmtTable('name')" style="cursor: pointer;">专利名称 ⇅</th>
-                                    <th onclick="sortPatentMgmtTable('classification')" style="cursor: pointer;">分类 ⇅</th>
-                                    <th onclick="sortPatentMgmtTable('applicant')" style="cursor: pointer;">申请人 </th>
-                                    <th onclick="sortPatentMgmtTable('applicationDate')" style="cursor: pointer;">申请日期 ⇅</th>
-                                    <th onclick="sortPatentMgmtTable('status')" style="cursor: pointer;">状态 </th>
+                                    <th onclick="sortPatentMgmtTable('patentNumber')" style="cursor: pointer;">专利号 ⇅</th>
+                                    <th onclick="sortPatentMgmtTable('announcementNumber')" style="cursor: pointer;">授权公告号 ⇅</th>
+                                    <th onclick="sortPatentMgmtTable('grantDate')" style="cursor: pointer;">授权日 </th>
+                                    <th onclick="sortPatentMgmtTable('applicant')" style="cursor: pointer;">申请人 ⇅</th>
+                                    <th onclick="sortPatentMgmtTable('inventor')" style="cursor: pointer;">发明人 ⇅</th>
+                                    <th onclick="sortPatentMgmtTable('classification')" style="cursor: pointer;">专利所属类别 ⇅</th>
+                                    <th onclick="sortPatentMgmtTable('status')" style="cursor: pointer;">状态 ⇅</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
@@ -2103,6 +2105,14 @@
                     <div style="background: #fff; padding: 30px; border-radius: 12px; width: 600px; max-height: 80vh; overflow-y: auto;">
                         <h3 style="margin-bottom: 20px; color: #333;" id="patentMgmtModalTitle">新增专利</h3>
                         <div class="form-group">
+                            <label>专利类型</label>
+                            <select id="patentMgmtPatentType" class="form-control">
+                                <option value="发明专利">发明专利</option>
+                                <option value="实用新型">实用新型</option>
+                                <option value="外观设计">外观设计</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label>专利名称 *</label>
                             <input type="text" id="patentMgmtName" class="form-control" placeholder="请输入专利名称">
                         </div>
@@ -2111,12 +2121,31 @@
                             <input type="text" id="patentMgmtPatentNumber" class="form-control" placeholder="如：ZL202610001234.5">
                         </div>
                         <div class="form-group">
+                            <label>授权公告号</label>
+                            <input type="text" id="patentMgmtAnnouncementNumber" class="form-control" placeholder="如：CN107000123A">
+                        </div>
+                        <div class="form-group">
+                            <label>授权日</label>
+                            <input type="date" id="patentMgmtGrantDate" class="form-control">
+                        </div>
+                        <div class="form-group">
                             <label>申请人 *</label>
                             <input type="text" id="patentMgmtApplicant" class="form-control" placeholder="请输入申请人">
                         </div>
                         <div class="form-group">
-                            <label>分类 *</label>
-                            <input type="text" id="patentMgmtClassification" class="form-control" placeholder="请输入分类">
+                            <label>发明人</label>
+                            <input type="text" id="patentMgmtInventor" class="form-control" placeholder="请输入发明人">
+                        </div>
+                        <div class="form-group">
+                            <label>专利所属类别 *</label>
+                            <select id="patentMgmtClassification" class="form-control">
+                                <option value="">请选择类别</option>
+                                <option value="能源技术">能源技术</option>
+                                <option value="人工智能">人工智能</option>
+                                <option value="城市安全">城市安全</option>
+                                <option value="土木水利">土木水利</option>
+                                <option value="其他">其他</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>申请日期 *</label>
@@ -11624,15 +11653,18 @@ ${JSON.stringify(excelDataArray, null, 2)}
         var editingPatentMgmtId = null;
         var patentMgmtSortField = '';
         var patentMgmtSortOrder = 'asc';
+        var patentPage = 1;
+        const PAGE_SIZE = 20;
         
         async function initPatentMgmtData() {
             try {
-                const data = await supabaseRequest('GET', 'patents', { select: '*', order: 'application_date.desc' });
+                const data = await supabaseRequest('GET', 'patents', { select: '*', order: 'grant_date.desc.nullslast' });
                 patentMgmtData = data || [];
             } catch (e) {
                 console.error('加载专利数据失败:', e);
                 patentMgmtData = [];
             }
+            patentPage = 1;
             filteredPatentMgmtData = [...patentMgmtData];
             updatePatentMgmtFilterCounts();
             renderPatentMgmtTable();
@@ -11645,7 +11677,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
         function updatePatentMgmtFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
             document.getElementById('patentMgmtCountAll').textContent = patentMgmtData.length;
-            document.getElementById('patentMgmtCountCurrentYear').textContent = patentMgmtData.filter(d => d.applicationDate && d.applicationDate.startsWith(currentYear)).length;
+            document.getElementById('patentMgmtCountCurrentYear').textContent = patentMgmtData.filter(d => d.application_date && d.application_date.startsWith(currentYear)).length;
             document.getElementById('patentMgmtCountReviewing').textContent = patentMgmtData.filter(d => d.status === '实质审查').length;
             document.getElementById('patentMgmtCountApproved').textContent = patentMgmtData.filter(d => d.status === '授权').length;
             document.getElementById('patentMgmtCountRejected').textContent = patentMgmtData.filter(d => d.status === '无效').length;
@@ -11660,7 +11692,13 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 return;
             }
             emptyMsg.style.display = 'none';
-            filteredPatentMgmtData.forEach(item => {
+            const totalPages = Math.ceil(filteredPatentMgmtData.length / PAGE_SIZE);
+            if (patentPage > totalPages) patentPage = totalPages;
+            if (patentPage < 1) patentPage = 1;
+            const start = (patentPage - 1) * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+            const pageData = filteredPatentMgmtData.slice(start, end);
+            pageData.forEach(item => {
                 const row = document.createElement('tr');
                 let statusClass = 'tag-warning';
                 if (item.status === '授权') statusClass = 'tag-success';
@@ -11669,12 +11707,14 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 else if (item.status === '实质审查') statusClass = 'tag-warning';
                 row.innerHTML = `
                     <td><input type="checkbox" ${selectedPatentMgmtIds.has(item.id) ? 'checked' : ''} onchange="togglePatentMgmtSelect(${item.id}, this)"></td>
-                    <td>${item.application_date ? item.application_date.substring(0, 4) : '-'}</td>
-                    <td>${item.patent_number || '-'}</td>
+                    <td>${item.patent_type || '-'}</td>
                     <td>${item.name}</td>
-                    <td>${item.classification || '-'}</td>
+                    <td>${item.patent_number || '-'}</td>
+                    <td>${item.announcement_number || '-'}</td>
+                    <td>${item.grant_date || '-'}</td>
                     <td>${item.applicant || '-'}</td>
-                    <td>${item.application_date || '-'}</td>
+                    <td>${item.inventor || '-'}</td>
+                    <td>${item.classification || '-'}</td>
                     <td><span class="tag ${statusClass}">${item.status}</span></td>
                     <td>
                         <button class="btn" style="padding: 4px 10px; font-size: 12px; margin-right: 5px;" onclick="editPatentMgmt(${item.id})">编辑</button>
@@ -11683,14 +11723,45 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 `;
                 tbody.appendChild(row);
             });
+            let paginationHtml = `<div style="display:flex;justify-content:space-between;align-items:center;padding:15px;border-top:1px solid #eee;">
+                <span style="color:#666;">共 ${filteredPatentMgmtData.length} 条，第 ${patentPage}/${totalPages} 页</span>
+                <div style="display:flex;gap:5px;align-items:center;">
+                    <button class="btn" style="padding:4px 12px;font-size:12px;${patentPage===1?'opacity:0.5;pointer-events:none':''}" onclick="changePatentPage(${patentPage-1})">上一页</button>`;
+            for (let p = 1; p <= totalPages; p++) {
+                if (totalPages > 7 && Math.abs(p - patentPage) > 2 && p !== 1 && p !== totalPages) {
+                    if (p === patentPage - 3 || p === patentPage + 3) paginationHtml += `<span style="padding:4px;">...</span>`;
+                    continue;
+                }
+                paginationHtml += `<button class="btn" style="padding:4px 12px;font-size:12px;${p===patentPage?'background:#666;':''}" onclick="changePatentPage(${p})">${p}</button>`;
+            }
+            paginationHtml += `<button class="btn" style="padding:4px 12px;font-size:12px;${patentPage===totalPages?'opacity:0.5;pointer-events:none':''}" onclick="changePatentPage(${patentPage+1})">下一页</button>
+                </div></div>`;
+            const existing = document.getElementById('patentPagination');
+            if (existing) existing.remove();
+            const paginationDiv = document.createElement('div');
+            paginationDiv.id = 'patentPagination';
+            paginationDiv.innerHTML = paginationHtml;
+            tbody.parentNode.parentNode.appendChild(paginationDiv);
+        }
+        
+        function changePatentPage(page) {
+            const totalPages = Math.ceil(filteredPatentMgmtData.length / PAGE_SIZE);
+            if (page < 1 || page > totalPages) return;
+            patentPage = page;
+            selectedPatentMgmtIds.clear();
+            renderPatentMgmtTable();
         }
         
         function showAddPatentMgmtModal() {
             editingPatentMgmtId = null;
             document.getElementById('patentMgmtModalTitle').textContent = '新增专利';
+            document.getElementById('patentMgmtPatentType').value = '发明专利';
             document.getElementById('patentMgmtName').value = '';
             document.getElementById('patentMgmtPatentNumber').value = '';
+            document.getElementById('patentMgmtAnnouncementNumber').value = '';
+            document.getElementById('patentMgmtGrantDate').value = '';
             document.getElementById('patentMgmtApplicant').value = '';
+            document.getElementById('patentMgmtInventor').value = '';
             document.getElementById('patentMgmtClassification').value = '';
             document.getElementById('patentMgmtApplicationDate').value = '';
             document.getElementById('patentMgmtStatus').value = '实质审查';
@@ -11776,9 +11847,13 @@ ${JSON.stringify(excelDataArray, null, 2)}
                                 role: 'user',
                                 content: `请从以下专利证书识别文本中提取字段，以JSON格式返回，不要其他任何内容：
 {
+  "patentType": "专利类型（如：发明专利/实用新型/外观设计）",
   "name": "专利名称",
   "patentNumber": "专利号",
+  "announcementNumber": "授权公告号",
+  "grantDate": "授权公告日（格式：YYYY-MM-DD）",
   "applicant": "申请人/专利权人",
+  "inventor": "发明人",
   "classification": "IPC分类号",
   "applicationDate": "申请日期（格式：YYYY-MM-DD）",
   "summary": "摘要（如果有）"
@@ -11814,9 +11889,16 @@ ${ocrText}`
                         const extractedData = JSON.parse(jsonMatch[0]);
                         console.log('提取的字段数据:', extractedData);
 
+                        if (extractedData.patentType) document.getElementById('patentMgmtPatentType').value = extractedData.patentType;
                         if (extractedData.name) document.getElementById('patentMgmtName').value = extractedData.name;
                         if (extractedData.patentNumber) document.getElementById('patentMgmtPatentNumber').value = extractedData.patentNumber;
+                        if (extractedData.announcementNumber) document.getElementById('patentMgmtAnnouncementNumber').value = extractedData.announcementNumber;
+                        if (extractedData.grantDate) {
+                            const grantDateStr = extractedData.grantDate.replace(/[年月]/g, '-').replace(/[日]/g, '');
+                            document.getElementById('patentMgmtGrantDate').value = grantDateStr;
+                        }
                         if (extractedData.applicant) document.getElementById('patentMgmtApplicant').value = extractedData.applicant;
+                        if (extractedData.inventor) document.getElementById('patentMgmtInventor').value = extractedData.inventor;
                         if (extractedData.classification) document.getElementById('patentMgmtClassification').value = extractedData.classification;
                         if (extractedData.applicationDate) {
                             const dateStr = extractedData.applicationDate.replace(/[年月]/g, '-').replace(/[日]/g, '');
@@ -11841,18 +11923,22 @@ ${ocrText}`
         }
         
         async function savePatentMgmt() {
+            const patentType = document.getElementById('patentMgmtPatentType').value;
             const name = document.getElementById('patentMgmtName').value.trim();
             const patentNumber = document.getElementById('patentMgmtPatentNumber').value.trim();
+            const announcementNumber = document.getElementById('patentMgmtAnnouncementNumber').value.trim();
+            const grantDate = document.getElementById('patentMgmtGrantDate').value;
             const applicant = document.getElementById('patentMgmtApplicant').value.trim();
+            const inventor = document.getElementById('patentMgmtInventor').value.trim();
             const classification = document.getElementById('patentMgmtClassification').value;
             const applicationDate = document.getElementById('patentMgmtApplicationDate').value;
             const status = document.getElementById('patentMgmtStatus').value;
             const summary = document.getElementById('patentMgmtSummary').value.trim();
-            if (!name || !patentNumber || !applicant || !classification || !applicationDate) {
+            if (!patentType || !name || !patentNumber || !applicant || !classification || !applicationDate) {
                 alert('请填写所有必填字段');
                 return;
             }
-            const record = { name, patent_number: patentNumber, applicant, classification, application_date: applicationDate, status, summary };
+            const record = { patent_type: patentType, name, patent_number: patentNumber, announcement_number: announcementNumber || null, grant_date: grantDate || null, applicant, inventor: inventor || null, classification, application_date: applicationDate, status, summary };
             try {
                 if (editingPatentMgmtId) {
                     await supabaseRequest('PATCH', 'patents?id=eq.' + editingPatentMgmtId, record);
@@ -11873,10 +11959,14 @@ ${ocrText}`
             if (!item) return;
             editingPatentMgmtId = id;
             document.getElementById('patentMgmtModalTitle').textContent = '编辑专利';
+            document.getElementById('patentMgmtPatentType').value = item.patent_type || '发明专利';
             document.getElementById('patentMgmtName').value = item.name;
             document.getElementById('patentMgmtPatentNumber').value = item.patent_number;
+            document.getElementById('patentMgmtAnnouncementNumber').value = item.announcement_number || '';
+            document.getElementById('patentMgmtGrantDate').value = item.grant_date || '';
             document.getElementById('patentMgmtApplicant').value = item.applicant;
-            document.getElementById('patentMgmtClassification').value = item.classification;
+            document.getElementById('patentMgmtInventor').value = item.inventor || '';
+            document.getElementById('patentMgmtClassification').value = item.classification || '';
             document.getElementById('patentMgmtApplicationDate').value = item.application_date;
             document.getElementById('patentMgmtStatus').value = item.status;
             document.getElementById('patentMgmtSummary').value = item.summary || '';
@@ -11915,11 +12005,12 @@ ${ocrText}`
             const currentYear = new Date().getFullYear().toString();
             switch(tag) {
                 case 'all': filteredPatentMgmtData = [...patentMgmtData]; break;
-                case 'current_year': filteredPatentMgmtData = patentMgmtData.filter(d => d.applicationDate && d.applicationDate.startsWith(currentYear)); break;
+                case 'current_year': filteredPatentMgmtData = patentMgmtData.filter(d => d.application_date && d.application_date.startsWith(currentYear)); break;
                 case 'reviewing': filteredPatentMgmtData = patentMgmtData.filter(d => d.status === '实质审查'); break;
                 case 'approved': filteredPatentMgmtData = patentMgmtData.filter(d => d.status === '授权'); break;
                 case 'rejected': filteredPatentMgmtData = patentMgmtData.filter(d => d.status === '无效'); break;
             }
+            patentPage = 1;
             renderPatentMgmtTable();
         }
         
@@ -11948,6 +12039,7 @@ ${ocrText}`
                 if (dateTo && (!d.application_date || d.application_date > dateTo)) return false;
                 return true;
             });
+            patentPage = 1;
             renderPatentMgmtTable();
         }
         
@@ -11964,6 +12056,7 @@ ${ocrText}`
             document.querySelectorAll('#patentMgmtFilterTags .filter-tag').forEach(t => t.classList.remove('active'));
             document.querySelector('#patentMgmtFilterTags .filter-tag').classList.add('active');
             filteredPatentMgmtData = [...patentMgmtData];
+            patentPage = 1;
             renderPatentMgmtTable();
         }
         
@@ -11975,7 +12068,7 @@ ${ocrText}`
                 patentMgmtSortOrder = 'asc';
             }
             filteredPatentMgmtData.sort((a, b) => {
-                const fieldMap = { patentNumber: 'patent_number', applicationDate: 'application_date' };
+                const fieldMap = { patentNumber: 'patent_number', applicationDate: 'application_date', grantDate: 'grant_date', announcementNumber: 'announcement_number', patentType: 'patent_type', inventor: 'inventor' };
                 const mappedField = fieldMap[field] || field;
                 let valA = a[mappedField] || '';
                 let valB = b[mappedField] || '';
@@ -12038,9 +12131,9 @@ ${ocrText}`
         
         function exportPatentMgmt() {
             if (filteredPatentMgmtData.length === 0) { alert('没有可导出的数据'); return; }
-            let csv = '\ufeff所属年度,专利号,专利名称,分类,申请人,申请日期,状态\n';
+            let csv = '\ufeff专利类型,专利名称,专利号,授权公告号,授权日,申请人,发明人,专利所属类别,状态\n';
             filteredPatentMgmtData.forEach(d => {
-                csv += `${d.application_date ? d.application_date.substring(0,4) : ''},${d.patent_number},${d.name},${d.classification},${d.applicant},${d.application_date},${d.status}\n`;
+                csv += `${d.patent_type || ''},${d.name},${d.patent_number},${d.announcement_number || ''},${d.grant_date || ''},${d.applicant || ''},${d.inventor || ''},${d.classification || ''},${d.status}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -12063,9 +12156,9 @@ ${ocrText}`
                     let count = 0;
                     for (let i = 1; i < lines.length; i++) {
                         const cols = lines[i].split(',');
-                        if (cols.length >= 7) {
+                        if (cols.length >= 9) {
                             const newId = patentMgmtData.length > 0 ? Math.max(...patentMgmtData.map(d => d.id)) + 1 : 1;
-                            await supabaseRequest('POST', 'patents', { name: cols[2] || '', patent_number: cols[1] || '', classification: cols[3] || '', applicant: cols[4] || '', application_date: cols[5] || '', status: cols[6] || '实质审查', summary: '', remark: '' });
+                            await supabaseRequest('POST', 'patents', { patent_type: cols[0] || '', name: cols[1] || '', patent_number: cols[2] || '', announcement_number: cols[3] || null, grant_date: cols[4] || null, applicant: cols[5] || '', inventor: cols[6] || null, classification: cols[7] || '', status: cols[8] || '实质审查', application_date: cols.length > 9 ? (cols[9] || null) : null, summary: '', remark: '' });
                             count++;
                         }
                     }
