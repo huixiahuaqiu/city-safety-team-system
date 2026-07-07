@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -4760,25 +4760,55 @@
 
                     <!-- 标签页3: 账号导入 -->
                     <div id="accountTab_accountImport" class="account-tab-content" style="display:none;">
-                        <div style="max-width:700px;">
+                        <div style="max-width:800px;">
                             <h3 style="margin-bottom:16px;">批量导入账号</h3>
                             <div style="background:#f5f5f5; padding:16px; border-radius:8px; margin-bottom:16px;">
-                                <h4 style="margin-bottom:8px;">CSV 文件格式说明</h4>
-                                <p style="font-size:13px; color:#666; margin-bottom:8px;">第一行为表头，后续每行为一个账号。字段顺序：</p>
-                                <code style="background:#e8e8e8; padding:4px 8px; border-radius:4px; font-size:12px;">用户名, 姓名, 角色(admin/leader/student/visitor), 所属小组, 邮箱</code>
-                                <p style="font-size:13px; color:#666; margin-top:8px;">示例：</p>
-                                <code style="background:#e8e8e8; padding:4px 8px; border-radius:4px; font-size:12px; display:block; white-space:pre;">username,张三,student,第一小组,zhang@example.com
-lisi,李四,leader,第一小组,li@example.com</code>
+                                <h4 style="margin-bottom:8px;">📋 导入文件格式说明</h4>
+                                <p style="font-size:13px; color:#666; margin-bottom:8px;">支持 <strong>CSV</strong> 和 <strong>Excel (.xlsx/.xls)</strong> 文件，第一行为表头。</p>
+                                <div style="background:#e8e8e8; padding:12px; border-radius:4px; font-size:12px; margin-bottom:8px;">
+                                    <strong>字段顺序（共8列）：</strong><br>
+                                    学号(必填), 姓名(必填), 角色(必填), 所属小组, 年级, 研究方向, 手机号, 邮箱
+                                </div>
+                                <div style="background:#e8e8e8; padding:12px; border-radius:4px; font-size:12px; margin-bottom:8px;">
+                                    <strong>角色可选值：</strong> admin(超级管理员), leader(小组组长), student(研究生), visitor(访客)
+                                </div>
+                                <div style="background:#e8e8e8; padding:12px; border-radius:4px; font-size:12px;">
+                                    <strong>示例数据：</strong><br>
+                                    2025001,张三,student,第一小组,2025级,深度学习,13800001001,zhangsan@university.edu.cn<br>
+                                    2025002,李四,student,第二小组,2025级,计算机视觉,13800001002,lisi@university.edu.cn
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>选择 CSV 文件</label>
-                                <input type="file" id="accountImportFile" accept=".csv" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            <div style="display:flex;gap:12px;margin-bottom:16px;">
+                                <button class="btn btn-secondary" onclick="downloadImportTemplate()">📥 下载导入模板</button>
+                                <button class="btn btn-secondary" onclick="document.getElementById('accountImportFile').click()">📁 选择文件</button>
+                                <input type="file" id="accountImportFile" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleImportFileSelect()">
                             </div>
-                            <div class="form-group">
-                                <label>统一初始密码</label>
-                                <input type="password" id="accountImportPassword" placeholder="为所有导入账号设置初始密码" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            <div class="form-group" style="margin-bottom:16px;">
+                                <label>统一初始密码 <span style="color:red;">*</span></label>
+                                <input type="password" id="accountImportPassword" placeholder="为所有导入账号设置初始密码（默认：123456）" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
                             </div>
-                            <button class="btn" onclick="handleAccountImport()">开始导入</button>
+                            <div id="importPreviewArea" style="display:none;">
+                                <h4 style="margin-bottom:12px;">🔍 导入预览（前10条）</h4>
+                                <div style="background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+                                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                        <thead>
+                                            <tr style="background:#f5f5f5;">
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">学号</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">姓名</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">角色</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">小组</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">年级</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">状态</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="importPreviewTable"></tbody>
+                                    </table>
+                                </div>
+                                <div style="display:flex;gap:12px;">
+                                    <button class="btn" onclick="confirmAccountImport()">✅ 确认导入</button>
+                                    <button class="btn btn-secondary" onclick="clearImportPreview()">❌ 取消</button>
+                                </div>
+                            </div>
                             <div id="accountImportResult" style="margin-top:16px;"></div>
                         </div>
                     </div>
@@ -15523,7 +15553,9 @@ ${ocrText}`
 
     function createAccountModal(title, account) {
         const isEdit = !!account;
+        const modalId = 'accountModal_' + Date.now();
         const div = document.createElement('div');
+        div.id = modalId;
         div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;';
         div.innerHTML = `
             <div style="background:#fff;border-radius:12px;padding:28px;width:500px;max-width:90vw;max-height:85vh;overflow-y:auto;">
@@ -15580,8 +15612,8 @@ ${ocrText}`
                 </div>
                 ${!isEdit ? `<div style="background:#f5f5f5;padding:10px;border-radius:6px;font-size:13px;color:#666;margin-bottom:16px;">新账号将自动生成默认密码：<strong>${DEFAULT_PASSWORD}</strong>，首次登录需修改密码</div>` : ''}
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
-                    <button class="btn btn-secondary" onclick="this.closest('div[style*=\"z-index:5000\"]').remove()">取消</button>
-                    <button class="btn" onclick="saveAccountFromModal(${isEdit ? account.id : 'null'})">${isEdit ? '保存修改' : '创建账号'}</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
+                    <button class="btn" onclick="saveAccountFromModal(${isEdit ? account.id : 'null'}, '${modalId}')">${isEdit ? '保存修改' : '创建账号'}</button>
                 </div>
             </div>`;
         return div;
@@ -15598,7 +15630,7 @@ ${ocrText}`
         document.getElementById('regGroupField').style.display = role === 'admin' ? 'none' : '';
     }
 
-    function saveAccountFromModal(editId) {
+    function saveAccountFromModal(editId, modalId) {
         const studentId = document.getElementById('modalStudentId').value.trim();
         const realName = document.getElementById('modalRealName').value.trim();
         const role = document.getElementById('modalRole').value;
@@ -15634,7 +15666,11 @@ ${ocrText}`
             });
         }
         saveAccountData();
-        document.querySelector('div[style*="z-index:5000"]')?.remove();
+        if (modalId) {
+            document.getElementById(modalId)?.remove();
+        } else {
+            document.querySelector('div[style*="z-index:5000"]')?.remove();
+        }
         renderAccountTable();
         alert(editId ? '账号已更新' : `账号创建成功！\n学号：${studentId}\n初始密码：${DEFAULT_PASSWORD}\n首次登录需修改密码`);
     }
@@ -15682,7 +15718,9 @@ ${ocrText}`
     function showLoginLogModal(studentId) {
         const logs = loginLogData.filter(l => l.studentId === studentId).slice(-20).reverse();
         const account = accountData.find(a => a.studentId === studentId);
+        const modalId = 'loginLogModal_' + Date.now();
         const div = document.createElement('div');
+        div.id = modalId;
         div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;';
         div.innerHTML = `
             <div style="background:#fff;border-radius:12px;padding:28px;width:560px;max-width:90vw;max-height:70vh;overflow-y:auto;">
@@ -15693,7 +15731,7 @@ ${ocrText}`
                     <tbody>${logs.map(l => `<tr><td>${escHtml(l.loginTime)}</td><td>${escHtml(l.ip)}</td><td>${escHtml(l.result)}</td></tr>`).join('')}</tbody>
                 </table>`}
                 <div style="display:flex;justify-content:flex-end;margin-top:16px;">
-                    <button class="btn btn-secondary" onclick="this.closest('div[style*=\"z-index:5000\"]').remove()">关闭</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">关闭</button>
                 </div>
             </div>`;
         document.body.appendChild(div);
@@ -15745,53 +15783,203 @@ ${ocrText}`
     }
 
     // ===== 6. 批量导入 =====
+    let importPreviewData = [];
+
     function downloadImportTemplate() {
-        const csv = '\ufeff学号,姓名,年级,研究方向,手机号,邮箱\n2024001,张三,2024级,城市安全,13800138000,zhang@example.com\n2024002,李四,2024级,智能监控,13900139000,li@example.com';
+        const csv = '\ufeff学号,姓名,角色,所属小组,年级,研究方向,手机号,邮箱\n2025001,张三,student,第一小组,2025级,深度学习,13800001001,zhangsan@university.edu.cn\n2025002,李四,student,第二小组,2025级,计算机视觉,13800001002,lisi@university.edu.cn\n2025003,王五,leader,第一小组,2024级,数据挖掘,13800001003,wangwu@university.edu.cn';
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = '账号导入模板.csv'; a.click();
         URL.revokeObjectURL(url);
     }
 
-    function handleAccountImport() {
-        if (currentUser && currentUser.role !== 'admin') { alert('只有导师可以导入账号'); return; }
+    function handleImportFileSelect() {
         const fileInput = document.getElementById('accountImportFile');
         const resultDiv = document.getElementById('accountImportResult');
-        if (!fileInput.files[0]) { alert('请选择文件'); return; }
+        if (!fileInput.files[0]) return;
 
+        const fileName = fileInput.files[0].name.toLowerCase();
+        resultDiv.innerHTML = '';
+
+        if (fileName.endsWith('.csv')) {
+            parseCSVFile(fileInput.files[0]);
+        } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+            parseExcelFile(fileInput.files[0]);
+        } else {
+            resultDiv.innerHTML = '<div style="color:#e53935;">不支持的文件格式，请选择 CSV 或 Excel 文件</div>';
+        }
+    }
+
+    function parseCSVFile(file) {
         const reader = new FileReader();
         reader.onload = function(e) {
             const text = e.target.result;
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-            if (lines.length < 2) { resultDiv.innerHTML = '<div style="color:#e53935;">文件为空或格式不正确</div>'; return; }
-
-            let success = 0, failed = 0;
-            const errors = [];
-            for (let i = 1; i < lines.length; i++) {
-                const cols = parseCSVLine(lines[i]);
-                if (cols.length < 2) { failed++; errors.push(`第${i+1}行：字段不足`); continue; }
-                const [studentId, realName, grade, research, phone, email] = cols.map(c => (c || '').trim().replace(/^"|"$/g, ''));
-                if (!studentId || !realName) { failed++; errors.push(`第${i+1}行：学号或姓名为空`); continue; }
-                if (accountData.find(a => a.studentId === studentId)) { failed++; errors.push(`第${i+1}行：学号已存在(${studentId})`); continue; }
-
-                const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
-                accountData.push({
-                    id: newId, studentId, realName, role: 'student',
-                    group: '', grade: grade || '', research: research || '', phone: phone || '', email: email || '',
-                    status: 'active', password: DEFAULT_PASSWORD,
-                    mustChangePwd: true, firstLogin: true,
-                    lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
-                    loginFailCount: 0, lockedUntil: null, avatar: ''
-                });
-                success++;
+            if (lines.length < 2) {
+                document.getElementById('accountImportResult').innerHTML = '<div style="color:#e53935;">文件为空或格式不正确</div>';
+                return;
             }
-            saveAccountData();
-            let html = `<div style="padding:12px;background:#e8f5e9;border-radius:6px;color:#2e7d32;">导入完成：成功 ${success} 条，失败 ${failed} 条<br>所有账号初始密码为 <strong>${DEFAULT_PASSWORD}</strong>，首次登录需修改密码</div>`;
-            if (errors.length > 0) html += '<div style="margin-top:8px;font-size:13px;color:#e53935;max-height:200px;overflow-y:auto;">失败详情：<br>' + errors.join('<br>') + '</div>';
-            resultDiv.innerHTML = html;
-            fileInput.value = '';
+            processImportData(lines);
         };
-        reader.readAsText(fileInput.files[0], 'UTF-8');
+        reader.readAsText(file, 'UTF-8');
+    }
+
+    function parseExcelFile(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                const lines = jsonData.map(row => row.join(','));
+                if (lines.length < 2) {
+                    document.getElementById('accountImportResult').innerHTML = '<div style="color:#e53935;">文件为空或格式不正确</div>';
+                    return;
+                }
+                processImportData(lines);
+            } catch (error) {
+                document.getElementById('accountImportResult').innerHTML = '<div style="color:#e53935;">Excel 文件解析失败：' + error.message + '</div>';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function processImportData(lines) {
+        importPreviewData = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cols = parseCSVLine(lines[i]);
+            const [studentId, realName, role, group, grade, research, phone, email] = cols.map(c => (c || '').trim().replace(/^"|"$/g, ''));
+            
+            let status = '✅ 正常';
+            let errorMsg = '';
+            
+            if (!studentId || !realName) {
+                status = '❌ 学号或姓名为空';
+                errorMsg = '学号或姓名不能为空';
+            } else if (accountData.find(a => a.studentId === studentId)) {
+                status = '❌ 学号已存在';
+                errorMsg = '学号已存在';
+            } else if (!role || !['admin', 'leader', 'student', 'visitor'].includes(role)) {
+                status = '⚠️ 角色无效';
+                errorMsg = '角色无效，将默认设为student';
+            }
+            
+            importPreviewData.push({
+                rowNum: i + 1,
+                studentId,
+                realName,
+                role: role && ['admin', 'leader', 'student', 'visitor'].includes(role) ? role : 'student',
+                group: group || '',
+                grade: grade || '',
+                research: research || '',
+                phone: phone || '',
+                email: email || '',
+                status,
+                errorMsg
+            });
+        }
+        renderImportPreview();
+    }
+
+    function renderImportPreview() {
+        const previewTable = document.getElementById('importPreviewTable');
+        const previewArea = document.getElementById('importPreviewArea');
+        
+        const validCount = importPreviewData.filter(d => !d.errorMsg || d.errorMsg === '角色无效，将默认设为student').length;
+        const errorCount = importPreviewData.filter(d => d.errorMsg && d.errorMsg !== '角色无效，将默认设为student').length;
+        
+        let html = '';
+        importPreviewData.slice(0, 10).forEach(item => {
+            const statusColor = item.status.includes('❌') ? 'color:#e53935;' : item.status.includes('⚠️') ? 'color:#f57c00;' : 'color:#2e7d32;';
+            html += `<tr>
+                <td style="padding:8px;border-bottom:1px solid #eee;">${escHtml(item.studentId)}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;">${escHtml(item.realName)}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;">${escHtml(ROLE_LABELS[item.role] || item.role)}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;">${escHtml(item.group)}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;">${escHtml(item.grade)}</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;${statusColor}">${item.status}</td>
+            </tr>`;
+        });
+        
+        if (importPreviewData.length > 10) {
+            html += `<tr><td colspan="6" style="padding:8px;text-align:center;color:#888;font-size:12px;">... 还有 ${importPreviewData.length - 10} 条记录</td></tr>`;
+        }
+        
+        previewTable.innerHTML = html;
+        previewArea.style.display = 'block';
+        
+        const resultDiv = document.getElementById('accountImportResult');
+        resultDiv.innerHTML = `<div style="padding:12px;background:#f3e5f5;border-radius:6px;color:#6a1b9a;">共读取 ${importPreviewData.length} 条记录，其中 ${validCount} 条有效，${errorCount} 条无效</div>`;
+    }
+
+    function clearImportPreview() {
+        document.getElementById('importPreviewArea').style.display = 'none';
+        document.getElementById('accountImportResult').innerHTML = '';
+        document.getElementById('accountImportFile').value = '';
+        importPreviewData = [];
+    }
+
+    function confirmAccountImport() {
+        if (currentUser && currentUser.role !== 'admin') { alert('只有导师可以导入账号'); return; }
+        
+        const passwordInput = document.getElementById('accountImportPassword');
+        const password = passwordInput.value.trim() || DEFAULT_PASSWORD;
+        
+        let success = 0, failed = 0;
+        const errors = [];
+        
+        importPreviewData.forEach(item => {
+            if (item.errorMsg && item.errorMsg !== '角色无效，将默认设为student') {
+                failed++;
+                errors.push(`第${item.rowNum}行：${item.errorMsg}`);
+                return;
+            }
+            
+            if (accountData.find(a => a.studentId === item.studentId)) {
+                failed++;
+                errors.push(`第${item.rowNum}行：学号已存在(${item.studentId})`);
+                return;
+            }
+            
+            const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
+            accountData.push({
+                id: newId,
+                studentId: item.studentId,
+                realName: item.realName,
+                role: item.role,
+                group: item.group,
+                grade: item.grade,
+                research: item.research,
+                phone: item.phone,
+                email: item.email,
+                status: 'active',
+                password: password,
+                mustChangePwd: true,
+                firstLogin: true,
+                lastLogin: '',
+                lastLoginIp: '',
+                createdAt: new Date().toISOString().split('T')[0],
+                loginFailCount: 0,
+                lockedUntil: null,
+                avatar: ''
+            });
+            success++;
+        });
+        
+        saveAccountData();
+        
+        const resultDiv = document.getElementById('accountImportResult');
+        let html = `<div style="padding:12px;background:#e8f5e9;border-radius:6px;color:#2e7d32;">导入完成：成功 ${success} 条，失败 ${failed} 条<br>所有账号初始密码为 <strong>${password}</strong>，首次登录需修改密码</div>`;
+        if (errors.length > 0) {
+            html += '<div style="margin-top:8px;font-size:13px;color:#e53935;max-height:200px;overflow-y:auto;">失败详情：<br>' + errors.join('<br>') + '</div>';
+        }
+        resultDiv.innerHTML = html;
+        
+        clearImportPreview();
+        passwordInput.value = '';
+        renderAccountTable();
     }
 
     // ===== 7. 密码管理 =====
