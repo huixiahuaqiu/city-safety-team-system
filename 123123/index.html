@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -1575,7 +1575,11 @@
                 <button class="btn btn-primary" onclick="handleLogin()" style="width: 100%; padding: 12px;">登录</button>
             </div>
             <div class="login-footer">
-                <p style="font-size: 12px; color: #888; margin-top: 16px;">默认账号：admin / 123456</p>
+                <div style="font-size: 12px; color: #aaa; margin-top: 16px; line-height: 1.8;">
+                    <p style="margin: 0 0 6px; color: #ccc;">测试账号（密码均为 123456）：</p>
+                    <p style="margin: 0;">导师：admin &nbsp;|&nbsp; 组长：leader01</p>
+                    <p style="margin: 0;">学生：stu001 / stu002 &nbsp;|&nbsp; 访客：visitor01</p>
+                </div>
             </div>
         </div>
     </div>
@@ -12077,7 +12081,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
         }
         
         function getApiKey() {
-            return localStorage.getItem('aliyunApiKey') || '';
+            return localStorage.getItem('openaiApiKey') || localStorage.getItem('aliyunApiKey') || '';
         }
 
         function showImportMembersModal() {
@@ -14464,17 +14468,31 @@ ${ocrText}`
 
     function initAccountSystem() {
         accountData = JSON.parse(localStorage.getItem('accountData') || 'null');
-        if (!accountData) {
-            accountData = [{
-                id: 1, studentId: 'admin', realName: '张教授', role: 'admin',
-                group: '', grade: '', research: '', phone: '', email: 'zhang@university.edu.cn',
-                status: 'active', password: DEFAULT_PASSWORD,
-                mustChangePwd: false, firstLogin: false,
-                lastLogin: '', lastLoginIp: '127.0.0.1', createdAt: '2026-01-01',
-                loginFailCount: 0, lockedUntil: null, avatar: ''
-            }];
-            saveAccountData();
-        }
+
+        // 确保 5 个默认账号始终存在（兼容旧缓存）
+        const defaults = [
+            { id: 1, studentId: 'admin', realName: '张教授', role: 'admin', group: '', grade: '', research: '城市安全智能监控', phone: '13800001001', email: 'zhang@university.edu.cn', mustChangePwd: false, firstLogin: false },
+            { id: 2, studentId: 'leader01', realName: '王师兄', role: 'leader', group: '第一小组', grade: '2024级', research: '多源数据融合分析', phone: '13800001002', email: 'wang@university.edu.cn', mustChangePwd: true, firstLogin: true },
+            { id: 3, studentId: 'stu001', realName: '李明', role: 'student', group: '第一小组', grade: '2025级', research: '深度学习目标检测', phone: '13800001003', email: 'liming@university.edu.cn', mustChangePwd: true, firstLogin: true },
+            { id: 4, studentId: 'stu002', realName: '赵芳', role: 'student', group: '第二小组', grade: '2025级', research: '自然语言处理', phone: '13800001004', email: 'zhaofang@university.edu.cn', mustChangePwd: true, firstLogin: true },
+            { id: 5, studentId: 'visitor01', realName: '陈交换生', role: 'visitor', group: '', grade: '', research: '', phone: '', email: 'chen@other.edu.cn', mustChangePwd: true, firstLogin: true }
+        ];
+
+        if (!accountData) { accountData = []; }
+        let changed = false;
+        defaults.forEach(def => {
+            if (!accountData.find(a => a.studentId === def.studentId)) {
+                const maxId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) : 0;
+                accountData.push({
+                    ...def, id: Math.max(def.id, maxId + 1),
+                    status: 'active', password: DEFAULT_PASSWORD,
+                    lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
+                    loginFailCount: 0, lockedUntil: null, avatar: ''
+                });
+                changed = true;
+            }
+        });
+        if (changed) saveAccountData();
         loginLogData = JSON.parse(localStorage.getItem('loginLogData') || '[]');
         permissionMatrix = JSON.parse(localStorage.getItem('permissionMatrix') || 'null');
         if (!permissionMatrix) { permissionMatrix = JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS)); savePermissionData(); }
