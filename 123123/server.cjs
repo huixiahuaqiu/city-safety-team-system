@@ -1,9 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const mammoth = require('mammoth');
-const { createRequire } = require('module');
-const require2 = createRequire(__filename);
-const pdfParse = require2('pdf-parse');
+const pdfParse = require('pdf-parse');
 
 const app = express();
 const PORT = 3000;
@@ -35,23 +33,39 @@ async function getBaiduOcrToken() {
     throw new Error('Failed to get Baidu OCR token: ' + JSON.stringify(data));
 }
 
-async function extractTextFromDocx(buffer) {
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value;
+async function extractFromDocx(buffer) {
+    const images = [];
+    const result = await mammoth.convertToHtml({ buffer }, {
+        convertImage: mammoth.images.imgElement(function(image) {
+            return image.read().then(function(buffer) {
+                const base64 = buffer.toString('base64');
+                const mimeType = image.contentType || 'image/png';
+                const dataUrl = `data:${mimeType};base64,${base64}`;
+                images.push(dataUrl);
+                return { src: dataUrl };
+            });
+        })
+    });
+    const text = result.value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    return { text, images };
 }
 
-async function extractTextFromPdf(buffer) {
+async function extractFromPdf(buffer) {
+    const images = [];
     const data = await pdfParse(buffer);
-    return data.text;
+    const text = data.text;
+    return { text, images };
 }
 
-async function extractMembersWithAI(text, apiKey) {
+async function extractMembersWithAI(text, apiKey, imageCount) {
     const prompt = `你是一个专业的个人信息提取助手。请仔细分析以下文档内容，提取其中包含的人员信息。
 
 文档可能是：
 1. 团队成员列表（包含多人信息）
 2. 个人简历（只包含一人信息）
 3. 其他类型文档
+
+文档中可能包含 ${imageCount} 张图片。请识别每个成员对应的头像图片。
 
 请识别文档中的人员信息并返回严格的 JSON 数组格式。
 
@@ -69,6 +83,7 @@ async function extractMembersWithAI(text, apiKey) {
 - projects: 主持/参与项目（可选）
 - awards: 获奖情况（可选）
 - bio: 个人简介（可选，简短描述）
+- avatarImageIndex: 头像图片索引（可选，整数，从 0 开始，表示文档中提取的第几张图片是该成员的头像，如果无法确定则返回 -1）
 
 提取规则：
 1. 如果是个人简历，提取该人的信息
@@ -76,6 +91,7 @@ async function extractMembersWithAI(text, apiKey) {
 3. 如果文档中没有明确的人员信息，返回空数组 []
 4. 不要凭空捏造信息，只提取文档中明确提到的内容
 5. category 字段必须从以下值中选择："advisor"、"2022"、"2023"、"2024"、"2025"、"2026"
+6. 如果文档中有图片且能识别出是该成员的头像，请填写 avatarImageIndex，否则填 -1
 
 请直接返回 JSON 数组，不要有任何多余的文字或 markdown 标记。
 
@@ -166,12 +182,17 @@ app.post('/api/import-members', upload.single('file'), async (req, res) => {
         const fileBuffer = req.file.buffer;
 
         let text = '';
+        let images = [];
         if (filename.endsWith('.docx')) {
             console.log('[DEBUG] 开始解析 DOCX:', filename);
-            text = await extractTextFromDocx(fileBuffer);
+            const result = await extractFromDocx(fileBuffer);
+            text = result.text;
+            images = result.images;
         } else if (filename.endsWith('.pdf')) {
             console.log('[DEBUG] 开始解析 PDF:', filename);
-            text = await extractTextFromPdf(fileBuffer);
+            const result = await extractFromPdf(fileBuffer);
+            text = result.text;
+            images = result.images;
         } else if (filename.endsWith('.doc')) {
             return res.status(400).json({ error: '.doc 格式暂不支持，请转换为 .docx 格式后再上传' });
         } else {
@@ -179,6 +200,7 @@ app.post('/api/import-members', upload.single('file'), async (req, res) => {
         }
 
         console.log('[DEBUG] 提取到文本长度:', text.length, '字符');
+        console.log('[DEBUG] 提取到图片数量:', images.length);
         console.log('[DEBUG] 文本预览:', text.substring(0, 300));
 
         if (!text || text.trim().length === 0) {
@@ -188,7 +210,7 @@ app.post('/api/import-members', upload.single('file'), async (req, res) => {
         let members = [];
         if (req.body.apiKey && req.body.apiKey.trim()) {
             console.log('[DEBUG] 开始调用 AI 提取成员信息');
-            members = await extractMembersWithAI(text, req.body.apiKey.trim());
+            members = await extractMembersWithAI(text, req.body.apiKey.trim(), images.length);
             console.log('[DEBUG] AI 返回成员数量:', members.length);
         } else {
             return res.status(400).json({ error: '请先在系统设置中配置阿里云百炼 API Key' });
@@ -197,6 +219,7 @@ app.post('/api/import-members', upload.single('file'), async (req, res) => {
         res.json({
             success: true,
             text: text.substring(0, 2000),
+            images: images,
             members: members
         });
     } catch (error) {

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -205,6 +205,29 @@
         
         .btn-success {
             background: #28a745;
+        }
+
+        .task-status-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            background: #fff;
+            color: #666;
+            border: 1px solid #ddd;
+            transition: all 0.2s;
+        }
+
+        .task-status-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .task-status-btn.active {
+            background: #667eea;
+            color: #fff;
+            border-color: #667eea;
         }
         
         /* 表单样式 */
@@ -3953,26 +3976,426 @@
             </div>
             
             <!-- 内部任务待办 -->
-            <div id="task_management" class="module">
-                <div class="card">
-                    <h2>✅ 内部任务待办</h2>
-                    <p>团队内部任务、待办事项管理</p>
+            <div id="task_management" class="module" style="padding: 0;">
+                <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">内部任务待办</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队内部任务、待办事项管理</p>
+                        </div>
+                        <button class="btn" onclick="showAddTaskModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>➕</span> 新增任务
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="taskSearchInput" placeholder="搜索任务名称..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                                oninput="renderTaskList()">
+                        </div>
+                        <select id="taskPriorityFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderTaskList()">
+                            <option value="">全部优先级</option>
+                            <option value="high">🔴 高优先级</option>
+                            <option value="medium">🟠 中优先级</option>
+                            <option value="low">🟢 低优先级</option>
+                        </select>
+                        <select id="taskStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderTaskList()">
+                            <option value="">全部状态</option>
+                            <option value="pending">待处理</option>
+                            <option value="progress">进行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="overdue">已逾期</option>
+                        </select>
+                        <select id="taskOwnerFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderTaskList()">
+                            <option value="">全部负责人</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="statPending">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">待处理任务</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📋</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="statTodayDue">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">今日到期</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏰</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #ff4d4f;" id="statOverdue">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已逾期</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff1f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⚠️</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="statWeekCompleted">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">本周已完成</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button class="task-status-btn active" onclick="setTaskStatusFilter('')">全部</button>
+                        <button class="task-status-btn" onclick="setTaskStatusFilter('pending')">待处理</button>
+                        <button class="task-status-btn" onclick="setTaskStatusFilter('progress')">进行中</button>
+                        <button class="task-status-btn" onclick="setTaskStatusFilter('completed')">已完成</button>
+                        <button class="task-status-btn" onclick="setTaskStatusFilter('overdue')">已逾期</button>
+                    </div>
+
+                    <div id="taskBatchToolbar" style="display: none; background: #fff; padding: 16px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <span style="font-size: 14px; color: #666; margin-right: 16px;">已选择 <span id="selectedTaskCount" style="color: #667eea; font-weight: bold;">0</span> 项</span>
+                        <button class="btn btn-secondary" onclick="batchCompleteTasks()" style="margin-right: 8px;">批量完成</button>
+                        <button class="btn btn-secondary" onclick="batchDeleteTasks()" style="margin-right: 8px;">批量删除</button>
+                        <button class="btn btn-secondary" onclick="clearTaskSelection()">取消选择</button>
+                    </div>
+
+                    <div id="taskListContainer">
+                        <div id="taskEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                            <div style="font-size: 64px; margin-bottom: 16px;">📝</div>
+                            <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无待办任务</h3>
+                            <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击下方按钮创建第一条任务</p>
+                            <button class="btn" onclick="showAddTaskModal()">➕ 新增任务</button>
+                        </div>
+                        <div id="taskList"></div>
+                        <div id="taskPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 任务详情抽屉 -->
+            <div id="taskDetailDrawer" style="display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 550px; background: #fff; box-shadow: -4px 0 20px rgba(0,0,0,0.15); z-index: 1000; overflow-y: auto;">
+                <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">任务详情</h3>
+                    <button onclick="closeTaskDetailDrawer()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                </div>
+                <div id="taskDetailContent" style="padding: 24px;"></div>
+            </div>
+            <div id="taskDetailOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="closeTaskDetailDrawer()"></div>
+
+            <!-- 新增/编辑任务弹窗 -->
+            <div id="taskModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 550px; max-height: 90vh; overflow-y: auto;">
+                    <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 id="taskModalTitle" style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">新增任务</h3>
+                        <button onclick="closeTaskModal()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div class="form-group">
+                            <label>任务标题 <span style="color:red;">*</span></label>
+                            <input type="text" id="taskTitle" placeholder="请输入任务标题" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>优先级 <span style="color:red;">*</span></label>
+                            <select id="taskPriority" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                                <option value="high">🔴 高优先级</option>
+                                <option value="medium">🟠 中优先级</option>
+                                <option value="low">🟢 低优先级</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>负责人 <span style="color:red;">*</span></label>
+                            <select id="taskOwner" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>截止时间 <span style="color:red;">*</span></label>
+                            <input type="datetime-local" id="taskDeadline" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>任务状态</label>
+                            <select id="taskStatus" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                                <option value="pending">待处理</option>
+                                <option value="progress">进行中</option>
+                                <option value="completed">已完成</option>
+                                <option value="overdue">已逾期</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>任务描述</label>
+                            <textarea id="taskDescription" rows="4" placeholder="请输入任务描述..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                            <button class="btn btn-secondary" onclick="closeTaskModal()">取消</button>
+                            <button class="btn" onclick="saveTask()">保存</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
             <!-- 团队工作周报 -->
-            <div id="weekly_report" class="module">
-                <div class="card">
-                    <h2>📅 团队工作周报</h2>
-                    <p>团队工作周报管理</p>
+            <div id="weekly_report" class="module" style="padding: 0;">
+                <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">团队工作周报</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队成员周报提交与审核管理</p>
+                        </div>
+                        <button class="btn" onclick="showAddWeeklyReportModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>✏️</span> 提交周报
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="weeklyReportSearchInput" placeholder="搜索周报内容..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                                oninput="renderWeeklyReportList()">
+                        </div>
+                        <select id="weeklyReportStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderWeeklyReportList()">
+                            <option value="">全部状态</option>
+                            <option value="pending">待审核</option>
+                            <option value="approved">已通过</option>
+                            <option value="rejected">已驳回</option>
+                        </select>
+                        <select id="weeklyReportOwnerFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderWeeklyReportList()">
+                            <option value="">全部成员</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="wrStatPending">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">待审核</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏳</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="wrStatApproved">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已通过</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #ff4d4f;" id="wrStatRejected">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已驳回</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff1f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">❌</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="wrStatSubmitted">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">本周已提交</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📊</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="weeklyReportEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📝</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无周报数据</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击下方按钮提交本周周报</p>
+                        <button class="btn" onclick="showAddWeeklyReportModal()">✏️ 提交周报</button>
+                    </div>
+                    <div id="weeklyReportList"></div>
+                    <div id="weeklyReportPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;"></div>
+                </div>
+            </div>
+
+            <!-- 周报详情抽屉 -->
+            <div id="weeklyReportDrawer" style="display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 550px; background: #fff; box-shadow: -4px 0 20px rgba(0,0,0,0.15); z-index: 1000; overflow-y: auto;">
+                <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">周报详情</h3>
+                    <button onclick="closeWeeklyReportDrawer()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                </div>
+                <div id="weeklyReportDetailContent" style="padding: 24px;"></div>
+            </div>
+            <div id="weeklyReportOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="closeWeeklyReportDrawer()"></div>
+
+            <!-- 提交/编辑周报弹窗 -->
+            <div id="weeklyReportModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                    <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 id="weeklyReportModalTitle" style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">提交周报</h3>
+                        <button onclick="closeWeeklyReportModal()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div class="form-group">
+                            <label>周报周期 <span style="color:red;">*</span></label>
+                            <input type="text" id="wrWeekRange" placeholder="例如：2026-07-06 至 2026-07-12" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>本周工作内容 <span style="color:red;">*</span></label>
+                            <textarea id="wrContent" rows="6" placeholder="请详细描述本周完成的工作内容..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>下周工作计划</label>
+                            <textarea id="wrNextWeek" rows="4" placeholder="请描述下周的工作计划..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>遇到的问题与困难</label>
+                            <textarea id="wrProblems" rows="3" placeholder="请描述工作中遇到的问题..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>备注</label>
+                            <textarea id="wrNotes" rows="2" placeholder="其他需要说明的事项..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                            <button class="btn btn-secondary" onclick="closeWeeklyReportModal()">取消</button>
+                            <button class="btn" onclick="saveWeeklyReport()">提交</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
             <!-- 内部通知发布 -->
-            <div id="notice_publish" class="module">
-                <div class="card">
-                    <h2>📝 内部通知发布</h2>
-                    <p>内部通知、公告发布管理</p>
+            <div id="notice_publish" class="module" style="padding: 0;">
+                <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">内部通知发布</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队内部通知、公告发布管理</p>
+                        </div>
+                        <button class="btn" onclick="showAddNoticeModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>📝</span> 发布通知
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="noticeSearchInput" placeholder="搜索通知标题..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                                oninput="renderNoticeList()">
+                        </div>
+                        <select id="noticeTypeFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderNoticeList()">
+                            <option value="">全部类型</option>
+                            <option value="notice">通知</option>
+                            <option value="announcement">公告</option>
+                            <option value="meeting">会议通知</option>
+                            <option value="urgent">紧急通知</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="noticeStatTotal">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">总通知数</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📋</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="noticeStatActive">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">进行中</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏰</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #ff4d4f;" id="noticeStatUrgent">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">紧急通知</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff1f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🚨</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="noticeStatExpired">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已过期</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="noticeEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📢</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无通知</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击下方按钮发布第一条通知</p>
+                        <button class="btn" onclick="showAddNoticeModal()">📝 发布通知</button>
+                    </div>
+                    <div id="noticeList"></div>
+                    <div id="noticePagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;"></div>
+                </div>
+            </div>
+
+            <!-- 通知详情抽屉 -->
+            <div id="noticeDrawer" style="display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 550px; background: #fff; box-shadow: -4px 0 20px rgba(0,0,0,0.15); z-index: 1000; overflow-y: auto;">
+                <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">通知详情</h3>
+                    <button onclick="closeNoticeDrawer()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                </div>
+                <div id="noticeDetailContent" style="padding: 24px;"></div>
+            </div>
+            <div id="noticeOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="closeNoticeDrawer()"></div>
+
+            <!-- 发布通知弹窗 -->
+            <div id="noticeModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                    <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 id="noticeModalTitle" style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">发布通知</h3>
+                        <button onclick="closeNoticeModal()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div class="form-group">
+                            <label>通知标题 <span style="color:red;">*</span></label>
+                            <input type="text" id="noticeTitle" placeholder="请输入通知标题" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>通知类型 <span style="color:red;">*</span></label>
+                            <select id="noticeType" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                                <option value="notice">📋 通知</option>
+                                <option value="announcement">📢 公告</option>
+                                <option value="meeting">📅 会议通知</option>
+                                <option value="urgent">🚨 紧急通知</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>生效时间</label>
+                            <input type="datetime-local" id="noticeStartTime" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>截止时间</label>
+                            <input type="datetime-local" id="noticeEndTime" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>通知内容 <span style="color:red;">*</span></label>
+                            <textarea id="noticeContent" rows="6" placeholder="请输入通知内容..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                            <button class="btn btn-secondary" onclick="closeNoticeModal()">取消</button>
+                            <button class="btn" onclick="saveNotice()">发布</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -3985,42 +4408,252 @@
             </div>
             
             <!-- 会议活动管理 -->
-            <div id="meeting_management" class="module">
-                <div class="card">
-                    <h2>🏢 会议活动管理</h2>
-                    <p>会议、活动管理</p>
+            <div id="meeting_management" class="module" style="padding: 0;">
+                <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">会议活动管理</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队会议、活动安排与管理</p>
+                        </div>
+                        <button class="btn" onclick="showAddMeetingModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>📅</span> 新建会议
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="meetingSearchInput" placeholder="搜索会议主题..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                                oninput="renderMeetingList()">
+                        </div>
+                        <select id="meetingStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderMeetingList()">
+                            <option value="">全部状态</option>
+                            <option value="upcoming">即将开始</option>
+                            <option value="ongoing">进行中</option>
+                            <option value="completed">已结束</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="meetingStatTotal">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">总会议数</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📅</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="meetingStatUpcoming">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">即将开始</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏰</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #1890ff;" id="meetingStatOngoing">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">进行中</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #e6f7ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🔄</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="meetingStatCompleted">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已结束</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="meetingEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">🏢</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无会议安排</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击下方按钮创建新会议</p>
+                        <button class="btn" onclick="showAddMeetingModal()">📅 新建会议</button>
+                    </div>
+                    <div id="meetingList"></div>
+                    <div id="meetingPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;"></div>
+                </div>
+            </div>
+
+            <!-- 会议详情抽屉 -->
+            <div id="meetingDrawer" style="display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 550px; background: #fff; box-shadow: -4px 0 20px rgba(0,0,0,0.15); z-index: 1000; overflow-y: auto;">
+                <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">会议详情</h3>
+                    <button onclick="closeMeetingDrawer()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                </div>
+                <div id="meetingDetailContent" style="padding: 24px;"></div>
+            </div>
+            <div id="meetingOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="closeMeetingDrawer()"></div>
+
+            <!-- 新建会议弹窗 -->
+            <div id="meetingModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                    <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 id="meetingModalTitle" style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">新建会议</h3>
+                        <button onclick="closeMeetingModal()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div class="form-group">
+                            <label>会议主题 <span style="color:red;">*</span></label>
+                            <input type="text" id="meetingTitle" placeholder="请输入会议主题" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>会议地点</label>
+                            <input type="text" id="meetingLocation" placeholder="请输入会议地点" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>开始时间 <span style="color:red;">*</span></label>
+                            <input type="datetime-local" id="meetingStartTime" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>结束时间 <span style="color:red;">*</span></label>
+                            <input type="datetime-local" id="meetingEndTime" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>参会人员</label>
+                            <input type="text" id="meetingParticipants" placeholder="请输入参会人员，用逗号分隔" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
+                            <label>会议议程</label>
+                            <textarea id="meetingAgenda" rows="4" placeholder="请输入会议议程..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>备注</label>
+                            <textarea id="meetingNotes" rows="2" placeholder="其他需要说明的事项..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                            <button class="btn btn-secondary" onclick="closeMeetingModal()">取消</button>
+                            <button class="btn" onclick="saveMeeting()">创建</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
             <!-- 文献资料库 -->
-            <div id="literature_library" class="module">
-                <div class="card">
-                    <h2>📚 文献资料库</h2>
-                    <p>文献资料管理</p>
+            <!-- 文献资料库 -->
+            <div id="literature_library" class="module" style="padding: 0;">
+                <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📚 文献资料库</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队文献资料收集与管理</p>
+                        </div>
+                        <button class="btn" onclick="showAddLiteratureModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>📥</span> 添加文献
+                        </button>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <input type="text" id="literatureSearchInput" placeholder="搜索文献标题/作者..." 
+                            style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                            oninput="renderLiteratureList()">
+                    </div>
+                </div>
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div id="literatureEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📚</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无文献资料</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击上方按钮添加文献</p>
+                        <button class="btn" onclick="showAddLiteratureModal()">📥 添加文献</button>
+                    </div>
+                    <div id="literatureList"></div>
                 </div>
             </div>
-            
+
             <!-- 数据集资源库 -->
-            <div id="dataset_library" class="module">
-                <div class="card">
-                    <h2>📊 数据集资源库</h2>
-                    <p>AI训练全部数据集管理</p>
+            <div id="dataset_library" class="module" style="padding: 0;">
+                <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📊 数据集资源库</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">AI训练数据集管理与共享</p>
+                        </div>
+                        <button class="btn" onclick="showAddDatasetModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>📥</span> 上传数据集
+                        </button>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <input type="text" id="datasetSearchInput" placeholder="搜索数据集名称..." 
+                            style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                            oninput="renderDatasetList()">
+                    </div>
+                </div>
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div id="datasetEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📊</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无数据集</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击上方按钮上传数据集</p>
+                        <button class="btn" onclick="showAddDatasetModal()">📥 上传数据集</button>
+                    </div>
+                    <div id="datasetList"></div>
                 </div>
             </div>
-            
+
             <!-- 项目报告归档 -->
-            <div id="project_report" class="module">
-                <div class="card">
-                    <h2>📄 项目报告归档</h2>
-                    <p>项目报告归档管理</p>
+            <div id="project_report" class="module" style="padding: 0;">
+                <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📄 项目报告归档</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">项目报告归档与管理</p>
+                        </div>
+                        <button class="btn" onclick="showAddReportModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>📥</span> 上传报告
+                        </button>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <input type="text" id="reportSearchInput" placeholder="搜索报告名称..." 
+                            style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                            oninput="renderReportList()">
+                    </div>
+                </div>
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div id="reportEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📄</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无项目报告</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击上方按钮上传报告</p>
+                        <button class="btn" onclick="showAddReportModal()">📥 上传报告</button>
+                    </div>
+                    <div id="reportList"></div>
                 </div>
             </div>
-            
+
             <!-- 团队共享文件库 -->
-            <div id="shared_files" class="module">
-                <div class="card">
-                    <h2>📤 团队共享文件库</h2>
-                    <p>团队共享文件管理</p>
+            <div id="shared_files" class="module" style="padding: 0;">
+                <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📤 团队共享文件库</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队共享文件管理与协作</p>
+                        </div>
+                        <button class="btn" onclick="showAddFileModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>📥</span> 上传文件
+                        </button>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <input type="text" id="fileSearchInput" placeholder="搜索文件名..." 
+                            style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                            oninput="renderFileList()">
+                    </div>
+                </div>
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div id="fileEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📤</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无共享文件</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击上方按钮上传文件</p>
+                        <button class="btn" onclick="showAddFileModal()">📥 上传文件</button>
+                    </div>
+                    <div id="fileList"></div>
                 </div>
             </div>
             
@@ -11846,7 +12479,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
             localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData));
         }
         
-        function saveTeamMemberData() { localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData)); }
+        function saveTeamMemberData() { 
+            localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData)); 
+            if (typeof populateOwnerSelects === 'function') populateOwnerSelects();
+        }
         
         function createMemberCard(m) {
             const card = document.createElement('div');
@@ -11869,9 +12505,16 @@ ${JSON.stringify(excelDataArray, null, 2)}
             actionsDiv.appendChild(delBtn);
             card.appendChild(actionsDiv);
             card.onclick = function() { showMemberDetail(m.id); };
-            const avatar = document.createElement('div');
-            avatar.style.cssText = 'width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: bold;';
-            avatar.textContent = m.name.charAt(0);
+            let avatar;
+            if (m.avatar) {
+                avatar = document.createElement('img');
+                avatar.src = m.avatar;
+                avatar.style.cssText = 'width: 60px; height: 60px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px;';
+            } else {
+                avatar = document.createElement('div');
+                avatar.style.cssText = 'width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: bold;';
+                avatar.textContent = m.name.charAt(0);
+            }
             const nameEl = document.createElement('div');
             nameEl.style.cssText = 'font-size: 14px; font-weight: bold; color: #333; margin-bottom: 4px;';
             nameEl.textContent = m.name;
@@ -11967,6 +12610,57 @@ ${JSON.stringify(excelDataArray, null, 2)}
             switchMemberCategory('all', document.querySelector('.member-nav-item.active') || document.querySelector('.member-nav-item'));
         }
         
+        function changeMemberAvatar(id) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const img = new Image();
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    img.src = event.target.result;
+                };
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const maxSize = 300;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height *= maxSize / width;
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width *= maxSize / height;
+                            height = maxSize;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                    const member = teamMemberData.find(d => d.id === id);
+                    if (member) {
+                        member.avatar = base64;
+                        saveTeamMemberData();
+                        renderTeamMembers();
+                        showMemberDetail(id);
+                        if (typeof renderTaskList === 'function') renderTaskList();
+                    }
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+        
         function showMemberDetail(id) {
             const m = teamMemberData.find(d => d.id === id);
             if (!m) return;
@@ -11974,7 +12668,8 @@ ${JSON.stringify(excelDataArray, null, 2)}
             const categoryLabels = { advisor: '导师', '2022': '2022级', '2023': '2023级', '2024': '2024级', '2025': '2025级', '2026': '2026级' };
             content.innerHTML = `
                 <div style="text-align: center; margin-bottom: 24px;">
-                    <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 32px; font-weight: bold;">${m.name.charAt(0)}</div>
+                    ${m.avatar ? `<img src="${m.avatar}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 12px;cursor:pointer;border:3px solid #667eea;" onclick="changeMemberAvatar(${m.id})" />` : `<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:bold;cursor:pointer;border:3px solid #667eea;" onclick="changeMemberAvatar(${m.id})">${m.name.charAt(0)}</div>`}
+                    <p style="font-size:12px;color:#667eea;margin-top:4px;cursor:pointer;" onclick="changeMemberAvatar(${m.id})">点击更换头像</p>
                     <h2 style="margin: 0; color: #333;">${m.name}</h2>
                     <div style="display: inline-block; background: #667eea; color: #fff; padding: 4px 16px; border-radius: 20px; font-size: 13px; margin-top: 8px;">${categoryLabels[m.category]}</div>
                 </div>
@@ -12231,17 +12926,22 @@ ${JSON.stringify(excelDataArray, null, 2)}
                         }
 
                         pendingImportMembers = data.members || [];
+                        const importImages = data.images || [];
                         const resultDiv = document.getElementById('importMembersResult');
 
                         if (pendingImportMembers.length === 0) {
                             resultDiv.innerHTML = `<div style="padding:12px; background:#fff3e0; border-radius:6px; color:#e65100;">⚠ 未从文档中提取到成员信息，请检查文档内容</div>`;
                         } else {
-                            let html = `<div style="padding:12px; background:#e8f5e9; border-radius:6px; color:#2e7d32; margin-bottom:12px;">✓ 成功提取 ${pendingImportMembers.length} 位成员信息：</div>`;
-                            html += '<div style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:8px;">';
+                            let html = `<div style="padding:12px; background:#e8f5e9; border-radius:6px; color:#2e7d32; margin-bottom:12px;">✓ 成功提取 ${pendingImportMembers.length} 位成员信息，${importImages.length} 张图片：</div>`;
+                            html += '<div style="max-height:300px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:8px;">';
                             pendingImportMembers.forEach((m, idx) => {
                                 const catLabels = { advisor: '导师', '2022': '2022级', '2023': '2023级', '2024': '2024级', '2025': '2025级', '2026': '2026级' };
-                                html += `<div style="padding:8px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center;">
-                                    <div>
+                                const avatarIdx = m.avatarImageIndex !== undefined && m.avatarImageIndex >= 0 && m.avatarImageIndex < importImages.length ? m.avatarImageIndex : -1;
+                                const avatarSrc = avatarIdx >= 0 ? importImages[avatarIdx] : '';
+                                const avatarHtml = avatarSrc ? `<img src="${avatarSrc}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; margin-right:12px;" />` : `<div style="width:40px; height:40px; border-radius:50%; background:#667eea; color:white; display:flex; justify-content:center; align-items:center; font-size:14px; margin-right:12px;">${(m.name || '未')[0]}</div>`;
+                                html += `<div style="padding:8px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center;">
+                                    ${avatarHtml}
+                                    <div style="flex:1;">
                                         <strong>${m.name || '未知'}</strong>
                                         <span style="color:#888; margin-left:8px;">${m.title || ''}</span>
                                     </div>
@@ -12250,6 +12950,14 @@ ${JSON.stringify(excelDataArray, null, 2)}
                             });
                             html += '</div>';
                             resultDiv.innerHTML = html;
+                        }
+
+                        if (importImages.length > 0) {
+                            pendingImportMembers.forEach(m => {
+                                if (m.avatarImageIndex !== undefined && m.avatarImageIndex >= 0 && m.avatarImageIndex < importImages.length) {
+                                    m.avatar = importImages[m.avatarImageIndex];
+                                }
+                            });
                         }
                     } catch (error) {
                         document.getElementById('importMembersResult').innerHTML = `<div style="padding:12px; background:#ffebee; border-radius:6px; color:#c62828;">✗ 导入失败：${error.message}</div>`;
@@ -12282,7 +12990,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
                     projects: m.projects || '',
                     awards: m.awards || '',
                     bio: m.bio || '',
-                    avatar: '',
+                    avatar: m.avatar || '',
                     fileName: ''
                 });
                 count++;
@@ -15335,6 +16043,1932 @@ ${ocrText}`
         _origShowModule(moduleId);
         if (moduleId === 'account_permission') { renderAccountTable(); renderPermissionMatrix(); }
         if (moduleId === 'role_permission') renderPermissionMatrix();
+        if (moduleId === 'task_management') { initTaskManagement(); }
+    };
+
+    // ===== 任务管理模块 =====
+    let taskData = [];
+    let selectedTaskIds = new Set();
+    let editingTaskId = null;
+    let taskPage = 1;
+    const TASK_PAGE_SIZE = 10;
+
+    const PRIORITY_CONFIG = {
+        high: { label: '高', color: '#ff4d4f', bgColor: '#fff1f0', borderColor: '#ffccc7' },
+        medium: { label: '中', color: '#faad14', bgColor: '#fffbe6', borderColor: '#ffe58f' },
+        low: { label: '低', color: '#52c41a', bgColor: '#f6ffed', borderColor: '#b7eb8f' }
+    };
+
+    const STATUS_CONFIG = {
+        pending: { label: '待处理', color: '#1890ff', bgColor: '#e6f7ff', borderColor: '#91d5ff' },
+        progress: { label: '进行中', color: '#faad14', bgColor: '#fffbe6', borderColor: '#ffe58f' },
+        completed: { label: '已完成', color: '#52c41a', bgColor: '#f6ffed', borderColor: '#b7eb8f' },
+        overdue: { label: '已逾期', color: '#ff4d4f', bgColor: '#fff1f0', borderColor: '#ffccc7' }
+    };
+
+    function initTaskManagement() {
+        loadTaskData();
+        populateOwnerSelects();
+        updateTaskStats();
+        renderTaskList();
+    }
+
+    function loadTaskData() {
+        const stored = localStorage.getItem('taskData');
+        if (stored) {
+            taskData = JSON.parse(stored);
+        } else {
+            taskData = [
+                { id: 1, title: '完成项目中期汇报PPT制作', priority: 'high', owner: '张三', deadline: '2026-07-05 18:00', status: 'overdue', description: '制作项目中期汇报PPT，包含项目进展、成果展示、下一步计划等内容' },
+                { id: 2, title: '整理团队上半年成果汇总文档', priority: 'high', owner: '李四', deadline: '2026-07-08 18:00', status: 'progress', description: '整理团队上半年的科研成果、论文发表、项目进展等内容' },
+                { id: 3, title: '更新团队成员档案信息', priority: 'medium', owner: '王五', deadline: '2026-07-12 18:00', status: 'pending', description: '更新所有团队成员的档案信息，包括个人简介、研究方向等' },
+                { id: 4, title: '团队周例会会议纪要整理', priority: 'low', owner: '赵六', deadline: '2026-07-06 12:00', status: 'completed', description: '整理上周周例会的会议纪要，分发到团队群' },
+                { id: 5, title: '撰写学术论文初稿', priority: 'high', owner: '张三', deadline: '2026-07-15 23:59', status: 'progress', description: '撰写关于城市安全数智创新的学术论文初稿' },
+                { id: 6, title: '准备项目答辩材料', priority: 'high', owner: '李四', deadline: '2026-07-10 18:00', status: 'pending', description: '准备项目中期答辩所需的所有材料' },
+                { id: 7, title: '数据清洗与预处理', priority: 'medium', owner: '王五', deadline: '2026-07-18 18:00', status: 'pending', description: '对采集的城市安全数据进行清洗和预处理' },
+                { id: 8, title: '文献综述撰写', priority: 'medium', owner: '赵六', deadline: '2026-07-20 18:00', status: 'pending', description: '撰写关于研究方向的文献综述' },
+                { id: 9, title: '系统测试用例编写', priority: 'low', owner: '张三', deadline: '2026-07-22 18:00', status: 'pending', description: '编写系统功能测试用例' },
+                { id: 10, title: '周报模板更新', priority: 'low', owner: '李四', deadline: '2026-07-09 12:00', status: 'completed', description: '更新团队周报模板' },
+                { id: 11, title: '安全漏洞扫描', priority: 'high', owner: '王五', deadline: '2026-07-07 18:00', status: 'pending', description: '对系统进行安全漏洞扫描' },
+                { id: 12, title: '数据库备份方案制定', priority: 'medium', owner: '赵六', deadline: '2026-07-25 18:00', status: 'pending', description: '制定数据库定期备份方案' },
+                { id: 13, title: '用户反馈整理', priority: 'low', owner: '张三', deadline: '2026-07-28 18:00', status: 'pending', description: '整理用户反馈意见，形成改进清单' },
+                { id: 14, title: '技术文档更新', priority: 'medium', owner: '李四', deadline: '2026-07-30 18:00', status: 'pending', description: '更新系统技术文档' },
+                { id: 15, title: '代码审查', priority: 'high', owner: '王五', deadline: '2026-07-07 23:59', status: 'progress', description: '审查新提交的代码' },
+                { id: 16, title: '性能优化', priority: 'medium', owner: '赵六', deadline: '2026-08-01 18:00', status: 'pending', description: '对系统进行性能优化' },
+                { id: 17, title: '演示视频制作', priority: 'low', owner: '张三', deadline: '2026-08-05 18:00', status: 'pending', description: '制作系统演示视频' }
+            ];
+            saveTaskData();
+        }
+    }
+
+    function saveTaskData() {
+        localStorage.setItem('taskData', JSON.stringify(taskData));
+    }
+
+    function populateOwnerSelects() {
+        const teamMembers = teamMemberData || [];
+        const memberNames = teamMembers.map(m => m.name).filter(n => n);
+        const taskOwners = [...new Set(taskData.map(t => t.owner))];
+        const allOwners = [...new Set([...memberNames, ...taskOwners])];
+        
+        const filterSelect = document.getElementById('taskOwnerFilter');
+        const modalSelect = document.getElementById('taskOwner');
+        
+        if (filterSelect) {
+            filterSelect.innerHTML = '<option value="">全部负责人</option>' + allOwners.map(o => `<option value="${o}">${o}</option>`).join('');
+        }
+        if (modalSelect) {
+            modalSelect.innerHTML = allOwners.map(o => `<option value="${o}">${o}</option>`).join('');
+        }
+    }
+
+    function getOwnerAvatarHtml(ownerName, size) {
+        const teamMembers = teamMemberData || [];
+        const member = teamMembers.find(m => m.name === ownerName);
+        if (member && member.avatar) {
+            return `<img src="${member.avatar}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;" />`;
+        }
+        return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:${size * 0.4}px;display:flex;align-items:center;justify-content:center;">${ownerName.charAt(0)}</div>`;
+    }
+
+    function updateTaskStats() {
+        const today = new Date().toDateString();
+        const weekStart = new Date();
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        
+        const pending = taskData.filter(t => t.status === 'pending' || t.status === 'progress').length;
+        const todayDue = taskData.filter(t => {
+            const deadline = new Date(t.deadline);
+            return deadline.toDateString() === today && t.status !== 'completed';
+        }).length;
+        const overdue = taskData.filter(t => {
+            const deadline = new Date(t.deadline);
+            return deadline < new Date() && t.status !== 'completed';
+        }).length;
+        const weekCompleted = taskData.filter(t => {
+            if (t.status !== 'completed') return false;
+            const completedTime = new Date(t.completedTime || t.deadline);
+            return completedTime >= weekStart;
+        }).length;
+
+        if (document.getElementById('statPending')) document.getElementById('statPending').textContent = pending;
+        if (document.getElementById('statTodayDue')) document.getElementById('statTodayDue').textContent = todayDue;
+        if (document.getElementById('statOverdue')) document.getElementById('statOverdue').textContent = overdue;
+        if (document.getElementById('statWeekCompleted')) document.getElementById('statWeekCompleted').textContent = weekCompleted;
+    }
+
+    function getFilteredTasks() {
+        let filtered = [...taskData];
+        
+        const search = document.getElementById('taskSearchInput')?.value?.toLowerCase() || '';
+        const priority = document.getElementById('taskPriorityFilter')?.value || '';
+        const status = document.getElementById('taskStatusFilter')?.value || '';
+        const owner = document.getElementById('taskOwnerFilter')?.value || '';
+
+        if (search) {
+            filtered = filtered.filter(t => t.title.toLowerCase().includes(search));
+        }
+        if (priority) {
+            filtered = filtered.filter(t => t.priority === priority);
+        }
+        if (status) {
+            filtered = filtered.filter(t => t.status === status);
+        }
+        if (owner) {
+            filtered = filtered.filter(t => t.owner === owner);
+        }
+
+        filtered.sort((a, b) => {
+            const deadlineA = new Date(a.deadline);
+            const deadlineB = new Date(b.deadline);
+            
+            const isOverdueA = deadlineA < new Date() && a.status !== 'completed';
+            const isOverdueB = deadlineB < new Date() && b.status !== 'completed';
+            
+            if (isOverdueA && !isOverdueB) return -1;
+            if (!isOverdueA && isOverdueB) return 1;
+            
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            }
+            
+            return deadlineA - deadlineB;
+        });
+
+        return filtered;
+    }
+
+    function renderTaskList() {
+        const container = document.getElementById('taskList');
+        const emptyState = document.getElementById('taskEmptyState');
+        const batchToolbar = document.getElementById('taskBatchToolbar');
+        
+        if (!container || !emptyState) return;
+
+        const filtered = getFilteredTasks();
+        
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'block';
+            batchToolbar.style.display = 'none';
+            renderTaskPagination([]);
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        
+        const start = (taskPage - 1) * TASK_PAGE_SIZE;
+        const end = start + TASK_PAGE_SIZE;
+        const pageData = filtered.slice(start, end);
+
+        container.innerHTML = '';
+        
+        const headerRow = document.createElement('div');
+        headerRow.style.cssText = 'display: grid; grid-template-columns: 40px 1fr 80px 100px 140px 80px 140px; gap: 16px; padding: 12px 16px; background: #f8f9fa; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 13px; color: #666;';
+        headerRow.innerHTML = `
+            <label style="display:flex;align-items:center;"><input type="checkbox" id="taskSelectAll" onchange="toggleSelectAllTasks()">全选</label>
+            <div>任务标题</div>
+            <div>优先级</div>
+            <div>负责人</div>
+            <div>截止时间</div>
+            <div>状态</div>
+            <div style="text-align:right;">操作</div>
+        `;
+        container.appendChild(headerRow);
+
+        pageData.forEach(task => {
+            const isOverdue = new Date(task.deadline) < new Date() && task.status !== 'completed';
+            const priority = PRIORITY_CONFIG[task.priority];
+            const status = STATUS_CONFIG[task.status];
+            
+            const row = document.createElement('div');
+            row.style.cssText = `display: grid; grid-template-columns: 40px 1fr 80px 100px 140px 80px 140px; gap: 16px; padding: 16px; background: #fff; border-bottom: 1px solid #f0f0f0; align-items: center; transition: background 0.2s;${isOverdue ? ' border-left: 3px solid #ff4d4f;' : ''}`;
+            
+            row.onmouseenter = () => { row.style.background = '#f9fafc'; };
+            row.onmouseleave = () => { row.style.background = '#fff'; };
+
+            const timeDisplay = formatTaskTime(task.deadline);
+            
+            row.innerHTML = `
+                <input type="checkbox" class="task-checkbox" value="${task.id}" onchange="toggleTaskSelection(${task.id})" ${selectedTaskIds.has(task.id) ? 'checked' : ''}>
+                <div style="min-width:0;">
+                    <div style="font-weight:bold;color:#333;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" onclick="showTaskDetail(${task.id})">${task.title}</div>
+                    ${isOverdue ? '<div style="font-size:12px;color:#ff4d4f;margin-top:4px;">⚠️ 已逾期</div>' : ''}
+                </div>
+                <div><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:bold;color:${priority.color};background:${priority.bgColor};border:1px solid ${priority.borderColor};">${priority.label}</span></div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    ${getOwnerAvatarHtml(task.owner, 28)}
+                    <span style="font-size:13px;color:#666;">${task.owner}</span>
+                </div>
+                <div style="font-size:13px;color:${isOverdue ? '#ff4d4f' : '#666'};">${timeDisplay}</div>
+                <div><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};border:1px solid ${status.borderColor};">${status.label}</span></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button onclick="showTaskDetail(${task.id})" style="padding:4px 8px;border:none;background:#f5f5f5;border-radius:4px;cursor:pointer;font-size:12px;color:#666;">查看</button>
+                    <button onclick="editTask(${task.id})" style="padding:4px 8px;border:none;background:#f5f5f5;border-radius:4px;cursor:pointer;font-size:12px;color:#666;">编辑</button>
+                    ${task.status !== 'completed' ? `<button onclick="completeTask(${task.id})" style="padding:4px 8px;border:none;background:#f6ffed;border-radius:4px;cursor:pointer;font-size:12px;color:#52c41a;">完成</button>` : ''}
+                    <button onclick="deleteTask(${task.id})" style="padding:4px 8px;border:none;background:#fff1f0;border-radius:4px;cursor:pointer;font-size:12px;color:#ff4d4f;">删除</button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+
+        updateBatchToolbar();
+        renderTaskPagination(filtered);
+        updateTaskStats();
+    }
+
+    function formatTaskTime(deadlineStr) {
+        const deadline = new Date(deadlineStr);
+        const now = new Date();
+        const diff = deadline - now;
+        
+        if (diff < 0) {
+            const hours = Math.floor(Math.abs(diff) / (1000 * 60 * 60));
+            if (hours < 24) return `已逾期 ${hours}小时`;
+            const days = Math.floor(hours / 24);
+            return `已逾期 ${days}天`;
+        }
+        
+        if (diff < 24 * 60 * 60 * 1000) {
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            return `还有 ${hours}小时`;
+        }
+        
+        return deadlineStr;
+    }
+
+    function renderTaskPagination(filtered) {
+        const pagination = document.getElementById('taskPagination');
+        if (!pagination) return;
+
+        const totalPages = Math.ceil(filtered.length / TASK_PAGE_SIZE);
+        
+        if (totalPages <= 1) {
+            pagination.innerHTML = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
+            return;
+        }
+
+        let html = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
+        
+        if (taskPage > 1) {
+            html += `<button onclick="setTaskPage(${taskPage - 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">上一页</button>`;
+        }
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === taskPage) {
+                html += `<button style="padding:4px 12px;border:none;background:#667eea;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">${i}</button>`;
+            } else {
+                html += `<button onclick="setTaskPage(${i})" style="padding:4px 12px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">${i}</button>`;
+            }
+        }
+        
+        if (taskPage < totalPages) {
+            html += `<button onclick="setTaskPage(${taskPage + 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">下一页</button>`;
+        }
+        
+        pagination.innerHTML = html;
+    }
+
+    function setTaskPage(page) {
+        taskPage = page;
+        renderTaskList();
+    }
+
+    function setTaskStatusFilter(status) {
+        const select = document.getElementById('taskStatusFilter');
+        const buttons = document.querySelectorAll('.task-status-btn');
+        
+        if (select) select.value = status;
+        buttons.forEach(btn => btn.classList.remove('active'));
+        buttons.forEach(btn => {
+            if ((status === '' && btn.textContent === '全部') ||
+                (status === 'pending' && btn.textContent === '待处理') ||
+                (status === 'progress' && btn.textContent === '进行中') ||
+                (status === 'completed' && btn.textContent === '已完成') ||
+                (status === 'overdue' && btn.textContent === '已逾期')) {
+                btn.classList.add('active');
+            }
+        });
+        
+        taskPage = 1;
+        renderTaskList();
+    }
+
+    function toggleSelectAllTasks() {
+        const checkbox = document.getElementById('taskSelectAll');
+        const checkboxes = document.querySelectorAll('.task-checkbox');
+        
+        if (checkbox.checked) {
+            checkboxes.forEach(cb => {
+                cb.checked = true;
+                selectedTaskIds.add(parseInt(cb.value));
+            });
+        } else {
+            checkboxes.forEach(cb => {
+                cb.checked = false;
+                selectedTaskIds.delete(parseInt(cb.value));
+            });
+        }
+        
+        updateBatchToolbar();
+    }
+
+    function toggleTaskSelection(id) {
+        const checkbox = document.querySelector(`.task-checkbox[value="${id}"]`);
+        if (checkbox.checked) {
+            selectedTaskIds.add(id);
+        } else {
+            selectedTaskIds.delete(id);
+        }
+        
+        const selectAll = document.getElementById('taskSelectAll');
+        const allCheckboxes = document.querySelectorAll('.task-checkbox');
+        selectAll.checked = allCheckboxes.length > 0 && Array.from(allCheckboxes).every(cb => cb.checked);
+        
+        updateBatchToolbar();
+    }
+
+    function updateBatchToolbar() {
+        const toolbar = document.getElementById('taskBatchToolbar');
+        const count = document.getElementById('selectedTaskCount');
+        
+        if (selectedTaskIds.size > 0) {
+            toolbar.style.display = 'flex';
+            count.textContent = selectedTaskIds.size;
+        } else {
+            toolbar.style.display = 'none';
+        }
+    }
+
+    function clearTaskSelection() {
+        selectedTaskIds.clear();
+        document.getElementById('taskSelectAll').checked = false;
+        document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = false);
+        updateBatchToolbar();
+    }
+
+    function batchCompleteTasks() {
+        if (selectedTaskIds.size === 0) return;
+        
+        taskData = taskData.map(t => {
+            if (selectedTaskIds.has(t.id)) {
+                return { ...t, status: 'completed', completedTime: new Date().toISOString() };
+            }
+            return t;
+        });
+        
+        saveTaskData();
+        clearTaskSelection();
+        renderTaskList();
+        alert(`已完成 ${selectedTaskIds.size} 个任务`);
+    }
+
+    function batchDeleteTasks() {
+        if (selectedTaskIds.size === 0) return;
+        
+        if (!confirm(`确定要删除选中的 ${selectedTaskIds.size} 个任务吗？`)) return;
+        
+        taskData = taskData.filter(t => !selectedTaskIds.has(t.id));
+        saveTaskData();
+        clearTaskSelection();
+        renderTaskList();
+        alert(`已删除 ${selectedTaskIds.size} 个任务`);
+    }
+
+    function showAddTaskModal() {
+        editingTaskId = null;
+        document.getElementById('taskModalTitle').textContent = '新增任务';
+        document.getElementById('taskTitle').value = '';
+        document.getElementById('taskPriority').value = 'medium';
+        document.getElementById('taskOwner').value = '';
+        document.getElementById('taskDeadline').value = '';
+        document.getElementById('taskStatus').value = 'pending';
+        document.getElementById('taskDescription').value = '';
+        document.getElementById('taskModal').style.display = 'flex';
+    }
+
+    function editTask(id) {
+        const task = taskData.find(t => t.id === id);
+        if (!task) return;
+        
+        editingTaskId = id;
+        document.getElementById('taskModalTitle').textContent = '编辑任务';
+        document.getElementById('taskTitle').value = task.title;
+        document.getElementById('taskPriority').value = task.priority;
+        document.getElementById('taskOwner').value = task.owner;
+        document.getElementById('taskDeadline').value = task.deadline.replace(' ', 'T');
+        document.getElementById('taskStatus').value = task.status;
+        document.getElementById('taskDescription').value = task.description || '';
+        document.getElementById('taskModal').style.display = 'flex';
+    }
+
+    function closeTaskModal() {
+        document.getElementById('taskModal').style.display = 'none';
+    }
+
+    function saveTask() {
+        const title = document.getElementById('taskTitle').value.trim();
+        const priority = document.getElementById('taskPriority').value;
+        const owner = document.getElementById('taskOwner').value;
+        const deadline = document.getElementById('taskDeadline').value;
+        const status = document.getElementById('taskStatus').value;
+        const description = document.getElementById('taskDescription').value.trim();
+
+        if (!title || !owner || !deadline) {
+            alert('请填写任务标题、负责人和截止时间');
+            return;
+        }
+
+        const deadlineStr = deadline.replace('T', ' ');
+
+        if (editingTaskId) {
+            const idx = taskData.findIndex(t => t.id === editingTaskId);
+            if (idx !== -1) {
+                taskData[idx] = { ...taskData[idx], title, priority, owner, deadline: deadlineStr, status, description };
+            }
+        } else {
+            const newId = taskData.length > 0 ? Math.max(...taskData.map(t => t.id)) + 1 : 1;
+            taskData.push({ id: newId, title, priority, owner, deadline: deadlineStr, status, description, completedTime: null });
+        }
+
+        saveTaskData();
+        closeTaskModal();
+        populateOwnerSelects();
+        renderTaskList();
+        alert('保存成功！');
+    }
+
+    function showTaskDetail(id) {
+        const task = taskData.find(t => t.id === id);
+        if (!task) return;
+        
+        const priority = PRIORITY_CONFIG[task.priority];
+        const status = STATUS_CONFIG[task.status];
+        
+        document.getElementById('taskDetailContent').innerHTML = `
+            <div style="margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:bold;color:${priority.color};background:${priority.bgColor};border:1px solid ${priority.borderColor};">${priority.label}优先级</span>
+                    <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};border:1px solid ${status.borderColor};">${status.label}</span>
+                </div>
+                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0;">${task.title}</h2>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">任务描述</h4>
+                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px;">${task.description || '暂无描述'}</p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">
+                    <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">负责人</h4>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        ${getOwnerAvatarHtml(task.owner, 36)}
+                        <span style="font-size:14px;color:#333;">${task.owner}</span>
+                    </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">
+                    <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">截止时间</h4>
+                    <p style="margin: 0; color: ${new Date(task.deadline) < new Date() && task.status !== 'completed' ? '#ff4d4f' : '#666'}; font-size: 14px;">${task.deadline}</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                <button class="btn btn-secondary" onclick="closeTaskDetailDrawer()">关闭</button>
+                <button class="btn" onclick="editTask(${task.id}); closeTaskDetailDrawer();">编辑</button>
+                ${task.status !== 'completed' ? `<button class="btn" style="background:#52c41a;" onclick="completeTask(${task.id}); closeTaskDetailDrawer();">标记完成</button>` : ''}
+            </div>
+        `;
+        
+        document.getElementById('taskDetailDrawer').style.display = 'block';
+        document.getElementById('taskDetailOverlay').style.display = 'block';
+    }
+
+    function closeTaskDetailDrawer() {
+        document.getElementById('taskDetailDrawer').style.display = 'none';
+        document.getElementById('taskDetailOverlay').style.display = 'none';
+    }
+
+    function completeTask(id) {
+        const task = taskData.find(t => t.id === id);
+        if (!task) return;
+        
+        task.status = 'completed';
+        task.completedTime = new Date().toISOString();
+        saveTaskData();
+        renderTaskList();
+        alert('任务已标记为完成！');
+    }
+
+    function deleteTask(id) {
+        if (!confirm('确定要删除该任务吗？')) return;
+        
+        taskData = taskData.filter(t => t.id !== id);
+        saveTaskData();
+        renderTaskList();
+        alert('任务已删除！');
+    }
+
+    // ===== 周报管理模块 =====
+    let weeklyReportData = [];
+    let editingWeeklyReportId = null;
+    let weeklyReportPage = 1;
+    const WR_PAGE_SIZE = 10;
+
+    const WR_STATUS_CONFIG = {
+        pending: { label: '待审核', color: '#faad14', bgColor: '#fffbe6', borderColor: '#ffe58f' },
+        approved: { label: '已通过', color: '#52c41a', bgColor: '#f6ffed', borderColor: '#b7eb8f' },
+        rejected: { label: '已驳回', color: '#ff4d4f', bgColor: '#fff1f0', borderColor: '#ffccc7' }
+    };
+
+    function initWeeklyReport() {
+        loadWeeklyReportData();
+        populateWeeklyReportOwnerSelects();
+        updateWeeklyReportStats();
+        renderWeeklyReportList();
+    }
+
+    function loadWeeklyReportData() {
+        const stored = localStorage.getItem('weeklyReportData');
+        if (stored) {
+            weeklyReportData = JSON.parse(stored);
+        } else {
+            weeklyReportData = [
+                { id: 1, weekRange: '2026-07-06 至 2026-07-12', owner: '张三', content: '1. 完成项目中期汇报PPT初稿\n2. 整理了上周实验数据\n3. 参加了组会讨论', nextWeek: '1. 修改PPT内容\n2. 进行新的实验\n3. 撰写论文大纲', problems: '实验设备故障，影响进度', notes: '', status: 'pending', submitTime: '2026-07-12 14:30', reviewComment: '' },
+                { id: 2, weekRange: '2026-07-06 至 2026-07-12', owner: '李四', content: '1. 完成团队上半年成果汇总\n2. 更新了项目文档\n3. 协助指导师弟实验', nextWeek: '1. 准备项目答辩材料\n2. 继续完善成果文档', problems: '暂无', notes: '', status: 'approved', submitTime: '2026-07-12 16:00', reviewComment: '完成良好，继续保持' },
+                { id: 3, weekRange: '2026-07-06 至 2026-07-12', owner: '王五', content: '1. 数据清洗工作完成80%\n2. 学习了新的数据分析方法', nextWeek: '1. 完成数据清洗\n2. 开始数据分析', problems: '数据量较大，处理时间长', notes: '', status: 'pending', submitTime: '2026-07-12 17:30', reviewComment: '' },
+                { id: 4, weekRange: '2026-06-29 至 2026-07-05', owner: '赵六', content: '1. 整理周例会纪要\n2. 更新周报模板\n3. 文献阅读5篇', nextWeek: '1. 继续文献阅读\n2. 撰写文献综述', problems: '暂无', notes: '', status: 'approved', submitTime: '2026-07-05 15:00', reviewComment: '工作认真' },
+                { id: 5, weekRange: '2026-06-29 至 2026-07-05', owner: '张三', content: '1. 实验方案设计完成\n2. 采购实验材料', nextWeek: '1. 开始实验\n2. 记录实验数据', problems: '材料采购周期较长', notes: '', status: 'rejected', submitTime: '2026-07-05 13:00', reviewComment: '请补充实验安全评估' }
+            ];
+            saveWeeklyReportData();
+        }
+    }
+
+    function saveWeeklyReportData() {
+        localStorage.setItem('weeklyReportData', JSON.stringify(weeklyReportData));
+    }
+
+    function populateWeeklyReportOwnerSelects() {
+        const teamMembers = teamMemberData || [];
+        const memberNames = teamMembers.map(m => m.name).filter(n => n);
+        const reportOwners = [...new Set(weeklyReportData.map(r => r.owner))];
+        const allOwners = [...new Set([...memberNames, ...reportOwners])];
+        
+        const filterSelect = document.getElementById('weeklyReportOwnerFilter');
+        if (filterSelect) {
+            filterSelect.innerHTML = '<option value="">全部成员</option>' + allOwners.map(o => `<option value="${o}">${o}</option>`).join('');
+        }
+    }
+
+    function updateWeeklyReportStats() {
+        const today = new Date();
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        
+        const pending = weeklyReportData.filter(r => r.status === 'pending').length;
+        const approved = weeklyReportData.filter(r => r.status === 'approved').length;
+        const rejected = weeklyReportData.filter(r => r.status === 'rejected').length;
+        const submittedThisWeek = weeklyReportData.filter(r => {
+            const submitTime = new Date(r.submitTime);
+            return submitTime >= weekStart;
+        }).length;
+
+        if (document.getElementById('wrStatPending')) document.getElementById('wrStatPending').textContent = pending;
+        if (document.getElementById('wrStatApproved')) document.getElementById('wrStatApproved').textContent = approved;
+        if (document.getElementById('wrStatRejected')) document.getElementById('wrStatRejected').textContent = rejected;
+        if (document.getElementById('wrStatSubmitted')) document.getElementById('wrStatSubmitted').textContent = submittedThisWeek;
+    }
+
+    function getFilteredWeeklyReports() {
+        let filtered = [...weeklyReportData];
+        
+        const search = document.getElementById('weeklyReportSearchInput')?.value?.toLowerCase() || '';
+        const status = document.getElementById('weeklyReportStatusFilter')?.value || '';
+        const owner = document.getElementById('weeklyReportOwnerFilter')?.value || '';
+
+        if (search) {
+            filtered = filtered.filter(r => r.content.toLowerCase().includes(search) || r.owner.toLowerCase().includes(search));
+        }
+        if (status) {
+            filtered = filtered.filter(r => r.status === status);
+        }
+        if (owner) {
+            filtered = filtered.filter(r => r.owner === owner);
+        }
+
+        filtered.sort((a, b) => new Date(b.submitTime) - new Date(a.submitTime));
+        return filtered;
+    }
+
+    function renderWeeklyReportList() {
+        const container = document.getElementById('weeklyReportList');
+        const emptyState = document.getElementById('weeklyReportEmptyState');
+        
+        if (!container || !emptyState) return;
+
+        const filtered = getFilteredWeeklyReports();
+        
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'block';
+            renderWeeklyReportPagination([]);
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        
+        const start = (weeklyReportPage - 1) * WR_PAGE_SIZE;
+        const end = start + WR_PAGE_SIZE;
+        const pageData = filtered.slice(start, end);
+
+        container.innerHTML = '';
+        
+        const headerRow = document.createElement('div');
+        headerRow.style.cssText = 'display: grid; grid-template-columns: 150px 1fr 100px 100px 120px 140px; gap: 16px; padding: 12px 16px; background: #f8f9fa; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 13px; color: #666;';
+        headerRow.innerHTML = `
+            <div>周报周期</div>
+            <div>工作内容摘要</div>
+            <div>提交人</div>
+            <div>状态</div>
+            <div>提交时间</div>
+            <div style="text-align:right;">操作</div>
+        `;
+        container.appendChild(headerRow);
+
+        pageData.forEach(report => {
+            const status = WR_STATUS_CONFIG[report.status];
+            
+            const row = document.createElement('div');
+            row.style.cssText = 'display: grid; grid-template-columns: 150px 1fr 100px 100px 120px 140px; gap: 16px; padding: 16px; background: #fff; border-bottom: 1px solid #f0f0f0; align-items: center; transition: background 0.2s;';
+            
+            row.onmouseenter = () => { row.style.background = '#f9fafc'; };
+            row.onmouseleave = () => { row.style.background = '#fff'; };
+
+            const contentPreview = report.content.length > 60 ? report.content.substring(0, 60) + '...' : report.content;
+            
+            row.innerHTML = `
+                <div style="font-size:13px;color:#666;">${report.weekRange}</div>
+                <div style="min-width:0;">
+                    <div style="font-weight:bold;color:#333;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" onclick="showWeeklyReportDetail(${report.id})">${contentPreview}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    ${getOwnerAvatarHtml(report.owner, 24)}
+                    <span style="font-size:13px;color:#666;">${report.owner}</span>
+                </div>
+                <div><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};border:1px solid ${status.borderColor};">${status.label}</span></div>
+                <div style="font-size:13px;color:#666;">${report.submitTime}</div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button onclick="showWeeklyReportDetail(${report.id})" style="padding:4px 8px;border:none;background:#f5f5f5;border-radius:4px;cursor:pointer;font-size:12px;color:#666;">查看</button>
+                    ${report.status === 'pending' ? `<button onclick="approveWeeklyReport(${report.id})" style="padding:4px 8px;border:none;background:#f6ffed;border-radius:4px;cursor:pointer;font-size:12px;color:#52c41a;">通过</button>` : ''}
+                    ${report.status === 'pending' ? `<button onclick="rejectWeeklyReport(${report.id})" style="padding:4px 8px;border:none;background:#fff1f0;border-radius:4px;cursor:pointer;font-size:12px;color:#ff4d4f;">驳回</button>` : ''}
+                </div>
+            `;
+            container.appendChild(row);
+        });
+
+        renderWeeklyReportPagination(filtered);
+        updateWeeklyReportStats();
+    }
+
+    function renderWeeklyReportPagination(filtered) {
+        const pagination = document.getElementById('weeklyReportPagination');
+        if (!pagination) return;
+
+        const totalPages = Math.ceil(filtered.length / WR_PAGE_SIZE);
+        
+        if (totalPages <= 1) {
+            pagination.innerHTML = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
+            return;
+        }
+
+        let html = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
+        
+        if (weeklyReportPage > 1) {
+            html += `<button onclick="setWeeklyReportPage(${weeklyReportPage - 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">上一页</button>`;
+        }
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === weeklyReportPage) {
+                html += `<button style="padding:4px 12px;border:none;background:#667eea;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">${i}</button>`;
+            } else {
+                html += `<button onclick="setWeeklyReportPage(${i})" style="padding:4px 12px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">${i}</button>`;
+            }
+        }
+        
+        if (weeklyReportPage < totalPages) {
+            html += `<button onclick="setWeeklyReportPage(${weeklyReportPage + 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">下一页</button>`;
+        }
+        
+        pagination.innerHTML = html;
+    }
+
+    function setWeeklyReportPage(page) {
+        weeklyReportPage = page;
+        renderWeeklyReportList();
+    }
+
+    function showAddWeeklyReportModal() {
+        editingWeeklyReportId = null;
+        document.getElementById('weeklyReportModalTitle').textContent = '提交周报';
+        
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const monday = new Date(today);
+        monday.setDate(monday.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+        const sunday = new Date(monday);
+        sunday.setDate(sunday.getDate() + 6);
+        
+        const formatDate = (d) => d.toISOString().split('T')[0];
+        document.getElementById('wrWeekRange').value = `${formatDate(monday)} 至 ${formatDate(sunday)}`;
+        document.getElementById('wrContent').value = '';
+        document.getElementById('wrNextWeek').value = '';
+        document.getElementById('wrProblems').value = '';
+        document.getElementById('wrNotes').value = '';
+        document.getElementById('weeklyReportModal').style.display = 'flex';
+    }
+
+    function closeWeeklyReportModal() {
+        document.getElementById('weeklyReportModal').style.display = 'none';
+    }
+
+    function saveWeeklyReport() {
+        const weekRange = document.getElementById('wrWeekRange').value.trim();
+        const content = document.getElementById('wrContent').value.trim();
+        const nextWeek = document.getElementById('wrNextWeek').value.trim();
+        const problems = document.getElementById('wrProblems').value.trim();
+        const notes = document.getElementById('wrNotes').value.trim();
+
+        if (!weekRange || !content) {
+            alert('请填写周报周期和本周工作内容');
+            return;
+        }
+
+        const submitter = currentUser ? currentUser.realName || currentUser.username : '未知用户';
+
+        if (editingWeeklyReportId) {
+            const idx = weeklyReportData.findIndex(r => r.id === editingWeeklyReportId);
+            if (idx !== -1) {
+                weeklyReportData[idx] = { ...weeklyReportData[idx], weekRange, content, nextWeek, problems, notes };
+            }
+        } else {
+            const newId = weeklyReportData.length > 0 ? Math.max(...weeklyReportData.map(r => r.id)) + 1 : 1;
+            weeklyReportData.push({ 
+                id: newId, 
+                weekRange, 
+                owner: submitter, 
+                content, 
+                nextWeek, 
+                problems, 
+                notes, 
+                status: 'pending', 
+                submitTime: new Date().toLocaleString('zh-CN'),
+                reviewComment: '' 
+            });
+        }
+
+        saveWeeklyReportData();
+        closeWeeklyReportModal();
+        populateWeeklyReportOwnerSelects();
+        renderWeeklyReportList();
+        alert('提交成功！');
+    }
+
+    function showWeeklyReportDetail(id) {
+        const report = weeklyReportData.find(r => r.id === id);
+        if (!report) return;
+        
+        const status = WR_STATUS_CONFIG[report.status];
+        
+        document.getElementById('weeklyReportDetailContent').innerHTML = `
+            <div style="margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};border:1px solid ${status.borderColor};">${status.label}</span>
+                    <span style="font-size:13px;color:#666;">${report.submitTime}</span>
+                </div>
+                <h2 style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">${report.weekRange}</h2>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                ${getOwnerAvatarHtml(report.owner, 40)}
+                <div>
+                    <div style="font-weight: bold; color: #333;">${report.owner}</div>
+                    <div style="font-size: 13px; color: #888;">提交人</div>
+                </div>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">本周工作内容</h4>
+                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${report.content}</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">下周工作计划</h4>
+                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${report.nextWeek || '暂无'}</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">遇到的问题与困难</h4>
+                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${report.problems || '暂无'}</p>
+            </div>
+            
+            ${report.reviewComment ? `
+            <div style="background: #fffbe6; padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #ffe58f;">
+                <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">审核意见</h4>
+                <p style="margin: 0; color: #faad14; line-height: 1.8; font-size: 14px;">${report.reviewComment}</p>
+            </div>
+            ` : ''}
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                <button class="btn btn-secondary" onclick="closeWeeklyReportDrawer()">关闭</button>
+                ${report.status === 'pending' ? `<button class="btn" style="background:#52c41a;" onclick="approveWeeklyReport(${report.id}); closeWeeklyReportDrawer();">通过</button>` : ''}
+                ${report.status === 'pending' ? `<button class="btn" style="background:#ff4d4f;" onclick="rejectWeeklyReport(${report.id}); closeWeeklyReportDrawer();">驳回</button>` : ''}
+            </div>
+        `;
+        
+        document.getElementById('weeklyReportDrawer').style.display = 'block';
+        document.getElementById('weeklyReportOverlay').style.display = 'block';
+    }
+
+    function closeWeeklyReportDrawer() {
+        document.getElementById('weeklyReportDrawer').style.display = 'none';
+        document.getElementById('weeklyReportOverlay').style.display = 'none';
+    }
+
+    function approveWeeklyReport(id) {
+        const report = weeklyReportData.find(r => r.id === id);
+        if (!report) return;
+        
+        const comment = prompt('请输入审核意见（可选）：');
+        
+        report.status = 'approved';
+        report.reviewComment = comment || '审核通过';
+        saveWeeklyReportData();
+        renderWeeklyReportList();
+        alert('已通过审核！');
+    }
+
+    function rejectWeeklyReport(id) {
+        const report = weeklyReportData.find(r => r.id === id);
+        if (!report) return;
+        
+        const comment = prompt('请输入驳回原因：');
+        if (!comment) {
+            alert('请填写驳回原因');
+            return;
+        }
+        
+        report.status = 'rejected';
+        report.reviewComment = comment;
+        saveWeeklyReportData();
+        renderWeeklyReportList();
+        alert('已驳回！');
+    }
+
+    // ===== 通知管理模块 =====
+    let noticeData = [];
+    let editingNoticeId = null;
+    let noticePage = 1;
+    const NOTICE_PAGE_SIZE = 10;
+
+    const NOTICE_TYPE_CONFIG = {
+        notice: { label: '通知', icon: '📋', color: '#1890ff', bgColor: '#e6f7ff' },
+        announcement: { label: '公告', icon: '📢', color: '#667eea', bgColor: '#e8ebfa' },
+        meeting: { label: '会议通知', icon: '📅', color: '#faad14', bgColor: '#fff7e6' },
+        urgent: { label: '紧急通知', icon: '🚨', color: '#ff4d4f', bgColor: '#fff1f0' }
+    };
+
+    function initNoticePublish() {
+        loadNoticeData();
+        updateNoticeStats();
+        renderNoticeList();
+    }
+
+    function loadNoticeData() {
+        const stored = localStorage.getItem('noticeData');
+        if (stored) {
+            noticeData = JSON.parse(stored);
+        } else {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            noticeData = [
+                { id: 1, title: '关于开展安全检查的通知', type: 'notice', content: '为确保实验室安全，定于本周周五下午3:00进行安全检查，请各课题组做好准备工作。', startTime: now.toISOString().replace('T', ' ').substring(0, 16), endTime: tomorrow.toISOString().replace('T', ' ').substring(0, 16), publishTime: '2026-07-12 09:00', publisher: '张三' },
+                { id: 2, title: '学术报告预告', type: 'announcement', content: '本周六上午10:00，特邀XXX教授来我校做学术报告，主题为"城市安全数智创新前沿"。地点：学术报告厅。', startTime: now.toISOString().replace('T', ' ').substring(0, 16), endTime: '', publishTime: '2026-07-11 14:30', publisher: '李四' },
+                { id: 3, title: '周例会通知', type: 'meeting', content: '本周三下午2:00召开周例会，请各位成员汇报本周工作进展。地点：会议室A。', startTime: '', endTime: '', publishTime: '2026-07-10 10:00', publisher: '王五' },
+                { id: 4, title: '紧急通知：暴雨预警', type: 'urgent', content: '接气象部门通知，未来24小时将有暴雨，请大家注意出行安全，实验室设备做好防水措施。', startTime: '', endTime: '', publishTime: '2026-07-09 16:00', publisher: '赵六' },
+                { id: 5, title: '年度考核通知', type: 'notice', content: '年度考核工作即将开始，请各位成员准备好年度总结材料，于下周五前提交。', startTime: '', endTime: '', publishTime: '2026-07-08 11:00', publisher: '张三' }
+            ];
+            saveNoticeData();
+        }
+    }
+
+    function saveNoticeData() {
+        localStorage.setItem('noticeData', JSON.stringify(noticeData));
+    }
+
+    function updateNoticeStats() {
+        const now = new Date();
+        const total = noticeData.length;
+        const active = noticeData.filter(n => !n.endTime || new Date(n.endTime) > now).length;
+        const urgent = noticeData.filter(n => n.type === 'urgent').length;
+        const expired = noticeData.filter(n => n.endTime && new Date(n.endTime) <= now).length;
+
+        if (document.getElementById('noticeStatTotal')) document.getElementById('noticeStatTotal').textContent = total;
+        if (document.getElementById('noticeStatActive')) document.getElementById('noticeStatActive').textContent = active;
+        if (document.getElementById('noticeStatUrgent')) document.getElementById('noticeStatUrgent').textContent = urgent;
+        if (document.getElementById('noticeStatExpired')) document.getElementById('noticeStatExpired').textContent = expired;
+    }
+
+    function getFilteredNotices() {
+        let filtered = [...noticeData];
+        
+        const search = document.getElementById('noticeSearchInput')?.value?.toLowerCase() || '';
+        const type = document.getElementById('noticeTypeFilter')?.value || '';
+
+        if (search) {
+            filtered = filtered.filter(n => n.title.toLowerCase().includes(search) || n.content.toLowerCase().includes(search));
+        }
+        if (type) {
+            filtered = filtered.filter(n => n.type === type);
+        }
+
+        filtered.sort((a, b) => new Date(b.publishTime) - new Date(a.publishTime));
+        return filtered;
+    }
+
+    function renderNoticeList() {
+        const container = document.getElementById('noticeList');
+        const emptyState = document.getElementById('noticeEmptyState');
+        
+        if (!container || !emptyState) return;
+
+        const filtered = getFilteredNotices();
+        
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'block';
+            renderNoticePagination([]);
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        
+        const start = (noticePage - 1) * NOTICE_PAGE_SIZE;
+        const end = start + NOTICE_PAGE_SIZE;
+        const pageData = filtered.slice(start, end);
+
+        container.innerHTML = '';
+        
+        pageData.forEach(notice => {
+            const typeConfig = NOTICE_TYPE_CONFIG[notice.type];
+            const isExpired = notice.endTime && new Date(notice.endTime) <= new Date();
+            
+            const card = document.createElement('div');
+            card.style.cssText = `background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;${notice.type === 'urgent' ? ' border-left: 4px solid #ff4d4f;' : ''}${isExpired ? ' opacity: 0.7;' : ''}`;
+            card.onmouseenter = () => { card.style.transform = 'translateY(-2px)'; card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
+            card.onmouseleave = () => { card.style.transform = ''; card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; };
+            
+            card.onclick = () => showNoticeDetail(notice.id);
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">${typeConfig.icon}</span>
+                        <span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;color:${typeConfig.color};background:${typeConfig.bgColor};">${typeConfig.label}</span>
+                    </div>
+                    <span style="font-size: 12px; color: #888;">${notice.publishTime}</span>
+                </div>
+                <h3 style="font-size: 16px; font-weight: bold; color: #333; margin: 0 0 8px;">${notice.title}</h3>
+                <p style="font-size: 14px; color: #666; line-height: 1.6; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${notice.content}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                    <span style="font-size: 12px; color: #888;">发布人：${notice.publisher}</span>
+                    ${notice.endTime ? `<span style="font-size: 12px; color: ${isExpired ? '#ff4d4f' : '#faad14'};">${isExpired ? '已过期' : `有效期至：${notice.endTime}`}</span>` : ''}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        renderNoticePagination(filtered);
+        updateNoticeStats();
+    }
+
+    function renderNoticePagination(filtered) {
+        const pagination = document.getElementById('noticePagination');
+        if (!pagination) return;
+
+        const totalPages = Math.ceil(filtered.length / NOTICE_PAGE_SIZE);
+        
+        if (totalPages <= 1) {
+            pagination.innerHTML = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
+            return;
+        }
+
+        let html = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
+        
+        if (noticePage > 1) {
+            html += `<button onclick="setNoticePage(${noticePage - 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">上一页</button>`;
+        }
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === noticePage) {
+                html += `<button style="padding:4px 12px;border:none;background:#667eea;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">${i}</button>`;
+            } else {
+                html += `<button onclick="setNoticePage(${i})" style="padding:4px 12px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">${i}</button>`;
+            }
+        }
+        
+        if (noticePage < totalPages) {
+            html += `<button onclick="setNoticePage(${noticePage + 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">下一页</button>`;
+        }
+        
+        pagination.innerHTML = html;
+    }
+
+    function setNoticePage(page) {
+        noticePage = page;
+        renderNoticeList();
+    }
+
+    function showAddNoticeModal() {
+        editingNoticeId = null;
+        document.getElementById('noticeModalTitle').textContent = '发布通知';
+        document.getElementById('noticeTitle').value = '';
+        document.getElementById('noticeType').value = 'notice';
+        document.getElementById('noticeStartTime').value = '';
+        document.getElementById('noticeEndTime').value = '';
+        document.getElementById('noticeContent').value = '';
+        document.getElementById('noticeModal').style.display = 'flex';
+    }
+
+    function closeNoticeModal() {
+        document.getElementById('noticeModal').style.display = 'none';
+    }
+
+    function saveNotice() {
+        const title = document.getElementById('noticeTitle').value.trim();
+        const type = document.getElementById('noticeType').value;
+        const startTime = document.getElementById('noticeStartTime').value;
+        const endTime = document.getElementById('noticeEndTime').value;
+        const content = document.getElementById('noticeContent').value.trim();
+
+        if (!title || !content) {
+            alert('请填写通知标题和内容');
+            return;
+        }
+
+        const publisher = currentUser ? currentUser.realName || currentUser.username : '未知用户';
+
+        if (editingNoticeId) {
+            const idx = noticeData.findIndex(n => n.id === editingNoticeId);
+            if (idx !== -1) {
+                noticeData[idx] = { ...noticeData[idx], title, type, startTime, endTime, content };
+            }
+        } else {
+            const newId = noticeData.length > 0 ? Math.max(...noticeData.map(n => n.id)) + 1 : 1;
+            noticeData.push({ 
+                id: newId, 
+                title, 
+                type, 
+                content, 
+                startTime, 
+                endTime, 
+                publishTime: new Date().toLocaleString('zh-CN'),
+                publisher 
+            });
+        }
+
+        saveNoticeData();
+        closeNoticeModal();
+        renderNoticeList();
+        alert('发布成功！');
+    }
+
+    function showNoticeDetail(id) {
+        const notice = noticeData.find(n => n.id === id);
+        if (!notice) return;
+        
+        const typeConfig = NOTICE_TYPE_CONFIG[notice.type];
+        const isExpired = notice.endTime && new Date(notice.endTime) <= new Date();
+        
+        document.getElementById('noticeDetailContent').innerHTML = `
+            <div style="margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span style="font-size: 24px;">${typeConfig.icon}</span>
+                    <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:${typeConfig.color};background:${typeConfig.bgColor};">${typeConfig.label}</span>
+                    ${notice.type === 'urgent' ? '<span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:#fff;background:#ff4d4f;">紧急</span>' : ''}
+                </div>
+                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0;">${notice.title}</h2>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <p style="margin: 0; color: #333; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${notice.content}</p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                    <div style="font-size: 12px; color: #888;">发布人</div>
+                    <div style="font-size: 14px; color: #333; margin-top: 4px;">${notice.publisher}</div>
+                </div>
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                    <div style="font-size: 12px; color: #888;">发布时间</div>
+                    <div style="font-size: 14px; color: #333; margin-top: 4px;">${notice.publishTime}</div>
+                </div>
+                ${notice.startTime ? `
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                    <div style="font-size: 12px; color: #888;">生效时间</div>
+                    <div style="font-size: 14px; color: #333; margin-top: 4px;">${notice.startTime}</div>
+                </div>
+                ` : ''}
+                ${notice.endTime ? `
+                <div style="background: ${isExpired ? '#fff1f0' : '#fff7e6'}; padding: 12px; border-radius: 8px;">
+                    <div style="font-size: 12px; color: #888;">截止时间</div>
+                    <div style="font-size: 14px; color: ${isExpired ? '#ff4d4f' : '#faad14'}; margin-top: 4px;">${notice.endTime} ${isExpired ? '(已过期)' : ''}</div>
+                </div>
+                ` : ''}
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeNoticeDrawer()">关闭</button>
+                <button class="btn" onclick="deleteNotice(${notice.id}); closeNoticeDrawer();">删除</button>
+            </div>
+        `;
+        
+        document.getElementById('noticeDrawer').style.display = 'block';
+        document.getElementById('noticeOverlay').style.display = 'block';
+    }
+
+    function closeNoticeDrawer() {
+        document.getElementById('noticeDrawer').style.display = 'none';
+        document.getElementById('noticeOverlay').style.display = 'none';
+    }
+
+    function deleteNotice(id) {
+        if (!confirm('确定要删除该通知吗？')) return;
+        
+        noticeData = noticeData.filter(n => n.id !== id);
+        saveNoticeData();
+        renderNoticeList();
+        alert('已删除！');
+    }
+
+    // ===== 会议管理模块 =====
+    let meetingData = [];
+    let editingMeetingId = null;
+    let meetingPage = 1;
+    const MEETING_PAGE_SIZE = 10;
+
+    const MEETING_STATUS_CONFIG = {
+        upcoming: { label: '即将开始', color: '#faad14', bgColor: '#fff7e6', icon: '⏰' },
+        ongoing: { label: '进行中', color: '#1890ff', bgColor: '#e6f7ff', icon: '🔄' },
+        completed: { label: '已结束', color: '#52c41a', bgColor: '#f6ffed', icon: '✅' }
+    };
+
+    function initMeetingManagement() {
+        loadMeetingData();
+        updateMeetingStats();
+        renderMeetingList();
+    }
+
+    function loadMeetingData() {
+        const stored = localStorage.getItem('meetingData');
+        if (stored) {
+            meetingData = JSON.parse(stored);
+        } else {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            meetingData = [
+                { id: 1, title: '项目周例会', location: '会议室A', startTime: tomorrow.toISOString().replace('T', ' ').substring(0, 16), endTime: tomorrow.toISOString().replace('T', ' ').substring(0, 16).replace(':00', ':30'), participants: '张三, 李四, 王五', agenda: '1. 本周工作汇报\n2. 项目进度讨论\n3. 下周工作计划', notes: '', createTime: '2026-07-12 09:00' },
+                { id: 2, title: '技术分享会', location: '学术报告厅', startTime: now.toISOString().replace('T', ' ').substring(0, 16), endTime: now.toISOString().replace('T', ' ').substring(0, 16).replace(':00', ':45'), participants: '全体成员', agenda: '深度学习在城市安全中的应用', notes: '', createTime: '2026-07-11 14:30' },
+                { id: 3, title: '安全检查会议', location: '会议室B', startTime: yesterday.toISOString().replace('T', ' ').substring(0, 16), endTime: yesterday.toISOString().replace('T', ' ').substring(0, 16).replace(':00', ':30'), participants: '安全负责人, 各课题组组长', agenda: '实验室安全检查结果通报', notes: '', createTime: '2026-07-10 10:00' },
+                { id: 4, title: '论文评审会议', location: '会议室A', startTime: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 16), endTime: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 16).replace(':00', ':45'), participants: '导师, 论文作者', agenda: '硕士论文中期评审', notes: '', createTime: '2026-07-09 16:00' },
+                { id: 5, title: '迎新座谈会', location: '学术报告厅', startTime: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 16), endTime: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 16).replace(':00', ':30'), participants: '全体成员, 新生', agenda: '欢迎新成员加入', notes: '', createTime: '2026-07-08 11:00' }
+            ];
+            saveMeetingData();
+        }
+    }
+
+    function saveMeetingData() {
+        localStorage.setItem('meetingData', JSON.stringify(meetingData));
+    }
+
+    function getMeetingStatus(meeting) {
+        const now = new Date();
+        const start = new Date(meeting.startTime);
+        const end = new Date(meeting.endTime);
+        
+        if (end < now) return 'completed';
+        if (start <= now && end >= now) return 'ongoing';
+        return 'upcoming';
+    }
+
+    function updateMeetingStats() {
+        const total = meetingData.length;
+        const upcoming = meetingData.filter(m => getMeetingStatus(m) === 'upcoming').length;
+        const ongoing = meetingData.filter(m => getMeetingStatus(m) === 'ongoing').length;
+        const completed = meetingData.filter(m => getMeetingStatus(m) === 'completed').length;
+
+        if (document.getElementById('meetingStatTotal')) document.getElementById('meetingStatTotal').textContent = total;
+        if (document.getElementById('meetingStatUpcoming')) document.getElementById('meetingStatUpcoming').textContent = upcoming;
+        if (document.getElementById('meetingStatOngoing')) document.getElementById('meetingStatOngoing').textContent = ongoing;
+        if (document.getElementById('meetingStatCompleted')) document.getElementById('meetingStatCompleted').textContent = completed;
+    }
+
+    function getFilteredMeetings() {
+        let filtered = [...meetingData];
+        
+        const search = document.getElementById('meetingSearchInput')?.value?.toLowerCase() || '';
+        const status = document.getElementById('meetingStatusFilter')?.value || '';
+
+        if (search) {
+            filtered = filtered.filter(m => m.title.toLowerCase().includes(search) || m.location.toLowerCase().includes(search));
+        }
+        if (status) {
+            filtered = filtered.filter(m => getMeetingStatus(m) === status);
+        }
+
+        filtered.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+        return filtered;
+    }
+
+    function renderMeetingList() {
+        const container = document.getElementById('meetingList');
+        const emptyState = document.getElementById('meetingEmptyState');
+        
+        if (!container || !emptyState) return;
+
+        const filtered = getFilteredMeetings();
+        
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'block';
+            renderMeetingPagination([]);
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        
+        const start = (meetingPage - 1) * MEETING_PAGE_SIZE;
+        const end = start + MEETING_PAGE_SIZE;
+        const pageData = filtered.slice(start, end);
+
+        container.innerHTML = '';
+        
+        pageData.forEach(meeting => {
+            const status = MEETING_STATUS_CONFIG[getMeetingStatus(meeting)];
+            
+            const card = document.createElement('div');
+            card.style.cssText = 'background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;';
+            card.onmouseenter = () => { card.style.transform = 'translateY(-2px)'; card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
+            card.onmouseleave = () => { card.style.transform = ''; card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; };
+            
+            card.onclick = () => showMeetingDetail(meeting.id);
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">📅</span>
+                        <span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};">${status.label}</span>
+                    </div>
+                    <span style="font-size: 12px; color: #888;">创建时间：${meeting.createTime}</span>
+                </div>
+                <h3 style="font-size: 16px; font-weight: bold; color: #333; margin: 0 0 8px;">${meeting.title}</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #666;">
+                    <span>📍 ${meeting.location}</span>
+                    <span>🕐 ${meeting.startTime} - ${meeting.endTime.substring(11)}</span>
+                </div>
+                <div style="margin-top: 8px; font-size: 13px; color: #666;">
+                    <span style="color: #888;">参会人员：</span>${meeting.participants}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        renderMeetingPagination(filtered);
+        updateMeetingStats();
+    }
+
+    function renderMeetingPagination(filtered) {
+        const pagination = document.getElementById('meetingPagination');
+        if (!pagination) return;
+
+        const totalPages = Math.ceil(filtered.length / MEETING_PAGE_SIZE);
+        
+        if (totalPages <= 1) {
+            pagination.innerHTML = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
+            return;
+        }
+
+        let html = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
+        
+        if (meetingPage > 1) {
+            html += `<button onclick="setMeetingPage(${meetingPage - 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">上一页</button>`;
+        }
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === meetingPage) {
+                html += `<button style="padding:4px 12px;border:none;background:#667eea;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">${i}</button>`;
+            } else {
+                html += `<button onclick="setMeetingPage(${i})" style="padding:4px 12px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">${i}</button>`;
+            }
+        }
+        
+        if (meetingPage < totalPages) {
+            html += `<button onclick="setMeetingPage(${meetingPage + 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">下一页</button>`;
+        }
+        
+        pagination.innerHTML = html;
+    }
+
+    function setMeetingPage(page) {
+        meetingPage = page;
+        renderMeetingList();
+    }
+
+    function showAddMeetingModal() {
+        editingMeetingId = null;
+        document.getElementById('meetingModalTitle').textContent = '新建会议';
+        document.getElementById('meetingTitle').value = '';
+        document.getElementById('meetingLocation').value = '';
+        document.getElementById('meetingStartTime').value = '';
+        document.getElementById('meetingEndTime').value = '';
+        document.getElementById('meetingParticipants').value = '';
+        document.getElementById('meetingAgenda').value = '';
+        document.getElementById('meetingNotes').value = '';
+        document.getElementById('meetingModal').style.display = 'flex';
+    }
+
+    function closeMeetingModal() {
+        document.getElementById('meetingModal').style.display = 'none';
+    }
+
+    function saveMeeting() {
+        const title = document.getElementById('meetingTitle').value.trim();
+        const location = document.getElementById('meetingLocation').value.trim();
+        const startTime = document.getElementById('meetingStartTime').value;
+        const endTime = document.getElementById('meetingEndTime').value;
+        const participants = document.getElementById('meetingParticipants').value.trim();
+        const agenda = document.getElementById('meetingAgenda').value.trim();
+        const notes = document.getElementById('meetingNotes').value.trim();
+
+        if (!title || !startTime || !endTime) {
+            alert('请填写会议主题和时间');
+            return;
+        }
+
+        if (editingMeetingId) {
+            const idx = meetingData.findIndex(m => m.id === editingMeetingId);
+            if (idx !== -1) {
+                meetingData[idx] = { ...meetingData[idx], title, location, startTime, endTime, participants, agenda, notes };
+            }
+        } else {
+            const newId = meetingData.length > 0 ? Math.max(...meetingData.map(m => m.id)) + 1 : 1;
+            meetingData.push({ 
+                id: newId, 
+                title, 
+                location, 
+                startTime, 
+                endTime, 
+                participants, 
+                agenda, 
+                notes, 
+                createTime: new Date().toLocaleString('zh-CN') 
+            });
+        }
+
+        saveMeetingData();
+        closeMeetingModal();
+        renderMeetingList();
+        alert('创建成功！');
+    }
+
+    function showMeetingDetail(id) {
+        const meeting = meetingData.find(m => m.id === id);
+        if (!meeting) return;
+        
+        const status = MEETING_STATUS_CONFIG[getMeetingStatus(meeting)];
+        
+        document.getElementById('meetingDetailContent').innerHTML = `
+            <div style="margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span style="font-size: 24px;">📅</span>
+                    <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};">${status.label}</span>
+                </div>
+                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0;">${meeting.title}</h2>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">
+                    <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">📍 会议地点</h4>
+                    <p style="margin: 0; color: #666; font-size: 14px;">${meeting.location || '未设置'}</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">
+                    <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">🕐 会议时间</h4>
+                    <p style="margin: 0; color: #666; font-size: 14px;">${meeting.startTime} - ${meeting.endTime}</p>
+                </div>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">👥 参会人员</h4>
+                <p style="margin: 0; color: #666; font-size: 14px;">${meeting.participants || '未设置'}</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">📋 会议议程</h4>
+                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${meeting.agenda || '暂无'}</p>
+            </div>
+            
+            ${meeting.notes ? `
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">备注</h4>
+                <p style="margin: 0; color: #666; font-size: 14px;">${meeting.notes}</p>
+            </div>
+            ` : ''}
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeMeetingDrawer()">关闭</button>
+                <button class="btn" onclick="deleteMeeting(${meeting.id}); closeMeetingDrawer();">删除</button>
+            </div>
+        `;
+        
+        document.getElementById('meetingDrawer').style.display = 'block';
+        document.getElementById('meetingOverlay').style.display = 'block';
+    }
+
+    function closeMeetingDrawer() {
+        document.getElementById('meetingDrawer').style.display = 'none';
+        document.getElementById('meetingOverlay').style.display = 'none';
+    }
+
+    function deleteMeeting(id) {
+        if (!confirm('确定要删除该会议吗？')) return;
+        
+        meetingData = meetingData.filter(m => m.id !== id);
+        saveMeetingData();
+        renderMeetingList();
+        alert('已删除！');
+    }
+
+    // ===== 资源管理模块（文献/数据集/报告/文件） =====
+    let literatureData = [];
+    let datasetData = [];
+    let reportData = [];
+    let sharedFileData = [];
+
+    function initResourceModules() {
+        loadLiteratureData();
+        loadDatasetData();
+        loadReportData();
+        loadFileData();
+        renderLiteratureList();
+        renderDatasetList();
+        renderReportList();
+        renderFileList();
+    }
+
+    function loadLiteratureData() {
+        const stored = localStorage.getItem('literatureData');
+        if (stored) {
+            literatureData = JSON.parse(stored);
+        } else {
+            literatureData = [
+                { id: 1, title: 'Urban Safety Intelligence: A Comprehensive Review', author: 'Zhang, L.', journal: 'IEEE Transactions', year: '2026', tags: '城市安全, 综述', uploader: '张三', uploadTime: '2026-07-12' },
+                { id: 2, title: '深度学习在城市安全监控中的应用', author: 'Li, W.', journal: '计算机学报', year: '2026', tags: '深度学习, 监控', uploader: '李四', uploadTime: '2026-07-11' },
+                { id: 3, title: '基于AI的城市灾害预警系统研究', author: 'Wang, Q.', journal: '安全与环境学报', year: '2025', tags: 'AI, 灾害预警', uploader: '王五', uploadTime: '2026-07-10' }
+            ];
+            localStorage.setItem('literatureData', JSON.stringify(literatureData));
+        }
+    }
+
+    function loadDatasetData() {
+        const stored = localStorage.getItem('datasetData');
+        if (stored) {
+            datasetData = JSON.parse(stored);
+        } else {
+            datasetData = [
+                { id: 1, name: '城市安全监测数据集V2', size: '2.5 GB', format: 'CSV/JSON', samples: '1,200,000', tags: '监测数据', uploader: '张三', uploadTime: '2026-07-12' },
+                { id: 2, name: '灾害事件标注数据集', size: '800 MB', format: 'JPG/XML', samples: '50,000', tags: '灾害识别', uploader: '李四', uploadTime: '2026-07-11' },
+                { id: 3, name: '交通流量预测数据集', size: '1.2 GB', format: 'CSV', samples: '2,000,000', tags: '交通预测', uploader: '赵六', uploadTime: '2026-07-09' }
+            ];
+            localStorage.setItem('datasetData', JSON.stringify(datasetData));
+        }
+    }
+
+    function loadReportData() {
+        const stored = localStorage.getItem('reportData');
+        if (stored) {
+            reportData = JSON.parse(stored);
+        } else {
+            reportData = [
+                { id: 1, name: '2026年上半年项目进展报告', type: '项目报告', date: '2026-07-01', uploader: '张三', description: '总结上半年项目进展情况' },
+                { id: 2, name: '城市安全数智创新平台可行性研究报告', type: '可行性报告', date: '2026-06-15', uploader: '李四', description: '项目可行性分析' },
+                { id: 3, name: '年度安全检查报告', type: '安全报告', date: '2026-06-01', uploader: '王五', description: '实验室年度安全检查总结' }
+            ];
+            localStorage.setItem('reportData', JSON.stringify(reportData));
+        }
+    }
+
+    function loadFileData() {
+        const stored = localStorage.getItem('sharedFileData');
+        if (stored) {
+            sharedFileData = JSON.parse(stored);
+        } else {
+            sharedFileData = [
+                { id: 1, name: '团队周报模板.docx', size: '52 KB', type: '文档', uploader: '张三', uploadTime: '2026-07-12' },
+                { id: 2, name: '项目汇报PPT模板.pptx', size: '3.2 MB', type: '演示', uploader: '李四', uploadTime: '2026-07-10' },
+                { id: 3, name: '会议纪要模板.docx', size: '28 KB', type: '文档', uploader: '王五', uploadTime: '2026-07-08' },
+                { id: 4, name: '参考文献整理.xlsx', size: '156 KB', type: '表格', uploader: '赵六', uploadTime: '2026-07-05' }
+            ];
+            localStorage.setItem('sharedFileData', JSON.stringify(sharedFileData));
+        }
+    }
+
+    function renderLiteratureList() {
+        const container = document.getElementById('literatureList');
+        const emptyState = document.getElementById('literatureEmptyState');
+        if (!container || !emptyState) return;
+
+        const search = document.getElementById('literatureSearchInput')?.value?.toLowerCase() || '';
+        const filtered = literatureData.filter(l => l.title.toLowerCase().includes(search) || l.author.toLowerCase().includes(search));
+
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+        emptyState.style.display = 'none';
+
+        container.innerHTML = filtered.map(l => `
+            <div style="background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <h3 style="font-size:16px;font-weight:bold;color:#333;margin:0 0 8px;">${l.title}</h3>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:#666;">
+                    <span>👤 ${l.author}</span>
+                    <span>📖 ${l.journal}</span>
+                    <span>📅 ${l.year}</span>
+                </div>
+                <div style="margin-top:8px;">
+                    ${l.tags.split(',').map(t => `<span style="display:inline-block;padding:2px 8px;background:#f0f5ff;color:#1890ff;border-radius:4px;font-size:12px;margin-right:6px;">${t}</span>`).join('')}
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+                    <span style="font-size:12px;color:#888;">上传者：${l.uploader} | ${l.uploadTime}</span>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">查看</button>
+                        <button class="btn" style="padding:4px 12px;font-size:12px;">下载</button>
+                        <button onclick="deleteLiterature(${l.id})" style="padding:4px 12px;border:none;background:#fff1f0;color:#ff4d4f;border-radius:4px;cursor:pointer;font-size:12px;">删除</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderDatasetList() {
+        const container = document.getElementById('datasetList');
+        const emptyState = document.getElementById('datasetEmptyState');
+        if (!container || !emptyState) return;
+
+        const search = document.getElementById('datasetSearchInput')?.value?.toLowerCase() || '';
+        const filtered = datasetData.filter(d => d.name.toLowerCase().includes(search));
+
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+        emptyState.style.display = 'none';
+
+        container.innerHTML = filtered.map(d => `
+            <div style="background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <h3 style="font-size:16px;font-weight:bold;color:#333;margin:0 0 8px;">${d.name}</h3>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:#666;">
+                    <span>📦 ${d.size}</span>
+                    <span>📋 ${d.format}</span>
+                    <span>🔢 ${d.samples} 条记录</span>
+                </div>
+                <div style="margin-top:8px;">
+                    ${d.tags.split(',').map(t => `<span style="display:inline-block;padding:2px 8px;background:#f0f5ff;color:#1890ff;border-radius:4px;font-size:12px;margin-right:6px;">${t}</span>`).join('')}
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+                    <span style="font-size:12px;color:#888;">上传者：${d.uploader} | ${d.uploadTime}</span>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">详情</button>
+                        <button class="btn" style="padding:4px 12px;font-size:12px;">下载</button>
+                        <button onclick="deleteDataset(${d.id})" style="padding:4px 12px;border:none;background:#fff1f0;color:#ff4d4f;border-radius:4px;cursor:pointer;font-size:12px;">删除</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderReportList() {
+        const container = document.getElementById('reportList');
+        const emptyState = document.getElementById('reportEmptyState');
+        if (!container || !emptyState) return;
+
+        const search = document.getElementById('reportSearchInput')?.value?.toLowerCase() || '';
+        const filtered = reportData.filter(r => r.name.toLowerCase().includes(search));
+
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+        emptyState.style.display = 'none';
+
+        container.innerHTML = filtered.map(r => `
+            <div style="background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                    <h3 style="font-size:16px;font-weight:bold;color:#333;margin:0;">${r.name}</h3>
+                    <span style="display:inline-block;padding:2px 8px;background:#f6ffed;color:#52c41a;border-radius:4px;font-size:12px;">${r.type}</span>
+                </div>
+                <p style="font-size:14px;color:#666;margin:0 0 12px;">${r.description}</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:12px;color:#888;">上传者：${r.uploader} | 日期：${r.date}</span>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">预览</button>
+                        <button class="btn" style="padding:4px 12px;font-size:12px;">下载</button>
+                        <button onclick="deleteReport(${r.id})" style="padding:4px 12px;border:none;background:#fff1f0;color:#ff4d4f;border-radius:4px;cursor:pointer;font-size:12px;">删除</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderFileList() {
+        const container = document.getElementById('fileList');
+        const emptyState = document.getElementById('fileEmptyState');
+        if (!container || !emptyState) return;
+
+        const search = document.getElementById('fileSearchInput')?.value?.toLowerCase() || '';
+        const filtered = sharedFileData.filter(f => f.name.toLowerCase().includes(search));
+
+        if (filtered.length === 0) {
+            container.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+        emptyState.style.display = 'none';
+
+        const typeIcons = { '文档': '📄', '演示': '📊', '表格': '📈', '其他': '📁' };
+
+        container.innerHTML = filtered.map(f => `
+            <div style="background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:24px;">${typeIcons[f.type] || '📁'}</span>
+                    <div style="flex:1;">
+                        <h3 style="font-size:16px;font-weight:bold;color:#333;margin:0 0 4px;">${f.name}</h3>
+                        <div style="font-size:13px;color:#666;">${f.size} | ${f.type}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">预览</button>
+                        <button class="btn" style="padding:4px 12px;font-size:12px;">下载</button>
+                        <button onclick="deleteSharedFile(${f.id})" style="padding:4px 12px;border:none;background:#fff1f0;color:#ff4d4f;border-radius:4px;cursor:pointer;font-size:12px;">删除</button>
+                    </div>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:#888;">上传者：${f.uploader} | ${f.uploadTime}</div>
+            </div>
+        `).join('');
+    }
+
+    // 文献添加弹窗
+    function showAddLiteratureModal() {
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
+            <h3 style="margin-bottom:20px;color:#333;">添加文献</h3>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">标题 <span style="color:red;">*</span></label>
+                <input type="text" id="litTitle" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入文献标题">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">作者</label>
+                <input type="text" id="litAuthor" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入作者">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">期刊</label>
+                <input type="text" id="litJournal" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入期刊名称">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">年份</label>
+                <input type="text" id="litYear" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入年份">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">标签（逗号分隔）</label>
+                <input type="text" id="litTags" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="例如：城市安全, 综述">
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="this.closest('div[style*=fixed]').remove()">取消</button>
+                <button class="btn" onclick="addLiterature(this)">保存</button>
+            </div></div>`;
+        document.body.appendChild(modal);
+    }
+
+    function addLiterature(btn) {
+        const title = document.getElementById('litTitle').value.trim();
+        const author = document.getElementById('litAuthor').value.trim();
+        const journal = document.getElementById('litJournal').value.trim();
+        const year = document.getElementById('litYear').value.trim();
+        const tags = document.getElementById('litTags').value.trim();
+        
+        if (!title) { alert('请输入标题'); return; }
+        
+        const newId = literatureData.length > 0 ? Math.max(...literatureData.map(l => l.id)) + 1 : 1;
+        literatureData.push({ id: newId, title, author, journal, year, tags, uploader: currentUser?.realName || currentUser?.username || '未知', uploadTime: new Date().toLocaleDateString('zh-CN') });
+        localStorage.setItem('literatureData', JSON.stringify(literatureData));
+        btn.closest('div[style*=fixed]').remove();
+        renderLiteratureList();
+        alert('添加成功！');
+    }
+
+    // 数据集添加弹窗
+    function showAddDatasetModal() {
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
+            <h3 style="margin-bottom:20px;color:#333;">上传数据集</h3>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">名称 <span style="color:red;">*</span></label>
+                <input type="text" id="dsName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入数据集名称">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">大小</label>
+                <input type="text" id="dsSize" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="例如：2.5 GB">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">格式</label>
+                <input type="text" id="dsFormat" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="例如：CSV/JSON">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">记录数</label>
+                <input type="text" id="dsSamples" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="例如：1,200,000">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">标签（逗号分隔）</label>
+                <input type="text" id="dsTags" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="例如：监测数据">
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="this.closest('div[style*=fixed]').remove()">取消</button>
+                <button class="btn" onclick="addDataset(this)">保存</button>
+            </div></div>`;
+        document.body.appendChild(modal);
+    }
+
+    function addDataset(btn) {
+        const name = document.getElementById('dsName').value.trim();
+        const size = document.getElementById('dsSize').value.trim();
+        const format = document.getElementById('dsFormat').value.trim();
+        const samples = document.getElementById('dsSamples').value.trim();
+        const tags = document.getElementById('dsTags').value.trim();
+        
+        if (!name) { alert('请输入名称'); return; }
+        
+        const newId = datasetData.length > 0 ? Math.max(...datasetData.map(d => d.id)) + 1 : 1;
+        datasetData.push({ id: newId, name, size, format, samples, tags, uploader: currentUser?.realName || currentUser?.username || '未知', uploadTime: new Date().toLocaleDateString('zh-CN') });
+        localStorage.setItem('datasetData', JSON.stringify(datasetData));
+        btn.closest('div[style*=fixed]').remove();
+        renderDatasetList();
+        alert('添加成功！');
+    }
+
+    // 报告添加弹窗
+    function showAddReportModal() {
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
+            <h3 style="margin-bottom:20px;color:#333;">上传报告</h3>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">名称 <span style="color:red;">*</span></label>
+                <input type="text" id="rpName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入报告名称">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">类型</label>
+                <select id="rpType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
+                    <option value="项目报告">项目报告</option>
+                    <option value="可行性报告">可行性报告</option>
+                    <option value="安全报告">安全报告</option>
+                    <option value="年度报告">年度报告</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">日期</label>
+                <input type="date" id="rpDate" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">描述</label>
+                <textarea id="rpDesc" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入报告描述"></textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="this.closest('div[style*=fixed]').remove()">取消</button>
+                <button class="btn" onclick="addReport(this)">保存</button>
+            </div></div>`;
+        document.body.appendChild(modal);
+    }
+
+    function addReport(btn) {
+        const name = document.getElementById('rpName').value.trim();
+        const type = document.getElementById('rpType').value;
+        const date = document.getElementById('rpDate').value;
+        const description = document.getElementById('rpDesc').value.trim();
+        
+        if (!name) { alert('请输入名称'); return; }
+        
+        const newId = reportData.length > 0 ? Math.max(...reportData.map(r => r.id)) + 1 : 1;
+        reportData.push({ id: newId, name, type, date: date || new Date().toISOString().split('T')[0], description, uploader: currentUser?.realName || currentUser?.username || '未知' });
+        localStorage.setItem('reportData', JSON.stringify(reportData));
+        btn.closest('div[style*=fixed]').remove();
+        renderReportList();
+        alert('添加成功！');
+    }
+
+    // 文件添加弹窗
+    function showAddFileModal() {
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
+            <h3 style="margin-bottom:20px;color:#333;">上传文件</h3>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">文件名 <span style="color:red;">*</span></label>
+                <input type="text" id="flName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入文件名">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">大小</label>
+                <input type="text" id="flSize" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="例如：2.5 MB">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">类型</label>
+                <select id="flType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
+                    <option value="文档">文档</option>
+                    <option value="演示">演示</option>
+                    <option value="表格">表格</option>
+                    <option value="图片">图片</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="this.closest('div[style*=fixed]').remove()">取消</button>
+                <button class="btn" onclick="addFile(this)">保存</button>
+            </div></div>`;
+        document.body.appendChild(modal);
+    }
+
+    function addFile(btn) {
+        const name = document.getElementById('flName').value.trim();
+        const size = document.getElementById('flSize').value.trim();
+        const type = document.getElementById('flType').value;
+        
+        if (!name) { alert('请输入文件名'); return; }
+        
+        const newId = sharedFileData.length > 0 ? Math.max(...sharedFileData.map(f => f.id)) + 1 : 1;
+        sharedFileData.push({ id: newId, name, size, type, uploader: currentUser?.realName || currentUser?.username || '未知', uploadTime: new Date().toLocaleDateString('zh-CN') });
+        localStorage.setItem('sharedFileData', JSON.stringify(sharedFileData));
+        btn.closest('div[style*=fixed]').remove();
+        renderFileList();
+        alert('添加成功！');
+    }
+
+    function deleteLiterature(id) {
+        if (!confirm('确定要删除该文献吗？')) return;
+        literatureData = literatureData.filter(l => l.id !== id);
+        localStorage.setItem('literatureData', JSON.stringify(literatureData));
+        renderLiteratureList();
+    }
+
+    function deleteDataset(id) {
+        if (!confirm('确定要删除该数据集吗？')) return;
+        datasetData = datasetData.filter(d => d.id !== id);
+        localStorage.setItem('datasetData', JSON.stringify(datasetData));
+        renderDatasetList();
+    }
+
+    function deleteReport(id) {
+        if (!confirm('确定要删除该报告吗？')) return;
+        reportData = reportData.filter(r => r.id !== id);
+        localStorage.setItem('reportData', JSON.stringify(reportData));
+        renderReportList();
+    }
+
+    function deleteSharedFile(id) {
+        if (!confirm('确定要删除该文件吗？')) return;
+        sharedFileData = sharedFileData.filter(f => f.id !== id);
+        localStorage.setItem('sharedFileData', JSON.stringify(sharedFileData));
+        renderFileList();
+    }
+
+    // 更新路由钩子
+    showModule = function(moduleId) {
+        _origShowModule(moduleId);
+        if (moduleId === 'account_permission') { renderAccountTable(); renderPermissionMatrix(); }
+        if (moduleId === 'role_permission') renderPermissionMatrix();
+        if (moduleId === 'task_management') { initTaskManagement(); }
+        if (moduleId === 'weekly_report') { initWeeklyReport(); }
+        if (moduleId === 'notice_publish') { initNoticePublish(); }
+        if (moduleId === 'meeting_management') { initMeetingManagement(); }
+        if (moduleId === 'literature_library' || moduleId === 'dataset_library' || moduleId === 'project_report' || moduleId === 'shared_files') { initResourceModules(); }
     };
     </script>
 </body>
