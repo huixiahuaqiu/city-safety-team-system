@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -3529,16 +3529,78 @@
             <!-- 模型训练管理 -->
             <div id="model_training" class="module">
                 <div class="card">
-                    <h2>🧠 模型训练管理</h2>
-                    <p>Qwen3-VL/YOLOv8 训练、权重、loss数据管理</p>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2>🧠 模型训练管理</h2>
+                        <button class="btn" onclick="showAddModelModal()">+ 新建模型</button>
+                    </div>
+                    <div style="display:flex;gap:16px;margin-bottom:20px;">
+                        <div style="flex:1;background:#f5f5f5;padding:16px;border-radius:8px;">
+                            <div style="font-size:24px;font-weight:bold;color:#6a1b9a;">12</div>
+                            <div style="font-size:13px;color:#666;">总模型数</div>
+                        </div>
+                        <div style="flex:1;background:#e8f5e9;padding:16px;border-radius:8px;">
+                            <div style="font-size:24px;font-weight:bold;color:#2e7d32;">3</div>
+                            <div style="font-size:13px;color:#666;">训练中</div>
+                        </div>
+                        <div style="flex:1;background:#fff3e0;padding:16px;border-radius:8px;">
+                            <div style="font-size:24px;font-weight:bold;color:#f57c00;">9</div>
+                            <div style="font-size:13px;color:#666;">已完成</div>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;">
+                            <thead>
+                                <tr style="background:#f5f5f5;">
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">模型名称</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">类型</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">状态</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">精度</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">创建时间</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modelTrainingTable"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             
             <!-- AI数据标注工具 -->
             <div id="data_annotation" class="module">
                 <div class="card">
-                    <h2>🏷️ AI数据标注工具</h2>
-                    <p>数据标注、管理功能</p>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2>🏷️ AI数据标注工具</h2>
+                        <button class="btn" onclick="showAddAnnotationModal()">+ 新建标注任务</button>
+                    </div>
+                    <div style="display:flex;gap:16px;margin-bottom:20px;">
+                        <div style="flex:1;background:#f5f5f5;padding:16px;border-radius:8px;">
+                            <div style="font-size:24px;font-weight:bold;color:#6a1b9a;">8</div>
+                            <div style="font-size:13px;color:#666;">标注任务</div>
+                        </div>
+                        <div style="flex:1;background:#e8f5e9;padding:16px;border-radius:8px;">
+                            <div style="font-size:24px;font-weight:bold;color:#2e7d32;">452</div>
+                            <div style="font-size:13px;color:#666;">已标注</div>
+                        </div>
+                        <div style="flex:1;background:#fff3e0;padding:16px;border-radius:8px;">
+                            <div style="font-size:24px;font-weight:bold;color:#f57c00;">128</div>
+                            <div style="font-size:13px;color:#666;">待标注</div>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;">
+                            <thead>
+                                <tr style="background:#f5f5f5;">
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">任务名称</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">数据集</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">标注类型</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">进度</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">负责人</th>
+                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="annotationTable"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             
@@ -3546,7 +3608,27 @@
             <div id="chat" class="module">
                 <div class="card">
                     <h2>💬 智能对话问答</h2>
-                    <p>AI对话、问答功能</p>
+                    <div style="display:flex;gap:20px;">
+                        <div style="flex:1;">
+                            <div style="background:#f5f5f5;padding:15px;border-radius:8px;margin-bottom:15px;">
+                                <h4>📚 知识库</h4>
+                                <div id="knowledgeList" style="max-height:200px;overflow-y:auto;"></div>
+                                <button class="btn btn-secondary" style="margin-top:10px;width:100%;" onclick="showAddKnowledgeModal()">+ 添加知识</button>
+                            </div>
+                        </div>
+                        <div style="flex:2;">
+                            <div id="chatContainer" style="height:400px;border:1px solid #ddd;border-radius:8px;overflow-y:auto;padding:15px;background:#fafafa;margin-bottom:15px;">
+                                <div style="background:#e8eaf6;padding:10px;border-radius:6px;margin-bottom:10px;">
+                                    <strong style="color:#3949ab;">AI助手：</strong><br>
+                                    您好！我是智能对话助手，有什么可以帮您的吗？
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:10px;">
+                                <input type="text" id="chatInput" placeholder="请输入您的问题..." style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                                <button class="btn" onclick="sendChatMessage()">发送</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -18157,7 +18239,417 @@ ${ocrText}`
         if (moduleId === 'notice_publish') { initNoticePublish(); }
         if (moduleId === 'meeting_management') { initMeetingManagement(); }
         if (moduleId === 'literature_library' || moduleId === 'dataset_library' || moduleId === 'project_report' || moduleId === 'shared_files') { initResourceModules(); }
+        if (moduleId === 'model_training') { initModelTraining(); }
+        if (moduleId === 'data_annotation') { initAnnotation(); }
+        if (moduleId === 'chat') { initChat(); }
     };
+
+    // ===== 智能工具模块 =====
+
+    // 模型训练管理
+    let modelTrainingData = [];
+
+    function initModelTraining() {
+        const saved = localStorage.getItem('modelTrainingData');
+        if (saved) {
+            modelTrainingData = JSON.parse(saved);
+        } else {
+            modelTrainingData = [
+                { id: 1, name: 'YOLOv8-Safety', type: 'YOLOv8', status: 'completed', accuracy: '95.2%', createdAt: '2026-06-15', description: '城市安全目标检测模型' },
+                { id: 2, name: 'Qwen3-VL-Safety', type: 'Qwen3-VL', status: 'training', accuracy: '88.5%', createdAt: '2026-07-01', description: '多模态安全识别模型' },
+                { id: 3, name: 'YOLOv8-Fire', type: 'YOLOv8', status: 'completed', accuracy: '97.1%', createdAt: '2026-05-20', description: '火灾检测专用模型' },
+                { id: 4, name: 'Qwen3-VL-Fall', type: 'Qwen3-VL', status: 'training', accuracy: '76.3%', createdAt: '2026-07-05', description: '跌倒检测模型' },
+                { id: 5, name: 'YOLOv8-Crowd', type: 'YOLOv8', status: 'completed', accuracy: '92.8%', createdAt: '2026-06-01', description: '人群密度分析模型' },
+                { id: 6, name: 'YOLOv8-Vehicle', type: 'YOLOv8', status: 'completed', accuracy: '94.5%', createdAt: '2026-05-10', description: '车辆检测模型' },
+                { id: 7, name: 'Qwen3-VL-Smoke', type: 'Qwen3-VL', status: 'completed', accuracy: '91.2%', createdAt: '2026-06-20', description: '烟雾识别模型' },
+                { id: 8, name: 'YOLOv8-Person', type: 'YOLOv8', status: 'training', accuracy: '82.0%', createdAt: '2026-07-03', description: '行人检测优化模型' },
+                { id: 9, name: 'Qwen3-VL-Helmet', type: 'Qwen3-VL', status: 'completed', accuracy: '96.8%', createdAt: '2026-06-10', description: '安全帽检测模型' },
+                { id: 10, name: 'YOLOv8-Sign', type: 'YOLOv8', status: 'completed', accuracy: '89.5%', createdAt: '2026-05-25', description: '交通标志识别模型' },
+                { id: 11, name: 'Qwen3-VL-Violence', type: 'Qwen3-VL', status: 'completed', accuracy: '85.3%', createdAt: '2026-06-25', description: '暴力行为识别模型' },
+                { id: 12, name: 'YOLOv8-Object', type: 'YOLOv8', status: 'completed', accuracy: '93.7%', createdAt: '2026-05-05', description: '通用物体检测模型' }
+            ];
+            localStorage.setItem('modelTrainingData', JSON.stringify(modelTrainingData));
+        }
+        renderModelTrainingList();
+    }
+
+    function renderModelTrainingList() {
+        const table = document.getElementById('modelTrainingTable');
+        if (!table) return;
+        
+        let html = '';
+        modelTrainingData.forEach(item => {
+            const statusColor = item.status === 'completed' ? '#2e7d32' : item.status === 'training' ? '#f57c00' : '#888';
+            const statusText = item.status === 'completed' ? '已完成' : item.status === 'training' ? '训练中' : '待训练';
+            html += `<tr>
+                <td style="padding:10px;border-bottom:1px solid #eee;"><strong>${escHtml(item.name)}</strong></td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.type)}</td>
+                <td style="padding:10px;border-bottom:1px solid #eee;"><span style="color:${statusColor};font-weight:bold;">${statusText}</span></td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.accuracy)}</td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.createdAt)}</td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">
+                    <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="viewModelDetail(${item.id})">查看</button>
+                    <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-left:4px;" onclick="downloadModel(${item.id})">下载</button>
+                </td>
+            </tr>`;
+        });
+        table.innerHTML = html;
+    }
+
+    function showAddModelModal() {
+        const modalId = 'addModelModal_' + Date.now();
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
+            <h3 style="margin-bottom:20px;color:#333;">新建模型训练</h3>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">模型名称 <span style="color:red;">*</span></label>
+                <input type="text" id="modelName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入模型名称">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">模型类型</label>
+                <select id="modelType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
+                    <option value="YOLOv8">YOLOv8</option>
+                    <option value="Qwen3-VL">Qwen3-VL</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">描述</label>
+                <textarea id="modelDesc" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;height:60px;" placeholder="请输入模型描述"></textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
+                <button class="btn" onclick="addModel('${modalId}')">开始训练</button>
+            </div></div>`;
+        document.body.appendChild(modal);
+    }
+
+    function addModel(modalId) {
+        const name = document.getElementById('modelName').value.trim();
+        const type = document.getElementById('modelType').value;
+        const desc = document.getElementById('modelDesc').value.trim();
+        
+        if (!name) { alert('请输入模型名称'); return; }
+        
+        const newId = modelTrainingData.length > 0 ? Math.max(...modelTrainingData.map(m => m.id)) + 1 : 1;
+        modelTrainingData.push({ 
+            id: newId, 
+            name, 
+            type, 
+            status: 'training', 
+            accuracy: '0%', 
+            createdAt: new Date().toISOString().split('T')[0], 
+            description: desc 
+        });
+        localStorage.setItem('modelTrainingData', JSON.stringify(modelTrainingData));
+        document.getElementById(modalId).remove();
+        renderModelTrainingList();
+        alert('训练任务已创建！');
+    }
+
+    function viewModelDetail(id) {
+        const model = modelTrainingData.find(m => m.id === id);
+        if (!model) return;
+        alert(`模型详情：\n名称：${model.name}\n类型：${model.type}\n状态：${model.status === 'completed' ? '已完成' : model.status === 'training' ? '训练中' : '待训练'}\n精度：${model.accuracy}\n创建时间：${model.createdAt}\n描述：${model.description || '无'}`);
+    }
+
+    function downloadModel(id) {
+        const model = modelTrainingData.find(m => m.id === id);
+        if (!model) return;
+        alert(`正在下载模型：${model.name}\n\n文件格式：.pt (PyTorch权重)\n预计大小：256MB\n\n下载链接已生成`);
+    }
+
+    // AI数据标注工具
+    let annotationData = [];
+
+    function initAnnotation() {
+        const saved = localStorage.getItem('annotationData');
+        if (saved) {
+            annotationData = JSON.parse(saved);
+        } else {
+            annotationData = [
+                { id: 1, name: '安全目标检测标注', dataset: 'CitySafety-V1', type: '目标检测', progress: 85, owner: '李明', total: 500, completed: 425 },
+                { id: 2, name: '火灾场景标注', dataset: 'FireDataset', type: '图像分类', progress: 100, owner: '赵芳', total: 1000, completed: 1000 },
+                { id: 3, name: '行人行为标注', dataset: 'PersonAction', type: '行为识别', progress: 62, owner: '王伟', total: 800, completed: 496 },
+                { id: 4, name: '交通标志标注', dataset: 'TrafficSign', type: '目标检测', progress: 95, owner: '刘洋', total: 600, completed: 570 },
+                { id: 5, name: '烟雾识别标注', dataset: 'SmokeDataset', type: '语义分割', progress: 78, owner: '李明', total: 350, completed: 273 },
+                { id: 6, name: '跌倒检测标注', dataset: 'FallDetection', type: '姿态估计', progress: 45, owner: '赵芳', total: 400, completed: 180 },
+                { id: 7, name: '安全帽检测标注', dataset: 'HelmetDataset', type: '目标检测', progress: 100, owner: '陈交换生', total: 280, completed: 280 },
+                { id: 8, name: '人群密度标注', dataset: 'CrowdCount', type: '密度估计', progress: 30, owner: '张教授', total: 550, completed: 165 }
+            ];
+            localStorage.setItem('annotationData', JSON.stringify(annotationData));
+        }
+        renderAnnotationList();
+    }
+
+    function renderAnnotationList() {
+        const table = document.getElementById('annotationTable');
+        if (!table) return;
+        
+        let html = '';
+        annotationData.forEach(item => {
+            html += `<tr>
+                <td style="padding:10px;border-bottom:1px solid #eee;"><strong>${escHtml(item.name)}</strong></td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.dataset)}</td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.type)}</td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">
+                    <div style="width:120px;height:8px;background:#eee;border-radius:4px;overflow:hidden;">
+                        <div style="height:100%;width:${item.progress}%;background:${item.progress === 100 ? '#2e7d32' : item.progress >= 50 ? '#f57c00' : '#e53935'};border-radius:4px;"></div>
+                    </div>
+                    <span style="font-size:12px;color:#666;margin-left:8px;">${item.progress}%</span>
+                </td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.owner)}</td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">
+                    <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="viewAnnotationDetail(${item.id})">查看</button>
+                    <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-left:4px;" onclick="exportAnnotation(${item.id})">导出</button>
+                </td>
+            </tr>`;
+        });
+        table.innerHTML = html;
+    }
+
+    function showAddAnnotationModal() {
+        const modalId = 'addAnnotationModal_' + Date.now();
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
+            <h3 style="margin-bottom:20px;color:#333;">新建标注任务</h3>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">任务名称 <span style="color:red;">*</span></label>
+                <input type="text" id="annoName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入任务名称">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">数据集</label>
+                <input type="text" id="annoDataset" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入数据集名称">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">标注类型</label>
+                <select id="annoType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
+                    <option value="目标检测">目标检测</option>
+                    <option value="图像分类">图像分类</option>
+                    <option value="语义分割">语义分割</option>
+                    <option value="行为识别">行为识别</option>
+                    <option value="姿态估计">姿态估计</option>
+                    <option value="密度估计">密度估计</option>
+                </select>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
+                <button class="btn" onclick="addAnnotation('${modalId}')">创建任务</button>
+            </div></div>`;
+        document.body.appendChild(modal);
+    }
+
+    function addAnnotation(modalId) {
+        const name = document.getElementById('annoName').value.trim();
+        const dataset = document.getElementById('annoDataset').value.trim();
+        const type = document.getElementById('annoType').value;
+        
+        if (!name) { alert('请输入任务名称'); return; }
+        
+        const newId = annotationData.length > 0 ? Math.max(...annotationData.map(a => a.id)) + 1 : 1;
+        annotationData.push({ 
+            id: newId, 
+            name, 
+            dataset: dataset || '自定义数据集', 
+            type, 
+            progress: 0, 
+            owner: currentUser?.realName || currentUser?.username || '未知', 
+            total: 0, 
+            completed: 0 
+        });
+        localStorage.setItem('annotationData', JSON.stringify(annotationData));
+        document.getElementById(modalId).remove();
+        renderAnnotationList();
+        alert('标注任务已创建！');
+    }
+
+    function viewAnnotationDetail(id) {
+        const task = annotationData.find(a => a.id === id);
+        if (!task) return;
+        alert(`标注任务详情：\n名称：${task.name}\n数据集：${task.dataset}\n类型：${task.type}\n进度：${task.progress}% (${task.completed}/${task.total})\n负责人：${task.owner}`);
+    }
+
+    function exportAnnotation(id) {
+        const task = annotationData.find(a => a.id === id);
+        if (!task) return;
+        alert(`正在导出标注结果：${task.name}\n\n格式：JSON/CSV\n包含：${task.completed} 条标注数据\n\n导出链接已生成`);
+    }
+
+    // 智能对话问答
+    let knowledgeData = [];
+
+    function initChat() {
+        const saved = localStorage.getItem('knowledgeData');
+        if (saved) {
+            knowledgeData = JSON.parse(saved);
+        } else {
+            knowledgeData = [
+                { id: 1, title: '课题组研究方向', content: '城市安全数智创新团队主要研究方向包括：城市安全监测与预警、计算机视觉与深度学习、物联网与传感器网络、应急管理与决策支持。' },
+                { id: 2, title: 'YOLOv8训练指南', content: 'YOLOv8训练流程：1.准备数据集（COCO格式）；2.配置yaml文件；3.设置训练参数（epochs、batch size、lr）；4.运行训练命令；5.评估模型精度；6.导出模型权重。' },
+                { id: 3, title: '周报提交要求', content: '每周日晚22:00前提交周报，内容包括：本周工作进展、下周计划、遇到的问题。组长需在周一12:00前审核完本组周报。' },
+                { id: 4, title: '会议安排', content: '每周三下午2:30召开组会，地点：工学院302会议室。每月最后一周周五下午召开月度总结会议。' },
+                { id: 5, title: '数据标注规范', content: '标注规范：目标框需完整包围目标，类别标签准确，避免重叠标注，每张图片标注完成后需检查确认。' }
+            ];
+            localStorage.setItem('knowledgeData', JSON.stringify(knowledgeData));
+        }
+        renderKnowledgeList();
+    }
+
+    function renderKnowledgeList() {
+        const list = document.getElementById('knowledgeList');
+        if (!list) return;
+        
+        let html = '';
+        knowledgeData.forEach(item => {
+            html += `<div style="padding:10px;border-bottom:1px solid #eee;cursor:pointer;" onclick="viewKnowledge(${item.id})">
+                <div style="font-weight:bold;color:#333;">${escHtml(item.title)}</div>
+                <div style="font-size:12px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(item.content)}</div>
+            </div>`;
+        });
+        list.innerHTML = html || '<div style="text-align:center;color:#888;padding:20px;">暂无知识库内容</div>';
+    }
+
+    function showAddKnowledgeModal() {
+        const modalId = 'addKnowledgeModal_' + Date.now();
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
+            <h3 style="margin-bottom:20px;color:#333;">添加知识</h3>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">标题 <span style="color:red;">*</span></label>
+                <input type="text" id="knowledgeTitle" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入知识标题">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">内容 <span style="color:red;">*</span></label>
+                <textarea id="knowledgeContent" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;height:120px;" placeholder="请输入知识内容"></textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
+                <button class="btn" onclick="addKnowledge('${modalId}')">保存</button>
+            </div></div>`;
+        document.body.appendChild(modal);
+    }
+
+    function addKnowledge(modalId) {
+        const title = document.getElementById('knowledgeTitle').value.trim();
+        const content = document.getElementById('knowledgeContent').value.trim();
+        
+        if (!title || !content) { alert('请填写标题和内容'); return; }
+        
+        const newId = knowledgeData.length > 0 ? Math.max(...knowledgeData.map(k => k.id)) + 1 : 1;
+        knowledgeData.push({ id: newId, title, content });
+        localStorage.setItem('knowledgeData', JSON.stringify(knowledgeData));
+        document.getElementById(modalId).remove();
+        renderKnowledgeList();
+        alert('知识已添加！');
+    }
+
+    function viewKnowledge(id) {
+        const knowledge = knowledgeData.find(k => k.id === id);
+        if (!knowledge) return;
+        alert(`知识详情：\n标题：${knowledge.title}\n\n内容：\n${knowledge.content}`);
+    }
+
+    function sendChatMessage() {
+        const input = document.getElementById('chatInput');
+        const container = document.getElementById('chatContainer');
+        const message = input.value.trim();
+        
+        if (!message) return;
+        
+        container.innerHTML += `<div style="background:#e3f2fd;padding:10px;border-radius:6px;margin-bottom:10px;">
+            <strong style="color:#1565c0;">我：</strong><br>${escHtml(message)}
+        </div>`;
+        input.value = '';
+        container.scrollTop = container.scrollHeight;
+        
+        setTimeout(() => {
+            let response = getChatResponse(message);
+            
+            container.innerHTML += `<div style="background:#e8eaf6;padding:10px;border-radius:6px;margin-bottom:10px;">
+                <strong style="color:#3949ab;">AI助手：</strong><br>${escHtml(response)}
+            </div>`;
+            container.scrollTop = container.scrollHeight;
+        }, 800);
+    }
+
+    function getChatResponse(message) {
+        const matched = knowledgeData.find(k => 
+            message.includes(k.title) || 
+            k.title.includes(message) ||
+            message.split('').some(c => k.content.includes(c))
+        );
+        if (matched) {
+            return `根据知识库：\n\n${matched.content}`;
+        }
+        
+        if (message.includes('你好') || message.includes('您好') || message.includes('hi') || message.includes('hello')) {
+            return '您好！我是城市安全数智创新团队的智能助手。您可以问我关于课题组的任何问题，比如研究方向、周报提交、会议安排等。';
+        }
+        
+        if (message.includes('你是谁') || message.includes('是什么') || message.includes('什么是')) {
+            return '我是城市安全数智创新团队的AI智能助手，专门为团队成员提供信息查询和问题解答服务。';
+        }
+        
+        if (message.includes('能做什么') || message.includes('功能') || message.includes('帮助')) {
+            return `我可以帮您：\n\n📚 查询知识库信息（研究方向、训练指南、标注规范等）\n📅 了解周报提交要求和会议安排\n🧠 解答模型训练相关问题\n🏷️ 提供数据标注指导\n💡 回答系统使用问题\n\n请问有什么可以帮您的？`;
+        }
+        
+        if (message.includes('研究') || message.includes('方向')) {
+            return '城市安全数智创新团队主要研究方向包括：城市安全监测与预警、计算机视觉与深度学习、物联网与传感器网络、应急管理与决策支持。';
+        }
+        
+        if (message.includes('周报') || message.includes('报告')) {
+            return '周报需在每周日晚22:00前提交，内容包括：本周工作进展、下周计划、遇到的问题。组长需在周一12:00前审核完本组周报。';
+        }
+        
+        if (message.includes('会议') || message.includes('组会')) {
+            return '每周三下午2:30召开组会，地点：工学院302会议室。每月最后一周周五下午召开月度总结会议。';
+        }
+        
+        if (message.includes('训练') || message.includes('模型') || message.includes('YOLO') || message.includes('Qwen')) {
+            return '您可以在"模型训练管理"模块查看和管理训练任务。支持YOLOv8和Qwen3-VL等模型的训练、权重管理和loss数据监控。';
+        }
+        
+        if (message.includes('标注') || message.includes('数据') || message.includes('数据集')) {
+            return '您可以在"AI数据标注工具"模块创建和管理标注任务。支持目标检测、图像分类、语义分割、行为识别、姿态估计、密度估计等多种标注类型。';
+        }
+        
+        if (message.includes('账号') || message.includes('登录') || message.includes('密码')) {
+            return '账号管理相关功能在左侧导航的"团队管理"模块中。管理员可以创建账号、管理权限、重置密码。首次登录需修改默认密码。';
+        }
+        
+        if (message.includes('文献') || message.includes('论文')) {
+            return '文献资料库在左侧导航的"资源中心"模块中，您可以查看、搜索和下载课题组的文献资料。';
+        }
+        
+        if (message.includes('文件') || message.includes('共享')) {
+            return '团队共享文件库在左侧导航的"资源中心"模块中，您可以上传、下载和管理共享文件。';
+        }
+        
+        if (message.includes('任务') || message.includes('待办')) {
+            return '任务管理在左侧导航的"团队工作"模块中，您可以查看、创建和处理分配给自己的科研任务。';
+        }
+        
+        if (message.includes('通知') || message.includes('公告')) {
+            return '内部通知在左侧导航的"公告动态"模块中，您可以查看最新的团队通知和公告。';
+        }
+        
+        if (message.includes('感谢') || message.includes('谢谢')) {
+            return '不客气！如有其他问题随时问我。';
+        }
+        
+        if (message.includes('再见') || message.includes('拜拜') || message.includes('bye')) {
+            return '再见！祝您工作顺利。';
+        }
+        
+        return `抱歉，我暂时无法回答这个问题。您可以尝试询问以下类型的问题：\n\n📚 课题组研究方向\n📅 周报提交要求和会议安排\n🧠 模型训练相关问题\n🏷️ 数据标注指导\n💡 系统使用帮助\n\n或者直接在左侧导航中查看相关模块。`;
+    }
     </script>
 </body>
 </html>
