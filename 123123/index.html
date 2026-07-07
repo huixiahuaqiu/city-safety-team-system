@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -3635,8 +3635,37 @@
             <!-- 文献对比分析 -->
             <div id="literature_analysis" class="module">
                 <div class="card">
-                    <h2>📄 文献对比分析</h2>
-                    <p>文献对比、分析功能</p>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2>📄 文献对比分析</h2>
+                        <div style="display:flex;gap:10px;">
+                            <button class="btn btn-success" onclick="showAddLiteratureModal()">➕ 添加文献</button>
+                            <button class="btn btn-secondary" onclick="document.getElementById('literatureCsvInput').click()">📥 导入CSV</button>
+                            <button class="btn btn-secondary" onclick="exportLiteratureCsv()">📤 导出CSV</button>
+                            <button class="btn" onclick="compareSelectedLiterature()">🔄 对比选中文献</button>
+                        </div>
+                        <input type="file" id="literatureCsvInput" accept=".csv" style="display:none;" onchange="importLiteratureCsv(event)">
+                    </div>
+                    <div style="display:flex;gap:20px;">
+                        <div style="flex:1;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                <h4>文献列表 <span id="literatureCount" style="font-weight:normal;color:#888;font-size:13px;"></span></h4>
+                                <div style="display:flex;gap:5px;">
+                                    <input type="text" id="literatureSearch" placeholder="搜索文献..." style="width:150px;padding:5px;border:1px solid #ddd;border-radius:4px;font-size:13px;" oninput="renderLiteratureCompareList()">
+                                </div>
+                            </div>
+                            <div id="literatureCompareList" style="max-height:500px;overflow-y:auto;"></div>
+                        </div>
+                        <div style="flex:1;">
+                            <h4>对比结果</h4>
+                            <div id="literatureCompareResult" style="border:1px solid #ddd;border-radius:8px;padding:15px;min-height:400px;">
+                                <div style="text-align:center;color:#888;padding:80px 20px;">
+                                    <div style="font-size:48px;margin-bottom:10px;">📊</div>
+                                    <div>请从左侧选择需要对比的文献</div>
+                                    <div style="font-size:13px;margin-top:5px;">（支持多选，最多10篇）</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -3866,8 +3895,40 @@
             <!-- 文档智能解析 -->
             <div id="document_analysis" class="module">
                 <div class="card">
-                    <h2>📑 文档智能解析</h2>
-                    <p>文档智能解析、提取功能</p>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2>📑 文档智能解析</h2>
+                        <button class="btn btn-secondary" onclick="clearDocumentAnalysis()">🗑️ 清空</button>
+                    </div>
+                    <div style="display:flex;gap:20px;">
+                        <div style="flex:1;">
+                            <div style="background:#f5f5f5;padding:40px;border-radius:8px;text-align:center;border:2px dashed #ddd;cursor:pointer;" onclick="document.getElementById('documentUploadInput').click()">
+                                <input type="file" id="documentUploadInput" accept=".doc,.docx,.pdf,.txt" style="display:none;" onchange="handleDocumentUpload(event)">
+                                <div style="font-size:48px;margin-bottom:10px;">📁</div>
+                                <div>点击或拖拽上传文档</div>
+                                <div style="font-size:13px;color:#888;margin-top:5px;">支持 .doc .docx .pdf .txt 格式</div>
+                            </div>
+                            <div id="documentInfo" style="margin-top:20px;display:none;">
+                                <div style="background:#e8f5e9;padding:15px;border-radius:8px;">
+                                    <div style="font-weight:bold;color:#2e7d32;">✅ 文件上传成功</div>
+                                    <div id="documentFileName" style="font-size:13px;color:#666;margin-top:5px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="flex:2;">
+                            <div id="documentAnalysisResult" style="border:1px solid #ddd;border-radius:8px;padding:15px;min-height:400px;">
+                                <div style="text-align:center;color:#888;padding:80px 20px;">
+                                    <div style="font-size:48px;margin-bottom:10px;">🤖</div>
+                                    <div>上传文档后，AI将自动解析内容</div>
+                                    <div style="font-size:13px;margin-top:5px;">提取关键信息、生成摘要、分析结构</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-top:15px;">
+                                <button class="btn" onclick="extractDocumentSummary()">📋 提取摘要</button>
+                                <button class="btn" onclick="extractDocumentKeyPoints()">🔑 提取关键点</button>
+                                <button class="btn" onclick="extractDocumentStructure()">📐 分析结构</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -18242,6 +18303,8 @@ ${ocrText}`
         if (moduleId === 'model_training') { initModelTraining(); }
         if (moduleId === 'data_annotation') { initAnnotation(); }
         if (moduleId === 'chat') { initChat(); }
+        if (moduleId === 'literature_analysis') { initLiteratureAnalysis(); }
+        if (moduleId === 'document_analysis') { initDocumentAnalysis(); }
     };
 
     // ===== 智能工具模块 =====
@@ -18649,6 +18712,679 @@ ${ocrText}`
         }
         
         return `抱歉，我暂时无法回答这个问题。您可以尝试询问以下类型的问题：\n\n📚 课题组研究方向\n📅 周报提交要求和会议安排\n🧠 模型训练相关问题\n🏷️ 数据标注指导\n💡 系统使用帮助\n\n或者直接在左侧导航中查看相关模块。`;
+    }
+
+    // ===== 文献对比分析 =====
+    let compareLiteratureData = [];
+    let selectedLiteratures = [];
+    let editingLiteratureId = null;
+
+    function initLiteratureAnalysis() {
+        const saved = localStorage.getItem('compareLiteratureData');
+        if (saved) {
+            compareLiteratureData = JSON.parse(saved);
+        } else {
+            compareLiteratureData = [
+                { id: 1, title: 'YOLOv8: Optimal Speed and Accuracy of Object Detection', author: 'Glenn Jocher', journal: 'arXiv', year: '2023', field: '计算机视觉', summary: 'YOLOv8是Ultralytics公司发布的最新目标检测模型，在速度和精度上达到了最优平衡，支持多种任务包括检测、分割、分类等。', keywords: ['YOLOv8', '目标检测', '深度学习'] },
+                { id: 2, title: 'Qwen-VL: A Versatile Vision-Language Model for Understanding and Generation', author: 'Alibaba Cloud', journal: 'arXiv', year: '2024', field: '多模态', summary: 'Qwen-VL是阿里云发布的多模态大模型，具备强大的视觉理解和图文生成能力，支持多种视觉任务。', keywords: ['Qwen-VL', '多模态', '大模型'] },
+                { id: 3, title: 'Deep Residual Learning for Image Recognition', author: 'He Kaiming', journal: 'CVPR', year: '2016', field: '计算机视觉', summary: 'ResNet通过引入残差连接解决了深度神经网络训练中的梯度消失问题，极大地推动了深度学习的发展。', keywords: ['ResNet', '深度学习', '图像识别'] },
+                { id: 4, title: 'Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks', author: 'Ren Shaoqing', journal: 'NIPS', year: '2015', field: '计算机视觉', summary: 'Faster R-CNN引入区域建议网络(RPN)，将目标检测速度提升到实时水平，成为两阶段检测算法的标杆。', keywords: ['Faster R-CNN', '目标检测', 'RPN'] },
+                { id: 5, title: 'Mask R-CNN', author: 'He Kaiming', journal: 'ICCV', year: '2017', field: '计算机视觉', summary: 'Mask R-CNN在Faster R-CNN基础上增加了实例分割分支，实现了目标检测和实例分割的统一框架。', keywords: ['Mask R-CNN', '实例分割', '目标检测'] },
+                { id: 6, title: 'Transformer: Attention Is All You Need', author: 'Vaswani', journal: 'NIPS', year: '2017', field: '自然语言处理', summary: 'Transformer架构引入自注意力机制，成为现代大语言模型的基础，彻底改变了NLP领域。', keywords: ['Transformer', '注意力机制', 'NLP'] },
+                { id: 7, title: 'Vision Transformer (ViT)', author: 'Dosovitskiy', journal: 'ICLR', year: '2021', field: '计算机视觉', summary: 'ViT将Transformer架构应用于计算机视觉领域，开创了视觉Transformer的先河。', keywords: ['ViT', 'Transformer', '图像分类'] },
+                { id: 8, title: 'EfficientDet: Scalable and Efficient Object Detection', author: 'Tan Mingxing', journal: 'CVPR', year: '2020', field: '计算机视觉', summary: 'EfficientDet通过复合缩放策略实现了检测模型的高效扩展，在精度和效率之间取得了良好平衡。', keywords: ['EfficientDet', '目标检测', '模型压缩'] },
+                { id: 9, title: 'YOLOv5: Real-Time Object Detection', author: 'Ultralytics', journal: 'arXiv', year: '2020', field: '计算机视觉', summary: 'YOLOv5是Ultralytics发布的目标检测模型，以其易用性和良好的性能成为工业界广泛使用的检测框架。', keywords: ['YOLOv5', '目标检测', '实时'] },
+                { id: 10, title: 'Cityscapes: Semantic Understanding of Urban Street Scenes', author: 'Cordts', journal: 'CVPR', year: '2016', field: '计算机视觉', summary: 'Cityscapes是一个大规模城市场景语义分割数据集，包含50个城市的街景图像，推动了城市场景理解的研究。', keywords: ['Cityscapes', '语义分割', '城市场景'] },
+                { id: 11, title: 'SSD: Single Shot MultiBox Detector', author: 'Liu Wei', journal: 'ECCV', year: '2016', field: '计算机视觉', summary: 'SSD是一种单次检测算法，通过在不同尺度特征图上进行检测，实现了较好的精度和速度平衡。', keywords: ['SSD', '目标检测', '单次检测'] },
+                { id: 12, title: 'MobileNetV2: Inverted Residuals and Linear Bottlenecks', author: 'Sandler', journal: 'CVPR', year: '2018', field: '计算机视觉', summary: 'MobileNetV2采用倒残差结构和线性瓶颈，在保持精度的同时大幅减少了模型参数量，适合移动端部署。', keywords: ['MobileNet', '轻量化', '移动端'] },
+                { id: 13, title: 'GPT-3: Language Models are Few-Shot Learners', author: 'Brown', journal: 'NeurIPS', year: '2020', field: '自然语言处理', summary: 'GPT-3是一个拥有1750亿参数的超大语言模型，展示了大模型在少样本学习方面的强大能力。', keywords: ['GPT-3', '大语言模型', '少样本'] },
+                { id: 14, title: 'BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding', author: 'Devlin', journal: 'NAACL', year: '2019', field: '自然语言处理', summary: 'BERT通过双向Transformer进行预训练，在多项NLP任务上取得了突破性进展。', keywords: ['BERT', '预训练', 'NLP'] },
+                { id: 15, title: 'DETR: End-to-End Object Detection with Transformers', author: 'Carion', journal: 'ECCV', year: '2020', field: '计算机视觉', summary: 'DETR首次将Transformer引入目标检测领域，实现了端到端的检测流程，无需复杂的后处理。', keywords: ['DETR', 'Transformer', '目标检测'] }
+            ];
+            localStorage.setItem('compareLiteratureData', JSON.stringify(compareLiteratureData));
+        }
+        renderLiteratureCompareList();
+    }
+
+    function renderLiteratureCompareList() {
+        const list = document.getElementById('literatureCompareList');
+        const count = document.getElementById('literatureCount');
+        const search = document.getElementById('literatureSearch')?.value || '';
+        
+        if (!list) return;
+        
+        const filtered = search ? compareLiteratureData.filter(item => 
+            item.title.toLowerCase().includes(search.toLowerCase()) ||
+            item.author.toLowerCase().includes(search.toLowerCase()) ||
+            item.keywords.some(k => k.toLowerCase().includes(search.toLowerCase()))
+        ) : compareLiteratureData;
+        
+        if (count) count.textContent = `(${filtered.length}篇)`;
+        
+        let html = '';
+        filtered.forEach(item => {
+            const isSelected = selectedLiteratures.includes(item.id);
+            html += `<div style="padding:12px;border:1px solid ${isSelected ? '#6a1b9a' : '#eee'};border-radius:6px;margin-bottom:8px;" onclick="toggleLiteratureSelection(${item.id})">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleLiteratureSelection(${item.id})" style="margin:0;">
+                    <div style="flex:1;cursor:pointer;">
+                        <div style="font-weight:bold;font-size:14px;">${escHtml(item.title)}</div>
+                        <div style="font-size:12px;color:#666;">${escHtml(item.author)} | ${escHtml(item.journal)} ${item.year}</div>
+                        <div style="font-size:12px;color:#8a2be2;margin-top:4px;">${item.keywords.map(k => `#${k}`).join(' ')}</div>
+                    </div>
+                    <div style="display:flex;gap:5px;">
+                        <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="event.stopPropagation();showEditLiteratureModal(${item.id})">✏️</button>
+                        <button class="btn btn-danger" style="padding:4px 8px;font-size:12px;" onclick="event.stopPropagation();deleteLiterature(${item.id})">🗑️</button>
+                    </div>
+                </div>
+            </div>`;
+        });
+        list.innerHTML = html;
+    }
+
+    function toggleLiteratureSelection(id) {
+        const idx = selectedLiteratures.indexOf(id);
+        if (idx > -1) {
+            selectedLiteratures.splice(idx, 1);
+        } else {
+            if (selectedLiteratures.length >= 10) {
+                alert('最多只能选择10篇文献进行对比');
+                return;
+            }
+            selectedLiteratures.push(id);
+        }
+        renderLiteratureCompareList();
+    }
+
+    function showAddLiteratureModal() {
+        editingLiteratureId = null;
+        showLiteratureModal();
+    }
+
+    function showEditLiteratureModal(id) {
+        editingLiteratureId = id;
+        showLiteratureModal();
+    }
+
+    function showLiteratureModal() {
+        const item = editingLiteratureId ? compareLiteratureData.find(l => l.id === editingLiteratureId) : null;
+        const modalId = 'literatureModal_' + Date.now();
+        
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:5000;`;
+        
+        modal.innerHTML = `
+            <div style="background:white;border-radius:12px;width:500px;max-height:90vh;overflow-y:auto;padding:24px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <h3 style="margin:0;color:#6a1b9a;">${item ? '✏️ 编辑文献' : '➕ 添加文献'}</h3>
+                    <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()" style="padding:5px 10px;">×</button>
+                </div>
+                
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div>
+                        <label style="font-size:13px;font-weight:bold;color:#333;">文献标题 <span style="color:red;">*</span></label>
+                        <input type="text" id="litTitle" class="form-control" value="${item ? escHtml(item.title) : ''}" placeholder="请输入文献标题">
+                    </div>
+                    
+                    <div>
+                        <label style="font-size:13px;font-weight:bold;color:#333;">作者</label>
+                        <input type="text" id="litAuthor" class="form-control" value="${item ? escHtml(item.author) : ''}" placeholder="请输入作者">
+                    </div>
+                    
+                    <div style="display:flex;gap:12px;">
+                        <div style="flex:1;">
+                            <label style="font-size:13px;font-weight:bold;color:#333;">期刊</label>
+                            <input type="text" id="litJournal" class="form-control" value="${item ? escHtml(item.journal) : ''}" placeholder="请输入期刊">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:13px;font-weight:bold;color:#333;">年份</label>
+                            <input type="text" id="litYear" class="form-control" value="${item ? item.year : ''}" placeholder="请输入年份">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label style="font-size:13px;font-weight:bold;color:#333;">研究领域</label>
+                        <input type="text" id="litField" class="form-control" value="${item ? escHtml(item.field) : ''}" placeholder="请输入研究领域">
+                    </div>
+                    
+                    <div>
+                        <label style="font-size:13px;font-weight:bold;color:#333;">关键词</label>
+                        <input type="text" id="litKeywords" class="form-control" value="${item ? item.keywords.join(', ') : ''}" placeholder="多个关键词用逗号分隔">
+                    </div>
+                    
+                    <div>
+                        <label style="font-size:13px;font-weight:bold;color:#333;">摘要</label>
+                        <textarea id="litSummary" class="form-control" rows="3" placeholder="请输入文献摘要">${item ? escHtml(item.summary) : ''}</textarea>
+                    </div>
+                </div>
+                
+                <div style="display:flex;gap:10px;margin-top:20px;">
+                    <button class="btn btn-success" onclick="saveLiterature('${modalId}')">${item ? '保存修改' : '添加文献'}</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    function saveLiterature(modalId) {
+        const title = document.getElementById('litTitle').value.trim();
+        const author = document.getElementById('litAuthor').value.trim();
+        const journal = document.getElementById('litJournal').value.trim();
+        const year = document.getElementById('litYear').value.trim();
+        const field = document.getElementById('litField').value.trim();
+        const keywordsStr = document.getElementById('litKeywords').value.trim();
+        const summary = document.getElementById('litSummary').value.trim();
+        
+        if (!title) {
+            alert('请输入文献标题');
+            return;
+        }
+        
+        const keywords = keywordsStr ? keywordsStr.split(/[,，]/).map(k => k.trim()).filter(k => k) : [];
+        
+        if (editingLiteratureId) {
+            const idx = compareLiteratureData.findIndex(l => l.id === editingLiteratureId);
+            if (idx > -1) {
+                compareLiteratureData[idx] = {
+                    id: editingLiteratureId,
+                    title, author, journal, year, field, summary, keywords
+                };
+            }
+        } else {
+            const newId = compareLiteratureData.length > 0 ? Math.max(...compareLiteratureData.map(l => l.id)) + 1 : 1;
+            compareLiteratureData.push({
+                id: newId,
+                title, author, journal, year, field, summary, keywords
+            });
+        }
+        
+        localStorage.setItem('compareLiteratureData', JSON.stringify(compareLiteratureData));
+        renderLiteratureCompareList();
+        document.getElementById(modalId).remove();
+    }
+
+    function deleteLiterature(id) {
+        if (!confirm('确定要删除这篇文献吗？')) return;
+        
+        compareLiteratureData = compareLiteratureData.filter(l => l.id !== id);
+        selectedLiteratures = selectedLiteratures.filter(lid => lid !== id);
+        localStorage.setItem('compareLiteratureData', JSON.stringify(compareLiteratureData));
+        renderLiteratureCompareList();
+    }
+
+    function importLiteratureCsv(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+            const lines = content.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            let importedCount = 0;
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+                const item = {};
+                
+                headers.forEach((header, idx) => {
+                    item[header] = values[idx] || '';
+                });
+                
+                if (item.title || item['文献标题']) {
+                    const newId = compareLiteratureData.length > 0 ? Math.max(...compareLiteratureData.map(l => l.id)) + 1 : 1;
+                    compareLiteratureData.push({
+                        id: newId,
+                        title: item.title || item['文献标题'] || '',
+                        author: item.author || item['作者'] || '',
+                        journal: item.journal || item['期刊'] || '',
+                        year: item.year || item['年份'] || '',
+                        field: item.field || item['研究领域'] || '',
+                        summary: item.summary || item['摘要'] || '',
+                        keywords: (item.keywords || item['关键词'] || '').split(/[,，]/).map(k => k.trim()).filter(k => k)
+                    });
+                    importedCount++;
+                }
+            }
+            
+            localStorage.setItem('compareLiteratureData', JSON.stringify(compareLiteratureData));
+            renderLiteratureCompareList();
+            alert(`成功导入 ${importedCount} 篇文献`);
+        };
+        
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    function exportLiteratureCsv() {
+        if (compareLiteratureData.length === 0) {
+            alert('暂无文献数据可导出');
+            return;
+        }
+        
+        let csv = '文献标题,作者,期刊,年份,研究领域,关键词,摘要\n';
+        
+        compareLiteratureData.forEach(item => {
+            const title = `"${item.title.replace(/"/g, '""')}"`;
+            const author = `"${item.author.replace(/"/g, '""')}"`;
+            const journal = `"${item.journal.replace(/"/g, '""')}"`;
+            const year = `"${item.year}"`;
+            const field = `"${item.field.replace(/"/g, '""')}"`;
+            const keywords = `"${item.keywords.join(', ').replace(/"/g, '""')}"`;
+            const summary = `"${item.summary.replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+            
+            csv += `${title},${author},${journal},${year},${field},${keywords},${summary}\n`;
+        });
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'literature_data.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function compareSelectedLiterature() {
+        if (selectedLiteratures.length < 2) {
+            alert('请至少选择2篇文献进行对比');
+            return;
+        }
+        
+        const selected = compareLiteratureData.filter(l => selectedLiteratures.includes(l.id));
+        const result = document.getElementById('literatureCompareResult');
+        
+        let html = `<div style="margin-bottom:20px;">
+            <div style="font-weight:bold;color:#6a1b9a;margin-bottom:10px;">📊 文献对比分析报告</div>
+            <div style="font-size:13px;color:#666;">共对比 ${selected.length} 篇文献</div>
+        </div>`;
+        
+        html += `<div style="margin-bottom:20px;">
+            <h4 style="margin-bottom:10px;">📝 基本信息对比</h4>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead><tr style="background:#f5f5f5;">
+                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">文献</th>
+                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">作者</th>
+                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">期刊</th>
+                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">年份</th>
+                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">领域</th>
+                </tr></thead>
+                <tbody>`;
+        
+        selected.forEach(item => {
+            html += `<tr>
+                <td style="padding:8px;border:1px solid #ddd;"><strong>${escHtml(item.title)}</strong></td>
+                <td style="padding:8px;border:1px solid #ddd;">${escHtml(item.author)}</td>
+                <td style="padding:8px;border:1px solid #ddd;">${escHtml(item.journal)}</td>
+                <td style="padding:8px;border:1px solid #ddd;">${item.year}</td>
+                <td style="padding:8px;border:1px solid #ddd;">${escHtml(item.field)}</td>
+            </tr>`;
+        });
+        
+        html += `</tbody></table>
+        </div>`;
+        
+        html += `<div style="margin-bottom:20px;">
+            <h4 style="margin-bottom:10px;">🎯 研究方向对比</h4>`;
+        
+        const keywordsMap = {};
+        selected.forEach(item => {
+            item.keywords.forEach(k => {
+                keywordsMap[k] = (keywordsMap[k] || 0) + 1;
+            });
+        });
+        
+        html += `<div style="display:flex;flex-wrap:wrap;gap:8px;">`;
+        Object.keys(keywordsMap).forEach(k => {
+            const count = keywordsMap[k];
+            const opacity = count / selected.length;
+            html += `<span style="padding:6px 12px;background:#e8eaf6;color:#3949ab;border-radius:4px;font-size:13px;">${k} (${count})</span>`;
+        });
+        html += `</div>
+        </div>`;
+        
+        html += `<div>
+            <h4 style="margin-bottom:10px;">📋 摘要对比</h4>`;
+        
+        selected.forEach(item => {
+            html += `<div style="margin-bottom:15px;padding:10px;background:#f8f9fa;border-radius:6px;">
+                <div style="font-weight:bold;color:#6a1b9a;margin-bottom:5px;">${escHtml(item.title)}</div>
+                <div style="font-size:13px;color:#666;line-height:1.6;">${escHtml(item.summary)}</div>
+            </div>`;
+        });
+        
+        html += `</div>`;
+        
+        result.innerHTML = html;
+    }
+
+    // ===== 文档智能解析 =====
+    let currentDocument = null;
+    let documentContent = '';
+
+    function initDocumentAnalysis() {
+        currentDocument = null;
+        documentContent = '';
+        document.getElementById('documentInfo').style.display = 'none';
+        document.getElementById('documentAnalysisResult').innerHTML = `<div style="text-align:center;color:#888;padding:80px 20px;">
+            <div style="font-size:48px;margin-bottom:10px;">🤖</div>
+            <div>上传文档后，AI将自动解析内容</div>
+            <div style="font-size:13px;margin-top:5px;">支持 .txt .doc .docx .pdf 格式</div>
+        </div>`;
+    }
+
+    function handleDocumentUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        currentDocument = {
+            name: file.name,
+            type: file.type,
+            size: file.size
+        };
+        
+        document.getElementById('documentFileName').textContent = `文件名：${file.name} | 大小：${formatFileSize(file.size)} | 类型：${file.type}`;
+        document.getElementById('documentInfo').style.display = 'block';
+        
+        const result = document.getElementById('documentAnalysisResult');
+        result.innerHTML = `<div style="text-align:center;color:#888;padding:40px 20px;">
+            <div style="font-size:36px;margin-bottom:10px;">🔄</div>
+            <div>正在解析文档...</div>
+            <div style="font-size:13px;margin-top:5px;">${file.name}</div>
+        </div>`;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            documentContent = e.target.result;
+            showDocumentContentPreview();
+        };
+        
+        if (file.name.endsWith('.txt')) {
+            reader.readAsText(file, 'utf-8');
+        } else if (file.name.endsWith('.csv')) {
+            reader.readAsText(file, 'utf-8');
+        } else {
+            reader.readAsText(file, 'utf-8');
+        }
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function showDocumentContentPreview() {
+        const result = document.getElementById('documentAnalysisResult');
+        const preview = documentContent.substring(0, 1000);
+        const fullLength = documentContent.length;
+        
+        result.innerHTML = `<div style="padding:10px;">
+            <div style="background:#e8f5e9;padding:15px;border-radius:8px;margin-bottom:15px;">
+                <div style="font-weight:bold;color:#2e7d32;margin-bottom:5px;">✅ 文档解析完成</div>
+                <div style="font-size:13px;color:#666;">共 ${fullLength} 字符，已提取完整文本内容</div>
+            </div>
+            <div style="font-size:14px;line-height:1.8;color:#333;">
+                <strong style="color:#6a1b9a;">文档内容预览：</strong><br>
+                <div style="background:#f8f9fa;padding:15px;border-radius:6px;margin-top:10px;max-height:200px;overflow-y:auto;">
+                    ${escHtml(preview)}${fullLength > 1000 ? '...' : ''}
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function extractDocumentSummary() {
+        if (!currentDocument || !documentContent) {
+            alert('请先上传文档');
+            return;
+        }
+        
+        const sentences = documentContent.split(/[。！？\n\r]/).filter(s => s.trim().length > 10);
+        const summary = sentences.slice(0, 3).join('。') + '。';
+        const corePoints = extractCorePoints();
+        
+        const result = document.getElementById('documentAnalysisResult');
+        result.innerHTML = `<div style="padding:10px;">
+            <div style="background:#fff3e0;padding:15px;border-radius:8px;margin-bottom:15px;">
+                <div style="font-weight:bold;color:#f57c00;margin-bottom:5px;">📋 文档摘要提取</div>
+            </div>
+            <div style="font-size:14px;line-height:1.8;color:#333;">
+                <strong>文档标题：</strong>${escHtml(currentDocument.name)}<br><br>
+                <strong>摘要内容：</strong><br>
+                ${escHtml(summary || '文档内容较短，无法生成摘要')}<br><br>
+                <strong>核心观点：</strong><br>
+                ${corePoints.map(p => `• ${escHtml(p)}`).join('<br>')}
+            </div>
+        </div>`;
+    }
+
+    function extractCorePoints() {
+        const points = [];
+        const lines = documentContent.split('\n').filter(l => l.trim());
+        
+        lines.forEach(line => {
+            if (line.includes('关键词') || line.includes('Key words')) {
+                points.push('关键词：' + line.replace(/关键词[：:]|Key words[：:]/gi, '').trim());
+            } else if (line.includes('摘要') || line.includes('Abstract')) {
+                points.push('摘要提示：文档包含摘要部分');
+            } else if (line.match(/^[\d一二三四五六七八九十]+[\.、]/)) {
+                points.push(line.substring(0, 50));
+            }
+        });
+        
+        if (points.length === 0) {
+            const wordCount = documentContent.split(/\s+/).length;
+            const charCount = documentContent.length;
+            points.push(`文档字数：约 ${wordCount} 词，${charCount} 字符`);
+            points.push('建议阅读全文以了解核心内容');
+        }
+        
+        return points.slice(0, 5);
+    }
+
+    function extractDocumentKeyPoints() {
+        if (!currentDocument || !documentContent) {
+            alert('请先上传文档');
+            return;
+        }
+        
+        const keywords = extractKeywords(documentContent);
+        const numbers = extractNumbers(documentContent);
+        const names = extractNames(documentContent);
+        const dates = extractDates(documentContent);
+        
+        const result = document.getElementById('documentAnalysisResult');
+        result.innerHTML = `<div style="padding:10px;">
+            <div style="background:#e3f2fd;padding:15px;border-radius:8px;margin-bottom:15px;">
+                <div style="font-weight:bold;color:#1565c0;margin-bottom:5px;">🔑 关键信息提取</div>
+            </div>
+            <div style="font-size:14px;line-height:2;color:#333;">
+                <strong>📌 核心关键词：</strong><br>
+                ${keywords.length > 0 ? keywords.map(k => `<span style="padding:4px 8px;background:#f5f5f5;border-radius:4px;margin-right:5px;">${escHtml(k)}</span>`).join('') : '暂无关键词'}<br><br>
+                
+                <strong>📊 重要数据：</strong><br>
+                ${numbers.length > 0 ? numbers.map(n => `• ${escHtml(n)}<br>`).join('') : '暂无数据'}<br>
+                
+                <strong>👤 相关人员：</strong><br>
+                ${names.length > 0 ? names.map(n => `• ${escHtml(n)}<br>`).join('') : '暂无人员信息'}<br>
+                
+                <strong>📅 时间信息：</strong><br>
+                ${dates.length > 0 ? dates.map(d => `• ${escHtml(d)}<br>`).join('') : '暂无时间信息'}
+            </div>
+        </div>`;
+    }
+
+    function extractKeywords(text) {
+        const commonWords = ['的', '是', '在', '有', '和', '了', '我', '你', '他', '她', '它', '这', '那', '为', '与', '及', '等', '一些', '一个', '这种', '这些', '因为', '所以', '但是', '如果', '可以', '可能', '应该', '需要', '已经', '正在', '将会', '已经', '曾经', '能够', '必须', '应该', '可能', '可以', '会', '要', '能', '应', '该', '可', '着', '过', '也', '还', '都', '就', '不', '很', '更', '最', '太', '又', '再', '也', '还', '都', '就'];
+        const words = text.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ').split(/\s+/);
+        const wordCount = {};
+        
+        words.forEach(word => {
+            if (word.length >= 2 && !commonWords.includes(word)) {
+                wordCount[word] = (wordCount[word] || 0) + 1;
+            }
+        });
+        
+        return Object.entries(wordCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(entry => entry[0]);
+    }
+
+    function extractNumbers(text) {
+        const patterns = [
+            /(\d+(?:\.\d+)?)\s*%/g,
+            /(\d+(?:\.\d+)?)\s*(秒|毫秒|分钟|小时|天|周|月|年)/g,
+            /(\d+(?:,\d+)?)\s*(个|种|项|篇|人|次|元|万元|亿)/g,
+            /(\d+(?:,\d+)?)\s*(图像|图片|样本|数据|记录)/g,
+            /准确率\s*[：:]\s*(\d+(?:\.\d+)?)/g,
+            /精度\s*[：:]\s*(\d+(?:\.\d+)?)/g,
+            /误差\s*[：:]\s*(\d+(?:\.\d+)?)/g
+        ];
+        
+        const results = [];
+        patterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(text)) !== null) {
+                results.push(match[0]);
+            }
+        });
+        
+        return [...new Set(results)].slice(0, 8);
+    }
+
+    function extractNames(text) {
+        const patterns = [
+            /([\u4e00-\u9fa5]{2,4})\s*(教授|副教授|研究员|博士|硕士|老师)/g,
+            /作者\s*[：:]\s*([\u4e00-\u9fa5]{2,4}(?:、[\u4e00-\u9fa5]{2,4})*)/g,
+            /团队\s*[：:]\s*([\u4e00-\u9fa5]{2,4})/g,
+            /机构\s*[：:]\s*([\u4e00-\u9fa5]{2,})/g
+        ];
+        
+        const results = [];
+        patterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(text)) !== null) {
+                results.push(match[1]);
+            }
+        });
+        
+        return [...new Set(results)].slice(0, 5);
+    }
+
+    function extractDates(text) {
+        const patterns = [
+            /(\d{4})\s*年\s*(\d{1,2})\s*月/g,
+            /(\d{4})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})/g,
+            /(\d{4})\s*年/g,
+            /起始时间\s*[：:]\s*(\d{4}年\d{1,2}月)/g,
+            /发表时间\s*[：:]\s*(\d{4}年\d{1,2}月)/g,
+            /时间\s*[：:]\s*(\d{4}年\d{1,2}月)/g
+        ];
+        
+        const results = [];
+        patterns.forEach(pattern => {
+            let match;
+            while ((match = pattern.exec(text)) !== null) {
+                results.push(match[0]);
+            }
+        });
+        
+        return [...new Set(results)].slice(0, 5);
+    }
+
+    function extractDocumentStructure() {
+        if (!currentDocument || !documentContent) {
+            alert('请先上传文档');
+            return;
+        }
+        
+        const structure = analyzeDocumentStructure(documentContent);
+        
+        const result = document.getElementById('documentAnalysisResult');
+        let html = `<div style="padding:10px;">
+            <div style="background:#f3e5f5;padding:15px;border-radius:8px;margin-bottom:15px;">
+                <div style="font-weight:bold;color:#6a1b9a;margin-bottom:5px;">📐 文档结构分析</div>
+            </div>
+            <div style="font-size:14px;line-height:2;color:#333;">
+                <strong>文档层次结构：</strong><br><br>`;
+        
+        if (structure.length > 0) {
+            structure.forEach(section => {
+                html += `<div style="padding-left:${section.level * 20}px;">
+                    <div style="font-weight:bold;">${escHtml(section.title)}</div>`;
+                if (section.children && section.children.length > 0) {
+                    html += `<div style="padding-left:20px;margin-top:5px;">`;
+                    section.children.forEach(child => {
+                        html += `${escHtml(child.title)}<br>`;
+                    });
+                    html += `</div>`;
+                }
+                html += `</div><br>`;
+            });
+        } else {
+            html += `<div style="color:#888;">无法识别文档结构，请检查文档格式</div><br>`;
+        }
+        
+        const lines = documentContent.split('\n').filter(l => l.trim());
+        const totalLines = lines.length;
+        const emptyLines = documentContent.split('\n').filter(l => !l.trim()).length;
+        const paragraphCount = lines.filter(l => l.length > 20).length;
+        
+        html += `<strong>📊 文档统计：</strong><br>
+            • 总行数：${totalLines} 行<br>
+            • 空行数：${emptyLines} 行<br>
+            • 段落数：${paragraphCount} 段<br>
+            • 字符数：${documentContent.length} 字符
+            </div>
+        </div>`;
+        
+        result.innerHTML = html;
+    }
+
+    function analyzeDocumentStructure(text) {
+        const lines = text.split('\n').filter(l => l.trim());
+        const structure = [];
+        let currentSection = null;
+        
+        lines.forEach(line => {
+            const level1Match = line.match(/^([\d一二三四五六七八九十]+)[\.、]\s+(.+)$/);
+            const level2Match = line.match(/^([\d一二三四五六七八九十]+\.[\d一二三四五六七八九十]+)[\.、]\s+(.+)$/);
+            
+            if (level1Match) {
+                currentSection = {
+                    title: line,
+                    level: 1,
+                    children: []
+                };
+                structure.push(currentSection);
+            } else if (level2Match && currentSection) {
+                currentSection.children.push({
+                    title: line,
+                    level: 2
+                });
+            }
+        });
+        
+        return structure;
+    }
+
+    function clearDocumentAnalysis() {
+        currentDocument = null;
+        documentContent = '';
+        document.getElementById('documentUploadInput').value = '';
+        document.getElementById('documentInfo').style.display = 'none';
+        document.getElementById('documentAnalysisResult').innerHTML = `<div style="text-align:center;color:#888;padding:80px 20px;">
+            <div style="font-size:48px;margin-bottom:10px;">🤖</div>
+            <div>上传文档后，AI将自动解析内容</div>
+            <div style="font-size:13px;margin-top:5px;">支持 .txt .doc .docx .pdf 格式</div>
+        </div>`;
     }
     </script>
 </body>
