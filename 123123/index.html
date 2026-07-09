@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -6196,6 +6196,18 @@
         <p>地址：重庆市沙坪坝区大学城东路 20 号 | 电话：023-65022222</p>
     </div>
 
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            console.error('Global error:', msg, 'at', url, line, col);
+            return true;
+        };
+        
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            event.preventDefault();
+        });
+    </script>
+    
     <script>
         // ========== Supabase 配置 (REST API 模式，无需SDK) ==========
         const SUPABASE_URL = 'https://havxlphglhjgcfgwowae.supabase.co';
@@ -17769,159 +17781,189 @@ ${ocrText}`
     }
 
     function showNewsModal() {
-        const item = editingNewsId ? newsData.find(n => n.id === editingNewsId) : null;
-        const modalId = 'newsModal_' + Date.now();
-        const editorId = 'newsEditor_' + Date.now();
-        const cropperModalId = 'cropperModal_' + Date.now();
-        
-        const modal = document.createElement('div');
-        modal.id = modalId;
-        modal.className = 'fixed inset-0 bg-black/50 z-[5000] flex justify-center items-center';
-        modal.innerHTML = `
-            <div class="bg-white rounded-xl w-[750px] max-h-[90vh] flex flex-col overflow-hidden">
-                <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
-                    <h3 class="text-xl font-semibold text-[#7c3aed]">${item ? '✏️ 编辑新闻' : '➕ 发布新闻'}</h3>
-                    <button class="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 flex items-center justify-center" onclick="document.getElementById('${modalId}').remove()">×</button>
-                </div>
-                
-                <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">新闻标题 <span class="text-red-500">*</span></label>
-                        <input type="text" id="newsTitle" class="w-full text-lg px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all" value="${item ? escHtml(item.title) : ''}" placeholder="请输入新闻标题">
+        try {
+            const item = editingNewsId ? newsData.find(n => n.id === editingNewsId) : null;
+            const modalId = 'newsModal_' + Date.now();
+            const editorId = 'newsEditor_' + Date.now();
+            const cropperModalId = 'cropperModal_' + Date.now();
+            
+            const modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'fixed inset-0 bg-black/50 z-[5000] flex justify-center items-center';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl w-[750px] max-h-[90vh] flex flex-col overflow-hidden">
+                    <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+                        <h3 class="text-xl font-semibold text-[#7c3aed]">${item ? '✏️ 编辑新闻' : '➕ 发布新闻'}</h3>
+                        <button class="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 flex items-center justify-center" onclick="document.getElementById('${modalId}').remove()">×</button>
                     </div>
                     
-                    <div class="flex gap-4">
-                        <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">分类</label>
-                            <select id="newsCategory" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all bg-white">
-                                ${NEWS_CATEGORIES.map(c => `<option value="${escHtml(c)}" ${item && item.category === c ? 'selected' : ''}>${escHtml(c)}</option>`).join('')}
-                            </select>
+                    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">新闻标题 <span class="text-red-500">*</span></label>
+                            <input type="text" id="newsTitle" class="w-full text-lg px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all" value="${item ? escHtml(item.title) : ''}" placeholder="请输入新闻标题">
                         </div>
-                        <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">作者</label>
-                            <input type="text" id="newsAuthor" readonly class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600" value="${item ? escHtml(item.author) : (currentUser?.realName || currentUser?.username || '')}">
+                        
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">分类</label>
+                                <select id="newsCategory" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all bg-white">
+                                    ${NEWS_CATEGORIES.map(c => `<option value="${escHtml(c)}" ${item && item.category === c ? 'selected' : ''}>${escHtml(c)}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">作者</label>
+                                <input type="text" id="newsAuthor" readonly class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600" value="${item ? escHtml(item.author) : (currentUser?.realName || currentUser?.username || '')}">
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">封面图</label>
-                        <div id="coverUploadArea_${modalId}" class="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center cursor-pointer hover:border-[#7c3aed] hover:bg-purple-50/50 transition-all" onclick="document.getElementById('coverFileInput_${modalId}').click()" ondragover="event.preventDefault()" ondrop="handleCoverDrop(event, '${modalId}')">
-                            <div id="coverPreview_${modalId}" class="hidden">
-                                <img id="coverImage_${modalId}" src="${item?.cover || ''}" class="max-h-40 mx-auto rounded-lg object-contain">
-                                <div class="mt-3 flex justify-center gap-2">
-                                    <button class="text-sm text-[#7c3aed] hover:text-[#6d28d9]" onclick="event.stopPropagation(); document.getElementById('coverFileInput_${modalId}').click()">重新上传</button>
-                                    <button class="text-sm text-gray-500 hover:text-gray-700" onclick="event.stopPropagation(); clearCoverImage('${modalId}')">删除</button>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">封面图</label>
+                            <div id="coverUploadArea_${modalId}" class="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center cursor-pointer hover:border-[#7c3aed] hover:bg-purple-50/50 transition-all" onclick="document.getElementById('coverFileInput_${modalId}').click()" ondragover="event.preventDefault()" ondrop="handleCoverDrop(event, '${modalId}')">
+                                <div id="coverPreview_${modalId}" class="hidden">
+                                    <img id="coverImage_${modalId}" src="${item?.cover || ''}" class="max-h-40 mx-auto rounded-lg object-contain">
+                                    <div class="mt-3 flex justify-center gap-2">
+                                        <button class="text-sm text-[#7c3aed] hover:text-[#6d28d9]" onclick="event.stopPropagation(); document.getElementById('coverFileInput_${modalId}').click()">重新上传</button>
+                                        <button class="text-sm text-gray-500 hover:text-gray-700" onclick="event.stopPropagation(); clearCoverImage('${modalId}')">删除</button>
+                                    </div>
+                                </div>
+                                <div id="coverPlaceholder_${modalId}" ${item?.cover ? 'class="hidden"' : ''}>
+                                    <div class="text-4xl mb-3">🖼️</div>
+                                    <div class="text-gray-500 mb-1">点击或拖拽上传封面图</div>
+                                    <div class="text-xs text-gray-400">建议尺寸 900×600（3:2），支持 JPG/PNG</div>
                                 </div>
                             </div>
-                            <div id="coverPlaceholder_${modalId}" ${item?.cover ? 'class="hidden"' : ''}>
-                                <div class="text-4xl mb-3">🖼️</div>
-                                <div class="text-gray-500 mb-1">点击或拖拽上传封面图</div>
-                                <div class="text-xs text-gray-400">建议尺寸 900×600（3:2），支持 JPG/PNG</div>
-                            </div>
+                            <input type="file" id="coverFileInput_${modalId}" accept=".jpg,.jpeg,.png" class="hidden" onchange="handleCoverUpload(event, '${modalId}', '${cropperModalId}')">
+                            <input type="hidden" id="newsCover" value="${item?.cover || ''}">
                         </div>
-                        <input type="file" id="coverFileInput_${modalId}" accept=".jpg,.jpeg,.png" class="hidden" onchange="handleCoverUpload(event, '${modalId}', '${cropperModalId}')">
-                        <input type="hidden" id="newsCover" value="${item?.cover || ''}">
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">从链接导入</label>
+                            <div class="flex gap-3">
+                                <input type="text" id="newsImportUrl" class="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all" placeholder="粘贴网页链接，自动提取标题和正文">
+                                <button class="px-4 py-3 bg-[#7c3aed] text-white rounded-lg hover:bg-[#6d28d9] transition-colors font-medium whitespace-nowrap" onclick="importFromUrl('${modalId}', '${editorId}')">🔗 导入</button>
+                            </div>
+                            <div id="importStatus_${modalId}" class="mt-2 text-xs" style="display:none;"></div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">摘要</label>
+                            <textarea id="newsSummary" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all resize-none" rows="3" placeholder="不填则默认截取正文前100字">${item ? escHtml(item.summary || '') : ''}</textarea>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="block text-sm font-medium text-gray-700">正文 <span class="text-red-500">*</span></label>
+                                <div class="flex gap-2">
+                                    <button id="insertTemplateBtn_${modalId}" class="text-sm text-[#7c3aed] hover:text-[#6d28d9] flex items-center gap-1" onclick="showTemplateMenu('${modalId}', '${editorId}')">
+                                        📋 插入模板
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="toolbar_${editorId}" class="w-full"></div>
+                            <div id="${editorId}" class="w-full"></div>
+                            <div class="text-right text-xs text-gray-400 mt-1" id="wordCount_${modalId}">0 字</div>
+                        </div>
                     </div>
                     
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">从链接导入</label>
+                    <div class="px-6 py-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <button class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors" onclick="showMobilePreview('${modalId}', '${editorId}')">
+                            👁️ 预览效果
+                        </button>
                         <div class="flex gap-3">
-                            <input type="text" id="newsImportUrl" class="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all" placeholder="粘贴网页链接，自动提取标题和正文">
-                            <button class="px-4 py-3 bg-[#7c3aed] text-white rounded-lg hover:bg-[#6d28d9] transition-colors font-medium whitespace-nowrap" onclick="importFromUrl('${modalId}', '${editorId}')">🔗 导入</button>
+                            <button class="px-4 py-2 text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" onclick="document.getElementById('${modalId}').remove()">取消</button>
+                            <button class="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" onclick="saveNewsAsDraft('${modalId}', '${editorId}')">保存草稿</button>
+                            <button class="px-6 py-2 text-white bg-[#7c3aed] rounded-lg hover:bg-[#6d28d9] transition-colors font-medium" onclick="submitNews('${modalId}', '${editorId}')">发布新闻</button>
                         </div>
-                        <div id="importStatus_${modalId}" class="mt-2 text-xs" style="display:none;"></div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">摘要</label>
-                        <textarea id="newsSummary" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all resize-none" rows="3" placeholder="不填则默认截取正文前100字">${item ? escHtml(item.summary || '') : ''}</textarea>
-                    </div>
-                    
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="block text-sm font-medium text-gray-700">正文 <span class="text-red-500">*</span></label>
-                            <div class="flex gap-2">
-                                <button id="insertTemplateBtn_${modalId}" class="text-sm text-[#7c3aed] hover:text-[#6d28d9] flex items-center gap-1" onclick="showTemplateMenu('${modalId}', '${editorId}')">
-                                    📋 插入模板
-                                </button>
-                            </div>
-                        </div>
-                        <div id="toolbar_${editorId}" class="w-full"></div>
-                        <div id="${editorId}" class="w-full"></div>
-                        <div class="text-right text-xs text-gray-400 mt-1" id="wordCount_${modalId}">0 字</div>
                     </div>
                 </div>
                 
-                <div class="px-6 py-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50">
-                    <button class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors" onclick="showMobilePreview('${modalId}', '${editorId}')">
-                        👁️ 预览效果
-                    </button>
-                    <div class="flex gap-3">
-                        <button class="px-4 py-2 text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" onclick="document.getElementById('${modalId}').remove()">取消</button>
-                        <button class="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" onclick="saveNewsAsDraft('${modalId}', '${editorId}')">保存草稿</button>
-                        <button class="px-6 py-2 text-white bg-[#7c3aed] rounded-lg hover:bg-[#6d28d9] transition-colors font-medium" onclick="submitNews('${modalId}', '${editorId}')">发布新闻</button>
+                <div id="${cropperModalId}" class="fixed inset-0 bg-black/60 z-[6000] flex justify-center items-center hidden">
+                    <div class="bg-white rounded-xl w-[600px] p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-lg font-semibold text-gray-800">裁剪封面图</h4>
+                            <button class="text-gray-400 hover:text-gray-600 text-xl font-bold" onclick="closeCropperModal('${cropperModalId}')">×</button>
+                        </div>
+                        <div class="bg-gray-900 rounded-lg overflow-hidden" style="max-height: 400px;">
+                            <img id="cropperImage_${cropperModalId}" src="" class="max-w-full">
+                        </div>
+                        <div class="text-center text-xs text-gray-400 mb-4">拖动裁剪框，裁剪比例固定为 3:2</div>
+                        <div class="flex justify-end gap-3">
+                            <button class="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg" onclick="closeCropperModal('${cropperModalId}')">取消</button>
+                            <button class="px-4 py-2 text-white bg-[#7c3aed] rounded-lg" onclick="confirmCrop('${cropperModalId}', '${modalId}')">确认裁剪</button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            `;
             
-            <div id="${cropperModalId}" class="fixed inset-0 bg-black/60 z-[6000] flex justify-center items-center hidden">
-                <div class="bg-white rounded-xl w-[600px] p-4">
-                    <div class="flex justify-between items-center mb-4">
-                        <h4 class="text-lg font-semibold text-gray-800">裁剪封面图</h4>
-                        <button class="text-gray-400 hover:text-gray-600 text-xl font-bold" onclick="closeCropperModal('${cropperModalId}')">×</button>
-                    </div>
-                    <div class="bg-gray-900 rounded-lg overflow-hidden" style="max-height: 400px;">
-                        <img id="cropperImage_${cropperModalId}" src="" class="max-w-full">
-                    </div>
-                    <div class="text-center text-xs text-gray-400 mb-4">拖动裁剪框，裁剪比例固定为 3:2</div>
-                    <div class="flex justify-end gap-3">
-                        <button class="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg" onclick="closeCropperModal('${cropperModalId}')">取消</button>
-                        <button class="px-4 py-2 text-white bg-[#7c3aed] rounded-lg" onclick="confirmCrop('${cropperModalId}', '${modalId}')">确认裁剪</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        setTimeout(() => {
-            initNewsEditor(editorId, modalId, item?.content || '');
-        }, 100);
+            document.body.appendChild(modal);
+            
+            setTimeout(() => {
+                initNewsEditor(editorId, modalId, item?.content || '');
+            }, 100);
+        } catch (e) {
+            console.error('showNewsModal error:', e);
+            alert('打开新闻编辑弹窗失败，请刷新页面重试');
+        }
     }
     
     let newsEditorInstance = null;
     
     function initNewsEditor(editorId, modalId, content) {
-        const editorConfig = {
-            placeholder: '请输入新闻正文...',
-            onChange: (editor) => {
-                const text = editor.getText();
-                document.getElementById('wordCount_' + modalId).textContent = text.length + ' 字';
+        try {
+            if (typeof wangEditor === 'undefined') {
+                console.warn('wangEditor not loaded');
+                return;
             }
-        };
-        
-        const toolbarConfig = [
-            'heading', 'bold', 'italic', 'underline', 'deleteLine',
-            'fontColor', 'bgColor',
-            'justifyLeft', 'justifyCenter', 'justifyRight',
-            'orderedList', 'unorderedList',
-            'quote', 'divider',
-            'insertImage', 'insertLink',
-            'undo', 'redo'
-        ];
-        
-        newsEditorInstance = wangEditor.createEditor({
-            selector: '#' + editorId,
-            html: content,
-            config: editorConfig,
-            mode: 'default'
-        });
-        
-        const toolbar = wangEditor.createToolbar({
-            editor: newsEditorInstance,
-            selector: '#toolbar_' + editorId,
-            config: { toolbarKeys: toolbarConfig }
-        });
+            
+            const toolbarEl = document.getElementById('toolbar_' + editorId);
+            const editorEl = document.getElementById(editorId);
+            
+            if (!toolbarEl || !editorEl) {
+                console.warn('Editor elements not found');
+                return;
+            }
+            
+            const editorConfig = {
+                placeholder: '请输入新闻正文...',
+                onChange: (editor) => {
+                    try {
+                        const text = editor.getText();
+                        const wordCountEl = document.getElementById('wordCount_' + modalId);
+                        if (wordCountEl) {
+                            wordCountEl.textContent = text.length + ' 字';
+                        }
+                    } catch (e) {
+                        console.error('Editor onChange error:', e);
+                    }
+                }
+            };
+            
+            const toolbarConfig = [
+                'heading', 'bold', 'italic', 'underline', 'deleteLine',
+                'fontColor', 'bgColor',
+                'justifyLeft', 'justifyCenter', 'justifyRight',
+                'orderedList', 'unorderedList',
+                'quote', 'divider',
+                'insertImage', 'insertLink',
+                'undo', 'redo'
+            ];
+            
+            newsEditorInstance = wangEditor.createEditor({
+                selector: '#' + editorId,
+                html: content,
+                config: editorConfig,
+                mode: 'default'
+            });
+            
+            wangEditor.createToolbar({
+                editor: newsEditorInstance,
+                selector: '#toolbar_' + editorId,
+                config: { toolbarKeys: toolbarConfig }
+            });
+            
+        } catch (e) {
+            console.error('wangEditor init error:', e);
+        }
     }
     
     function handleCoverUpload(event, modalId, cropperModalId) {
@@ -18015,87 +18057,105 @@ ${ocrText}`
     };
     
     function showTemplateMenu(modalId, editorId) {
-        let menu = document.getElementById('templateMenu_' + modalId);
-        if (menu) {
-            menu.remove();
-            return;
-        }
-        
-        menu = document.createElement('div');
-        menu.id = 'templateMenu_' + modalId;
-        menu.className = 'fixed bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-[7000]';
-        
-        Object.entries(NEWS_TEMPLATES).forEach(([key, template]) => {
-            const item = document.createElement('div');
-            item.className = 'px-4 py-2 hover:bg-purple-50 cursor-pointer text-sm text-gray-700';
-            item.textContent = template.title;
-            item.onclick = () => {
-                newsEditorInstance.setHtml(template.content);
+        try {
+            let menu = document.getElementById('templateMenu_' + modalId);
+            if (menu) {
                 menu.remove();
-            };
-            menu.appendChild(item);
-        });
-        
-        const btn = document.getElementById('insertTemplateBtn_' + modalId);
-        const rect = btn.getBoundingClientRect();
-        menu.style.left = rect.left + 'px';
-        menu.style.top = (rect.bottom + 8) + 'px';
-        
-        document.body.appendChild(menu);
-        
-        document.addEventListener('click', function closeMenu(e) {
-            if (!menu.contains(e.target) && !btn.contains(e.target)) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
+                return;
             }
-        });
+            
+            menu = document.createElement('div');
+            menu.id = 'templateMenu_' + modalId;
+            menu.className = 'fixed bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-[7000]';
+            
+            Object.entries(NEWS_TEMPLATES).forEach(([key, template]) => {
+                const item = document.createElement('div');
+                item.className = 'px-4 py-2 hover:bg-purple-50 cursor-pointer text-sm text-gray-700';
+                item.textContent = template.title;
+                item.onclick = () => {
+                    if (newsEditorInstance) {
+                        newsEditorInstance.setHtml(template.content);
+                    }
+                    menu.remove();
+                };
+                menu.appendChild(item);
+            });
+            
+            const btn = document.getElementById('insertTemplateBtn_' + modalId);
+            if (btn) {
+                const rect = btn.getBoundingClientRect();
+                menu.style.left = rect.left + 'px';
+                menu.style.top = (rect.bottom + 8) + 'px';
+            }
+            
+            document.body.appendChild(menu);
+            
+            document.addEventListener('click', function closeMenu(e) {
+                if (!menu.contains(e.target) && !btn?.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('click', closeMenu);
+                }
+            });
+        } catch (e) {
+            console.error('showTemplateMenu error:', e);
+        }
     }
     
     function importFromUrl(modalId, editorId) {
-        const urlInput = document.getElementById('newsImportUrl');
-        const url = urlInput.value.trim();
-        const statusDiv = document.getElementById('importStatus_' + modalId);
-        
-        if (!url) {
-            statusDiv.textContent = '❌ 请输入网页链接';
-            statusDiv.style.color = '#ef4444';
-            statusDiv.style.display = 'block';
-            return;
-        }
-        
-        if (!/^https?:\/\//.test(url)) {
-            statusDiv.textContent = '❌ 请输入有效的网址（以 http:// 或 https:// 开头）';
-            statusDiv.style.color = '#ef4444';
-            statusDiv.style.display = 'block';
-            return;
-        }
-        
-        statusDiv.textContent = '🔄 正在导入内容，请稍候...';
-        statusDiv.style.color = '#7c3aed';
-        statusDiv.style.display = 'block';
-        
-        setTimeout(() => {
-            try {
-                const importedContent = extractContentFromUrl(url);
-                
-                if (importedContent.title) {
-                    document.getElementById('newsTitle').value = importedContent.title;
-                }
-                if (importedContent.summary) {
-                    document.getElementById('newsSummary').value = importedContent.summary;
-                }
-                if (importedContent.content && newsEditorInstance) {
-                    newsEditorInstance.setHtml(importedContent.content);
-                }
-                
-                statusDiv.textContent = '✅ 导入成功！标题和正文已自动填充';
-                statusDiv.style.color = '#22c55e';
-                
-            } catch (error) {
-                statusDiv.textContent = '❌ 导入失败，该网站可能限制了访问，请手动复制内容';
+        try {
+            const urlInput = document.getElementById('newsImportUrl');
+            const statusDiv = document.getElementById('importStatus_' + modalId);
+            
+            if (!urlInput || !statusDiv) return;
+            
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                statusDiv.textContent = '❌ 请输入网页链接';
                 statusDiv.style.color = '#ef4444';
+                statusDiv.style.display = 'block';
+                return;
             }
-        }, 1500);
+            
+            if (!/^https?:\/\//.test(url)) {
+                statusDiv.textContent = '❌ 请输入有效的网址（以 http:// 或 https:// 开头）';
+                statusDiv.style.color = '#ef4444';
+                statusDiv.style.display = 'block';
+                return;
+            }
+            
+            statusDiv.textContent = '🔄 正在导入内容，请稍候...';
+            statusDiv.style.color = '#7c3aed';
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                try {
+                    const importedContent = extractContentFromUrl(url);
+                    
+                    const titleInput = document.getElementById('newsTitle');
+                    const summaryInput = document.getElementById('newsSummary');
+                    
+                    if (importedContent.title && titleInput) {
+                        titleInput.value = importedContent.title;
+                    }
+                    if (importedContent.summary && summaryInput) {
+                        summaryInput.value = importedContent.summary;
+                    }
+                    if (importedContent.content && newsEditorInstance) {
+                        newsEditorInstance.setHtml(importedContent.content);
+                    }
+                    
+                    statusDiv.textContent = '✅ 导入成功！标题和正文已自动填充';
+                    statusDiv.style.color = '#22c55e';
+                    
+                } catch (error) {
+                    statusDiv.textContent = '❌ 导入失败，该网站可能限制了访问，请手动复制内容';
+                    statusDiv.style.color = '#ef4444';
+                }
+            }, 1500);
+        } catch (e) {
+            console.error('importFromUrl error:', e);
+        }
     }
     
     function extractContentFromUrl(url) {
@@ -18141,76 +18201,94 @@ ${ocrText}`
     }
     
     function showMobilePreview(modalId, editorId) {
-        const title = document.getElementById('newsTitle').value;
-        const author = document.getElementById('newsAuthor').value;
-        const cover = document.getElementById('newsCover').value;
-        const summary = document.getElementById('newsSummary').value;
-        const content = newsEditorInstance.getHtml();
-        
-        const previewModalId = 'previewModal_' + Date.now();
-        const preview = document.createElement('div');
-        preview.id = previewModalId;
-        preview.className = 'fixed inset-0 bg-black/60 z-[6000] flex justify-center items-center';
-        preview.innerHTML = `
-            <div class="bg-white rounded-xl p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h4 class="text-lg font-semibold text-gray-800">📱 手机预览</h4>
-                    <button class="text-gray-400 hover:text-gray-600 text-xl font-bold" onclick="document.getElementById('${previewModalId}').remove()">×</button>
-                </div>
-                <div class="bg-gray-100 rounded-lg p-4">
-                    <div class="bg-white rounded-lg shadow-md w-[375px] overflow-hidden">
-                        <div class="bg-[#7c3aed] px-4 py-3 text-white text-center text-sm">城市安全数智创新团队</div>
-                        ${cover ? `<img src="${cover}" class="w-full h-48 object-cover">` : ''}
-                        <div class="p-4">
-                            <h1 class="text-xl font-bold text-gray-900 mb-2">${title || '标题占位'}</h1>
-                            <div class="flex items-center gap-2 text-sm text-gray-500 mb-3">
-                                <span>${author}</span>
-                                <span>•</span>
-                                <span>${new Date().toLocaleDateString('zh-CN')}</span>
+        try {
+            const titleInput = document.getElementById('newsTitle');
+            const authorInput = document.getElementById('newsAuthor');
+            const coverInput = document.getElementById('newsCover');
+            const summaryInput = document.getElementById('newsSummary');
+            
+            const title = titleInput ? titleInput.value : '';
+            const author = authorInput ? authorInput.value : '';
+            const cover = coverInput ? coverInput.value : '';
+            const summary = summaryInput ? summaryInput.value : '';
+            const content = newsEditorInstance ? newsEditorInstance.getHtml() : '';
+            
+            const previewModalId = 'previewModal_' + Date.now();
+            const preview = document.createElement('div');
+            preview.id = previewModalId;
+            preview.className = 'fixed inset-0 bg-black/60 z-[6000] flex justify-center items-center';
+            preview.innerHTML = `
+                <div class="bg-white rounded-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-lg font-semibold text-gray-800">📱 手机预览</h4>
+                        <button class="text-gray-400 hover:text-gray-600 text-xl font-bold" onclick="document.getElementById('${previewModalId}').remove()">×</button>
+                    </div>
+                    <div class="bg-gray-100 rounded-lg p-4">
+                        <div class="bg-white rounded-lg shadow-md w-[375px] overflow-hidden">
+                            <div class="bg-[#7c3aed] px-4 py-3 text-white text-center text-sm">城市安全数智创新团队</div>
+                            ${cover ? `<img src="${cover}" class="w-full h-48 object-cover">` : ''}
+                            <div class="p-4">
+                                <h1 class="text-xl font-bold text-gray-900 mb-2">${title || '标题占位'}</h1>
+                                <div class="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                                    <span>${author}</span>
+                                    <span>•</span>
+                                    <span>${new Date().toLocaleDateString('zh-CN')}</span>
+                                </div>
+                                ${summary ? `<p class="text-gray-600 text-sm mb-4 italic">${summary}</p>` : ''}
+                                <div class="text-gray-800 text-sm leading-relaxed">${content || '<p>正文内容...</p>'}</div>
                             </div>
-                            ${summary ? `<p class="text-gray-600 text-sm mb-4 italic">${summary}</p>` : ''}
-                            <div class="text-gray-800 text-sm leading-relaxed">${content || '<p>正文内容...</p>'}</div>
+                            <div class="px-4 py-3 bg-gray-50 text-center text-xs text-gray-400">--- 预览结束 ---</div>
                         </div>
-                        <div class="px-4 py-3 bg-gray-50 text-center text-xs text-gray-400">--- 预览结束 ---</div>
                     </div>
                 </div>
-            </div>
-        `;
-        
-        document.body.appendChild(preview);
+            `;
+            
+            document.body.appendChild(preview);
+        } catch (e) {
+            console.error('showMobilePreview error:', e);
+        }
     }
 
     function validateNewsForm() {
-        const title = document.getElementById('newsTitle');
-        const content = newsEditorInstance.getHtml();
-        let isValid = true;
-        
-        if (!title.value.trim()) {
-            title.classList.add('border-red-500', 'ring-2', 'ring-red-200');
-            isValid = false;
-        } else {
-            title.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+        try {
+            const title = document.getElementById('newsTitle');
+            const content = newsEditorInstance ? newsEditorInstance.getHtml() : '';
+            let isValid = true;
+            
+            if (title) {
+                if (!title.value.trim()) {
+                    title.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                    isValid = false;
+                } else {
+                    title.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+                }
+            }
+            
+            if (!content.replace(/<[^>]*>/g, '').trim()) {
+                isValid = false;
+            }
+            
+            return isValid;
+        } catch (e) {
+            console.error('validateNewsForm error:', e);
+            return false;
         }
-        
-        if (!content.replace(/<[^>]*>/g, '').trim()) {
-            const editorContainer = newsEditorInstance.editor.getContainerElem();
-            editorContainer.classList.add('border-red-500', 'ring-2', 'ring-red-200');
-            setTimeout(() => {
-                editorContainer.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
-            }, 2000);
-            isValid = false;
-        }
-        
-        return isValid;
     }
     
     function saveNewsData(status) {
-        const title = document.getElementById('newsTitle').value.trim();
-        const category = document.getElementById('newsCategory').value;
-        const author = document.getElementById('newsAuthor').value.trim();
-        const summary = document.getElementById('newsSummary').value.trim();
-        const content = newsEditorInstance.getHtml();
-        const cover = document.getElementById('newsCover').value;
+        try {
+            const titleInput = document.getElementById('newsTitle');
+            const categoryInput = document.getElementById('newsCategory');
+            const authorInput = document.getElementById('newsAuthor');
+            const summaryInput = document.getElementById('newsSummary');
+            const coverInput = document.getElementById('newsCover');
+            
+            const title = titleInput ? titleInput.value.trim() : '';
+            const category = categoryInput ? categoryInput.value : 'team';
+            const author = authorInput ? authorInput.value.trim() : '';
+            const summary = summaryInput ? summaryInput.value.trim() : '';
+            const content = newsEditorInstance ? newsEditorInstance.getHtml() : '';
+            const cover = coverInput ? coverInput.value : '';
         
         let actualSummary = summary;
         if (!actualSummary) {
@@ -18236,41 +18314,59 @@ ${ocrText}`
             });
         }
         
-        localStorage.setItem('newsData', JSON.stringify(newsData));
+            localStorage.setItem('newsData', JSON.stringify(newsData));
+        } catch (e) {
+            console.error('saveNewsData error:', e);
+        }
     }
     
     function saveNewsAsDraft(modalId) {
-        saveNewsData('draft');
-        document.getElementById(modalId).remove();
-        updateNewsStats();
-        renderNewsList();
-        alert('草稿保存成功！');
+        try {
+            saveNewsData('draft');
+            const modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+            updateNewsStats();
+            renderNewsList();
+            alert('草稿保存成功！');
+        } catch (e) {
+            console.error('saveNewsAsDraft error:', e);
+        }
     }
     
     function submitNews(modalId) {
-        if (!validateNewsForm()) {
-            alert('请填写标题和正文内容');
-            return;
+        try {
+            if (!validateNewsForm()) {
+                alert('请填写标题和正文内容');
+                return;
+            }
+            
+            saveNewsData('published');
+            const modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+            updateNewsStats();
+            renderNewsList();
+            alert('新闻发布成功！');
+        } catch (e) {
+            console.error('submitNews error:', e);
         }
-        
-        saveNewsData('published');
-        document.getElementById(modalId).remove();
-        updateNewsStats();
-        renderNewsList();
-        alert('新闻发布成功！');
     }
     
     function saveNews(modalId) {
-        if (!validateNewsForm()) {
-            alert('请填写标题和正文内容');
-            return;
-        }
+        try {
+            if (!validateNewsForm()) {
+                alert('请填写标题和正文内容');
+                return;
+            }
         
-        saveNewsData('published');
-        document.getElementById(modalId).remove();
-        updateNewsStats();
-        renderNewsList();
-        alert(editingNewsId ? '修改成功！' : '发布成功！');
+            saveNewsData('published');
+            const modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+            updateNewsStats();
+            renderNewsList();
+            alert(editingNewsId ? '修改成功！' : '发布成功！');
+        } catch (e) {
+            console.error('saveNews error:', e);
+        }
     }
 
     function publishNews(id) {
