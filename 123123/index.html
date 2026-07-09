@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -12,8 +12,16 @@
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            corePlugins: {
+                preflight: false
+            }
+        }
+    </script>
     <!-- wangEditor 富文本编辑器 -->
-    <script src="https://cdn.jsdelivr.net/npm/wangeditor@5.1.23/dist/wangEditor.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@wangeditor/editor@5.1.23/dist/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@wangeditor/editor@5.1.23/dist/index.min.js"></script>
     <!-- Cropper.js 图片裁剪 -->
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
@@ -17851,6 +17859,11 @@ ${ocrText}`
                         </div>
                         
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">原文链接</label>
+                            <input type="text" id="newsOriginalUrl" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all" placeholder="填写原文链接，发布后可直接跳转（可选）" value="${item ? escHtml(item.originalUrl || '') : ''}">
+                        </div>
+                        
+                        <div>
                             <div class="flex justify-between items-center mb-2">
                                 <label class="block text-sm font-medium text-gray-700">正文 <span class="text-red-500">*</span></label>
                                 <div class="flex gap-2">
@@ -17860,7 +17873,7 @@ ${ocrText}`
                                 </div>
                             </div>
                             <div id="toolbar_${editorId}" class="w-full"></div>
-                            <div id="${editorId}" class="w-full"></div>
+                            <div id="${editorId}" class="w-full" style="min-height:300px;"></div>
                             <div class="text-right text-xs text-gray-400 mt-1" id="wordCount_${modalId}">0 字</div>
                         </div>
                     </div>
@@ -17923,6 +17936,11 @@ ${ocrText}`
                 return;
             }
             
+            toolbarEl.style.borderBottom = '1px solid #e8e8e8';
+            editorEl.style.height = '400px';
+            editorEl.style.border = '1px solid #e8e8e8';
+            editorEl.style.borderTop = 'none';
+            
             const editorConfig = {
                 placeholder: '请输入新闻正文...',
                 onChange: (editor) => {
@@ -17935,17 +17953,63 @@ ${ocrText}`
                     } catch (e) {
                         console.error('Editor onChange error:', e);
                     }
+                },
+                pasteFilterStyle: true,
+                pasteIgnoreImg: false,
+                pasteTextHandle: (pasteStr) => {
+                    return pasteStr;
+                },
+                MENU_CONF: {
+                    uploadImage: {
+                        customUpload: (file, insertFn) => {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                const base64 = e.target.result;
+                                insertFn(base64);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    },
+                    uploadVideo: {
+                        customUpload: (file, insertFn) => {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                const base64 = e.target.result;
+                                insertFn(base64);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    },
+                    link: {
+                        parseUrl: (url) => {
+                            return url;
+                        }
+                    },
+                    insertTable: {
+                        modalWidth: 300,
+                        modalHeight: 200,
+                        rows: 4,
+                        cols: 6
+                    }
                 }
             };
             
             const toolbarConfig = [
-                'heading', 'bold', 'italic', 'underline', 'deleteLine',
-                'fontColor', 'bgColor',
-                'justifyLeft', 'justifyCenter', 'justifyRight',
-                'orderedList', 'unorderedList',
-                'quote', 'divider',
-                'insertImage', 'insertLink',
-                'undo', 'redo'
+                'undo', 'redo', 'divider',
+                'bold', 'italic', 'underline', 'through',
+                'color', 'bgColor',
+                'fontFamily', 'fontSize',
+                'sup', 'sub',
+                'divider',
+                'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyJustify',
+                'headerSelect',
+                'insertOrderedList', 'insertUnorderedList', 'todo',
+                'blockquote', 'code', 'divider',
+                'insertLink', 'uploadImage', 'uploadVideo',
+                'insertTable', 'divider',
+                'clearStyle',
+                'searchReplace',
+                'fullScreen'
             ];
             
             newsEditorInstance = wangEditor.createEditor({
@@ -18282,6 +18346,7 @@ ${ocrText}`
             const authorInput = document.getElementById('newsAuthor');
             const summaryInput = document.getElementById('newsSummary');
             const coverInput = document.getElementById('newsCover');
+            const originalUrlInput = document.getElementById('newsOriginalUrl');
             
             const title = titleInput ? titleInput.value.trim() : '';
             const category = categoryInput ? categoryInput.value : 'team';
@@ -18289,30 +18354,31 @@ ${ocrText}`
             const summary = summaryInput ? summaryInput.value.trim() : '';
             const content = newsEditorInstance ? newsEditorInstance.getHtml() : '';
             const cover = coverInput ? coverInput.value : '';
+            const originalUrl = originalUrlInput ? originalUrlInput.value.trim() : '';
         
-        let actualSummary = summary;
-        if (!actualSummary) {
-            const textContent = content.replace(/<[^>]*>/g, '').trim();
-            actualSummary = textContent.substring(0, 100) + (textContent.length > 100 ? '...' : '');
-        }
-        
-        if (editingNewsId) {
-            const idx = newsData.findIndex(n => n.id === editingNewsId);
-            if (idx > -1) {
-                newsData[idx] = {
-                    ...newsData[idx],
-                    title, category, author, summary: actualSummary, content, cover, status,
-                    publishTime: status === 'published' && newsData[idx].status === 'draft' ? new Date().toLocaleDateString('zh-CN') : newsData[idx].publishTime
-                };
+            let actualSummary = summary;
+            if (!actualSummary) {
+                const textContent = content.replace(/<[^>]*>/g, '').trim();
+                actualSummary = textContent.substring(0, 100) + (textContent.length > 100 ? '...' : '');
             }
-        } else {
-            const newId = newsData.length > 0 ? Math.max(...newsData.map(n => n.id)) + 1 : 1;
-            newsData.push({
-                id: newId, title, category, author, summary: actualSummary, content, cover, status,
-                publishTime: status === 'published' ? new Date().toLocaleDateString('zh-CN') : '',
-                views: 0
-            });
-        }
+        
+            if (editingNewsId) {
+                const idx = newsData.findIndex(n => n.id === editingNewsId);
+                if (idx > -1) {
+                    newsData[idx] = {
+                        ...newsData[idx],
+                        title, category, author, summary: actualSummary, content, cover, status, originalUrl,
+                        publishTime: status === 'published' && newsData[idx].status === 'draft' ? new Date().toLocaleDateString('zh-CN') : newsData[idx].publishTime
+                    };
+                }
+            } else {
+                const newId = newsData.length > 0 ? Math.max(...newsData.map(n => n.id)) + 1 : 1;
+                newsData.push({
+                    id: newId, title, category, author, summary: actualSummary, content, cover, status, originalUrl,
+                    publishTime: status === 'published' ? new Date().toLocaleDateString('zh-CN') : '',
+                    views: 0
+                });
+            }
         
             localStorage.setItem('newsData', JSON.stringify(newsData));
         } catch (e) {
