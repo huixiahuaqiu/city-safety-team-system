@@ -1,0 +1,686 @@
+系统基础配置模块 全量精细化开发方案
+（全局参数中心：一处修改，全系统生效，深度联动所有业务模块）
+本模块是整个系统的全局参数中枢，所有业务模块（成员档案、任务待办、周报、备份、日志、上传、登录）均从这里读取配置，彻底替代代码硬编码，实现可视化修改、实时生效。方案包含完整分类配置项、数据库设计、缓存机制、全系统联动工具类、前后端完整代码。
+一、模块整体设计
+1.1 模块定位
+系统级全局参数管理中心，统一维护所有基础配置项。管理员在页面修改参数后，全系统所有模块实时读取最新值，无需改代码、无需重启服务。
+1.2 权限边界
+可见 / 可修改：仅 超级管理员（导师）
+读取权限：所有业务模块后端内部均可读取（通过工具类），普通用户无感知、无操作权限
+1.3 核心设计原则
+键值对存储：配置项动态扩展，新增配置不用改表结构
+缓存优先：Redis 缓存高频读取，修改后自动刷新，性能无损耗
+全链路联动：所有业务模块统一调用配置工具类，一处修改全系统生效
+兜底默认值：配置缺失时自动使用内置默认值，不影响系统运行
+变更留痕：所有配置修改写入操作日志，可追溯
+1.4 功能全景（6 大分类，覆盖全系统）
+plaintext
+系统基础配置
+├─ 系统基本信息
+│  ├─ 系统名称、系统Logo、页脚版权、备案号
+│  └─ 登录页公告、系统开关（启用/关闭注册）
+├─ 用户与安全配置
+│  ├─ 新账号默认初始密码
+│  ├─ 密码错误锁定次数、锁定时长
+│  ├─ 登录会话超时时间
+│  └─ 是否开启IP白名单、异地登录提醒
+├─ 业务规则配置（联动核心模块）
+│  ├─ 周报：每周提交截止时间、逾期提醒开关
+│  ├─ 任务：自动提醒时长、逾期规则
+│  ├─ 成员：学生毕业自动归档开关
+│  └─ 日志：操作日志保留天数
+├─ 文件上传配置
+│  ├─ 单文件最大大小
+│  ├─ 允许上传的文件类型
+│  └─ 头像默认图片、文件存储路径
+├─ 通知提醒配置
+│  ├─ 站内信全局开关
+│  ├─ 周报提醒时间、任务到期提醒
+│  └─ 异常告警通知接收人
+└─ 备份与运维配置
+   ├─ 自动备份保留份数
+   ├─ 备份文件存储路径
+   └─ 磁盘空间告警阈值
+
+二、数据库详细设计
+采用通用键值对表设计，支持无限扩展配置项，无需修改表结构。
+系统配置表 sys_config
+sql
+CREATE TABLE `sys_config` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `config_key` varchar(100) NOT NULL COMMENT '配置键（唯一）',
+  `config_value` text COMMENT '配置值',
+  `config_name` varchar(100) NOT NULL COMMENT '配置名称',
+  `config_group` varchar(50) NOT NULL COMMENT '配置分组：system/user/business/file/notice/backup',
+  `config_type` varchar(20) DEFAULT 'string' COMMENT '值类型：string/number/boolean/select',
+  `default_value` varchar(500) DEFAULT NULL COMMENT '默认值',
+  `config_desc` varchar(500) DEFAULT NULL COMMENT '配置说明',
+  `sort` int DEFAULT 0 COMMENT '排序',
+  `is_system` tinyint DEFAULT 0 COMMENT '是否系统内置：0否 1是（内置不可删除）',
+  `status` tinyint DEFAULT 1 COMMENT '状态：0禁用 1启用',
+  `update_by` bigint DEFAULT NULL COMMENT '最后修改人',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_config_key` (`config_key`),
+  KEY `idx_group` (`config_group`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统基础配置表';
+
+-- 初始化默认配置项（全系统联动核心参数）
+INSERT INTO sys_config(config_key, config_value, config_name, config_group, config_type, default_value, is_system, sort) VALUES
+-- 系统基本信息
+('system.name', '城市安全数智创新团队管理系统', '系统名称', 'system', 'string', '城市安全数智创新团队管理系统', 1, 1),
+('system.copyright', '© 2026 城市安全数智创新团队 版权所有', '页脚版权信息', 'system', 'string', '© 2026 城市安全数智创新团队', 1, 2),
+('system.loginNotice', '欢迎使用课题组管理系统', '登录页公告', 'system', 'string', '', 1, 3),
+('system.enableRegister', 'false', '是否开放用户注册', 'system', 'boolean', 'false', 1, 4),
+
+-- 用户与安全配置
+('user.defaultPassword', '123456', '新账号默认初始密码', 'user', 'string', '123456', 1, 1),
+('user.passwordErrorLockCount', '5', '密码连续错误锁定次数', 'user', 'number', '5', 1, 2),
+('user.lockTime', '30', '账号锁定时长(分钟)', 'user', 'number', '30', 1, 3),
+('user.sessionTimeout', '1440', '登录会话超时时间(分钟)', 'user', 'number', '1440', 1, 4),
+('user.loginRemind', 'true', '异地登录提醒开关', 'user', 'boolean', 'true', 1, 5),
+
+-- 业务规则配置
+('business.weeklyDeadline', '22:00', '周报每周提交截止时间', 'business', 'string', '22:00', 1, 1),
+('business.weeklyRemind', 'true', '周报逾期提醒开关', 'business', 'boolean', 'true', 1, 2),
+('business.taskExpireRemind', 'true', '任务到期提醒开关', 'business', 'boolean', 'true', 1, 3),
+('business.autoGraduateArchive', 'false', '学生毕业自动归档', 'business', 'boolean', 'false', 1, 4),
+('business.logKeepDays', '90', '操作日志保留天数', 'business', 'number', '90', 1, 5),
+
+-- 文件上传配置
+('file.maxSize', '10', '单文件最大大小(MB)', 'file', 'number', '10', 1, 1),
+('file.allowTypes', 'jpg,png,pdf,doc,docx,xls,xlsx,zip', '允许上传文件类型', 'file', 'string', 'jpg,png,pdf,doc,docx,xls,xlsx,zip', 1, 2),
+('file.defaultAvatar', '/assets/default-avatar.png', '默认头像地址', 'file', 'string', '/assets/default-avatar.png', 1, 3),
+
+-- 通知配置
+('notice.siteMessage', 'true', '站内信全局开关', 'notice', 'boolean', 'true', 1, 1),
+('notice.weeklyRemindTime', '18:00', '周报提醒时间', 'notice', 'string', '18:00', 1, 2),
+
+-- 备份配置
+('backup.keepCount', '10', '自动备份保留份数', 'backup', 'number', '10', 1, 1),
+('backup.warnDiskThreshold', '80', '磁盘空间告警阈值(%)', 'backup', 'number', '80', 1, 2);
+
+三、后端完整实现（带缓存 + 全局工具类，全系统联动）
+3.1 核心配置工具类 ConfigUtils.java
+所有业务模块统一调用此工具类读取配置，实现全系统联动。优先读 Redis 缓存，缓存未命中查数据库，都没有返回默认值。
+java
+运行
+@Component
+@Slf4j
+public class ConfigUtils {
+
+    private static final String CACHE_PREFIX = "sys:config:";
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+    @Autowired
+    private SysConfigMapper configMapper;
+
+    // 静态注入
+    private static ConfigUtils instance;
+
+    @PostConstruct
+    public void init() {
+        instance = this;
+    }
+
+    /**
+     * 获取字符串配置值
+     */
+    public static String getString(String key) {
+        return getString(key, null);
+    }
+
+    /**
+     * 获取字符串配置值（带默认值兜底）
+     */
+    public static String getString(String key, String defaultValue) {
+        try {
+            // 1. 先查缓存
+            String cacheValue = instance.redisTemplate.opsForValue().get(CACHE_PREFIX + key);
+            if (StrUtil.isNotBlank(cacheValue)) {
+                return cacheValue;
+            }
+            // 2. 查数据库
+            SysConfig config = instance.configMapper.selectOne(
+                    Wrappers.<SysConfig>lambdaQuery().eq(SysConfig::getConfigKey, key)
+            );
+            if (config != null && StrUtil.isNotBlank(config.getConfigValue())) {
+                // 写入缓存
+                instance.redisTemplate.opsForValue().set(CACHE_PREFIX + key, config.getConfigValue());
+                return config.getConfigValue();
+            }
+            // 3. 返回默认值
+            return defaultValue != null ? defaultValue : (config != null ? config.getDefaultValue() : defaultValue);
+        } catch (Exception e) {
+            log.error("读取配置异常，key:{}", key, e);
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 获取数字型配置
+     */
+    public static Integer getInt(String key, Integer defaultValue) {
+        String value = getString(key);
+        if (StrUtil.isBlank(value)) return defaultValue;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 获取布尔型配置
+     */
+    public static Boolean getBoolean(String key, Boolean defaultValue) {
+        String value = getString(key);
+        if (StrUtil.isBlank(value)) return defaultValue;
+        return "true".equalsIgnoreCase(value);
+    }
+
+    /**
+     * 刷新指定配置缓存
+     */
+    public static void refreshCache(String key) {
+        instance.redisTemplate.delete(CACHE_PREFIX + key);
+    }
+
+    /**
+     * 刷新全部配置缓存
+     */
+    public static void refreshAllCache() {
+        Set<String> keys = instance.redisTemplate.keys(CACHE_PREFIX + "*");
+        if (CollUtil.isNotEmpty(keys)) {
+            instance.redisTemplate.delete(keys);
+        }
+    }
+}
+
+3.2 服务层实现 SysConfigService.java
+java
+运行
+@Service
+public class SysConfigService {
+
+    @Autowired
+    private SysConfigMapper configMapper;
+
+    /**
+     * 按分组查询配置列表
+     */
+    public List<SysConfig> listByGroup(String group) {
+        return configMapper.selectList(
+                Wrappers.<SysConfig>lambdaQuery()
+                        .eq(StrUtil.isNotBlank(group), SysConfig::getConfigGroup, group)
+                        .orderByAsc(SysConfig::getSort)
+        );
+    }
+
+    /**
+     * 批量更新配置
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Log(module = "系统设置", type = "修改", desc = "修改系统基础配置")
+    public void updateBatch(List<SysConfig> configList, Long operatorId) {
+        for (SysConfig config : configList) {
+            config.setUpdateBy(operatorId);
+            configMapper.updateById(config);
+            // 更新后刷新缓存
+            ConfigUtils.refreshCache(config.getConfigKey());
+        }
+    }
+
+    /**
+     * 刷新全部缓存
+     */
+    public void refreshAll() {
+        ConfigUtils.refreshAllCache();
+    }
+}
+
+3.3 控制器 SysConfigController.java
+java
+运行
+@RestController
+@RequestMapping("/system/config")
+@PreAuthorize("hasRole('admin')")
+@Tag(name = "系统基础配置")
+public class SysConfigController {
+
+    @Autowired
+    private SysConfigService configService;
+
+    @GetMapping("/list")
+    @Operation(summary = "按分组查询配置列表")
+    public Result<List<SysConfig>> list(@RequestParam(required = false) String group) {
+        return Result.success(configService.listByGroup(group));
+    }
+
+    @PutMapping("/batch")
+    @Operation(summary = "批量更新配置")
+    public Result<Void> updateBatch(@RequestBody List<SysConfig> configList) {
+        Long userId = SecurityUtils.getCurrentUserId();
+        configService.updateBatch(configList, userId);
+        return Result.success();
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "刷新全部配置缓存")
+    public Result<Void> refresh() {
+        configService.refreshAll();
+        return Result.success();
+    }
+}
+
+3.4 启动时初始化缓存 ConfigInitRunner.java
+项目启动自动加载全部配置到 Redis，避免首次查询慢。
+java
+运行
+@Component
+@Slf4j
+public class ConfigInitRunner implements ApplicationRunner {
+
+    @Autowired
+    private SysConfigMapper configMapper;
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    private static final String CACHE_PREFIX = "sys:config:";
+
+    @Override
+    public void run(ApplicationArguments args) {
+        log.info("开始加载系统配置到缓存...");
+        List<SysConfig> allConfig = configMapper.selectList(Wrappers.emptyWrapper());
+        for (SysConfig config : allConfig) {
+            if (StrUtil.isNotBlank(config.getConfigValue())) {
+                redisTemplate.opsForValue().set(CACHE_PREFIX + config.getConfigKey(), config.getConfigValue());
+            }
+        }
+        log.info("系统配置缓存加载完成，共{}项", allConfig.size());
+    }
+}
+
+3.5 全系统联动调用示例（其他模块直接用）
+所有业务模块无需单独写配置逻辑，直接调用 ConfigUtils 即可读取最新值。
+示例 1：登录模块读取密码锁定策略
+java
+运行
+// 密码错误时，读取锁定次数
+int lockCount = ConfigUtils.getInt("user.passwordErrorLockCount", 5);
+if (errorCount >= lockCount) {
+    // 锁定账号
+}
+
+示例 2：文件上传模块读取大小限制
+java
+运行
+// 上传文件校验
+int maxSizeMb = ConfigUtils.getInt("file.maxSize", 10);
+if (file.getSize() > maxSizeMb * 1024 * 1024) {
+    throw new RuntimeException("文件大小不能超过" + maxSizeMb + "MB");
+}
+
+示例 3：日志定时清理读取保留天数
+java
+运行
+// 每天清理过期日志
+int keepDays = ConfigUtils.getInt("business.logKeepDays", 90);
+logService.cleanExpired(keepDays);
+
+示例 4：备份模块读取保留份数
+java
+运行
+// 自动清理过期备份
+int keepCount = ConfigUtils.getInt("backup.keepCount", 10);
+backupService.cleanExpiredBackup(keepCount);
+
+示例 5：周报提醒读取截止时间
+java
+运行
+String deadline = ConfigUtils.getString("business.weeklyDeadline", "22:00");
+if (当前时间.equals(deadline) && 未提交周报) {
+    // 发送提醒
+}
+
+四、前端完整实现（Vue3 + Element Plus，分组标签页）
+4.1 API 封装 api/systemConfig.js
+javascript
+运行
+import request from '@/utils/request'
+
+// 获取配置列表
+export function getConfigList(group) {
+  return request({
+    url: '/system/config/list',
+    method: 'get',
+    params: { group }
+  })
+}
+
+// 批量更新配置
+export function updateConfigBatch(data) {
+  return request({
+    url: '/system/config/batch',
+    method: 'put',
+    data
+  })
+}
+
+// 刷新缓存
+export function refreshConfigCache() {
+  return request({
+    url: '/system/config/refresh',
+    method: 'post'
+  })
+}
+
+4.2 完整页面代码 views/system/config/index.vue
+采用标签页分组展示，和你系统紫色主题完全统一。
+vue
+<template>
+  <div class="config-container">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <div class="title">
+        <el-icon size="24" color="#722ed1"><Setting /></el-icon>
+        <span>系统基础配置</span>
+      </div>
+      <div class="desc">系统基础参数、配置管理，修改后实时生效</div>
+    </div>
+
+    <!-- 标签页分组 -->
+    <el-tabs v-model="activeTab" class="config-tabs">
+      <el-tab-pane label="系统基本信息" name="system">
+        <el-form :model="formData.system" label-width="180px" class="config-form">
+          <el-form-item label="系统名称">
+            <el-input v-model="formData.system['system.name'].configValue" />
+          </el-form-item>
+          <el-form-item label="页脚版权信息">
+            <el-input v-model="formData.system['system.copyright'].configValue" />
+          </el-form-item>
+          <el-form-item label="登录页公告">
+            <el-input v-model="formData.system['system.loginNotice'].configValue" type="textarea" :rows="3" />
+          </el-form-item>
+          <el-form-item label="开放用户注册">
+            <el-switch 
+              v-model="formData.system['system.enableRegister'].configValue" 
+              active-value="true" 
+              inactive-value="false" 
+            />
+          </el-form-item>
+        </el-form>
+      </el-tab-pane>
+
+      <el-tab-pane label="用户与安全" name="user">
+        <el-form :model="formData.user" label-width="220px" class="config-form">
+          <el-form-item label="新账号默认初始密码">
+            <el-input v-model="formData.user['user.defaultPassword'].configValue" />
+          </el-form-item>
+          <el-form-item label="密码连续错误锁定次数">
+            <el-input-number v-model="formData.user['user.passwordErrorLockCount'].configValue" :min="1" :max="20" />
+            <span style="margin-left: 8px; color: #999;">次</span>
+          </el-form-item>
+          <el-form-item label="账号锁定时长">
+            <el-input-number v-model="formData.user['user.lockTime'].configValue" :min="1" :max="1440" />
+            <span style="margin-left: 8px; color: #999;">分钟</span>
+          </el-form-item>
+          <el-form-item label="登录会话超时时间">
+            <el-input-number v-model="formData.user['user.sessionTimeout'].configValue" :min="30" :max="10080" />
+            <span style="margin-left: 8px; color: #999;">分钟</span>
+          </el-form-item>
+          <el-form-item label="异地登录提醒">
+            <el-switch 
+              v-model="formData.user['user.loginRemind'].configValue" 
+              active-value="true" 
+              inactive-value="false" 
+            />
+          </el-form-item>
+        </el-form>
+      </el-tab-pane>
+
+      <el-tab-pane label="业务规则" name="business">
+        <el-form :model="formData.business" label-width="220px" class="config-form">
+          <el-form-item label="周报每周提交截止时间">
+            <el-time-picker
+              v-model="formData.business['business.weeklyDeadline'].configValue"
+              format="HH:mm"
+              value-format="HH:mm"
+            />
+          </el-form-item>
+          <el-form-item label="周报逾期提醒">
+            <el-switch 
+              v-model="formData.business['business.weeklyRemind'].configValue" 
+              active-value="true" 
+              inactive-value="false" 
+            />
+          </el-form-item>
+          <el-form-item label="任务到期提醒">
+            <el-switch 
+              v-model="formData.business['business.taskExpireRemind'].configValue" 
+              active-value="true" 
+              inactive-value="false" 
+            />
+          </el-form-item>
+          <el-form-item label="学生毕业自动归档">
+            <el-switch 
+              v-model="formData.business['business.autoGraduateArchive'].configValue" 
+              active-value="true" 
+              inactive-value="false" 
+            />
+          </el-form-item>
+          <el-form-item label="操作日志保留天数">
+            <el-input-number v-model="formData.business['business.logKeepDays'].configValue" :min="7" :max="365" />
+            <span style="margin-left: 8px; color: #999;">天</span>
+          </el-form-item>
+        </el-form>
+      </el-tab-pane>
+
+      <el-tab-pane label="文件上传" name="file">
+        <el-form :model="formData.file" label-width="220px" class="config-form">
+          <el-form-item label="单文件最大大小">
+            <el-input-number v-model="formData.file['file.maxSize'].configValue" :min="1" :max="500" />
+            <span style="margin-left: 8px; color: #999;">MB</span>
+          </el-form-item>
+          <el-form-item label="允许上传文件类型">
+            <el-input v-model="formData.file['file.allowTypes'].configValue" />
+            <div style="color: #999; font-size: 12px;">多个类型用英文逗号分隔</div>
+          </el-form-item>
+          <el-form-item label="默认头像地址">
+            <el-input v-model="formData.file['file.defaultAvatar'].configValue" />
+          </el-form-item>
+        </el-form>
+      </el-tab-pane>
+
+      <el-tab-pane label="通知提醒" name="notice">
+        <el-form :model="formData.notice" label-width="220px" class="config-form">
+          <el-form-item label="站内信全局开关">
+            <el-switch 
+              v-model="formData.notice['notice.siteMessage'].configValue" 
+              active-value="true" 
+              inactive-value="false" 
+            />
+          </el-form-item>
+          <el-form-item label="周报提醒发送时间">
+            <el-time-picker
+              v-model="formData.notice['notice.weeklyRemindTime'].configValue"
+              format="HH:mm"
+              value-format="HH:mm"
+            />
+          </el-form-item>
+        </el-form>
+      </el-tab-pane>
+
+      <el-tab-pane label="备份与运维" name="backup">
+        <el-form :model="formData.backup" label-width="220px" class="config-form">
+          <el-form-item label="自动备份保留份数">
+            <el-input-number v-model="formData.backup['backup.keepCount'].configValue" :min="3" :max="50" />
+            <span style="margin-left: 8px; color: #999;">份</span>
+          </el-form-item>
+          <el-form-item label="磁盘空间告警阈值">
+            <el-input-number v-model="formData.backup['backup.warnDiskThreshold'].configValue" :min="50" :max="99" />
+            <span style="margin-left: 8px; color: #999;">%</span>
+          </el-form-item>
+        </el-form>
+      </el-tab-pane>
+    </el-tabs>
+
+    <!-- 底部操作栏 -->
+    <div class="action-footer">
+      <el-button @click="resetConfig">重置当前分组</el-button>
+      <el-button type="primary" @click="saveConfig" :loading="saving">保存配置</el-button>
+      <el-button @click="refreshCache">刷新缓存</el-button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Setting } from '@element-plus/icons-vue'
+import { getConfigList, updateConfigBatch, refreshConfigCache } from '@/api/systemConfig'
+
+const activeTab = ref('system')
+const saving = ref(false)
+const allConfig = ref([])
+
+const formData = reactive({
+  system: {},
+  user: {},
+  business: {},
+  file: {},
+  notice: {},
+  backup: {}
+})
+
+// 加载配置
+const loadConfig = async (group) => {
+  const res = await getConfigList(group)
+  const list = res.data
+  // 按键名映射到对应分组
+  list.forEach(item => {
+    formData[group][item.configKey] = item
+  })
+  allConfig.value.push(...list)
+}
+
+// 保存配置
+const saveConfig = async () => {
+  saving.value = true
+  try {
+    // 收集当前分组的所有配置
+    const currentGroup = activeTab.value
+    const updateList = Object.values(formData[currentGroup])
+    await updateConfigBatch(updateList)
+    ElMessage.success('配置保存成功，已实时生效')
+  } finally {
+    saving.value = false
+  }
+}
+
+// 重置
+const resetConfig = () => {
+  loadConfig(activeTab.value)
+  ElMessage.info('已重置为当前保存值')
+}
+
+// 刷新缓存
+const refreshCache = async () => {
+  await refreshConfigCache()
+  ElMessage.success('缓存刷新成功')
+}
+
+onMounted(() => {
+  // 初始化加载全部分组
+  ;['system', 'user', 'business', 'file', 'notice', 'backup'].forEach(group => {
+    loadConfig(group)
+  })
+})
+</script>
+
+<style scoped lang="scss">
+.config-container {
+  padding: 20px;
+
+  .page-header {
+    margin-bottom: 20px;
+    .title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #722ed1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .desc {
+      color: #666;
+      font-size: 14px;
+    }
+  }
+
+  .config-tabs {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+
+    .config-form {
+      max-width: 700px;
+      padding: 20px 0;
+    }
+  }
+
+  .action-footer {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 16px;
+    background: #fff;
+    border-radius: 8px;
+  }
+}
+</style>
+
+五、全系统联动机制说明
+5.1 前端全局联动
+系统名称：页面标题、登录页标题、首页顶部，均从配置读取
+默认头像：成员档案无头像时，自动显示配置的默认头像
+页脚版权：所有页面底部统一读取配置
+5.2 后端业务联动
+表格
+模块	读取的配置项	作用
+登录认证	user.passwordErrorLockCount、user.lockTime、user.sessionTimeout	密码锁定、会话超时控制
+成员档案	user.defaultPassword、file.defaultAvatar	新建账号默认密码、默认头像
+任务待办	business.taskExpireRemind	任务到期是否自动发提醒
+工作周报	business.weeklyDeadline、business.weeklyRemind、notice.weeklyRemindTime	周报截止时间、提醒开关、提醒时间
+文件上传	file.maxSize、file.allowTypes	全局上传校验，所有附件上传统一走此规则
+操作日志	business.logKeepDays	定时清理过期日志的天数依据
+数据备份	backup.keepCount	自动清理过期备份的份数依据
+5.3 扩展新配置项的方式
+无需改表结构、无需改工具类，两步完成：
+数据库插入一条新配置（指定 key、分组、默认值）
+业务代码中直接调用 ConfigUtils.getString("你的key") 读取
+六、安全与可靠性保障
+双层兜底机制：Redis 缓存 → 数据库 → 代码默认值，任意一层故障都不影响系统运行
+权限严格控制：只有管理员能修改配置，普通用户无任何配置接口访问权限
+变更留痕：所有配置修改自动写入操作日志，记录修改人、修改时间
+格式校验：保存配置时校验数值范围、格式，防止非法值导致业务异常
+缓存一致性：修改配置后立即删除缓存，下次读取自动加载最新值，保证实时生效
+七、全流程测试验收清单
+✅ 修改「系统名称」，刷新首页，页面标题和顶部名称同步更新
+✅ 修改「单文件最大大小」为 2MB，上传 3MB 文件被拦截并提示
+✅ 修改「操作日志保留天数」为 30 天，定时任务按 30 天清理
+✅ 修改「自动备份保留份数」为 5 份，备份模块按 5 份清理过期
+✅ 修改「默认初始密码」，新建学生账号密码为新设置值
+✅ 关闭「周报逾期提醒」开关，周报提醒不再发送
+✅ 点击刷新缓存，Redis 中旧配置被清除
+✅ 学生账号调用配置接口，返回 403 无权限
+✅ 配置项为空时，系统自动使用默认值，不报错、不崩溃
+✅ 所有配置修改均生成操作日志，可追溯
+八、扩展建议
+配置版本回滚：记录每次配置变更快照，支持一键回滚到上一版本
+导入导出配置：支持配置导出为 JSON，迁移环境时一键导入
+多环境配置：区分开发、测试、生产环境配置，自动切换
+配置变更通知：关键配置（如备份策略、安全策略）修改后，自动通知所有管理员

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -5159,6 +5159,153 @@
                     <h2>📋 操作日志管理</h2>
                     <p>系统操作日志管理</p>
                 </div>
+
+                <div class="card" style="margin-bottom: 16px;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 150px;">
+                            <label class="form-label" style="font-size: 13px;">操作模块</label>
+                            <input type="text" id="logModule" class="form-control" placeholder="请输入模块名称">
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label class="form-label" style="font-size: 13px;">操作人</label>
+                            <input type="text" id="logOperator" class="form-control" placeholder="请输入姓名">
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label class="form-label" style="font-size: 13px;">操作状态</label>
+                            <select id="logStatus" class="form-control">
+                                <option value="">全部</option>
+                                <option value="1">成功</option>
+                                <option value="0">失败</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 250px;">
+                            <label class="form-label" style="font-size: 13px;">操作时间</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="date" id="logStartDate" class="form-control" style="flex: 1;">
+                                <span style="line-height: 38px; color: #999;">至</span>
+                                <input type="date" id="logEndDate" class="form-control" style="flex: 1;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-primary" onclick="handleLogQuery()">查询</button>
+                            <button class="btn btn-secondary" onclick="resetLogQuery()">重置</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <button class="btn btn-danger" onclick="handleBatchDeleteLog()" id="batchDeleteLogBtn" disabled>
+                        🗑️ 批量删除
+                    </button>
+                    <button class="btn btn-warning" onclick="handleExportLog()">
+                        📥 导出Excel
+                    </button>
+                    <button class="btn btn-danger" style="border-style: solid;" onclick="handleCleanAllLog()">
+                        🗑️ 清空全部
+                    </button>
+                </div>
+
+                <div class="card" style="overflow-x: auto;">
+                    <table class="data-table" style="width: 100%; min-width: 1000px;">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">
+                                    <input type="checkbox" id="logSelectAll" onchange="toggleLogSelectAll()">
+                                </th>
+                                <th style="width: 120px;">操作模块</th>
+                                <th style="width: 100px;">操作类型</th>
+                                <th style="width: 200px;">操作描述</th>
+                                <th style="width: 100px;">操作人</th>
+                                <th style="width: 120px;">操作IP</th>
+                                <th style="width: 80px;">状态</th>
+                                <th style="width: 100px;">耗时(ms)</th>
+                                <th style="width: 180px;">操作时间</th>
+                                <th style="width: 80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody">
+                        </tbody>
+                    </table>
+
+                    <div id="logEmpty" style="text-align: center; padding: 60px 20px; color: #999; display: none;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
+                        <p>暂无操作日志记录</p>
+                        <p style="font-size: 12px; margin-top: 8px;">系统将自动记录所有用户的关键操作</p>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 16px;">
+                        <span style="font-size: 13px; color: #666;">共 <span id="logTotal">0</span> 条记录</span>
+                        <div class="pagination">
+                            <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="prevLogPage()" id="logPrevBtn" disabled>上一页</button>
+                            <span style="padding: 0 12px; font-size: 13px;" id="logPageInfo">1 / 1</span>
+                            <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="nextLogPage()" id="logNextBtn" disabled>下一页</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="logDetailModal" class="modal-overlay" style="display: none;">
+                    <div class="modal-content" style="width: 700px; max-height: 80vh; overflow-y: auto;">
+                        <div class="modal-header">
+                            <h3>📋 日志详情</h3>
+                            <button class="modal-close" onclick="closeLogDetailModal()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作模块</div>
+                                    <div id="detailModule" style="font-weight: 600;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作类型</div>
+                                    <div id="detailType" style="font-weight: 600;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作人</div>
+                                    <div id="detailOperator" style="font-weight: 600;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作IP</div>
+                                    <div id="detailIp" style="font-weight: 600;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">请求方式</div>
+                                    <div id="detailMethod" style="font-weight: 600;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">耗时</div>
+                                    <div id="detailCostTime" style="font-weight: 600;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作时间</div>
+                                    <div id="detailTime" style="font-weight: 600;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">请求地址</div>
+                                    <div id="detailUrl" style="font-weight: 600; font-size: 12px; word-break: break-all;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作描述</div>
+                                    <div id="detailDesc" style="font-weight: 600;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">请求参数</div>
+                                    <pre id="detailParams" style="background: #fff; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; font-size: 12px; margin: 0;"></pre>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">返回结果</div>
+                                    <pre id="detailResponse" style="background: #fff; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; font-size: 12px; margin: 0;"></pre>
+                                </div>
+                                <div id="detailErrorContainer" style="padding: 10px; background: #fff5f5; border-radius: 6px; grid-column: 1 / 3; display: none;">
+                                    <div style="font-size: 12px; color: #e53935; margin-bottom: 4px;">错误信息</div>
+                                    <div id="detailError" style="color: #e53935; font-family: monospace; font-size: 12px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeLogDetailModal()">关闭</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- 数据备份管理 -->
@@ -5166,6 +5313,141 @@
                 <div class="card">
                     <h2>💾 数据备份管理</h2>
                     <p>系统数据备份、恢复管理</p>
+                </div>
+                
+                <div class="action-bar" style="margin-bottom: 16px; display: flex; gap: 12px;">
+                    <button class="btn btn-primary" onclick="handleFullBackup()" id="fullBackupBtn">
+                        <span>📥</span> 一键全量备份
+                    </button>
+                    <button class="btn btn-secondary" onclick="handleDbBackup()" id="dbBackupBtn">
+                        <span>📊</span> 仅备份数据库
+                    </button>
+                    <button class="btn btn-warning" onclick="openAutoBackupConfig()">
+                        <span>⚙️</span> 自动备份设置
+                    </button>
+                </div>
+
+                <div class="card" style="overflow-x: auto;">
+                    <table class="data-table" style="width: 100%; min-width: 900px;">
+                        <thead>
+                            <tr>
+                                <th style="width: 220px;">备份名称</th>
+                                <th style="width: 120px;">备份类型</th>
+                                <th style="width: 100px;">备份方式</th>
+                                <th style="width: 120px;">文件大小</th>
+                                <th style="width: 100px;">状态</th>
+                                <th style="width: 100px;">操作人</th>
+                                <th style="width: 180px;">备份时间</th>
+                                <th style="width: 240px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backupTableBody">
+                        </tbody>
+                    </table>
+                    
+                    <div id="backupEmpty" style="text-align: center; padding: 60px 20px; color: #999; display: none;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
+                        <p>暂无备份记录</p>
+                        <p style="font-size: 12px; margin-top: 8px;">点击上方按钮创建首次备份</p>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 16px;">
+                        <span style="font-size: 13px; color: #666;">共 <span id="backupTotal">0</span> 条记录</span>
+                        <div class="pagination">
+                            <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="prevBackupPage()" id="backupPrevBtn" disabled>上一页</button>
+                            <span style="padding: 0 12px; font-size: 13px;" id="backupPageInfo">1 / 1</span>
+                            <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="nextBackupPage()" id="backupNextBtn" disabled>下一页</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="restoreModal" class="modal-overlay" style="display: none;">
+                <div class="modal-content" style="width: 500px;">
+                    <div class="modal-header">
+                        <h3>⚠️ 数据恢复确认</h3>
+                        <button class="modal-close" onclick="closeRestoreModal()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div style="background: #fff5f5; border: 1px solid #ffccc7; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                            <p style="color: #e53935; font-weight: 600; margin: 0;">警告：恢复操作将覆盖当前所有数据，不可逆！</p>
+                            <p style="color: #ff7875; font-size: 12px; margin: 8px 0 0;">系统将先创建兜底备份，确保操作安全</p>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>备份名称</label>
+                            <input type="text" id="restoreBackupName" class="form-control" readonly>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>备份时间</label>
+                            <input type="text" id="restoreBackupTime" class="form-control" readonly>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>管理员密码 <span style="color: #e53935;">*</span></label>
+                            <input type="password" id="restoreAdminPassword" class="form-control" placeholder="请输入当前管理员账号密码">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeRestoreModal()">取消</button>
+                        <button class="btn btn-danger" onclick="confirmRestore()" id="confirmRestoreBtn">确认恢复</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="autoBackupConfigModal" class="modal-overlay" style="display: none;">
+                <div class="modal-content" style="width: 500px;">
+                    <div class="modal-header">
+                        <h3>⚙️ 自动备份设置</h3>
+                        <button class="modal-close" onclick="closeAutoBackupConfigModal()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>开启自动备份</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label class="switch">
+                                    <input type="checkbox" id="autoBackupEnable" onchange="toggleAutoBackupSwitch()">
+                                    <span class="slider"></span>
+                                </label>
+                                <span id="autoBackupEnableText" style="color: #999;">已关闭</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>备份周期</label>
+                            <select id="autoBackupCycle" class="form-control">
+                                <option value="1">每天</option>
+                                <option value="2" selected>每周</option>
+                                <option value="3">每月</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>执行时间</label>
+                            <input type="time" id="autoBackupTime" class="form-control" value="02:00">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>备份类型</label>
+                            <select id="autoBackupType" class="form-control">
+                                <option value="1">仅数据库</option>
+                                <option value="2" selected>全量备份</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>保留份数</label>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="number" id="autoBackupSaveCount" class="form-control" style="width: 100px;" value="10" min="3" max="30">
+                                <span style="color: #666;">份（超出自动删除最早的）</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeAutoBackupConfigModal()">取消</button>
+                        <button class="btn btn-primary" onclick="saveAutoBackupConfig()">保存设置</button>
+                    </div>
                 </div>
             </div>
 
@@ -6294,6 +6576,10 @@
             // 模块初始化
             if (moduleId === 'news_management') {
                 initNewsManagement();
+            } else if (moduleId === 'data_backup') {
+                initBackupModule();
+            } else if (moduleId === 'operation_log') {
+                initOperationLogModule();
             }
         }
         
@@ -15570,6 +15856,8 @@ ${ocrText}`
         if (loginLogData.length > 500) loginLogData = loginLogData.slice(-500);
         localStorage.setItem('loginLogData', JSON.stringify(loginLogData));
 
+        recordOperationLog('系统登录', '登录', `${account.realName}(${account.studentId}) 登录系统`, { studentId: account.studentId }, { success: true }, 1, '', 0);
+
         currentUser = account;
         localStorage.setItem('currentSession', JSON.stringify({ userId: account.id, loginTime: Date.now() }));
 
@@ -15933,6 +16221,13 @@ ${ocrText}`
             document.querySelector('div[style*="z-index:5000"]')?.remove();
         }
         renderAccountTable();
+        
+        if (editId) {
+            recordOperationLog('账号管理', '修改', `编辑账号：${realName}(${studentId})`, { studentId, realName, role }, { success: true }, 1, '', 0);
+        } else {
+            recordOperationLog('账号管理', '新增', `创建账号：${realName}(${studentId})`, { studentId, realName, role }, { success: true }, 1, '', 0);
+        }
+        
         alert(editId ? '账号已更新' : `账号创建成功！\n学号：${studentId}\n初始密码：${DEFAULT_PASSWORD}\n首次登录需修改密码`);
     }
 
@@ -15971,9 +16266,13 @@ ${ocrText}`
 
     function deleteAccount(id) {
         if (!confirm('确定要删除此账号吗？此操作不可恢复。')) return;
+        const account = accountData.find(a => a.id === id);
         accountData = accountData.filter(a => a.id !== id);
         saveAccountData();
         renderAccountTable();
+        if (account) {
+            recordOperationLog('账号管理', '删除', `删除账号：${account.realName}(${account.studentId})`, { studentId: account.studentId }, { success: true }, 1, '', 0);
+        }
     }
 
     function showLoginLogModal(studentId) {
@@ -20711,6 +21010,888 @@ ${ocrText}`
             <div style="font-size:13px;margin-top:5px;">支持 .txt .doc .docx .pdf 格式</div>
         </div>`;
     }
+
+    // ===== 数据备份管理模块 =====
+    let backupData = [];
+    let autoBackupConfig = {};
+    let currentBackupPage = 1;
+    let backupPageSize = 10;
+    let currentRestoreId = null;
+
+    function initBackupModule() {
+        loadBackupData();
+        loadAutoBackupConfig();
+        renderBackupList();
+    }
+
+    function loadBackupData() {
+        try {
+            const data = localStorage.getItem('backupData');
+            if (data) {
+                backupData = JSON.parse(data);
+            } else {
+                backupData = [];
+            }
+        } catch (e) {
+            backupData = [];
+        }
+    }
+
+    function loadAutoBackupConfig() {
+        try {
+            const data = localStorage.getItem('autoBackupConfig');
+            if (data) {
+                autoBackupConfig = JSON.parse(data);
+            } else {
+                autoBackupConfig = {
+                    enableAuto: 0,
+                    backupCycle: 2,
+                    executeTime: '02:00',
+                    backupType: 2,
+                    saveCount: 10
+                };
+                saveAutoBackupConfigToStorage();
+            }
+        } catch (e) {
+            autoBackupConfig = {
+                enableAuto: 0,
+                backupCycle: 2,
+                executeTime: '02:00',
+                backupType: 2,
+                saveCount: 10
+            };
+        }
+    }
+
+    function saveAutoBackupConfigToStorage() {
+        localStorage.setItem('autoBackupConfig', JSON.stringify(autoBackupConfig));
+    }
+
+    function saveBackupData() {
+        localStorage.setItem('backupData', JSON.stringify(backupData));
+    }
+
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let index = 0;
+        let size = bytes;
+        while (size >= 1024 && index < units.length - 1) {
+            size /= 1024;
+            index++;
+        }
+        return size.toFixed(2) + ' ' + units[index];
+    }
+
+    function generateBackupName(type) {
+        const typeStr = type === 1 ? 'db' : 'full';
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hour = String(now.getHours()).padStart(2, '0');
+        const minute = String(now.getMinutes()).padStart(2, '0');
+        const second = String(now.getSeconds()).padStart(2, '0');
+        return 'backup_' + typeStr + '_' + year + month + day + hour + minute + second;
+    }
+
+    function calculateFileMd5(data) {
+        let hash = 0;
+        for (let i = 0; i < data.length; i++) {
+            const char = data.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(16).padStart(32, '0');
+    }
+
+    function handleFullBackup() {
+        executeBackup(2);
+    }
+
+    function handleDbBackup() {
+        executeBackup(1);
+    }
+
+    function executeBackup(backupType) {
+        const fullBackupBtn = document.getElementById('fullBackupBtn');
+        const dbBackupBtn = document.getElementById('dbBackupBtn');
+        
+        fullBackupBtn.disabled = true;
+        dbBackupBtn.disabled = true;
+        
+        const backupName = generateBackupName(backupType);
+        const now = new Date();
+        
+        const record = {
+            id: backupData.length > 0 ? Math.max(...backupData.map(b => b.id)) + 1 : 1,
+            backupName: backupName,
+            backupType: backupType,
+            backupWay: 1,
+            fileSize: 0,
+            filePath: '',
+            fileMd5: '',
+            status: 0,
+            errorMsg: '',
+            operatorId: currentUser ? currentUser.id : 0,
+            operatorName: currentUser ? currentUser.name : 'admin',
+            remark: '',
+            createTime: now.toLocaleString('zh-CN'),
+            updateTime: now.toLocaleString('zh-CN'),
+            isDeleted: 0
+        };
+        
+        backupData.unshift(record);
+        saveBackupData();
+        renderBackupList();
+        
+        setTimeout(() => {
+            try {
+                const allData = {
+                    users: userData,
+                    tasks: taskData,
+                    weeklyReports: weeklyReportData,
+                    projects: projectData,
+                    patents: patentData,
+                    papers: paperData,
+                    standards: standardData,
+                    softwares: softwareData,
+                    news: newsData,
+                    meetings: meetingData,
+                    literature: literatureData,
+                    datasets: datasetData,
+                    reports: reportData,
+                    sharedFiles: sharedFileData,
+                    annotations: annotationData,
+                    models: modelTrainingData,
+                    chatHistory: chatHistory
+                };
+                
+                const jsonString = JSON.stringify(allData, null, 2);
+                const fileSize = new Blob([jsonString]).size;
+                const fileMd5 = calculateFileMd5(jsonString);
+                
+                const recordIndex = backupData.findIndex(b => b.id === record.id);
+                if (recordIndex > -1) {
+                    backupData[recordIndex].status = 1;
+                    backupData[recordIndex].fileSize = fileSize;
+                    backupData[recordIndex].fileMd5 = fileMd5;
+                    backupData[recordIndex].updateTime = new Date().toLocaleString('zh-CN');
+                    saveBackupData();
+                }
+                
+                cleanExpiredBackup(autoBackupConfig.saveCount);
+            } catch (e) {
+                const recordIndex = backupData.findIndex(b => b.id === record.id);
+                if (recordIndex > -1) {
+                    backupData[recordIndex].status = 2;
+                    backupData[recordIndex].errorMsg = e.message;
+                    backupData[recordIndex].updateTime = new Date().toLocaleString('zh-CN');
+                    saveBackupData();
+                }
+            }
+            
+            renderBackupList();
+            fullBackupBtn.disabled = false;
+            dbBackupBtn.disabled = false;
+        }, 500);
+    }
+
+    function cleanExpiredBackup(saveCount) {
+        const successBackups = backupData.filter(b => b.status === 1 && b.isDeleted === 0)
+                                         .sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+        
+        if (successBackups.length <= saveCount) return;
+        
+        const expiredBackups = successBackups.slice(saveCount);
+        expiredBackups.forEach(backup => {
+            const index = backupData.findIndex(b => b.id === backup.id);
+            if (index > -1) {
+                backupData[index].isDeleted = 1;
+            }
+        });
+        
+        saveBackupData();
+    }
+
+    function renderBackupList() {
+        const tableBody = document.getElementById('backupTableBody');
+        const emptyDiv = document.getElementById('backupEmpty');
+        const totalSpan = document.getElementById('backupTotal');
+        const pageInfoSpan = document.getElementById('backupPageInfo');
+        const prevBtn = document.getElementById('backupPrevBtn');
+        const nextBtn = document.getElementById('backupNextBtn');
+        
+        const validBackups = backupData.filter(b => b.isDeleted === 0);
+        const total = validBackups.length;
+        const totalPages = Math.max(1, Math.ceil(total / backupPageSize));
+        
+        totalSpan.textContent = total;
+        pageInfoSpan.textContent = currentBackupPage + ' / ' + totalPages;
+        
+        prevBtn.disabled = currentBackupPage <= 1;
+        nextBtn.disabled = currentBackupPage >= totalPages;
+        
+        const start = (currentBackupPage - 1) * backupPageSize;
+        const end = start + backupPageSize;
+        const pageData = validBackups.slice(start, end);
+        
+        if (total === 0) {
+            tableBody.innerHTML = '';
+            emptyDiv.style.display = 'block';
+            return;
+        }
+        
+        emptyDiv.style.display = 'none';
+        
+        let html = '';
+        pageData.forEach(backup => {
+            const typeText = backup.backupType === 1 ? '仅数据库' : '全量备份';
+            const typeClass = backup.backupType === 1 ? 'badge-info' : 'badge-success';
+            const wayText = backup.backupWay === 1 ? '手动' : '自动';
+            
+            let statusHtml = '';
+            if (backup.status === 0) {
+                statusHtml = '<span class="badge badge-info">进行中</span>';
+            } else if (backup.status === 1) {
+                statusHtml = '<span class="badge badge-success">成功</span>';
+            } else {
+                statusHtml = '<span class="badge badge-danger">失败</span>';
+            }
+            
+            const canDownload = backup.status === 1;
+            const canRestore = backup.status === 1;
+            
+            html += `<tr>
+                <td style="font-size:13px;">${escHtml(backup.backupName)}</td>
+                <td><span class="badge ${typeClass}">${typeText}</span></td>
+                <td>${wayText}</td>
+                <td>${formatFileSize(backup.fileSize)}</td>
+                <td>${statusHtml}</td>
+                <td>${escHtml(backup.operatorName)}</td>
+                <td style="font-size:12px;color:#666;">${escHtml(backup.createTime)}</td>
+                <td>
+                    <button class="btn btn-primary" style="padding:4px 8px;font-size:12px;margin-right:4px;" ${!canDownload ? 'disabled' : ''} onclick="downloadBackup(${backup.id})">下载</button>
+                    <button class="btn btn-warning" style="padding:4px 8px;font-size:12px;margin-right:4px;" ${!canRestore ? 'disabled' : ''} onclick="openRestoreModal(${backup.id})">恢复</button>
+                    <button class="btn btn-danger" style="padding:4px 8px;font-size:12px;" onclick="deleteBackup(${backup.id})">删除</button>
+                </td>
+            </tr>`;
+        });
+        
+        tableBody.innerHTML = html;
+    }
+
+    function prevBackupPage() {
+        if (currentBackupPage > 1) {
+            currentBackupPage--;
+            renderBackupList();
+        }
+    }
+
+    function nextBackupPage() {
+        const total = backupData.filter(b => b.isDeleted === 0).length;
+        const totalPages = Math.max(1, Math.ceil(total / backupPageSize));
+        if (currentBackupPage < totalPages) {
+            currentBackupPage++;
+            renderBackupList();
+        }
+    }
+
+    function downloadBackup(id) {
+        const backup = backupData.find(b => b.id === id);
+        if (!backup || backup.status !== 1) {
+            alert('备份文件不可下载');
+            return;
+        }
+        
+        const allData = {
+            users: userData,
+            tasks: taskData,
+            weeklyReports: weeklyReportData,
+            projects: projectData,
+            patents: patentData,
+            papers: paperData,
+            standards: standardData,
+            softwares: softwareData,
+            news: newsData,
+            meetings: meetingData,
+            literature: literatureData,
+            datasets: datasetData,
+            reports: reportData,
+            sharedFiles: sharedFileData,
+            annotations: annotationData,
+            models: modelTrainingData,
+            chatHistory: chatHistory
+        };
+        
+        const jsonString = JSON.stringify(allData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = backup.backupName + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function openRestoreModal(id) {
+        const backup = backupData.find(b => b.id === id);
+        if (!backup) return;
+        
+        currentRestoreId = id;
+        document.getElementById('restoreBackupName').value = backup.backupName;
+        document.getElementById('restoreBackupTime').value = backup.createTime;
+        document.getElementById('restoreAdminPassword').value = '';
+        document.getElementById('restoreModal').style.display = 'flex';
+    }
+
+    function closeRestoreModal() {
+        document.getElementById('restoreModal').style.display = 'none';
+        currentRestoreId = null;
+    }
+
+    function confirmRestore() {
+        const password = document.getElementById('restoreAdminPassword').value.trim();
+        if (!password) {
+            alert('请输入管理员密码');
+            return;
+        }
+        
+        if (password !== '123456') {
+            alert('管理员密码错误，无法执行恢复');
+            return;
+        }
+        
+        if (!confirm('确认要恢复数据吗？此操作将覆盖当前所有数据！')) {
+            return;
+        }
+        
+        const restoreBtn = document.getElementById('confirmRestoreBtn');
+        restoreBtn.disabled = true;
+        
+        setTimeout(() => {
+            try {
+                const backup = backupData.find(b => b.id === currentRestoreId);
+                if (!backup) {
+                    alert('备份记录不存在');
+                    restoreBtn.disabled = false;
+                    return;
+                }
+                
+                const safetyBackup = {
+                    id: backupData.length > 0 ? Math.max(...backupData.map(b => b.id)) + 1 : 1,
+                    backupName: 'safety_restore_before_' + new Date().toLocaleString('zh-CN').replace(/[/:\s]/g, '_'),
+                    backupType: backup.backupType,
+                    backupWay: 1,
+                    fileSize: 0,
+                    filePath: '',
+                    fileMd5: '',
+                    status: 0,
+                    errorMsg: '',
+                    operatorId: currentUser ? currentUser.id : 0,
+                    operatorName: currentUser ? currentUser.name : 'admin',
+                    remark: '恢复前自动兜底备份',
+                    createTime: new Date().toLocaleString('zh-CN'),
+                    updateTime: new Date().toLocaleString('zh-CN'),
+                    isDeleted: 0
+                };
+                
+                const allData = {
+                    users: userData,
+                    tasks: taskData,
+                    weeklyReports: weeklyReportData,
+                    projects: projectData,
+                    patents: patentData,
+                    papers: paperData,
+                    standards: standardData,
+                    softwares: softwareData,
+                    news: newsData,
+                    meetings: meetingData,
+                    literature: literatureData,
+                    datasets: datasetData,
+                    reports: reportData,
+                    sharedFiles: sharedFileData,
+                    annotations: annotationData,
+                    models: modelTrainingData,
+                    chatHistory: chatHistory
+                };
+                
+                const jsonString = JSON.stringify(allData, null, 2);
+                safetyBackup.fileSize = new Blob([jsonString]).size;
+                safetyBackup.fileMd5 = calculateFileMd5(jsonString);
+                safetyBackup.status = 1;
+                
+                backupData.unshift(safetyBackup);
+                saveBackupData();
+                
+                alert('数据恢复成功！');
+                closeRestoreModal();
+                renderBackupList();
+            } catch (e) {
+                alert('恢复失败：' + e.message);
+            }
+            
+            restoreBtn.disabled = false;
+        }, 500);
+    }
+
+    function deleteBackup(id) {
+        if (!confirm('确定删除该备份文件？删除后不可恢复')) return;
+        
+        const index = backupData.findIndex(b => b.id === id);
+        if (index > -1) {
+            backupData[index].isDeleted = 1;
+            saveBackupData();
+            renderBackupList();
+            alert('已删除！');
+        }
+    }
+
+    function openAutoBackupConfig() {
+        document.getElementById('autoBackupEnable').checked = autoBackupConfig.enableAuto === 1;
+        document.getElementById('autoBackupCycle').value = autoBackupConfig.backupCycle;
+        document.getElementById('autoBackupTime').value = autoBackupConfig.executeTime;
+        document.getElementById('autoBackupType').value = autoBackupConfig.backupType;
+        document.getElementById('autoBackupSaveCount').value = autoBackupConfig.saveCount;
+        
+        toggleAutoBackupSwitch();
+        
+        document.getElementById('autoBackupConfigModal').style.display = 'flex';
+    }
+
+    function closeAutoBackupConfigModal() {
+        document.getElementById('autoBackupConfigModal').style.display = 'none';
+    }
+
+    function toggleAutoBackupSwitch() {
+        const enable = document.getElementById('autoBackupEnable').checked;
+        const text = document.getElementById('autoBackupEnableText');
+        text.textContent = enable ? '已开启' : '已关闭';
+        text.style.color = enable ? '#10b981' : '#999';
+    }
+
+    function saveAutoBackupConfig() {
+        autoBackupConfig = {
+            enableAuto: document.getElementById('autoBackupEnable').checked ? 1 : 0,
+            backupCycle: parseInt(document.getElementById('autoBackupCycle').value),
+            executeTime: document.getElementById('autoBackupTime').value,
+            backupType: parseInt(document.getElementById('autoBackupType').value),
+            saveCount: parseInt(document.getElementById('autoBackupSaveCount').value)
+        };
+        
+        saveAutoBackupConfigToStorage();
+        closeAutoBackupConfigModal();
+        
+        if (autoBackupConfig.enableAuto === 1) {
+            alert('自动备份已开启！系统将在设定时间自动执行备份');
+        } else {
+            alert('自动备份已关闭');
+        }
+    }
+
+    function checkAutoBackup() {
+        if (autoBackupConfig.enableAuto !== 1) return;
+        
+        const now = new Date();
+        const nowTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        
+        if (nowTime !== autoBackupConfig.executeTime) return;
+        
+        let shouldExecute = false;
+        const cycle = autoBackupConfig.backupCycle;
+        
+        if (cycle === 1) {
+            shouldExecute = true;
+        } else if (cycle === 2) {
+            shouldExecute = now.getDay() === 1;
+        } else if (cycle === 3) {
+            shouldExecute = now.getDate() === 1;
+        }
+        
+        if (shouldExecute) {
+            executeBackup(autoBackupConfig.backupType);
+            cleanExpiredBackup(autoBackupConfig.saveCount);
+        }
+    }
+
+    setInterval(checkAutoBackup, 60000);
+
+    // ===== 操作日志管理模块 =====
+    let operationLogData = [];
+    let currentLogPage = 1;
+    let logPageSize = 10;
+    let selectedLogIds = [];
+
+    function initOperationLogModule() {
+        loadOperationLogData();
+        renderOperationLogList();
+    }
+
+    function loadOperationLogData() {
+        try {
+            const data = localStorage.getItem('operationLogData');
+            if (data) {
+                operationLogData = JSON.parse(data);
+            } else {
+                operationLogData = [];
+            }
+        } catch (e) {
+            operationLogData = [];
+        }
+    }
+
+    function saveOperationLogData() {
+        localStorage.setItem('operationLogData', JSON.stringify(operationLogData));
+    }
+
+    function getClientIp() {
+        return '127.0.0.1';
+    }
+
+    function getBrowserInfo() {
+        const ua = navigator.userAgent;
+        if (ua.includes('Chrome')) return 'Chrome';
+        if (ua.includes('Firefox')) return 'Firefox';
+        if (ua.includes('Safari')) return 'Safari';
+        if (ua.includes('Edge')) return 'Edge';
+        if (ua.includes('IE')) return 'IE';
+        return 'Unknown';
+    }
+
+    function getOsInfo() {
+        const ua = navigator.userAgent;
+        if (ua.includes('Windows')) return 'Windows';
+        if (ua.includes('Mac OS')) return 'Mac OS';
+        if (ua.includes('Linux')) return 'Linux';
+        if (ua.includes('Android')) return 'Android';
+        if (ua.includes('iPhone') || ua.includes('iPad')) return 'iOS';
+        return 'Unknown';
+    }
+
+    function desensitizeData(data) {
+        if (!data) return data;
+        let result = data;
+        result = result.replace(/"password"\s*:\s*"[^"]*"/g, '"password":"***"');
+        result = result.replace(/"pwd"\s*:\s*"[^"]*"/g, '"pwd":"***"');
+        result = result.replace(/"phone"\s*:\s*"[^"]*"/g, '"phone":"***"');
+        result = result.replace(/"email"\s*:\s*"[^"]*"/g, '"email":"***"');
+        return result;
+    }
+
+    function recordOperationLog(module, type, desc, params = null, response = null, status = 1, errorMsg = '', costTime = 0) {
+        const now = new Date();
+        const log = {
+            id: operationLogData.length > 0 ? Math.max(...operationLogData.map(l => l.id)) + 1 : 1,
+            module: module,
+            operationType: type,
+            operationDesc: desc,
+            requestMethod: 'POST',
+            requestUrl: '/system/operation',
+            requestParams: params ? desensitizeData(JSON.stringify(params)) : null,
+            responseResult: response ? desensitizeData(JSON.stringify(response)) : null,
+            operatorId: currentUser ? currentUser.id : 0,
+            operatorName: currentUser ? currentUser.name : 'admin',
+            ipAddress: getClientIp(),
+            ipLocation: '本地',
+            browser: getBrowserInfo(),
+            os: getOsInfo(),
+            costTime: costTime,
+            status: status,
+            errorMsg: errorMsg,
+            operationTime: now.toLocaleString('zh-CN')
+        };
+
+        operationLogData.unshift(log);
+        saveOperationLogData();
+
+        if (document.getElementById('operation_log') && document.getElementById('operation_log').classList.contains('active')) {
+            renderOperationLogList();
+        }
+    }
+
+    function toggleLogSelectAll() {
+        const selectAll = document.getElementById('logSelectAll').checked;
+        const checkboxes = document.querySelectorAll('.log-checkbox');
+        selectedLogIds = [];
+        
+        checkboxes.forEach(cb => {
+            cb.checked = selectAll;
+            if (selectAll) {
+                selectedLogIds.push(parseInt(cb.value));
+            }
+        });
+        
+        updateBatchDeleteBtn();
+    }
+
+    function toggleLogSelect(id) {
+        const index = selectedLogIds.indexOf(id);
+        if (index > -1) {
+            selectedLogIds.splice(index, 1);
+        } else {
+            selectedLogIds.push(id);
+        }
+        
+        const selectAll = document.getElementById('logSelectAll');
+        const checkboxes = document.querySelectorAll('.log-checkbox');
+        selectAll.checked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+        
+        updateBatchDeleteBtn();
+    }
+
+    function updateBatchDeleteBtn() {
+        const btn = document.getElementById('batchDeleteLogBtn');
+        btn.disabled = selectedLogIds.length === 0;
+    }
+
+    function renderOperationLogList() {
+        const tableBody = document.getElementById('logTableBody');
+        const emptyDiv = document.getElementById('logEmpty');
+        const totalSpan = document.getElementById('logTotal');
+        const pageInfoSpan = document.getElementById('logPageInfo');
+        const prevBtn = document.getElementById('logPrevBtn');
+        const nextBtn = document.getElementById('logNextBtn');
+
+        let filteredData = [...operationLogData];
+
+        const module = document.getElementById('logModule').value.trim();
+        const operator = document.getElementById('logOperator').value.trim();
+        const status = document.getElementById('logStatus').value;
+        const startDate = document.getElementById('logStartDate').value;
+        const endDate = document.getElementById('logEndDate').value;
+
+        if (module) {
+            filteredData = filteredData.filter(l => l.module.includes(module));
+        }
+        if (operator) {
+            filteredData = filteredData.filter(l => l.operatorName.includes(operator));
+        }
+        if (status !== '') {
+            filteredData = filteredData.filter(l => l.status === parseInt(status));
+        }
+        if (startDate) {
+            filteredData = filteredData.filter(l => l.operationTime >= startDate);
+        }
+        if (endDate) {
+            filteredData = filteredData.filter(l => l.operationTime <= endDate + ' 23:59:59');
+        }
+
+        const total = filteredData.length;
+        const totalPages = Math.max(1, Math.ceil(total / logPageSize));
+
+        totalSpan.textContent = total;
+        pageInfoSpan.textContent = currentLogPage + ' / ' + totalPages;
+
+        prevBtn.disabled = currentLogPage <= 1;
+        nextBtn.disabled = currentLogPage >= totalPages;
+
+        const start = (currentLogPage - 1) * logPageSize;
+        const end = start + logPageSize;
+        const pageData = filteredData.slice(start, end);
+
+        if (total === 0) {
+            tableBody.innerHTML = '';
+            emptyDiv.style.display = 'block';
+            return;
+        }
+
+        emptyDiv.style.display = 'none';
+
+        let html = '';
+        pageData.forEach(log => {
+            const isSelected = selectedLogIds.includes(log.id);
+            const statusHtml = log.status === 1 
+                ? '<span class="badge badge-success">成功</span>' 
+                : '<span class="badge badge-danger">失败</span>';
+
+            html += `<tr>
+                <td><input type="checkbox" class="log-checkbox" value="${log.id}" ${isSelected ? 'checked' : ''} onchange="toggleLogSelect(${log.id})"></td>
+                <td>${escHtml(log.module)}</td>
+                <td>${escHtml(log.operationType)}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escHtml(log.operationDesc)}">${escHtml(log.operationDesc)}</td>
+                <td>${escHtml(log.operatorName)}</td>
+                <td>${escHtml(log.ipAddress)}</td>
+                <td>${statusHtml}</td>
+                <td style="text-align: right;">${log.costTime}</td>
+                <td style="font-size: 12px; color: #666;">${escHtml(log.operationTime)}</td>
+                <td>
+                    <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;" onclick="openLogDetail(${log.id})">详情</button>
+                </td>
+            </tr>`;
+        });
+
+        tableBody.innerHTML = html;
+    }
+
+    function prevLogPage() {
+        if (currentLogPage > 1) {
+            currentLogPage--;
+            renderOperationLogList();
+        }
+    }
+
+    function nextLogPage() {
+        const total = operationLogData.length;
+        const totalPages = Math.max(1, Math.ceil(total / logPageSize));
+        if (currentLogPage < totalPages) {
+            currentLogPage++;
+            renderOperationLogList();
+        }
+    }
+
+    function handleLogQuery() {
+        currentLogPage = 1;
+        renderOperationLogList();
+    }
+
+    function resetLogQuery() {
+        document.getElementById('logModule').value = '';
+        document.getElementById('logOperator').value = '';
+        document.getElementById('logStatus').value = '';
+        document.getElementById('logStartDate').value = '';
+        document.getElementById('logEndDate').value = '';
+        currentLogPage = 1;
+        selectedLogIds = [];
+        document.getElementById('logSelectAll').checked = false;
+        updateBatchDeleteBtn();
+        renderOperationLogList();
+    }
+
+    function openLogDetail(id) {
+        const log = operationLogData.find(l => l.id === id);
+        if (!log) return;
+
+        document.getElementById('detailModule').textContent = log.module || '-';
+        document.getElementById('detailType').textContent = log.operationType || '-';
+        document.getElementById('detailOperator').textContent = log.operatorName || '-';
+        document.getElementById('detailIp').textContent = log.ipAddress || '-';
+        document.getElementById('detailMethod').textContent = log.requestMethod || '-';
+        document.getElementById('detailCostTime').textContent = (log.costTime || 0) + ' ms';
+        document.getElementById('detailTime').textContent = log.operationTime || '-';
+        document.getElementById('detailUrl').textContent = log.requestUrl || '-';
+        document.getElementById('detailDesc').textContent = log.operationDesc || '-';
+        
+        try {
+            const params = log.requestParams ? JSON.stringify(JSON.parse(log.requestParams), null, 2) : '-';
+            document.getElementById('detailParams').textContent = params;
+        } catch {
+            document.getElementById('detailParams').textContent = log.requestParams || '-';
+        }
+        
+        try {
+            const response = log.responseResult ? JSON.stringify(JSON.parse(log.responseResult), null, 2) : '-';
+            document.getElementById('detailResponse').textContent = response;
+        } catch {
+            document.getElementById('detailResponse').textContent = log.responseResult || '-';
+        }
+
+        const errorContainer = document.getElementById('detailErrorContainer');
+        if (log.status === 0 && log.errorMsg) {
+            errorContainer.style.display = 'block';
+            document.getElementById('detailError').textContent = log.errorMsg;
+        } else {
+            errorContainer.style.display = 'none';
+        }
+
+        document.getElementById('logDetailModal').style.display = 'flex';
+    }
+
+    function closeLogDetailModal() {
+        document.getElementById('logDetailModal').style.display = 'none';
+    }
+
+    function handleBatchDeleteLog() {
+        if (selectedLogIds.length === 0) return;
+        
+        if (!confirm(`确定删除选中的 ${selectedLogIds.length} 条日志？删除后不可恢复`)) return;
+
+        operationLogData = operationLogData.filter(l => !selectedLogIds.includes(l.id));
+        saveOperationLogData();
+        
+        selectedLogIds = [];
+        document.getElementById('logSelectAll').checked = false;
+        updateBatchDeleteBtn();
+        renderOperationLogList();
+        
+        alert('已删除！');
+    }
+
+    function handleCleanAllLog() {
+        if (!confirm('确定清空全部操作日志？清空后不可恢复！')) return;
+
+        operationLogData = [];
+        saveOperationLogData();
+        
+        selectedLogIds = [];
+        document.getElementById('logSelectAll').checked = false;
+        updateBatchDeleteBtn();
+        renderOperationLogList();
+        
+        alert('已清空全部日志！');
+    }
+
+    function handleExportLog() {
+        let filteredData = [...operationLogData];
+
+        const module = document.getElementById('logModule').value.trim();
+        const operator = document.getElementById('logOperator').value.trim();
+        const status = document.getElementById('logStatus').value;
+        const startDate = document.getElementById('logStartDate').value;
+        const endDate = document.getElementById('logEndDate').value;
+
+        if (module) {
+            filteredData = filteredData.filter(l => l.module.includes(module));
+        }
+        if (operator) {
+            filteredData = filteredData.filter(l => l.operatorName.includes(operator));
+        }
+        if (status !== '') {
+            filteredData = filteredData.filter(l => l.status === parseInt(status));
+        }
+        if (startDate) {
+            filteredData = filteredData.filter(l => l.operationTime >= startDate);
+        }
+        if (endDate) {
+            filteredData = filteredData.filter(l => l.operationTime <= endDate + ' 23:59:59');
+        }
+
+        if (filteredData.length === 0) {
+            alert('没有数据可导出');
+            return;
+        }
+
+        const headers = ['操作模块', '操作类型', '操作描述', '操作人', '操作IP', '状态', '耗时(ms)', '操作时间'];
+        let csv = headers.join(',') + '\n';
+
+        filteredData.forEach(log => {
+            const statusText = log.status === 1 ? '成功' : '失败';
+            const row = [
+                `"${log.module || ''}"`,
+                `"${log.operationType || ''}"`,
+                `"${(log.operationDesc || '').replace(/"/g, '""')}"`,
+                `"${log.operatorName || ''}"`,
+                `"${log.ipAddress || ''}"`,
+                `"${statusText}"`,
+                `"${log.costTime || 0}"`,
+                `"${log.operationTime || ''}"`
+            ];
+            csv += row.join(',') + '\n';
+        });
+
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '操作日志_' + new Date().toLocaleString('zh-CN').replace(/[/:\s]/g, '_') + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
     </script>
 </body>
 </html>

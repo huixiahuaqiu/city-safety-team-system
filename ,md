@@ -1,0 +1,752 @@
+操作日志管理模块 全量精细化开发方案
+适配你课题组管理系统的审计溯源需求，采用「AOP 注解自动埋点 + 分页查询 + 详情追溯」标准实现，含完整表结构、后端自动记录逻辑、前端页面、导出与清理机制，开箱即用。
+一、模块整体设计
+1.1 模块定位
+系统级安全审计模块，自动记录所有用户的关键操作行为，实现「谁、在什么时间、用什么 IP、做了什么操作、结果如何」的全链路可追溯。用于：操作失误溯源、数据变更排查、安全审计、责任认定。
+1.2 权限边界
+可见角色：仅 超级管理员（导师） 侧边栏显示菜单
+可操作角色：仅管理员可查询、导出、清理日志
+记录范围：覆盖全系统所有账号的关键操作，学生、组长的操作也会被记录
+1.3 核心设计原则
+自动记录，不侵入业务代码：通过注解 + AOP 切面自动采集，不用在每个业务接口里手写日志代码
+异步写入，不影响接口性能：日志保存走异步线程，不阻塞主业务接口响应
+关键信息完整留存：请求参数、返回结果、报错信息、操作 IP、耗时全记录
+敏感信息自动脱敏：密码、密钥等字段自动打码，不存明文
+1.4 功能全景
+plaintext
+操作日志管理
+├─ 日志查询
+│  ├─ 多条件筛选（模块、操作人、状态、时间范围）
+│  ├─ 分页列表展示
+│  └─ 日志详情查看（完整请求/响应/报错信息）
+├─ 日志管理
+│  ├─ 单条删除
+│  ├─ 批量删除
+│  └─ 清空全部日志
+├─ 日志导出
+│  └─ 按筛选条件导出Excel
+└─ 自动清理机制
+   └─ 定时删除超过保留天数的历史日志
+二、数据库详细设计
+操作日志表 sys_operation_log
+sql
+CREATE TABLE `sys_operation_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '日志主键',
+  `module` varchar(50) DEFAULT NULL COMMENT '操作模块：团队管理/角色权限/任务/周报/系统设置等',
+  `operation_type` varchar(20) DEFAULT NULL COMMENT '操作类型：新增/修改/删除/登录/审核/备份/导出等',
+  `operation_desc` varchar(500) DEFAULT NULL COMMENT '操作描述',
+  `request_method` varchar(10) DEFAULT NULL COMMENT '请求方式：GET/POST/PUT/DELETE',
+  `request_url` varchar(500) DEFAULT NULL COMMENT '请求接口地址',
+  `request_params` text COMMENT '请求参数（JSON格式）',
+  `response_result` text COMMENT '返回结果（JSON格式）',
+  `operator_id` bigint DEFAULT NULL COMMENT '操作人ID',
+  `operator_name` varchar(50) DEFAULT NULL COMMENT '操作人姓名',
+  `ip_address` varchar(50) DEFAULT NULL COMMENT '操作IP地址',
+  `ip_location` varchar(100) DEFAULT NULL COMMENT 'IP归属地（可选）',
+  `browser` varchar(100) DEFAULT NULL COMMENT '浏览器',
+  `os` varchar(100) DEFAULT NULL COMMENT '操作系统',
+  `cost_time` bigint DEFAULT 0 COMMENT '接口耗时，单位：毫秒',
+  `status` tinyint DEFAULT 1 COMMENT '操作状态：1成功 0失败',
+  `error_msg` text COMMENT '失败异常信息',
+  `operation_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_operator` (`operator_id`),
+  KEY `idx_module` (`module`),
+  KEY `idx_operation_time` (`operation_time`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统操作日志表';
+三、后端完整代码实现
+3.1 自定义日志注解 @Log
+放在需要记录日志的接口上，自动触发 AOP 采集。
+java
+运行
+/**
+ * 操作日志注解
+ */
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Log {
+    /**
+     * 操作模块
+     */
+    String module() default "";
+
+    /**
+     * 操作类型
+     */
+    String type() default "其他";
+
+    /**
+     * 操作描述
+     */
+    String desc() default "";
+
+    /**
+     * 是否保存请求参数
+     */
+    boolean saveRequest() default true;
+
+    /**
+     * 是否保存返回结果
+     */
+    boolean saveResponse() default true;
+}
+3.2 AOP 日志切面 LogAspect.java
+核心逻辑，自动拦截带 @Log 注解的接口，采集信息并异步保存。
+java
+运行
+@Aspect
+@Component
+@Slf4j
+public class LogAspect {
+
+    @Autowired
+    private SysOperationLogService logService;
+
+    /**
+     * 切入点：所有带@Log注解的方法
+     */
+    @Pointcut("@annotation(com.yourproject.common.annotation.Log)")
+    public void logPointCut() {}
+
+    /**
+     * 环绕通知
+     */
+    @Around("logPointCut()")
+    public Object around(ProceedingJoinPoint point) throws Throwable {
+        long startTime = System.currentTimeMillis();
+        Object result = null;
+        Exception exception = null;
+
+        try {
+            // 执行原方法
+            result = point.proceed();
+            return result;
+        } catch (Exception e) {
+            exception = e;
+            throw e;
+        } finally {
+            // 方法执行完后，异步记录日志
+            try {
+                Log logAnnotation = getAnnotation(point);
+                SysOperationLog operationLog = buildLog(point, logAnnotation, startTime, result, exception);
+                // 异步保存，不阻塞主线程
+                CompletableFuture.runAsync(() -> logService.saveLog(operationLog));
+            } catch (Exception e) {
+                log.error("记录操作日志失败", e);
+            }
+        }
+    }
+
+    /**
+     * 获取注解
+     */
+    private Log getAnnotation(ProceedingJoinPoint point) {
+        MethodSignature signature = (MethodSignature) point.getSignature();
+        return signature.getMethod().getAnnotation(Log.class);
+    }
+
+    /**
+     * 构建日志对象
+     */
+    private SysOperationLog buildLog(ProceedingJoinPoint point, Log logAnnotation,
+                                     long startTime, Object result, Exception exception) {
+        SysOperationLog operLog = new SysOperationLog();
+
+        // 1. 注解基础信息
+        operLog.setModule(logAnnotation.module());
+        operLog.setOperationType(logAnnotation.type());
+        operLog.setOperationDesc(logAnnotation.desc());
+
+        // 2. 请求信息
+        HttpServletRequest request = ServletUtils.getRequest();
+        operLog.setRequestMethod(request.getMethod());
+        operLog.setRequestUrl(request.getRequestURI());
+        operLog.setIpAddress(IpUtils.getIpAddr(request));
+        operLog.setBrowser(UserAgentUtils.getBrowser(request));
+        operLog.setOs(UserAgentUtils.getOs(request));
+
+        // 3. 操作人信息（从登录上下文获取）
+        Long userId = SecurityUtils.getCurrentUserId();
+        String userName = SecurityUtils.getCurrentUserName();
+        operLog.setOperatorId(userId);
+        operLog.setOperatorName(userName);
+
+        // 4. 请求参数（脱敏处理）
+        if (logAnnotation.saveRequest()) {
+            String params = JSON.toJSONString(point.getArgs());
+            // 密码等敏感字段脱敏
+            params = SensitiveUtils.desensitize(params);
+            operLog.setRequestParams(params);
+        }
+
+        // 5. 返回结果
+        if (logAnnotation.saveResponse() && result != null) {
+            operLog.setResponseResult(JSON.toJSONString(result));
+        }
+
+        // 6. 状态与异常
+        if (exception != null) {
+            operLog.setStatus(0);
+            operLog.setErrorMsg(exception.getMessage());
+        } else {
+            operLog.setStatus(1);
+        }
+
+        // 7. 耗时
+        operLog.setCostTime(System.currentTimeMillis() - startTime);
+        operLog.setOperationTime(new Date());
+
+        return operLog;
+    }
+}
+3.3 服务层实现 SysOperationLogService.java
+java
+运行
+@Service
+public class SysOperationLogService {
+
+    @Autowired
+    private SysOperationLogMapper logMapper;
+
+    /**
+     * 保存日志
+     */
+    public void saveLog(SysOperationLog log) {
+        logMapper.insert(log);
+    }
+
+    /**
+     * 分页查询日志列表
+     */
+    public PageResult<SysOperationLog> getLogPage(LogQuery query) {
+        Page<SysOperationLog> page = logMapper.selectPage(
+                query.buildPage(),
+                Wrappers.<SysOperationLog>lambdaQuery()
+                        .like(StrUtil.isNotBlank(query.getModule()), SysOperationLog::getModule, query.getModule())
+                        .like(StrUtil.isNotBlank(query.getOperatorName()), SysOperationLog::getOperatorName, query.getOperatorName())
+                        .eq(query.getStatus() != null, SysOperationLog::getStatus, query.getStatus())
+                        .ge(query.getStartTime() != null, SysOperationLog::getOperationTime, query.getStartTime())
+                        .le(query.getEndTime() != null, SysOperationLog::getOperationTime, query.getEndTime())
+                        .orderByDesc(SysOperationLog::getOperationTime)
+        );
+        return PageResult.of(page);
+    }
+
+    /**
+     * 批量删除日志
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void batchDelete(List<Long> ids) {
+        logMapper.deleteBatchIds(ids);
+    }
+
+    /**
+     * 清空全部日志
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void cleanAll() {
+        logMapper.delete(null);
+    }
+
+    /**
+     * 清理过期日志（保留指定天数）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void cleanExpired(int keepDays) {
+        Date expireDate = DateUtil.offsetDay(new Date(), -keepDays);
+        logMapper.delete(Wrappers.<SysOperationLog>lambdaQuery()
+                .lt(SysOperationLog::getOperationTime, expireDate));
+    }
+}
+3.4 控制器 SysOperationLogController.java
+java
+运行
+@RestController
+@RequestMapping("/system/operation-log")
+@PreAuthorize("hasRole('admin')")
+@Tag(name = "操作日志管理")
+public class SysOperationLogController {
+
+    @Autowired
+    private SysOperationLogService logService;
+
+    @GetMapping("/list")
+    @Operation(summary = "分页查询操作日志")
+    public Result<PageResult<SysOperationLog>> list(LogQuery query) {
+        return Result.success(logService.getLogPage(query));
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "获取日志详情")
+    public Result<SysOperationLog> getDetail(@PathVariable Long id) {
+        return Result.success(logService.getById(id));
+    }
+
+    @DeleteMapping("/batch")
+    @Operation(summary = "批量删除日志")
+    @Log(module = "系统设置", type = "删除", desc = "批量删除操作日志")
+    public Result<Void> batchDelete(@RequestBody List<Long> ids) {
+        logService.batchDelete(ids);
+        return Result.success();
+    }
+
+    @DeleteMapping("/clean")
+    @Operation(summary = "清空全部日志")
+    @Log(module = "系统设置", type = "删除", desc = "清空全部操作日志")
+    public Result<Void> cleanAll() {
+        logService.cleanAll();
+        return Result.success();
+    }
+
+    @GetMapping("/export")
+    @Operation(summary = "导出日志Excel")
+    @Log(module = "系统设置", type = "导出", desc = "导出操作日志")
+    public void export(LogQuery query, HttpServletResponse response) {
+        // 用EasyExcel导出，逻辑同成员档案导出
+        List<SysOperationLog> list = logService.getAll(query);
+        EasyExcel.write(response.getOutputStream(), SysOperationLog.class)
+                .sheet("操作日志")
+                .doWrite(list);
+    }
+}
+3.5 业务接口使用示例
+在你的业务接口上加上 @Log 注解，即可自动记录日志，无需额外代码。
+java
+运行
+// 示例：新增成员
+@PostMapping("/member/add")
+@Log(module = "团队管理", type = "新增", desc = "新增团队成员")
+public Result<Void> addMember(@RequestBody Student student) {
+    memberService.add(student);
+    return Result.success();
+}
+
+// 示例：数据备份
+@PostMapping("/backup/manual")
+@Log(module = "数据备份", type = "备份", desc = "执行手动数据备份")
+public Result<Long> manualBackup(@RequestParam Integer backupType) {
+    // ...业务逻辑
+}
+
+// 示例：登录接口
+@PostMapping("/login")
+@Log(module = "系统登录", type = "登录", desc = "用户登录系统", saveResponse = false)
+public Result<LoginVO> login(@RequestBody LoginDTO dto) {
+    // ...登录逻辑
+}
+3.6 定时清理过期日志
+java
+运行
+@Component
+public class LogCleanTask {
+    @Autowired
+    private SysOperationLogService logService;
+
+    // 每天凌晨3点执行，清理超过90天的日志
+    @Scheduled(cron = "0 0 3 * * ?")
+    public void cleanExpiredLog() {
+        logService.cleanExpired(90);
+    }
+}
+四、前端完整实现（Vue3 + Element Plus）
+4.1 API 封装 api/operationLog.js
+javascript
+运行
+import request from '@/utils/request'
+
+// 获取日志列表
+export function getLogList(params) {
+  return request({
+    url: '/system/operation-log/list',
+    method: 'get',
+    params
+  })
+}
+
+// 获取日志详情
+export function getLogDetail(id) {
+  return request({
+    url: `/system/operation-log/${id}`,
+    method: 'get'
+  })
+}
+
+// 批量删除
+export function batchDeleteLog(ids) {
+  return request({
+    url: '/system/operation-log/batch',
+    method: 'delete',
+    data: ids
+  })
+}
+
+// 清空全部
+export function cleanAllLog() {
+  return request({
+    url: '/system/operation-log/clean',
+    method: 'delete'
+  })
+}
+
+// 导出
+export function exportLog(params) {
+  return request({
+    url: '/system/operation-log/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}
+4.2 完整页面代码 views/system/operationLog/index.vue
+vue
+<template>
+  <div class="log-container">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <div class="title">
+        <el-icon size="24" color="#722ed1"><Document /></el-icon>
+        <span>操作日志管理</span>
+      </div>
+      <div class="desc">系统操作日志管理</div>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+      <el-form :model="queryForm" inline label-width="80px">
+        <el-form-item label="操作模块">
+          <el-input v-model="queryForm.module" placeholder="请输入模块名称" clearable />
+        </el-form-item>
+        <el-form-item label="操作人">
+          <el-input v-model="queryForm.operatorName" placeholder="请输入姓名" clearable />
+        </el-form-item>
+        <el-form-item label="操作状态">
+          <el-select v-model="queryForm.status" placeholder="全部" clearable>
+            <el-option label="成功" :value="1" />
+            <el-option label="失败" :value="0" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="操作时间">
+          <el-date-picker
+            v-model="queryForm.dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleQuery">
+            <el-icon><Search /></el-icon> 查询
+          </el-button>
+          <el-button @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <!-- 操作栏 -->
+    <div class="action-bar">
+      <el-button type="danger" :disabled="selectedIds.length === 0" @click="handleBatchDelete">
+        批量删除
+      </el-button>
+      <el-button type="warning" @click="handleExport">
+        <el-icon><Download /></el-icon> 导出Excel
+      </el-button>
+      <el-button type="danger" plain @click="handleCleanAll">
+        清空全部
+      </el-button>
+    </div>
+
+    <!-- 日志表格 -->
+    <el-table 
+      :data="tableData" 
+      v-loading="loading" 
+      border 
+      stripe
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column type="selection" width="55" />
+      <el-table-column prop="module" label="操作模块" width="120" />
+      <el-table-column prop="operationType" label="操作类型" width="100" />
+      <el-table-column prop="operationDesc" label="操作描述" min-width="180" show-overflow-tooltip />
+      <el-table-column prop="operatorName" label="操作人" width="100" />
+      <el-table-column prop="ipAddress" label="操作IP" width="120" />
+      <el-table-column prop="status" label="状态" width="80">
+        <template #default="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+            {{ row.status === 1 ? '成功' : '失败' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="costTime" label="耗时(ms)" width="90" align="right" />
+      <el-table-column prop="operationTime" label="操作时间" width="180" />
+      <el-table-column label="操作" width="100" fixed="right">
+        <template #default="{ row }">
+          <el-button type="primary" link @click="openDetail(row)">详情</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 分页 -->
+    <div class="pagination">
+      <el-pagination
+        v-model:current-page="queryForm.pageNum"
+        v-model:page-size="queryForm.pageSize"
+        :total="total"
+        layout="total, prev, pager, next, sizes"
+        :page-sizes="[10, 20, 50, 100]"
+        @size-change="fetchList"
+        @current-change="fetchList"
+      />
+    </div>
+
+    <!-- 详情弹窗 -->
+    <el-dialog v-model="detailDialogVisible" title="日志详情" width="700px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="操作模块">{{ detailData.module }}</el-descriptions-item>
+        <el-descriptions-item label="操作类型">{{ detailData.operationType }}</el-descriptions-item>
+        <el-descriptions-item label="操作人">{{ detailData.operatorName }}</el-descriptions-item>
+        <el-descriptions-item label="操作IP">{{ detailData.ipAddress }}</el-descriptions-item>
+        <el-descriptions-item label="请求方式">{{ detailData.requestMethod }}</el-descriptions-item>
+        <el-descriptions-item label="耗时">{{ detailData.costTime }} ms</el-descriptions-item>
+        <el-descriptions-item label="操作时间" :span="2">{{ detailData.operationTime }}</el-descriptions-item>
+        <el-descriptions-item label="请求地址" :span="2">{{ detailData.requestUrl }}</el-descriptions-item>
+        <el-descriptions-item label="请求参数" :span="2">
+          <pre class="json-pre">{{ formatJson(detailData.requestParams) }}</pre>
+        </el-descriptions-item>
+        <el-descriptions-item label="返回结果" :span="2">
+          <pre class="json-pre">{{ formatJson(detailData.responseResult) }}</pre>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="detailData.status === 0" label="错误信息" :span="2">
+          <div class="error-text">{{ detailData.errorMsg }}</div>
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Document, Search, Download } from '@element-plus/icons-vue'
+import {
+  getLogList,
+  getLogDetail,
+  batchDeleteLog,
+  cleanAllLog,
+  exportLog
+} from '@/api/operationLog'
+
+const loading = ref(false)
+const tableData = ref([])
+const total = ref(0)
+const selectedIds = ref([])
+
+const queryForm = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  module: '',
+  operatorName: '',
+  status: null,
+  dateRange: []
+})
+
+// 详情弹窗
+const detailDialogVisible = ref(false)
+const detailData = ref({})
+
+// 格式化JSON
+const formatJson = (str) => {
+  if (!str) return '-'
+  try {
+    return JSON.stringify(JSON.parse(str), null, 2)
+  } catch {
+    return str
+  }
+}
+
+// 获取列表
+const fetchList = async () => {
+  loading.value = true
+  const params = { ...queryForm }
+  if (params.dateRange && params.dateRange.length === 2) {
+    params.startTime = params.dateRange[0]
+    params.endTime = params.dateRange[1]
+  }
+  delete params.dateRange
+  try {
+    const res = await getLogList(params)
+    tableData.value = res.data.records
+    total.value = res.data.total
+  } finally {
+    loading.value = false
+  }
+}
+
+// 查询
+const handleQuery = () => {
+  queryForm.pageNum = 1
+  fetchList()
+}
+
+// 重置
+const resetQuery = () => {
+  Object.assign(queryForm, {
+    pageNum: 1,
+    pageSize: 10,
+    module: '',
+    operatorName: '',
+    status: null,
+    dateRange: []
+  })
+  fetchList()
+}
+
+// 多选
+const handleSelectionChange = (selection) => {
+  selectedIds.value = selection.map(item => item.id)
+}
+
+// 批量删除
+const handleBatchDelete = () => {
+  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条日志？`, '提示', {
+    type: 'warning'
+  }).then(async () => {
+    await batchDeleteLog(selectedIds.value)
+    ElMessage.success('删除成功')
+    fetchList()
+  })
+}
+
+// 清空全部
+const handleCleanAll = () => {
+  ElMessageBox.confirm('确定清空全部操作日志？清空后不可恢复！', '警告', {
+    type: 'error'
+  }).then(async () => {
+    await cleanAllLog()
+    ElMessage.success('已清空全部日志')
+    fetchList()
+  })
+}
+
+// 导出
+const handleExport = async () => {
+  const params = { ...queryForm }
+  delete params.pageNum
+  delete params.pageSize
+  const res = await exportLog(params)
+  const blob = new Blob([res])
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `操作日志_${new Date().getTime()}.xlsx`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// 打开详情
+const openDetail = async (row) => {
+  const res = await getLogDetail(row.id)
+  detailData.value = res.data
+  detailDialogVisible.value = true
+}
+
+onMounted(() => {
+  fetchList()
+})
+</script>
+
+<style scoped lang="scss">
+.log-container {
+  padding: 20px;
+
+  .page-header {
+    margin-bottom: 20px;
+    .title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #722ed1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .desc {
+      color: #666;
+      font-size: 14px;
+    }
+  }
+
+  .filter-bar {
+    background: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  .action-bar {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .pagination {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .json-pre {
+    background: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 12px;
+    margin: 0;
+  }
+
+  .error-text {
+    color: #f56c6c;
+    font-family: monospace;
+  }
+}
+</style>
+五、日志记录规范与安全优化
+5.1 必须记录的操作（建议全覆盖）
+表格
+模块	必记操作
+账号权限	登录、登出、修改密码、分配角色、新增 / 删除账号
+团队成员	新增、编辑、删除、导入、导出、毕业归档
+任务待办	删除任务、驳回任务、批量派发任务
+工作周报	审核通过 / 驳回、批量导出
+数据备份	手动备份、执行恢复、删除备份、修改备份配置
+系统设置	修改系统配置、清空日志、删除日志
+5.2 无需记录的操作
+普通查询类接口（列表、详情、搜索）
+下拉选项、字典数据获取
+高频调用的心跳、状态检查接口
+5.3 安全与性能要点
+敏感信息脱敏：密码、手机号、身份证等字段在写入日志前自动打码，防止日志泄露敏感数据
+异步写入：日志保存走独立线程池，接口响应不受日志写入速度影响
+定期清理：默认保留 90 天日志，自动清理过期数据，避免数据库体积膨胀
+仅管理员可访问：所有日志接口严格权限拦截，普通用户无法查询任何操作日志
+日志不可修改：日志表只有新增和删除权限，不提供编辑接口，保证审计不可篡改
+六、全流程测试验收清单
+✅ 登录系统，操作日志自动生成一条登录记录，信息完整
+✅ 新增一条成员记录，日志表自动生成对应操作记录，参数、返回结果正确
+✅ 故意触发接口报错，日志状态标记为失败，错误信息完整留存
+✅ 日志列表支持按模块、操作人、状态、时间范围筛选
+✅ 点击详情可查看完整的请求参数、返回结果、报错信息
+✅ 批量删除、清空全部功能正常，有二次确认
+✅ 导出 Excel 功能正常，导出内容和列表一致
+✅ 学生账号登录，无法访问日志接口，返回 403 无权限
+✅ 密码字段在日志中已脱敏，无明文泄露
+✅ 高并发操作下，主接口响应正常，日志不阻塞业务
+七、扩展建议
+对接 IP 归属地：集成免费 IP 库，自动显示操作地点，异常登录一目了然
+异常登录告警：检测到非常用 IP、异地登录时，自动给管理员发站内信提醒
+日志归档：超过 30 天的日志自动迁移到历史表，提升主表查询速度
+操作统计看板：统计每日操作量、高频操作、失败操作 TOP 榜，直观展示系统运行状态
