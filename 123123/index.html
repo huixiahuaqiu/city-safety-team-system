@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -15839,6 +15839,7 @@ ${ocrText}`
             const remain = securitySettings.maxAttempts - (attempts + 1);
             if (remain <= 2) { warningEl.textContent = `密码错误！再失败 ${remain} 次后账号将被锁定`; warningEl.style.display = 'block'; }
             errorEl.textContent = '密码错误';
+            recordOperationLog('系统登录', '登录', `${account.realName}(${account.studentId}) 登录失败：密码错误`, { studentId: account.studentId }, { success: false }, 0, '密码错误', 0, account.id, account.realName);
             return;
         }
 
@@ -15860,6 +15861,9 @@ ${ocrText}`
 
         currentUser = account;
         localStorage.setItem('currentSession', JSON.stringify({ userId: account.id, loginTime: Date.now() }));
+
+        loadOperationLogData();
+        cleanExpiredLogs();
 
         // 首次登录强制改密
         if (account.mustChangePwd) {
@@ -15909,6 +15913,10 @@ ${ocrText}`
 
     function handleLogout() {
         if (!confirm('确定要退出登录吗？')) return;
+        const userName = currentUser ? currentUser.realName : '';
+        const studentId = currentUser ? currentUser.studentId : '';
+        const userId = currentUser ? currentUser.id : 0;
+        recordOperationLog('系统登录', '登出', `${userName}(${studentId}) 退出登录`, { studentId }, { success: true }, 1, '', 0, userId, userName);
         currentUser = null;
         localStorage.removeItem('currentSession');
         document.getElementById('loginOverlay').classList.add('active');
@@ -16559,6 +16567,7 @@ ${ocrText}`
         ['pwdOld','pwdNew','pwdNewConfirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         document.getElementById('newPwdStrength').textContent = '';
         document.getElementById('newPwdStrengthBar').style.width = '0';
+        recordOperationLog('账号权限', '修改', `${currentUser.realName}(${currentUser.studentId}) 修改密码`, { studentId: currentUser.studentId }, { success: true }, 1, '', 0);
         alert('密码修改成功！');
     }
 
@@ -16576,6 +16585,7 @@ ${ocrText}`
             account.lockedUntil = null;
             saveAccountData();
             document.getElementById('resetPwdNew').value = '';
+            recordOperationLog('账号权限', '修改', `${currentUser.realName} 重置 ${account.realName}(${account.studentId}) 的密码`, { targetStudentId: account.studentId }, { success: true }, 1, '', 0);
             alert(`用户 "${account.realName}" 的密码已重置`);
         }
     }
@@ -16624,6 +16634,8 @@ ${ocrText}`
             lockDuration: parseInt(document.getElementById('securityLockDuration').value) || 30
         };
         localStorage.setItem('securitySettings', JSON.stringify(securitySettings));
+        recordOperationLog('系统设置', '修改', `修改安全策略：最大尝试次数${securitySettings.maxAttempts}次，锁定时长${securitySettings.lockDuration}分钟`, 
+            { maxAttempts: securitySettings.maxAttempts, lockDuration: securitySettings.lockDuration }, { success: true }, 1, '', 0);
         alert('安全设置已保存');
     }
 
@@ -17312,9 +17324,13 @@ ${ocrText}`
     function deleteTask(id) {
         if (!confirm('确定要删除该任务吗？')) return;
         
+        const task = taskData.find(t => t.id === id);
         taskData = taskData.filter(t => t.id !== id);
         saveTaskData();
         renderTaskList();
+        if (task) {
+            recordOperationLog('任务待办', '删除', `删除任务：${task.title}`, { taskId: id, taskTitle: task.title }, { success: true }, 1, '', 0);
+        }
         alert('任务已删除！');
     }
 
@@ -17653,6 +17669,7 @@ ${ocrText}`
         report.reviewComment = comment || '审核通过';
         saveWeeklyReportData();
         renderWeeklyReportList();
+        recordOperationLog('工作周报', '审核', `审核通过周报：${report.weekRange}，提交人${report.ownerName}`, { reportId: id, weekRange: report.weekRange, ownerName: report.ownerName }, { success: true }, 1, '', 0);
         alert('已通过审核！');
     }
 
@@ -17670,6 +17687,7 @@ ${ocrText}`
         report.reviewComment = comment;
         saveWeeklyReportData();
         renderWeeklyReportList();
+        recordOperationLog('工作周报', '审核', `驳回周报：${report.weekRange}，提交人${report.ownerName}，原因：${comment}`, { reportId: id, weekRange: report.weekRange, ownerName: report.ownerName }, { success: true }, 1, '', 0);
         alert('已驳回！');
     }
 
@@ -21180,6 +21198,9 @@ ${ocrText}`
                     saveBackupData();
                 }
                 
+                const typeText = backupType === 1 ? '仅数据库' : '全量备份';
+                recordOperationLog('数据备份', '备份', `执行手动备份：${record.backupName}，${typeText}`, { backupName: record.backupName, backupType: typeText, fileSize: formatFileSize(fileSize) }, { success: true }, 1, '', 0);
+                
                 cleanExpiredBackup(autoBackupConfig.saveCount);
             } catch (e) {
                 const recordIndex = backupData.findIndex(b => b.id === record.id);
@@ -21427,6 +21448,8 @@ ${ocrText}`
                 backupData.unshift(safetyBackup);
                 saveBackupData();
                 
+                recordOperationLog('数据备份', '恢复', `执行数据恢复：${backup.backupName}`, { backupName: backup.backupName, backupType: backup.backupType === 1 ? '仅数据库' : '全量备份' }, { success: true }, 1, '', 0);
+                
                 alert('数据恢复成功！');
                 closeRestoreModal();
                 renderBackupList();
@@ -21443,9 +21466,11 @@ ${ocrText}`
         
         const index = backupData.findIndex(b => b.id === id);
         if (index > -1) {
+            const backupName = backupData[index].backupName;
             backupData[index].isDeleted = 1;
             saveBackupData();
             renderBackupList();
+            recordOperationLog('数据备份', '删除', `删除备份文件：${backupName}`, { backupName }, { success: true }, 1, '', 0);
             alert('已删除！');
         }
     }
@@ -21484,6 +21509,13 @@ ${ocrText}`
         
         saveAutoBackupConfigToStorage();
         closeAutoBackupConfigModal();
+        
+        const cycleText = autoBackupConfig.backupCycle === 1 ? '每天' : autoBackupConfig.backupCycle === 2 ? '每周' : '每月';
+        const typeText = autoBackupConfig.backupType === 1 ? '仅数据库' : '全量备份';
+        const statusText = autoBackupConfig.enableAuto === 1 ? '开启' : '关闭';
+        recordOperationLog('数据备份', '修改', `修改自动备份配置：${statusText}，周期${cycleText}，时间${autoBackupConfig.executeTime}，${typeText}，保留${autoBackupConfig.saveCount}份`, 
+            { enableAuto: autoBackupConfig.enableAuto, backupCycle: cycleText, executeTime: autoBackupConfig.executeTime, backupType: typeText, saveCount: autoBackupConfig.saveCount }, 
+            { success: true }, 1, '', 0);
         
         if (autoBackupConfig.enableAuto === 1) {
             alert('自动备份已开启！系统将在设定时间自动执行备份');
@@ -21527,7 +21559,38 @@ ${ocrText}`
 
     function initOperationLogModule() {
         loadOperationLogData();
+        cleanExpiredLogs();
         renderOperationLogList();
+        
+        setInterval(cleanExpiredLogs, 24 * 60 * 60 * 1000);
+    }
+
+    function cleanExpiredLogs() {
+        const retentionDays = 90;
+        const expireTime = new Date();
+        expireTime.setDate(expireTime.getDate() - retentionDays);
+        
+        const expiredCount = operationLogData.filter(log => {
+            try {
+                const logTime = new Date(log.operationTime);
+                return logTime < expireTime;
+            } catch {
+                return false;
+            }
+        }).length;
+        
+        operationLogData = operationLogData.filter(log => {
+            try {
+                const logTime = new Date(log.operationTime);
+                return logTime >= expireTime;
+            } catch {
+                return true;
+            }
+        });
+        
+        if (expiredCount > 0) {
+            saveOperationLogData();
+        }
     }
 
     function loadOperationLogData() {
@@ -21581,7 +21644,7 @@ ${ocrText}`
         return result;
     }
 
-    function recordOperationLog(module, type, desc, params = null, response = null, status = 1, errorMsg = '', costTime = 0) {
+    function recordOperationLog(module, type, desc, params = null, response = null, status = 1, errorMsg = '', costTime = 0, opId = null, opName = null) {
         const now = new Date();
         const log = {
             id: operationLogData.length > 0 ? Math.max(...operationLogData.map(l => l.id)) + 1 : 1,
@@ -21592,8 +21655,8 @@ ${ocrText}`
             requestUrl: '/system/operation',
             requestParams: params ? desensitizeData(JSON.stringify(params)) : null,
             responseResult: response ? desensitizeData(JSON.stringify(response)) : null,
-            operatorId: currentUser ? currentUser.id : 0,
-            operatorName: currentUser ? currentUser.name : 'admin',
+            operatorId: opId !== null ? opId : (currentUser ? currentUser.id : 0),
+            operatorName: opName !== null ? opName : (currentUser ? currentUser.name : 'admin'),
             ipAddress: getClientIp(),
             ipLocation: '本地',
             browser: getBrowserInfo(),
@@ -21829,6 +21892,8 @@ ${ocrText}`
         document.getElementById('logSelectAll').checked = false;
         updateBatchDeleteBtn();
         renderOperationLogList();
+        
+        recordOperationLog('系统设置', '删除', '清空所有操作日志', {}, { success: true }, 1, '', 0);
         
         alert('已清空全部日志！');
     }
