@@ -7462,8 +7462,8 @@
             });
         }
 
-        // ========== 全站云端同步（Supabase app_kv） ==========
-        // 需要先在 Supabase 执行 123123/supabase_sync.sql
+        // ========== 全站云端同步（复用已有 patents 表，无需新建表） ==========
+        // 同步记录标记：classification=__APP_SYNC__，patent_number=__SYNC_KV__{key}
         const CLOUD_SYNC_KEYS = new Set([
             'teamMemberData', 'accountData', 'permissionMatrix', 'passwordPolicy', 'loginLogData',
             'longitudinalData', 'horizontalData', 'schoolData',
@@ -7477,11 +7477,14 @@
             'customInstructionTemplates', 'devlogEntries',
             'backupData', 'autoBackupConfig'
         ]);
+        const CLOUD_SYNC_MARK = '__APP_SYNC__';
+        const CLOUD_SYNC_PREFIX = '__SYNC_KV__';
 
         let cloudSyncReady = false;
         let cloudSyncEnabled = true;
         let cloudPulling = false;
         const cloudUpsertTimers = {};
+        const cloudRowIdCache = {};
         let cloudSyncBannerEl = null;
 
         function showCloudSyncBanner(msg, isError) {
@@ -7502,6 +7505,41 @@
             }, isError ? 8000 : 2500);
         }
 
+        function syncKeyToPatentNumber(key) {
+            return CLOUD_SYNC_PREFIX + key;
+        }
+
+        function patentNumberToSyncKey(pn) {
+            if (!pn || pn.indexOf(CLOUD_SYNC_PREFIX) !== 0) return null;
+            return pn.slice(CLOUD_SYNC_PREFIX.length);
+        }
+
+        function compactSyncValue(key, parsed) {
+            // 头像 base64 太大，同步时去掉，避免撑爆字段
+            if (key === 'teamMemberData' && Array.isArray(parsed)) {
+                return parsed.map(function(m) {
+                    var copy = Object.assign({}, m);
+                    if (copy.avatar && String(copy.avatar).length > 200) {
+                        copy.avatar = '';
+                        copy.avatarSynced = false;
+                    }
+                    return copy;
+                });
+            }
+            return parsed;
+        }
+
+        async function findSyncRowId(key) {
+            if (cloudRowIdCache[key]) return cloudRowIdCache[key];
+            var pn = encodeURIComponent(syncKeyToPatentNumber(key));
+            var rows = await supabaseRequest('GET', 'patents?patent_number=eq.' + pn, { select: 'id', limit: 1 });
+            if (rows && rows[0] && rows[0].id) {
+                cloudRowIdCache[key] = rows[0].id;
+                return rows[0].id;
+            }
+            return null;
+        }
+
         async function cloudUpsert(key, rawValue) {
             if (!cloudSyncEnabled || !CLOUD_SYNC_KEYS.has(key)) return;
             var parsed;
@@ -7510,23 +7548,44 @@
             } catch (e) {
                 parsed = rawValue;
             }
+            parsed = compactSyncValue(key, parsed);
+            var summary = '';
             try {
-                await supabaseRequest('POST', 'app_kv', {
-                    key: key,
-                    value: parsed,
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'key',
-                    prefer: 'resolution=merge-duplicates,return=minimal'
-                });
+                summary = JSON.stringify(parsed);
+            } catch (e) {
+                console.warn('cloud stringify failed', key, e);
+                return;
+            }
+            // 过大则跳过（约 500KB 保护）
+            if (summary.length > 500000) {
+                console.warn('cloud value too large, skip', key, summary.length);
+                return;
+            }
+            var payload = {
+                patent_type: '同步',
+                name: '[SYNC] ' + key,
+                patent_number: syncKeyToPatentNumber(key),
+                classification: CLOUD_SYNC_MARK,
+                status: 'SYNC',
+                applicant: 'system',
+                summary: summary,
+                remark: 'cloud-sync:' + new Date().toISOString()
+            };
+            try {
+                var id = await findSyncRowId(key);
+                if (id) {
+                    await supabaseRequest('PATCH', 'patents?id=eq.' + id, payload, { prefer: 'return=minimal' });
+                } else {
+                    var created = await supabaseRequest('POST', 'patents', payload, { prefer: 'return=representation' });
+                    if (created && created[0] && created[0].id) {
+                        cloudRowIdCache[key] = created[0].id;
+                    }
+                }
                 cloudSyncReady = true;
             } catch (err) {
-                var msg = String(err && err.message || err);
-                if (msg.indexOf('PGRST205') >= 0 || msg.indexOf('app_kv') >= 0) {
-                    cloudSyncEnabled = false;
-                    showCloudSyncBanner('云端同步未开通：请在 Supabase 执行 supabase_sync.sql', true);
-                } else {
-                    console.warn('cloud upsert failed', key, err);
+                console.warn('cloud upsert failed', key, err);
+                if (String(err && err.message || err).indexOf('401') >= 0) {
+                    showCloudSyncBanner('云端同步权限不足', true);
                 }
             }
         }
@@ -7552,17 +7611,31 @@
             if (!cloudSyncEnabled) return { ok: false, reason: 'disabled' };
             try {
                 cloudPulling = true;
-                var rows = await supabaseRequest('GET', 'app_kv', { select: 'key,value,updated_at', limit: 500 });
+                var rows = await supabaseRequest(
+                    'GET',
+                    'patents?classification=eq.' + encodeURIComponent(CLOUD_SYNC_MARK),
+                    { select: 'id,patent_number,summary', limit: 500 }
+                );
                 cloudSyncReady = true;
                 var applied = 0;
+                var latestByKey = {};
                 (rows || []).forEach(function(row) {
-                    if (!row || !CLOUD_SYNC_KEYS.has(row.key)) return;
+                    var key = patentNumberToSyncKey(row.patent_number);
+                    if (!key || !CLOUD_SYNC_KEYS.has(key)) return;
+                    // 若有重复，保留 id 更大的
+                    if (!latestByKey[key] || (row.id > latestByKey[key].id)) {
+                        latestByKey[key] = row;
+                    }
+                });
+                Object.keys(latestByKey).forEach(function(key) {
+                    var row = latestByKey[key];
+                    cloudRowIdCache[key] = row.id;
                     try {
-                        var raw = JSON.stringify(row.value);
-                        Storage.prototype.setItem.call(localStorage, row.key, raw);
+                        var parsed = JSON.parse(row.summary || 'null');
+                        Storage.prototype.setItem.call(localStorage, key, JSON.stringify(parsed));
                         applied++;
                     } catch (e) {
-                        console.warn('apply cloud key failed', row.key, e);
+                        console.warn('apply cloud key failed', key, e);
                     }
                 });
                 if (options.silent !== true) {
@@ -7570,15 +7643,9 @@
                 }
                 return { ok: true, applied: applied };
             } catch (err) {
-                var msg = String(err && err.message || err);
-                if (msg.indexOf('PGRST205') >= 0 || msg.indexOf('app_kv') >= 0) {
-                    cloudSyncEnabled = false;
-                    showCloudSyncBanner('云端同步未开通：请在 Supabase 执行 123123/supabase_sync.sql', true);
-                } else {
-                    console.warn('pullAllFromCloud failed', err);
-                    if (options.silent !== true) showCloudSyncBanner('拉取云端数据失败', true);
-                }
-                return { ok: false, error: msg };
+                console.warn('pullAllFromCloud failed', err);
+                if (options.silent !== true) showCloudSyncBanner('拉取云端数据失败', true);
+                return { ok: false, error: String(err && err.message || err) };
             } finally {
                 cloudPulling = false;
             }
@@ -14739,7 +14806,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
         async function initPatentMgmtData() {
             try {
                 const data = await supabaseRequest('GET', 'patents', { select: '*', order: 'grant_date.desc.nullslast' });
-                patentMgmtData = data || [];
+                // 过滤掉云端同步占位记录，避免出现在专利台账
+                patentMgmtData = (data || []).filter(function(p) {
+                    return !(p && (p.classification === '__APP_SYNC__' || (p.patent_number && String(p.patent_number).indexOf('__SYNC_KV__') === 0)));
+                });
             } catch (e) {
                 console.error('加载专利数据失败:', e);
                 patentMgmtData = [];
