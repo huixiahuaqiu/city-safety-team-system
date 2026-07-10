@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -14210,7 +14210,88 @@ ${JSON.stringify(excelDataArray, null, 2)}
         
         var teamMemberData = [];
         var editingMemberId = null;
-        
+
+        function getProfileLibraryAdvisors() {
+            return [
+                {
+                    name: '王丽萍',
+                    category: 'advisor',
+                    title: '重庆科技大学教授、科技处处长',
+                    phone: '13996488662',
+                    email: 'wangliping98@163.com',
+                    research: '城市安全、智能运维、结构抗震',
+                    education: '2005-2010年重庆大学防灾减灾及防护工程博士；2002-2005年新疆大学结构工程硕士；1998-2002年新疆大学工民建学士',
+                    projects: '国家自然科学基金青年/地区项目；重庆市科委社会类重点研发项目等',
+                    awards: '重庆市科技进步二等奖、三等奖；重庆市建设创新一等奖',
+                    bio: '王丽萍，1980年11月生，女，重庆科技大学教授，科技处处长，重庆安全生产科学研究院副院长，防灾减灾及防护工程专业博士，重庆市巾帼科技创新团队负责人。2013年赴新加坡南洋理工大学访问，2016年赴美国内华达拉斯维加斯大学访学。长期从事工程结构抗灾和城市区域防灾研究。',
+                    avatar: '',
+                    fileName: ''
+                },
+                {
+                    name: '罗文文',
+                    category: 'advisor',
+                    title: '博士、副教授',
+                    phone: '18523539873',
+                    email: 'luowenwen326@163.com',
+                    research: '工程结构抗震与城市灾害风险研究',
+                    education: '2009/09～2015/12重庆大学土木工程学院工学博士(直攻博)；2005/09～2009/06重庆大学土木工程学院工学学士',
+                    projects: '国家自然科学基金青年项目；兵团重点领域科技攻关项目；重庆市自然科学基金等',
+                    awards: '新疆建设兵团科学技术奖自然科学奖二等奖',
+                    bio: '罗文文，男，博士，副教授。1987年10月出生于四川省绵阳市。2009年、2015年分别获得重庆大学学士和博士学位。主持国家自然科学基金1项及多项省部级项目，发表论文20余篇，授权发明专利6项，参编专著2部、地方标准2项。',
+                    avatar: '',
+                    fileName: ''
+                },
+                {
+                    name: '罗钧',
+                    category: 'advisor',
+                    title: '土木工程博士/博士后，高级工程师，硕士生导师',
+                    phone: '13452426159',
+                    email: 'jluo@cqust.edu.cn',
+                    research: '基于人工智能和图像信息的结构振动测试和损伤诊断，多信息融合的结构三维数字模型构建',
+                    education: '2009-2016年重庆大学土木工程博士（直博）；2005-2009年重庆大学土木工程学士',
+                    projects: '重庆市自然科学基金创新发展联合基金重点项目；重庆市博士后特别资助项目；重庆市自然科学基金面上项目等',
+                    awards: '省部级科技进步奖；重庆科技大学教学成果奖二等奖',
+                    bio: '罗钧，出生于1986年5月，土木工程博士/博士后，高级工程师，硕士生导师，土木与水利工程学院教师。主持多项省部级项目，以第一作者或通讯作者发表论文17篇（SCI/EI检索14篇），获实用新型专利3项，参编地方标准2项。',
+                    avatar: '',
+                    fileName: ''
+                }
+            ];
+        }
+
+        function importProfileLibraryAdvisors(forceUpdate) {
+            const advisors = getProfileLibraryAdvisors();
+            let nextId = teamMemberData.length > 0 ? Math.max(...teamMemberData.map(d => d.id)) + 1 : 1;
+            let changed = 0;
+            advisors.forEach(function(adv) {
+                const idx = teamMemberData.findIndex(m => m.name === adv.name);
+                if (idx === -1) {
+                    teamMemberData.push(Object.assign({ id: nextId++ }, adv));
+                    changed++;
+                } else if (forceUpdate) {
+                    const id = teamMemberData[idx].id;
+                    const avatar = teamMemberData[idx].avatar || '';
+                    teamMemberData[idx] = Object.assign({}, teamMemberData[idx], adv, { id: id, avatar: avatar });
+                    changed++;
+                }
+            });
+            // 移除占位假导师
+            const before = teamMemberData.length;
+            teamMemberData = teamMemberData.filter(m => !(m.category === 'advisor' && (m.name === '张教授' || m.name === '李副教授')));
+            if (teamMemberData.length !== before) changed++;
+            if (changed > 0) {
+                saveTeamMemberData();
+                if (typeof renderTeamMembers === 'function') renderTeamMembers();
+            }
+            return changed;
+        }
+
+        function importAdvisorsFromProfileUI() {
+            const n = importProfileLibraryAdvisors(true);
+            closeImportMembersModal();
+            switchMemberCategory('advisor', document.querySelector('.member-nav-item[onclick*=\"advisor\"]') || null);
+            alert(n > 0 ? ('已导入/更新导师信息，并同步到云端（王丽萍、罗文文、罗钧）') : '导师信息已是最新');
+        }
+
         async function initTeamMemberData() {
             // 先拉云端，避免本机默认数据覆盖别人的删除
             try { await syncFromCloudAndRefresh({ silent: true }); } catch (e) {}
@@ -14220,23 +14301,26 @@ ${JSON.stringify(excelDataArray, null, 2)}
             } else {
                 resetToDefaultMembers();
             }
+            // 从个人信息库导入三位导师，并同步到云端
+            importProfileLibraryAdvisors(true);
             renderTeamMembers();
         }
         
         function resetToDefaultMembers() {
             teamMemberData = [
-                { id: 1, name: '张教授', category: 'advisor', title: '教授/博士生导师', phone: '138****1001', email: 'zhang@university.edu.cn', bio: '长期从事人工智能与大数据分析研究，主持国家自然科学基金重点项目2项，发表SCI论文80余篇，获省部级科技进步奖3项。', avatar: '', research: '人工智能、大数据分析、深度学习', projects: '国家自然科学基金重点项目、国家重点研发计划', awards: '省部级科技进步一等奖、二等奖', education: '博士，毕业于清华大学计算机科学与技术专业' },
-                { id: 2, name: '李副教授', category: 'advisor', title: '副教授/硕士生导师', phone: '138****1002', email: 'li@university.edu.cn', bio: '研究方向为计算机视觉与图像处理，在TPAMI、CVPR等顶级期刊/会议发表论文50余篇，担任多个国际期刊编委。', avatar: '', research: '计算机视觉、图像处理、目标检测', projects: '国家自然科学基金面上项目、重庆市自然科学基金', awards: '重庆市自然科学奖二等奖', education: '博士，毕业于浙江大学计算机学院' },
-                { id: 3, name: '王明', category: '2022', title: '2022级硕士研究生', phone: '138****2001', email: 'wangm@university.edu.cn', bio: '研究方向为自然语言处理，已发表SCI论文2篇，参与国家级科研项目1项。', avatar: '', research: '自然语言处理、知识图谱', projects: '国家自然科学基金面上项目（参与）', awards: '研究生国家奖学金', education: '本科毕业于重庆邮电大学计算机科学专业' },
-                { id: 4, name: '赵芳', category: '2022', title: '2022级硕士研究生', phone: '138****2002', email: 'zhaof@university.edu.cn', bio: '研究方向为机器学习，已发表SCI论文1篇，获研究生学术创新奖。', avatar: '', research: '机器学习、数据挖掘', projects: '重庆市自然科学基金（参与）', awards: '研究生学术创新奖', education: '本科毕业于西南大学计算机专业' },
-                { id: 5, name: '陈浩', category: '2023', title: '2023级硕士研究生', phone: '138****3001', email: 'chenh@university.edu.cn', bio: '研究方向为深度学习，已发表SCI论文1篇，积极参与学术竞赛。', avatar: '', research: '深度学习、图像分割', projects: '国家自然科学基金（参与）', awards: '优秀研究生', education: '本科毕业于重庆理工大学计算机专业' },
-                { id: 6, name: '刘洋', category: '2023', title: '2023级硕士研究生', phone: '138****3002', email: 'liuy@university.edu.cn', bio: '研究方向为计算机视觉，已完成课程学习，正在开展研究工作。', avatar: '', research: '计算机视觉、视频分析', projects: '横向项目（参与）', awards: '', education: '本科毕业于重庆科技大学计算机专业' },
-                { id: 7, name: '孙丽', category: '2024', title: '2024级硕士研究生', phone: '138****4001', email: 'sunl@university.edu.cn', bio: '研究方向为人工智能，刚入学，正在学习相关课程。', avatar: '', research: '人工智能、智能推荐', projects: '', awards: '', education: '本科毕业于重庆交通大学计算机专业' },
-                { id: 8, name: '周杰', category: '2024', title: '2024级硕士研究生', phone: '138****4002', email: 'zhouj@university.edu.cn', bio: '研究方向为大数据，刚入学，正在适应研究生生活。', avatar: '', research: '大数据、云计算', projects: '', awards: '', education: '本科毕业于重庆工商大学计算机专业' },
-                { id: 9, name: '吴婷', category: '2025', title: '2025级硕士研究生', phone: '138****5001', email: 'wut@university.edu.cn', bio: '研究方向为物联网，刚入学，正在学习基础课程。', avatar: '', research: '物联网、边缘计算', projects: '', awards: '', education: '本科毕业于重庆师范大学计算机专业' },
-                { id: 10, name: '郑伟', category: '2025', title: '2025级硕士研究生', phone: '138****5002', email: 'zhengw@university.edu.cn', bio: '研究方向为网络安全，刚入学，正在适应新的学习环境。', avatar: '', research: '网络安全、信息安全', projects: '', awards: '', education: '本科毕业于重庆科技学院计算机专业' },
-                { id: 11, name: '冯雪', category: '2026', title: '2026级硕士研究生', phone: '138****6001', email: 'fengx@university.edu.cn', bio: '研究方向为人工智能，刚入学，正在学习相关基础知识。', avatar: '', research: '人工智能、智能算法', projects: '', awards: '', education: '本科毕业于重庆文理学院计算机专业' },
-                { id: 12, name: '何强', category: '2026', title: '2026级硕士研究生', phone: '138****6002', email: 'heq@university.edu.cn', bio: '研究方向为计算机图形学，刚入学，正在适应研究生阶段的学习。', avatar: '', research: '计算机图形学、虚拟现实', projects: '', awards: '', education: '本科毕业于长江师范学院计算机专业' }
+                { id: 1, name: '王丽萍', category: 'advisor', title: '重庆科技大学教授、科技处处长', phone: '13996488662', email: 'wangliping98@163.com', bio: '王丽萍，1980年11月生，女，重庆科技大学教授，科技处处长，重庆安全生产科学研究院副院长，防灾减灾及防护工程专业博士，重庆市巾帼科技创新团队负责人。长期从事工程结构抗灾和城市区域防灾研究。', avatar: '', research: '城市安全、智能运维、结构抗震', projects: '国家自然科学基金青年/地区项目；重庆市科委社会类重点研发项目等', awards: '重庆市科技进步二等奖、三等奖；重庆市建设创新一等奖', education: '重庆大学防灾减灾及防护工程博士；新疆大学结构工程硕士、工民建学士' },
+                { id: 2, name: '罗文文', category: 'advisor', title: '博士、副教授', phone: '18523539873', email: 'luowenwen326@163.com', bio: '罗文文，男，博士，副教授。1987年10月出生于四川省绵阳市。2009年、2015年分别获得重庆大学学士和博士学位，主要从事工程结构抗震与城市灾害风险研究。', avatar: '', research: '工程结构抗震与城市灾害风险研究', projects: '国家自然科学基金青年项目；兵团重点领域科技攻关项目；重庆市自然科学基金等', awards: '新疆建设兵团科学技术奖自然科学奖二等奖', education: '重庆大学土木工程博士（直攻博）、学士' },
+                { id: 3, name: '罗钧', category: 'advisor', title: '土木工程博士/博士后，高级工程师，硕士生导师', phone: '13452426159', email: 'jluo@cqust.edu.cn', bio: '罗钧，出生于1986年5月，土木工程博士/博士后，高级工程师，硕士生导师。主要从事基于人工智能和图像信息的结构振动测试和损伤诊断研究。', avatar: '', research: '基于人工智能和图像信息的结构振动测试和损伤诊断，多信息融合的结构三维数字模型构建', projects: '重庆市自然科学基金创新发展联合基金重点项目等', awards: '省部级科技进步奖；重庆科技大学教学成果奖二等奖', education: '重庆大学土木工程博士（直博）、学士' },
+                { id: 4, name: '王明', category: '2022', title: '2022级硕士研究生', phone: '138****2001', email: 'wangm@university.edu.cn', bio: '研究方向为自然语言处理，已发表SCI论文2篇，参与国家级科研项目1项。', avatar: '', research: '自然语言处理、知识图谱', projects: '国家自然科学基金面上项目（参与）', awards: '研究生国家奖学金', education: '本科毕业于重庆邮电大学计算机科学专业' },
+                { id: 5, name: '赵芳', category: '2022', title: '2022级硕士研究生', phone: '138****2002', email: 'zhaof@university.edu.cn', bio: '研究方向为机器学习，已发表SCI论文1篇，获研究生学术创新奖。', avatar: '', research: '机器学习、数据挖掘', projects: '重庆市自然科学基金（参与）', awards: '研究生学术创新奖', education: '本科毕业于西南大学计算机专业' },
+                { id: 6, name: '陈浩', category: '2023', title: '2023级硕士研究生', phone: '138****3001', email: 'chenh@university.edu.cn', bio: '研究方向为深度学习，已发表SCI论文1篇，积极参与学术竞赛。', avatar: '', research: '深度学习、图像分割', projects: '国家自然科学基金（参与）', awards: '优秀研究生', education: '本科毕业于重庆理工大学计算机专业' },
+                { id: 7, name: '刘洋', category: '2023', title: '2023级硕士研究生', phone: '138****3002', email: 'liuy@university.edu.cn', bio: '研究方向为计算机视觉，已完成课程学习，正在开展研究工作。', avatar: '', research: '计算机视觉、视频分析', projects: '横向项目（参与）', awards: '', education: '本科毕业于重庆科技大学计算机专业' },
+                { id: 8, name: '孙丽', category: '2024', title: '2024级硕士研究生', phone: '138****4001', email: 'sunl@university.edu.cn', bio: '研究方向为人工智能，刚入学，正在学习相关课程。', avatar: '', research: '人工智能、智能推荐', projects: '', awards: '', education: '本科毕业于重庆交通大学计算机专业' },
+                { id: 9, name: '周杰', category: '2024', title: '2024级硕士研究生', phone: '138****4002', email: 'zhouj@university.edu.cn', bio: '研究方向为大数据，刚入学，正在适应研究生生活。', avatar: '', research: '大数据、云计算', projects: '', awards: '', education: '本科毕业于重庆工商大学计算机专业' },
+                { id: 10, name: '吴婷', category: '2025', title: '2025级硕士研究生', phone: '138****5001', email: 'wut@university.edu.cn', bio: '研究方向为物联网，刚入学，正在学习基础课程。', avatar: '', research: '物联网、边缘计算', projects: '', awards: '', education: '本科毕业于重庆师范大学计算机专业' },
+                { id: 11, name: '郑伟', category: '2025', title: '2025级硕士研究生', phone: '138****5002', email: 'zhengw@university.edu.cn', bio: '研究方向为网络安全，刚入学，正在适应新的学习环境。', avatar: '', research: '网络安全、信息安全', projects: '', awards: '', education: '本科毕业于重庆科技学院计算机专业' },
+                { id: 12, name: '冯雪', category: '2026', title: '2026级硕士研究生', phone: '138****6001', email: 'fengx@university.edu.cn', bio: '研究方向为人工智能，刚入学，正在学习相关基础知识。', avatar: '', research: '人工智能、智能算法', projects: '', awards: '', education: '本科毕业于重庆文理学院计算机专业' },
+                { id: 13, name: '何强', category: '2026', title: '2026级硕士研究生', phone: '138****6002', email: 'heq@university.edu.cn', bio: '研究方向为计算机图形学，刚入学，正在适应研究生阶段的学习。', avatar: '', research: '计算机图形学、虚拟现实', projects: '', awards: '', education: '本科毕业于长江师范学院计算机专业' }
             ];
             localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData));
         }
@@ -14552,10 +14636,12 @@ ${JSON.stringify(excelDataArray, null, 2)}
                         <h3 style="margin:0 0 16px; color:#333;">导入团队成员</h3>
                         <div style="margin-bottom:16px;">
                             <label style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">选择导入方式</label>
-                            <div style="display:flex; gap:8px; margin-bottom:12px;">
-                                <button class="btn btn-secondary" onclick="setImportMode('csv')" id="importModeCsv" style="flex:1;">CSV 文件</button>
-                                <button class="btn" onclick="setImportMode('doc')" id="importModeDoc" style="flex:1;">Word/PDF 文档</button>
+                            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+                                <button class="btn" onclick="importAdvisorsFromProfileUI()" id="importModeProfile" style="flex:1;min-width:140px;">从个人信息库导入</button>
+                                <button class="btn btn-secondary" onclick="setImportMode('csv')" id="importModeCsv" style="flex:1;min-width:100px;">CSV 文件</button>
+                                <button class="btn btn-secondary" onclick="setImportMode('doc')" id="importModeDoc" style="flex:1;min-width:100px;">Word/PDF</button>
                             </div>
+                            <p style="color:#888;font-size:12px;margin:0 0 8px;">一键导入：王丽萍、罗文文、罗钧（自动同步到云端）</p>
                         </div>
                         <div id="csvImportSection" style="display:none; margin-bottom:16px;">
                             <p style="color:#666; font-size:13px; margin-bottom:8px;">选择 CSV 格式的成员数据文件导入</p>
