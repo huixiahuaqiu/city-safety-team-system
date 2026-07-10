@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -33,28 +33,131 @@
             box-sizing: border-box;
         }
         
-        body {
-            font-family: 'Microsoft YaHei', Arial, sans-serif;
-            background: #F5F7FA;
-            color: #333;
-            min-height: 100vh;
+        :root {
+            --brand: #7c3aed;
+            --brand-2: #4f46e5;
+            --brand-soft: rgba(124, 58, 237, 0.12);
+            --surface: rgba(255, 255, 255, 0.82);
+            --surface-solid: #ffffff;
+            --ink: #1f1635;
+            --muted: #6b7280;
+            --line: rgba(124, 58, 237, 0.12);
+            --shadow: 0 18px 50px rgba(49, 30, 100, 0.10);
+            --radius: 18px;
         }
-        
-        /* 顶部导航栏 - 参考重庆科技大学风格 */
+
+        body {
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--ink);
+            min-height: 100vh;
+            background:
+                radial-gradient(900px 500px at 8% 0%, rgba(167, 139, 250, 0.22), transparent 55%),
+                radial-gradient(800px 480px at 92% 8%, rgba(99, 102, 241, 0.16), transparent 50%),
+                radial-gradient(700px 420px at 70% 100%, rgba(236, 72, 153, 0.10), transparent 55%),
+                linear-gradient(180deg, #f4f1ff 0%, #f7f8fc 40%, #eef2ff 100%);
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                linear-gradient(rgba(124, 58, 237, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(124, 58, 237, 0.035) 1px, transparent 1px);
+            background-size: 56px 56px;
+            mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+            animation: appGridDrift 24s linear infinite;
+            opacity: 0.7;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            width: 420px;
+            height: 420px;
+            border-radius: 50%;
+            right: -120px;
+            top: 120px;
+            background: radial-gradient(circle, rgba(167, 139, 250, 0.28), transparent 70%);
+            filter: blur(18px);
+            pointer-events: none;
+            z-index: 0;
+            animation: appOrbFloat 14s ease-in-out infinite;
+        }
+
+        .top-nav,
+        .app-shell,
+        .login-overlay {
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes appGridDrift {
+            from { transform: translate3d(0, 0, 0); }
+            to { transform: translate3d(-56px, -28px, 0); }
+        }
+        @keyframes appOrbFloat {
+            0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+            50% { transform: translate3d(-30px, 40px, 0) scale(1.08); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(18px); filter: blur(4px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+        @keyframes softPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.18); }
+            50% { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0); }
+        }
+        @keyframes shimmerSweep {
+            0% { transform: translateX(-130%); }
+            100% { transform: translateX(130%); }
+        }
+        @keyframes navGlow {
+            0%, 100% { opacity: 0.45; }
+            50% { opacity: 0.85; }
+        }
+
+        /* 顶部导航栏 */
         .top-nav {
-            background: #8A2BE2; /* 紫色主题 */
             color: white;
-            padding: 10px 20px;
+            padding: 12px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: linear-gradient(120deg, #5b21b6 0%, #7c3aed 45%, #4f46e5 100%);
+            background-size: 180% 180%;
+            animation: navGradientShift 10s ease infinite;
+            box-shadow: 0 10px 30px rgba(76, 29, 149, 0.28);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            overflow: hidden;
+        }
+        .top-nav::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+            transform: translateX(-120%);
+            animation: shimmerSweep 4.8s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes navGradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
         
         .top-nav .logo {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
         }
         
         .top-nav .logo img {
@@ -63,58 +166,86 @@
         
         .top-nav .logo-text {
             font-size: 18px;
-            font-weight: bold;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.18);
         }
         
         .top-nav .nav-links {
             display: flex;
-            gap: 20px;
+            gap: 8px;
+            position: relative;
+            z-index: 1;
         }
         
         .top-nav .nav-links a {
-            color: white;
+            color: rgba(255,255,255,0.92);
             text-decoration: none;
             font-size: 14px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            transition: background 0.25s, transform 0.25s, color 0.25s;
         }
         
         .top-nav .nav-links a:hover {
-            text-decoration: underline;
+            background: rgba(255,255,255,0.16);
+            transform: translateY(-1px);
+            text-decoration: none;
         }
         
         /* 主容器 */
         .app-shell {
             display: flex;
             width: 100%;
-            min-height: calc(100vh - 60px);
+            min-height: calc(100vh - 64px);
         }
         
         /* 左侧菜单 */
         .sidebar {
-            width: 250px;
-            background: white;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            padding: 20px 0;
+            width: 260px;
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.78);
+            backdrop-filter: blur(16px) saturate(140%);
+            -webkit-backdrop-filter: blur(16px) saturate(140%);
+            border-right: 1px solid var(--line);
+            box-shadow: 8px 0 30px rgba(49, 30, 100, 0.06);
+            padding: 18px 12px;
+            overflow-y: auto;
+            max-height: calc(100vh - 64px);
+            position: sticky;
+            top: 64px;
+            align-self: flex-start;
         }
         
         .nav-item {
-            padding: 15px 25px;
+            padding: 12px 16px;
+            margin: 4px 0;
             cursor: pointer;
-            transition: all 0.3s;
-            border-left: 4px solid transparent;
+            transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+            border-left: 3px solid transparent;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             gap: 10px;
+            color: #374151;
+            position: relative;
+            overflow: hidden;
         }
         
         .nav-item:hover {
-            background-color: #f8f9fa;
-            border-left-color: #8A2BE2;
+            background: linear-gradient(90deg, rgba(124,58,237,0.10), rgba(124,58,237,0.03));
+            border-left-color: var(--brand);
+            transform: translateX(4px);
+            color: var(--brand);
         }
         
         .nav-item.active {
-            background-color: #f3e5f5;
-            border-left-color: #8A2BE2;
-            color: #8A2BE2;
+            background: linear-gradient(90deg, rgba(124,58,237,0.16), rgba(79,70,229,0.06));
+            border-left-color: var(--brand);
+            color: var(--brand);
+            font-weight: 600;
+            box-shadow: inset 0 0 0 1px rgba(124,58,237,0.08);
+            animation: softPulse 2.8s ease-in-out infinite;
         }
         
         /* 导航分类样式 */
@@ -122,24 +253,27 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-weight: bold;
+            font-weight: 700;
         }
         
         /* 子菜单样式 */
         .submenu {
             display: none;
-            padding-left: 20px;
-            background-color: #f8f9fa;
+            padding-left: 10px;
+            background: transparent;
+            overflow: hidden;
         }
         
         .submenu.show {
             display: block;
+            animation: fadeIn 0.28s ease;
         }
         
         /* 子菜单切换按钮 */
         .submenu-toggle {
             font-size: 12px;
             transition: transform 0.3s;
+            opacity: 0.7;
         }
         
         .submenu-toggle.rotated {
@@ -148,82 +282,190 @@
         
         /* 子菜单项样式 */
         .submenu .nav-item {
-            font-size: 14px;
-            padding-left: 35px;
+            font-size: 13px;
+            padding-left: 28px;
         }
         
         .submenu .nav-item:hover {
-            background-color: #e9ecef;
+            background: rgba(124,58,237,0.08);
         }
         
         .submenu .nav-item.active {
-            background-color: #f3e5f5;
-            border-left-color: #8A2BE2;
+            background: rgba(124,58,237,0.12);
+            border-left-color: var(--brand);
         }
         
         /* 主内容区 */
         .main-content {
             flex: 1;
-            padding: 30px;
+            min-width: 0;
+            padding: 28px;
             overflow-y: auto;
+            position: relative;
         }
         
         /* 模块显示 */
         .module {
             display: none;
-            animation: fadeIn 0.3s ease-in;
         }
         
         .module.active {
             display: block;
+            animation: fadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
         }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        .module.active > .card,
+        .module.active > div > .card,
+        .module.active [style*="background: #fff"],
+        .module.active [style*="background:#fff"],
+        .module.active [style*="background: white"],
+        .module.active [style*="background:white"] {
+            animation: fadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
         }
+        .module.active > .card:nth-child(1),
+        .module.active > div:nth-child(1) { animation-delay: 0.02s; }
+        .module.active > .card:nth-child(2),
+        .module.active > div:nth-child(2) { animation-delay: 0.06s; }
+        .module.active > .card:nth-child(3),
+        .module.active > div:nth-child(3) { animation-delay: 0.10s; }
+        .module.active > .card:nth-child(4),
+        .module.active > div:nth-child(4) { animation-delay: 0.14s; }
         
         /* 卡片样式 */
         .card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
+            background: var(--surface);
+            backdrop-filter: blur(14px) saturate(140%);
+            -webkit-backdrop-filter: blur(14px) saturate(140%);
+            border-radius: var(--radius);
+            padding: 24px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.7);
+            box-shadow: var(--shadow);
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s, border-color 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #a78bfa, #7c3aed, #4f46e5);
+            opacity: 0.85;
+            transform: scaleX(0.35);
+            transform-origin: left;
+            transition: transform 0.35s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 24px 60px rgba(49, 30, 100, 0.14);
+            border-color: rgba(124, 58, 237, 0.18);
+        }
+        .card:hover::after {
+            transform: scaleX(1);
         }
         
         .card h2 {
-            color: #8A2BE2;
-            margin-bottom: 20px;
+            color: var(--brand);
+            margin-bottom: 18px;
             font-size: 22px;
-            border-bottom: 2px solid #8A2BE2;
-            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 12px;
+            letter-spacing: 0.01em;
         }
         
         /* 按钮样式 */
         .btn {
-            background: #8A2BE2;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed 50%, #4f46e5);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+            padding: 11px 22px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 14px;
-            transition: transform 0.2s;
+            font-weight: 600;
+            transition: transform 0.22s, box-shadow 0.22s, filter 0.22s;
             margin: 5px;
+            box-shadow: 0 10px 24px rgba(124, 58, 237, 0.28);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent);
+            transform: translateX(-120%);
+            transition: none;
         }
         
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(138, 43, 226, 0.4);
+            box-shadow: 0 14px 30px rgba(124, 58, 237, 0.38);
+            filter: brightness(1.05);
         }
+        .btn:hover::after {
+            animation: shimmerSweep 0.85s ease;
+        }
+        .btn:active { transform: translateY(0); }
         
         .btn-secondary {
-            background: #6c757d;
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+            box-shadow: 0 8px 18px rgba(75, 85, 99, 0.25);
         }
         
         .btn-success {
-            background: #28a745;
+            background: linear-gradient(135deg, #34d399, #10b981);
+            box-shadow: 0 8px 18px rgba(16, 185, 129, 0.28);
+        }
+
+        /* 通用表格/输入动效 */
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        table tbody tr {
+            transition: background 0.2s, transform 0.2s;
+        }
+        table tbody tr:hover {
+            background: rgba(124, 58, 237, 0.04);
+        }
+        input[type="text"],
+        input[type="password"],
+        input[type="search"],
+        input[type="number"],
+        input[type="date"],
+        select,
+        textarea {
+            transition: border-color 0.22s, box-shadow 0.22s, transform 0.22s;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="search"]:focus,
+        input[type="number"]:focus,
+        input[type="date"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: rgba(124, 58, 237, 0.55) !important;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+        }
+
+        /* 首页等内联白卡片也有轻微动效 */
+        .main-content [style*="box-shadow"] {
+            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s;
+        }
+        .file-card-item:hover,
+        .file-list-row:hover {
+            /* 已有内联 hover，这里补强过渡 */
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .login-particle,
+            .login-bg-orb,
+            .login-grid {
+                animation-duration: 0.01ms !important;
+            }
         }
 
         .task-status-btn {
@@ -375,7 +617,8 @@
         }
         
         .btn-danger {
-            background: #dc3545;
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            box-shadow: 0 8px 18px rgba(239, 68, 68, 0.28);
         }
         
         /* 软著管理筛选标签样式 */
@@ -528,84 +771,347 @@
             }
         }
         
-        /* ========== 登录页样式 ========== */
+        /* ========== 登录页样式（动态高级感） ========== */
         .login-overlay {
             display: none;
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            inset: 0;
             z-index: 10000;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
+            background:
+                radial-gradient(1200px 700px at 12% 18%, rgba(167, 139, 250, 0.55), transparent 55%),
+                radial-gradient(900px 600px at 88% 12%, rgba(99, 102, 241, 0.45), transparent 50%),
+                radial-gradient(1000px 700px at 70% 90%, rgba(236, 72, 153, 0.28), transparent 55%),
+                linear-gradient(135deg, #1e1b4b 0%, #4c1d95 42%, #312e81 100%);
         }
         .login-overlay.active { display: flex; }
+        .login-overlay::before {
+            content: '';
+            position: absolute;
+            inset: -20%;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(255,255,255,0.12) 0 1px, transparent 2px),
+                radial-gradient(circle at 70% 60%, rgba(255,255,255,0.10) 0 1px, transparent 2px),
+                radial-gradient(circle at 40% 80%, rgba(255,255,255,0.08) 0 1px, transparent 2px);
+            background-size: 120px 120px, 180px 180px, 90px 90px;
+            animation: loginStarDrift 12s linear infinite;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        .login-overlay::after {
+            content: '';
+            position: absolute;
+            width: 520px;
+            height: 520px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.35), transparent 70%);
+            filter: blur(20px);
+            top: 12%;
+            left: 8%;
+            animation: loginOrbFloat 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .login-bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(30px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .login-bg-orb.orb-a {
+            width: 420px; height: 420px;
+            right: -60px; bottom: -40px;
+            background: radial-gradient(circle, rgba(244, 114, 182, 0.35), transparent 70%);
+            animation: loginOrbFloat 6s ease-in-out infinite reverse;
+        }
+        .login-bg-orb.orb-b {
+            width: 280px; height: 280px;
+            right: 18%; top: 16%;
+            background: radial-gradient(circle, rgba(129, 140, 248, 0.4), transparent 70%);
+            animation: loginOrbFloat 4.5s ease-in-out infinite;
+        }
+        .login-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 64px 64px;
+            mask-image: radial-gradient(circle at center, black 30%, transparent 75%);
+            animation: loginGridPulse 3.5s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes loginStarDrift {
+            from { transform: translate3d(0,0,0); }
+            to { transform: translate3d(-80px, -60px, 0); }
+        }
+        @keyframes loginOrbFloat {
+            0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.75; }
+            50% { transform: translate3d(48px, -56px, 0) scale(1.18); opacity: 1; }
+        }
+        @keyframes loginParticleFloat {
+            0% { transform: translate3d(0, 20px, 0) scale(0.6); opacity: 0; }
+            15% { opacity: 1; }
+            85% { opacity: 1; }
+            100% { transform: translate3d(var(--dx, 40px), -110vh, 0) scale(1.2); opacity: 0; }
+        }
+        @keyframes loginRingPulse {
+            0%, 100% { transform: scale(1); opacity: 0.35; }
+            50% { transform: scale(1.35); opacity: 0.75; }
+        }
+        .login-particles {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .login-particle {
+            position: absolute;
+            bottom: -20px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.85);
+            box-shadow: 0 0 12px rgba(196, 181, 253, 0.9), 0 0 24px rgba(167, 139, 250, 0.6);
+            animation: loginParticleFloat linear infinite;
+        }
+        .login-ring {
+            position: absolute;
+            border: 1px solid rgba(255,255,255,0.22);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            animation: loginRingPulse 4s ease-in-out infinite;
+        }
+        .login-ring.r1 { width: 280px; height: 280px; left: 8%; top: 18%; animation-delay: 0s; }
+        .login-ring.r2 { width: 420px; height: 420px; right: 6%; bottom: 10%; animation-delay: 1.2s; }
+        .login-ring.r3 { width: 180px; height: 180px; right: 28%; top: 12%; animation-delay: 0.6s; }
         .login-box {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            width: 420px;
-            max-width: 90vw;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            transition: transform 0.15s ease-out;
+        }
+        @keyframes loginGridPulse {
+            0%, 100% { opacity: 0.25; }
+            50% { opacity: 0.45; }
+        }
+        @keyframes loginCardIn {
+            from { opacity: 0; transform: translateY(28px) scale(0.96); filter: blur(8px); }
+            to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+        @keyframes loginShimmer {
+            0% { transform: translateX(-120%); }
+            100% { transform: translateX(120%); }
+        }
+        .login-box {
+            position: relative;
+            z-index: 1;
+            width: min(440px, 92vw);
+            padding: 42px 40px 34px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            box-shadow:
+                0 30px 80px rgba(15, 10, 40, 0.45),
+                inset 0 1px 0 rgba(255,255,255,0.35);
+            backdrop-filter: blur(22px) saturate(160%);
+            -webkit-backdrop-filter: blur(22px) saturate(160%);
+            animation: loginCardIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+            overflow: hidden;
+        }
+        .login-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.18), transparent 40%, transparent 60%, rgba(255,255,255,0.08));
+            pointer-events: none;
+        }
+        .login-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 28px;
+            position: relative;
+            z-index: 1;
+        }
+        .login-brand-mark {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 16px;
+            font-size: 28px;
+            color: #fff;
+            background: linear-gradient(145deg, #a78bfa, #7c3aed 55%, #4f46e5);
+            box-shadow:
+                0 12px 30px rgba(124, 58, 237, 0.45),
+                inset 0 1px 0 rgba(255,255,255,0.4);
+            animation: loginOrbFloat 6s ease-in-out infinite;
         }
         .login-box h2 {
             text-align: center;
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 22px;
+            color: #fff;
+            margin: 0 0 8px;
+            font-size: clamp(18px, 2.2vw, 22px);
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            line-height: 1.35;
+            text-shadow: 0 2px 16px rgba(0,0,0,0.25);
         }
         .login-box .login-subtitle {
             text-align: center;
-            color: #888;
+            color: rgba(255,255,255,0.72);
             font-size: 13px;
-            margin-bottom: 30px;
+            margin-bottom: 0;
+            letter-spacing: 0.08em;
         }
-        .login-box .form-group { margin-bottom: 18px; }
+        .login-box .form-group {
+            margin-bottom: 16px;
+            position: relative;
+            z-index: 1;
+        }
         .login-box label {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             font-weight: 600;
-            color: #555;
-            font-size: 14px;
+            color: rgba(255,255,255,0.88);
+            font-size: 13px;
+            letter-spacing: 0.04em;
+        }
+        .login-input-wrap {
+            position: relative;
         }
         .login-box input[type="text"],
         .login-box input[type="password"] {
             width: 100%;
-            padding: 12px 14px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            padding: 14px 44px 14px 14px;
+            border: 1px solid rgba(255,255,255,0.22);
+            border-radius: 12px;
             font-size: 14px;
             outline: none;
-            transition: border-color 0.2s;
+            color: #1f1635;
+            background: rgba(255,255,255,0.92);
+            transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+            box-shadow: 0 8px 24px rgba(20, 10, 50, 0.12);
         }
-        .login-box input:focus { border-color: #667eea; }
+        .login-box input::placeholder { color: #9ca3af; }
+        .login-box input:focus {
+            border-color: rgba(167, 139, 250, 0.9);
+            box-shadow:
+                0 0 0 4px rgba(124, 58, 237, 0.22),
+                0 10px 28px rgba(20, 10, 50, 0.16);
+            transform: translateY(-1px);
+        }
+        .login-eye-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #6b7280;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            transition: background 0.2s, color 0.2s;
+        }
+        .login-eye-btn:hover {
+            background: rgba(124, 58, 237, 0.1);
+            color: #7c3aed;
+        }
         .login-box .login-btn {
+            position: relative;
             width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 14px;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9 50%, #4f46e5);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            margin-top: 10px;
-            transition: opacity 0.2s;
+            margin-top: 8px;
+            overflow: hidden;
+            letter-spacing: 0.08em;
+            box-shadow: 0 14px 34px rgba(109, 40, 217, 0.45);
+            transition: transform 0.25s, box-shadow 0.25s, filter 0.25s;
+            z-index: 1;
         }
-        .login-box .login-btn:hover { opacity: 0.9; }
-        .login-box .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .login-box .login-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 40%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+            transform: translateX(-120%);
+        }
+        .login-box .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 40px rgba(109, 40, 217, 0.55);
+            filter: brightness(1.05);
+        }
+        .login-box .login-btn:hover::after {
+            animation: loginShimmer 0.9s ease;
+        }
+        .login-box .login-btn:active { transform: translateY(0); }
+        .login-box .login-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
         .login-error {
-            color: #e53935;
+            color: #fecaca;
             font-size: 13px;
             text-align: center;
             margin-top: 10px;
             min-height: 20px;
+            text-shadow: 0 1px 8px rgba(0,0,0,0.25);
+            position: relative;
+            z-index: 1;
         }
         .login-footer {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 22px;
             font-size: 12px;
-            color: #aaa;
+            color: rgba(255,255,255,0.55);
+            position: relative;
+            z-index: 1;
+        }
+        .login-footer .login-demo {
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            line-height: 1.75;
+            color: rgba(255,255,255,0.7);
+        }
+        .login-footer .login-demo strong {
+            color: rgba(255,255,255,0.92);
+            font-weight: 600;
+        }
+        .login-attempt-warning {
+            background: rgba(255, 237, 213, 0.92);
+            border: 1px solid rgba(253, 186, 116, 0.7);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #9a3412;
+            position: relative;
+            z-index: 1;
+        }
+        @media (max-width: 480px) {
+            .login-box { padding: 32px 22px 26px; border-radius: 20px; }
+            .login-brand-mark { width: 56px; height: 56px; border-radius: 16px; }
         }
 
         /* ========== 账号管理样式 ========== */
@@ -688,15 +1194,7 @@
             font-size: 12px;
             margin-top: 4px;
         }
-        .login-attempt-warning {
-            background: #fff3e0;
-            border: 1px solid #ffe0b2;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
-            font-size: 13px;
-            color: #e65100;
-        }
+        /* login-attempt-warning 样式已并入登录页高级样式 */
         .user-info-bar {
             display: flex;
             align-items: center;
@@ -1742,28 +2240,40 @@
 <body>
     <!-- 登录遮罩层 -->
     <div class="login-overlay" id="loginOverlay">
-        <div class="login-box">
-            <h2>城市安全数智创新团队管理系统</h2>
-            <div class="login-subtitle">请登录您的账号</div>
+        <div class="login-grid"></div>
+        <div class="login-bg-orb orb-a"></div>
+        <div class="login-bg-orb orb-b"></div>
+        <div class="login-ring r1"></div>
+        <div class="login-ring r2"></div>
+        <div class="login-ring r3"></div>
+        <div class="login-particles" id="loginParticles"></div>
+        <div class="login-box" id="loginBox">
+            <div class="login-brand">
+                <div class="login-brand-mark">🔬</div>
+                <h2>城市安全数智创新团队管理系统</h2>
+                <div class="login-subtitle">SECURE ACCESS · 请登录您的账号</div>
+            </div>
             <div class="form-group">
-                <label>学号/账号</label>
-                <input type="text" id="loginUsername" placeholder="请输入学号">
+                <label>学号 / 账号</label>
+                <div class="login-input-wrap">
+                    <input type="text" id="loginUsername" placeholder="请输入学号" autocomplete="username">
+                </div>
             </div>
             <div class="form-group">
                 <label>密码</label>
-                <div style="position: relative;">
-                    <input type="password" id="loginPassword" placeholder="请输入密码">
-                    <button type="button" onclick="toggleLoginPasswordVisibility()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666;">👁</button>
+                <div class="login-input-wrap">
+                    <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+                    <button type="button" class="login-eye-btn" onclick="toggleLoginPasswordVisibility()" title="显示/隐藏密码">👁</button>
                 </div>
             </div>
             <div id="loginError" class="login-error"></div>
-            <div id="loginAttemptWarning" class="login-attempt-warning"></div>
-            <button class="login-btn" onclick="handleLogin()">登录</button>
+            <div id="loginAttemptWarning" class="login-attempt-warning" style="display:none;"></div>
+            <button class="login-btn" onclick="handleLogin()">登 录</button>
             <div class="login-footer">
-                <div style="font-size: 12px; color: #aaa; margin-top: 16px; line-height: 1.8;">
-                    <p style="margin: 0 0 6px; color: #ccc;">测试账号（密码均为 123456）：</p>
-                    <p style="margin: 0;">导师：admin &nbsp;|&nbsp; 组长：leader01</p>
-                    <p style="margin: 0;">学生：stu001 / stu002 &nbsp;|&nbsp; 访客：visitor01</p>
+                <div class="login-demo">
+                    <div><strong>测试账号</strong>（密码均为 123456）</div>
+                    <div>导师：admin　|　组长：leader01</div>
+                    <div>学生：stu001 / stu002　|　访客：visitor01</div>
                 </div>
             </div>
         </div>
@@ -16203,7 +16713,7 @@ ${ocrText}`
         }
         if (session) localStorage.removeItem('currentSession');
 
-        document.getElementById('loginOverlay').classList.add('active');
+        document.getElementById('loginOverlay').classList.add('active'); initLoginMotion();
         document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
         document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
     }
@@ -16212,6 +16722,48 @@ ${ocrText}`
     function savePermissionData() { localStorage.setItem('permissionMatrix', JSON.stringify(permissionMatrix)); }
 
     // ===== 2. 登录 / 登出 =====
+
+    function initLoginMotion() {
+        const overlay = document.getElementById('loginOverlay');
+        const layer = document.getElementById('loginParticles');
+        const box = document.getElementById('loginBox');
+        if (!overlay || !layer) return;
+        if (layer.dataset.ready === '1') return;
+        layer.dataset.ready = '1';
+
+        const count = 36;
+        for (let i = 0; i < count; i++) {
+            const p = document.createElement('span');
+            p.className = 'login-particle';
+            const size = 3 + Math.random() * 6;
+            const left = Math.random() * 100;
+            const dur = 6 + Math.random() * 10;
+            const delay = Math.random() * 8;
+            const dx = (Math.random() * 160 - 80).toFixed(1) + 'px';
+            p.style.width = size + 'px';
+            p.style.height = size + 'px';
+            p.style.left = left + '%';
+            p.style.setProperty('--dx', dx);
+            p.style.animationDuration = dur + 's';
+            p.style.animationDelay = delay + 's';
+            if (Math.random() > 0.6) {
+                p.style.background = 'rgba(196, 181, 253, 0.95)';
+            }
+            layer.appendChild(p);
+        }
+
+        if (box) {
+            overlay.addEventListener('mousemove', (e) => {
+                const x = (e.clientX / window.innerWidth - 0.5) * 18;
+                const y = (e.clientY / window.innerHeight - 0.5) * 14;
+                box.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+            });
+            overlay.addEventListener('mouseleave', () => {
+                box.style.transform = 'translate3d(0, 0, 0)';
+            });
+        }
+    }
+
     function toggleLoginPasswordVisibility() {
         const pwd = document.getElementById('loginPassword');
         pwd.type = pwd.type === 'password' ? 'text' : 'password';
@@ -16331,7 +16883,7 @@ ${ocrText}`
         recordOperationLog('系统登录', '登出', `${userName}(${studentId}) 退出登录`, { studentId }, { success: true }, 1, '', 0, userId, userName);
         currentUser = null;
         localStorage.removeItem('currentSession');
-        document.getElementById('loginOverlay').classList.add('active');
+        document.getElementById('loginOverlay').classList.add('active'); initLoginMotion();
         document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
         document.getElementById('loginError').textContent = '';
@@ -19496,6 +20048,78 @@ ${ocrText}`
     let reportData = [];
     let sharedFileData = [];
     let currentFileType = 'all';
+    const SHARED_FILE_DB = 'sharedFileBlobDB';
+    const SHARED_FILE_STORE = 'blobs';
+
+    function openSharedFileDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(SHARED_FILE_DB, 1);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(SHARED_FILE_STORE)) {
+                    db.createObjectStore(SHARED_FILE_STORE);
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function saveSharedFileBlob(id, file) {
+        const db = await openSharedFileDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(SHARED_FILE_STORE, 'readwrite');
+            tx.objectStore(SHARED_FILE_STORE).put(file, String(id));
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
+
+    async function getSharedFileBlob(id) {
+        const db = await openSharedFileDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(SHARED_FILE_STORE, 'readonly');
+            const req = tx.objectStore(SHARED_FILE_STORE).get(String(id));
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function deleteSharedFileBlob(id) {
+        const db = await openSharedFileDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(SHARED_FILE_STORE, 'readwrite');
+            tx.objectStore(SHARED_FILE_STORE).delete(String(id));
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
+
+    function getFileExt(fileName) {
+        const parts = (fileName || '').split('.');
+        return parts.length > 1 ? parts.pop().toLowerCase() : '';
+    }
+
+    function getFileIconByName(fileName) {
+        const ext = getFileExt(fileName);
+        const map = {
+            pdf: '📕', doc: '📄', docx: '📄', txt: '📝', md: '📝', rtf: '📄',
+            xls: '📊', xlsx: '📊', csv: '📊', json: '🧾', xml: '🧾',
+            ppt: '📑', pptx: '📑', pptm: '📑',
+            jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', bmp: '🖼️', webp: '🖼️', svg: '🖼️',
+            zip: '🗜️', rar: '🗜️', '7z': '🗜️',
+            js: '💻', ts: '💻', py: '💻', java: '💻', html: '💻', css: '💻', c: '💻', cpp: '💻', go: '💻'
+        };
+        return map[ext] || '📁';
+    }
+
+    function isImageExt(ext) {
+        return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+    }
+
+    function isPreviewableTextExt(ext) {
+        return ['txt', 'md', 'csv', 'json', 'xml', 'js', 'ts', 'py', 'html', 'css', 'log'].includes(ext);
+    }
 
     function initResourceModules() {
         loadLiteratureData();
@@ -19753,6 +20377,10 @@ ${ocrText}`
         if (stored) {
             sharedFileData = JSON.parse(stored);
             sharedFileData.forEach(f => {
+                if (f.name) {
+                    f.type = getFileTypeBySuffix(f.name);
+                }
+
                 if (f.downloadCount === undefined) { f.downloadCount = 0; needSave = true; }
                 if (f.fileSizeBytes === undefined) {
                     needSave = true;
@@ -20084,7 +20712,7 @@ ${ocrText}`
             container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;">${pageData.map(f => {
                 const isOwner = currentUser && f.uploaderId === currentUser.id;
                 const canDelete = canDeleteAll || isOwner;
-                const icon = typeIcons[f.type] || '📁';
+                const icon = getFileIconByName(f.name) || typeIcons[f.type] || '📁';
                 const color = typeColors[f.type] || '#8c8c8c';
                 const isSelected = selectedFileIds.includes(f.id);
 
@@ -20130,7 +20758,7 @@ ${ocrText}`
                 ${pageData.map((f, idx) => {
                     const isOwner = currentUser && f.uploaderId === currentUser.id;
                     const canDelete = canDeleteAll || isOwner;
-                    const icon = typeIcons[f.type] || '📁';
+                    const icon = getFileIconByName(f.name) || typeIcons[f.type] || '📁';
                     const color = typeColors[f.type] || '#8c8c8c';
                     const isSelected = selectedFileIds.includes(f.id);
 
@@ -20196,15 +20824,16 @@ ${ocrText}`
         renderFileList();
     }
 
-    function batchDeleteFiles() {
+    async function batchDeleteFiles() {
         if (selectedFileIds.length === 0) return;
         if (!confirm(`确定要删除选中的 ${selectedFileIds.length} 个文件吗？此操作不可恢复。`)) return;
 
         const deletedNames = [];
-        selectedFileIds.forEach(id => {
+        for (const id of selectedFileIds) {
             const f = sharedFileData.find(x => x.id === id);
             if (f) deletedNames.push(f.name);
-        });
+            try { await deleteSharedFileBlob(id); } catch (e) { console.warn(e); }
+        }
 
         sharedFileData = sharedFileData.filter(f => !selectedFileIds.includes(f.id));
         localStorage.setItem('sharedFileData', JSON.stringify(sharedFileData));
@@ -20261,7 +20890,7 @@ ${ocrText}`
             <div style="background:#fff;border-radius:16px;width:520px;max-height:85vh;overflow:hidden;animation:fadeIn 0.2s ease;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
                 <div style="padding:24px 30px;text-align:center;background:linear-gradient(135deg, ${color}12, ${color}05);border-bottom:1px solid #f0f0f0;position:relative;">
                     <button onclick="this.closest('div[style*=fixed]').remove()" style="position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;background:rgba(0,0,0,0.05);border-radius:50%;cursor:pointer;font-size:16px;color:#999;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.1)';this.style.color='#666'" onmouseout="this.style.background='rgba(0,0,0,0.05)';this.style.color='#999'">✕</button>
-                    <div style="font-size:72px;margin-bottom:12px;filter:drop-shadow(0 4px 12px ${color}30);">${typeIcons[file.type] || '📁'}</div>
+                    <div id="fileDetailPreview" style="font-size:72px;margin-bottom:12px;filter:drop-shadow(0 4px 12px ${color}30);">${getFileIconByName(file.name) || typeIcons[file.type] || '📁'}</div>
                     <h3 style="font-size:18px;color:#1a1a1a;margin:0 0 10px;word-break:break-all;font-weight:600;line-height:1.4;">${file.name}</h3>
                     <div style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;">
                         <span style="display:inline-block;padding:5px 14px;background:${color}15;color:${color};border-radius:20px;font-size:12px;font-weight:500;">${typeLabels[file.type] || file.type}</span>
@@ -20314,6 +20943,30 @@ ${ocrText}`
             </div>`;
         modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
         document.body.appendChild(modal);
+        loadSharedFilePreview(file, modal);
+    }
+
+    async function loadSharedFilePreview(file, modal) {
+        const box = modal.querySelector('#fileDetailPreview');
+        if (!box || !file.hasBlob) return;
+        try {
+            const blob = await getSharedFileBlob(file.id);
+            if (!blob) return;
+            const ext = getFileExt(file.name);
+            if (isImageExt(ext)) {
+                const url = URL.createObjectURL(blob);
+                box.innerHTML = `<img src="${url}" alt="${file.name}" style="max-width:100%;max-height:220px;border-radius:12px;object-fit:contain;box-shadow:0 8px 24px rgba(0,0,0,0.12);">`;
+            } else if (ext === 'pdf') {
+                const url = URL.createObjectURL(blob);
+                box.innerHTML = `<iframe src="${url}" style="width:100%;height:260px;border:none;border-radius:12px;background:#f5f5f5;"></iframe>`;
+            } else if (isPreviewableTextExt(ext) && blob.size < 512 * 1024) {
+                const textContent = await blob.text();
+                const safe = textContent.slice(0, 4000).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                box.innerHTML = `<pre style="text-align:left;max-height:220px;overflow:auto;background:#f7f7fb;border-radius:12px;padding:12px;font-size:12px;line-height:1.5;color:#333;white-space:pre-wrap;word-break:break-word;">${safe}</pre>`;
+            }
+        } catch (e) {
+            console.warn('preview failed', e);
+        }
     }
 
     function updateStorageStats() {
@@ -20360,16 +21013,33 @@ ${ocrText}`
         return size.toFixed(2) + ' ' + units[index];
     }
 
-    function handleFileDownload(id) {
+    async function handleFileDownload(id) {
         const file = sharedFileData.find(f => f.id === id);
         if (!file) return;
-        
-        file.downloadCount = (file.downloadCount || 0) + 1;
-        localStorage.setItem('sharedFileData', JSON.stringify(sharedFileData));
-        renderFileList();
-        
-        recordOperationLog('资源中心', '下载', `下载文件：${file.name}`, { fileName: file.name }, { success: true }, 1, '', 0);
-        alert('文件下载中...');
+
+        try {
+            const blob = await getSharedFileBlob(id);
+            if (!blob) {
+                alert('该文件没有保存完整内容（可能是旧数据）。请重新上传后再下载。');
+                return;
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            file.downloadCount = (file.downloadCount || 0) + 1;
+            localStorage.setItem('sharedFileData', JSON.stringify(sharedFileData));
+            renderFileList();
+            recordOperationLog('资源中心', '下载', `下载文件：${file.name}`, { fileName: file.name }, { success: true }, 1, '', 0);
+        } catch (err) {
+            console.error(err);
+            alert('下载失败，请重试');
+        }
     }
 
     // 文献添加弹窗
@@ -20790,15 +21460,14 @@ ${ocrText}`
         }
     }
 
-    function addFile(btn) {
+    async function addFile(btn) {
         if (currentUploadMode === 'folder') {
-            addFolderFiles(btn);
+            await addFolderFiles(btn);
             return;
         }
 
         const name = document.getElementById('flName').value.trim();
         const size = document.getElementById('flSize').value.trim();
-        const type = document.getElementById('flType').value;
         const fileInput = document.getElementById('flFile');
 
         if (!name) { alert('请输入文件名'); return; }
@@ -20813,19 +21482,31 @@ ${ocrText}`
         }
 
         const allowTypes = getConfig('file.allowTypes', 'jpg,png,pdf,doc,docx,xls,xlsx,zip');
-        const suffix = file.name.split('.').pop().toLowerCase();
-        if (!allowTypes.split(',').includes(suffix)) {
+        const suffix = getFileExt(file.name);
+        if (!allowTypes.split(',').map(s => s.trim()).includes(suffix)) {
             alert(`不支持的文件类型，允许：${allowTypes}`);
             return;
         }
 
+        // 上传啥就是啥：按真实后缀分类，并保存完整文件内容
+        const type = getFileTypeBySuffix(name || file.name);
         const newId = sharedFileData.length > 0 ? Math.max(...sharedFileData.map(f => f.id)) + 1 : 1;
+        try {
+            await saveSharedFileBlob(newId, file);
+        } catch (err) {
+            console.error(err);
+            alert('保存文件内容失败，请重试');
+            return;
+        }
+
         sharedFileData.push({
             id: newId,
-            name,
-            size,
+            name: name || file.name,
+            size: size || formatFileSize(file.size),
             fileSizeBytes: file.size,
             type,
+            mimeType: file.type || '',
+            hasBlob: true,
             uploader: currentUser?.realName || currentUser?.username || '未知',
             uploaderId: currentUser?.id || 0,
             uploadTime: new Date().toLocaleDateString('zh-CN'),
@@ -20836,46 +21517,55 @@ ${ocrText}`
         currentFileType = 'all';
         renderFileList();
 
-        recordOperationLog('资源中心', '上传', `上传文件：${name}`, { fileName: name, fileSize: size, fileType: type }, { success: true }, 1, '', 0);
+        recordOperationLog('资源中心', '上传', `上传文件：${name || file.name}`, { fileName: name || file.name, fileSize: size || formatFileSize(file.size), fileType: type }, { success: true }, 1, '', 0);
         alert('上传成功！');
     }
 
-    function addFolderFiles(btn) {
+    async function addFolderFiles(btn) {
         if (selectedFolderFiles.length === 0) {
             alert('请选择文件夹');
             return;
         }
 
-        const type = document.getElementById('flTypeFolder').value;
         let baseId = sharedFileData.length > 0 ? Math.max(...sharedFileData.map(f => f.id)) + 1 : 1;
         const folderName = selectedFolderFiles[0].relPath.split('/')[0];
         let successCount = 0;
 
-        selectedFolderFiles.forEach(item => {
+        for (const item of selectedFolderFiles) {
             const file = item.file;
             const relPath = item.relPath;
+            const fileId = baseId++;
+            const type = getFileTypeBySuffix(file.name);
+            try {
+                await saveSharedFileBlob(fileId, file);
+            } catch (err) {
+                console.error(err);
+                continue;
+            }
 
             sharedFileData.push({
-                id: baseId++,
+                id: fileId,
                 name: file.name,
                 relativePath: relPath,
                 size: formatFileSize(file.size),
                 fileSizeBytes: file.size,
-                type: type,
+                type,
+                mimeType: file.type || '',
+                hasBlob: true,
                 uploader: currentUser?.realName || currentUser?.username || '未知',
                 uploaderId: currentUser?.id || 0,
                 uploadTime: new Date().toLocaleDateString('zh-CN'),
                 downloadCount: 0
             });
             successCount++;
-        });
+        }
 
         localStorage.setItem('sharedFileData', JSON.stringify(sharedFileData));
         btn.closest('div[style*=fixed]').remove();
         currentFileType = 'all';
         renderFileList();
 
-        recordOperationLog('资源中心', '上传', `上传文件夹：${folderName}（${successCount}个文件）`, { folderName: folderName, fileCount: successCount, fileType: type }, { success: true }, 1, '', 0);
+        recordOperationLog('资源中心', '上传', `上传文件夹：${folderName}（${successCount}个文件）`, { folderName: folderName, fileCount: successCount }, { success: true }, 1, '', 0);
         alert(`文件夹上传成功！共上传 ${successCount} 个文件`);
     }
 
@@ -20900,12 +21590,13 @@ ${ocrText}`
         renderReportList();
     }
 
-    function deleteSharedFile(id) {
+    async function deleteSharedFile(id) {
         const file = sharedFileData.find(f => f.id === id);
         if (!file) return;
         
         if (!confirm('确定要删除该文件吗？')) return;
         
+        try { await deleteSharedFileBlob(id); } catch (e) { console.warn(e); }
         sharedFileData = sharedFileData.filter(f => f.id !== id);
         localStorage.setItem('sharedFileData', JSON.stringify(sharedFileData));
         renderFileList();
