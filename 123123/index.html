@@ -7419,27 +7419,32 @@
         const SUPABASE_URL = 'https://havxlphglhjgcfgwowae.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_jhRxljv8ocdnXBknablKiA_kRBzlEnC';
         
-        function supabaseRequest(method, table, data) {
+        function supabaseRequest(method, table, data, options) {
+            options = options || {};
             return new Promise(function(resolve, reject) {
                 var xhr = new XMLHttpRequest();
                 var url = SUPABASE_URL + '/rest/v1/' + table;
-                if (method === 'GET' && data && data.select) {
+                if (method === 'GET' && data) {
                     var params = [];
                     if (data.select) params.push('select=' + encodeURIComponent(data.select));
                     if (data.limit) params.push('limit=' + data.limit);
                     if (data.order) params.push('order=' + encodeURIComponent(data.order));
-                    if (params.length) url += '?' + params.join('&');
+                    if (params.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + params.join('&');
+                }
+                if (options.onConflict) {
+                    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'on_conflict=' + encodeURIComponent(options.onConflict);
                 }
                 xhr.open(method, url, true);
                 xhr.setRequestHeader('Content-Type', 'application/json');
                 xhr.setRequestHeader('apikey', SUPABASE_KEY);
                 xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
-                xhr.setRequestHeader('Prefer', 'return=representation');
+                var prefer = options.prefer || 'return=representation';
+                xhr.setRequestHeader('Prefer', prefer);
                 xhr.onreadystatechange = function() {
                     if (xhr.readyState === 4) {
                         if (xhr.status >= 200 && xhr.status < 300) {
                             try {
-                                resolve(JSON.parse(xhr.responseText));
+                                resolve(xhr.responseText ? JSON.parse(xhr.responseText) : []);
                             } catch(e) {
                                 resolve(xhr.responseText ? null : []);
                             }
@@ -7457,8 +7462,197 @@
             });
         }
 
+        // ========== 全站云端同步（Supabase app_kv） ==========
+        // 需要先在 Supabase 执行 123123/supabase_sync.sql
+        const CLOUD_SYNC_KEYS = new Set([
+            'teamMemberData', 'accountData', 'permissionMatrix', 'passwordPolicy', 'loginLogData',
+            'longitudinalData', 'horizontalData', 'schoolData',
+            'taskData', 'weeklyReportData', 'noticeData', 'newsData', 'meetingData',
+            'literatureData', 'datasetData', 'reportData', 'sharedFileData',
+            'standardData', 'copyrightData',
+            'modelTrainingData', 'annotationTypes', 'annotationData',
+            'knowledgeData', 'compareLiteratureData',
+            'systemConfigData', 'operationLogData',
+            'patentData', 'categoryData', 'memberData',
+            'customInstructionTemplates', 'devlogEntries',
+            'backupData', 'autoBackupConfig'
+        ]);
+
+        let cloudSyncReady = false;
+        let cloudSyncEnabled = true;
+        let cloudPulling = false;
+        const cloudUpsertTimers = {};
+        let cloudSyncBannerEl = null;
+
+        function showCloudSyncBanner(msg, isError) {
+            if (!cloudSyncBannerEl) {
+                cloudSyncBannerEl = document.createElement('div');
+                cloudSyncBannerEl.id = 'cloudSyncBanner';
+                cloudSyncBannerEl.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:20000;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.18);transition:opacity 0.3s;pointer-events:none;';
+                document.body.appendChild(cloudSyncBannerEl);
+            }
+            cloudSyncBannerEl.style.background = isError ? '#fff1f0' : '#f0fff4';
+            cloudSyncBannerEl.style.color = isError ? '#cf1322' : '#389e0d';
+            cloudSyncBannerEl.style.border = isError ? '1px solid #ffa39e' : '1px solid #b7eb8f';
+            cloudSyncBannerEl.textContent = msg;
+            cloudSyncBannerEl.style.opacity = '1';
+            clearTimeout(showCloudSyncBanner._t);
+            showCloudSyncBanner._t = setTimeout(function() {
+                if (cloudSyncBannerEl) cloudSyncBannerEl.style.opacity = '0';
+            }, isError ? 8000 : 2500);
+        }
+
+        async function cloudUpsert(key, rawValue) {
+            if (!cloudSyncEnabled || !CLOUD_SYNC_KEYS.has(key)) return;
+            var parsed;
+            try {
+                parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+            } catch (e) {
+                parsed = rawValue;
+            }
+            try {
+                await supabaseRequest('POST', 'app_kv', {
+                    key: key,
+                    value: parsed,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'key',
+                    prefer: 'resolution=merge-duplicates,return=minimal'
+                });
+                cloudSyncReady = true;
+            } catch (err) {
+                var msg = String(err && err.message || err);
+                if (msg.indexOf('PGRST205') >= 0 || msg.indexOf('app_kv') >= 0) {
+                    cloudSyncEnabled = false;
+                    showCloudSyncBanner('云端同步未开通：请在 Supabase 执行 supabase_sync.sql', true);
+                } else {
+                    console.warn('cloud upsert failed', key, err);
+                }
+            }
+        }
+
+        function queueCloudUpsert(key, rawValue) {
+            if (!cloudSyncEnabled || cloudPulling || !CLOUD_SYNC_KEYS.has(key)) return;
+            clearTimeout(cloudUpsertTimers[key]);
+            cloudUpsertTimers[key] = setTimeout(function() {
+                cloudUpsert(key, rawValue);
+            }, 350);
+        }
+
+        (function patchLocalStorageSync() {
+            var origSetItem = localStorage.setItem.bind(localStorage);
+            localStorage.setItem = function(key, value) {
+                origSetItem(key, value);
+                queueCloudUpsert(key, value);
+            };
+        })();
+
+        async function pullAllFromCloud(options) {
+            options = options || {};
+            if (!cloudSyncEnabled) return { ok: false, reason: 'disabled' };
+            try {
+                cloudPulling = true;
+                var rows = await supabaseRequest('GET', 'app_kv', { select: 'key,value,updated_at', limit: 500 });
+                cloudSyncReady = true;
+                var applied = 0;
+                (rows || []).forEach(function(row) {
+                    if (!row || !CLOUD_SYNC_KEYS.has(row.key)) return;
+                    try {
+                        var raw = JSON.stringify(row.value);
+                        Storage.prototype.setItem.call(localStorage, row.key, raw);
+                        applied++;
+                    } catch (e) {
+                        console.warn('apply cloud key failed', row.key, e);
+                    }
+                });
+                if (options.silent !== true) {
+                    showCloudSyncBanner(applied > 0 ? ('已同步云端数据 ' + applied + ' 项') : '云端暂无共享数据', false);
+                }
+                return { ok: true, applied: applied };
+            } catch (err) {
+                var msg = String(err && err.message || err);
+                if (msg.indexOf('PGRST205') >= 0 || msg.indexOf('app_kv') >= 0) {
+                    cloudSyncEnabled = false;
+                    showCloudSyncBanner('云端同步未开通：请在 Supabase 执行 123123/supabase_sync.sql', true);
+                } else {
+                    console.warn('pullAllFromCloud failed', err);
+                    if (options.silent !== true) showCloudSyncBanner('拉取云端数据失败', true);
+                }
+                return { ok: false, error: msg };
+            } finally {
+                cloudPulling = false;
+            }
+        }
+
+        function hydrateInMemoryFromLocalStorage() {
+            function apply(name, setter) {
+                try {
+                    var raw = localStorage.getItem(name);
+                    if (raw === null) return;
+                    setter(JSON.parse(raw));
+                } catch (e) {}
+            }
+            try { apply('teamMemberData', function(v){ teamMemberData = v; }); } catch(e){}
+            try { apply('accountData', function(v){ accountData = v; }); } catch(e){}
+            try { apply('permissionMatrix', function(v){ permissionMatrix = v; }); } catch(e){}
+            try { apply('sharedFileData', function(v){ sharedFileData = v; }); } catch(e){}
+            try { apply('longitudinalData', function(v){ longitudinalData = v; }); } catch(e){}
+            try { apply('horizontalData', function(v){ horizontalData = v; }); } catch(e){}
+            try { apply('schoolData', function(v){ schoolData = v; }); } catch(e){}
+            try { apply('taskData', function(v){ taskData = v; }); } catch(e){}
+            try { apply('weeklyReportData', function(v){ weeklyReportData = v; }); } catch(e){}
+            try { apply('noticeData', function(v){ noticeData = v; }); } catch(e){}
+            try { apply('newsData', function(v){ newsData = v; }); } catch(e){}
+            try { apply('meetingData', function(v){ meetingData = v; }); } catch(e){}
+            try { apply('literatureData', function(v){ literatureData = v; }); } catch(e){}
+            try { apply('datasetData', function(v){ datasetData = v; }); } catch(e){}
+            try { apply('reportData', function(v){ reportData = v; }); } catch(e){}
+            try { apply('standardData', function(v){ standardData = v; }); } catch(e){}
+            try { apply('copyrightData', function(v){ copyrightData = v; }); } catch(e){}
+            try { apply('systemConfigData', function(v){ systemConfigData = v; }); } catch(e){}
+            try { apply('operationLogData', function(v){ operationLogData = v; }); } catch(e){}
+            try { apply('modelTrainingData', function(v){ modelTrainingData = v; }); } catch(e){}
+            try { apply('annotationTypes', function(v){ annotationTypes = v; }); } catch(e){}
+            try { apply('annotationData', function(v){ annotationData = v; }); } catch(e){}
+            try { apply('knowledgeData', function(v){ knowledgeData = v; }); } catch(e){}
+            try { apply('compareLiteratureData', function(v){ compareLiteratureData = v; }); } catch(e){}
+            try { apply('patentData', function(v){ patentData = v; }); } catch(e){}
+            try { apply('categoryData', function(v){ categoryData = v; }); } catch(e){}
+            try { apply('memberData', function(v){ memberData = v; }); } catch(e){}
+        }
+
+        async function syncFromCloudAndRefresh(options) {
+            var result = await pullAllFromCloud(options || {});
+            hydrateInMemoryFromLocalStorage();
+            try { if (typeof renderTeamMembers === 'function') renderTeamMembers(); } catch (e) {}
+            try { if (typeof renderFileList === 'function') renderFileList(); } catch (e) {}
+            try { if (typeof renderAccountTable === 'function') renderAccountTable(); } catch (e) {}
+            try { if (typeof renderLiteratureList === 'function') renderLiteratureList(); } catch (e) {}
+            try { if (typeof renderDatasetList === 'function') renderDatasetList(); } catch (e) {}
+            try { if (typeof renderReportList === 'function') renderReportList(); } catch (e) {}
+            return result;
+        }
+
+        setInterval(function() {
+            if (!cloudSyncEnabled) return;
+            if (document.hidden) return;
+            syncFromCloudAndRefresh({ silent: true });
+        }, 15000);
+
+        window.__cloudBootstrapped = true;
+        setTimeout(function() {
+            syncFromCloudAndRefresh({ silent: true });
+        }, 400);
+
         // 显示模块
         function showModule(moduleId) {
+            if (cloudSyncEnabled) {
+                clearTimeout(window.__cloudModuleSyncTimer);
+                window.__cloudModuleSyncTimer = setTimeout(function() {
+                    syncFromCloudAndRefresh({ silent: true });
+                }, 200);
+            }
+
             // 隐藏所有模块
             document.querySelectorAll('.module').forEach(module => {
                 module.classList.remove('active');
@@ -13950,9 +14144,11 @@ ${JSON.stringify(excelDataArray, null, 2)}
         var teamMemberData = [];
         var editingMemberId = null;
         
-        function initTeamMemberData() {
+        async function initTeamMemberData() {
+            // 先拉云端，避免本机默认数据覆盖别人的删除
+            try { await syncFromCloudAndRefresh({ silent: true }); } catch (e) {}
             const saved = localStorage.getItem('teamMemberData');
-            if (saved) {
+            if (saved !== null) {
                 teamMemberData = JSON.parse(saved);
             } else {
                 resetToDefaultMembers();
@@ -16870,6 +17066,9 @@ ${ocrText}`
     }
 
     function enterSystem() {
+        // 登录后先拉云端，保证看到其他人的最新增删改
+        syncFromCloudAndRefresh({ silent: false }).catch(function(e){ console.warn(e); });
+
         document.getElementById('loginOverlay').classList.remove('active');
         updateHeaderUserInfo();
         applyRolePermissions();
