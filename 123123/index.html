@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -4615,13 +4615,12 @@
                     <!-- 顶部操作栏 -->
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                         <div style="display: flex; gap: 10px;">
-                            <button class="btn" onclick="showAddMemberModal()"> 新增</button>
-                            <button class="btn btn-secondary" onclick="exportMembers()"> 导出</button>
-                            <button class="btn btn-secondary" onclick="importMembers()"> 导入</button>
+                            <button class="btn" data-perm="member-edit" onclick="showAddMemberModal()"> 新增</button>
+                            <button class="btn btn-secondary" data-perm="member-export" onclick="exportMembers()"> 导出</button>
+                            <button class="btn btn-secondary" data-perm="member-edit" onclick="importMembers()"> 导入</button>
                         </div>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <input type="text" id="memberSearchInput" class="form-control" placeholder="搜索成员姓名..." style="width: 200px;" oninput="searchMembers(this.value)">
-                            <button class="btn btn-secondary" onclick="resetMemberData()"> 重置数据</button>
                         </div>
                     </div>
                     
@@ -4645,27 +4644,45 @@
                             <!-- 按分类展示成员 -->
                             <div id="memberCategoryAll">
                                 <div class="member-category-section" data-category="advisor" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold;"> 导师</div>
+                                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>导师</span>
+                                        <button type="button" onclick="showAddMemberModal('advisor')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
+                                    </div>
                                     <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGridAdvisor"></div>
                                 </div>
                                 <div class="member-category-section" data-category="2022" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold;">2022级</div>
+                                    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>2022级</span>
+                                        <button type="button" onclick="showAddMemberModal('2022')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
+                                    </div>
                                     <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2022"></div>
                                 </div>
                                 <div class="member-category-section" data-category="2023" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold;">2023级</div>
+                                    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>2023级</span>
+                                        <button type="button" onclick="showAddMemberModal('2023')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
+                                    </div>
                                     <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2023"></div>
                                 </div>
                                 <div class="member-category-section" data-category="2024" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold;">2024级</div>
+                                    <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>2024级</span>
+                                        <button type="button" onclick="showAddMemberModal('2024')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
+                                    </div>
                                     <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2024"></div>
                                 </div>
                                 <div class="member-category-section" data-category="2025" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold;">2025级</div>
+                                    <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>2025级</span>
+                                        <button type="button" onclick="showAddMemberModal('2025')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
+                                    </div>
                                     <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2025"></div>
                                 </div>
                                 <div class="member-category-section" data-category="2026" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold;">2026级</div>
+                                    <div style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>2026级</span>
+                                        <button type="button" onclick="showAddMemberModal('2026')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
+                                    </div>
                                     <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2026"></div>
                                 </div>
                             </div>
@@ -5674,7 +5691,7 @@
                                 </select>
                             </div>
                             <div class="toolbar-right">
-                                <button class="btn" onclick="showAddAccountModal()">+ 新建账号</button>
+                                <button class="btn" data-perm="account-create" onclick="showAddAccountModal()">+ 新建账号</button>
                                 <button class="btn btn-secondary" onclick="exportAccounts()">📥 导出</button>
                             </div>
                         </div>
@@ -7529,6 +7546,15 @@
                     return copy;
                 });
             }
+            // 账号头像过大时裁掉，密码与角色权限必须保留以支持全局登录
+            if (key === 'accountData' && Array.isArray(parsed)) {
+                return parsed.map(function(a) {
+                    var copy = Object.assign({}, a);
+                    var av = copy.avatar ? String(copy.avatar) : '';
+                    if (av.length > 80000) copy.avatar = '';
+                    return copy;
+                });
+            }
             return parsed;
         }
 
@@ -7718,9 +7744,11 @@
         async function syncFromCloudAndRefresh(options) {
             var result = await pullAllFromCloud(options || {});
             hydrateInMemoryFromLocalStorage();
+            try { if (typeof onCloudAccountPermissionHydrated === 'function') onCloudAccountPermissionHydrated(); } catch (e) {}
             try { if (typeof renderTeamMembers === 'function') renderTeamMembers(); } catch (e) {}
             try { if (typeof renderFileList === 'function') renderFileList(); } catch (e) {}
             try { if (typeof renderAccountTable === 'function') renderAccountTable(); } catch (e) {}
+            try { if (typeof renderPermissionMatrix === 'function') renderPermissionMatrix(); } catch (e) {}
             try { if (typeof renderLiteratureList === 'function') renderLiteratureList(); } catch (e) {}
             try { if (typeof renderDatasetList === 'function') renderDatasetList(); } catch (e) {}
             try { if (typeof renderReportList === 'function') renderReportList(); } catch (e) {}
@@ -14362,21 +14390,23 @@ ${JSON.stringify(excelDataArray, null, 2)}
             card.style.cssText = 'background: #fff; border-radius: 8px; padding: 16px; width: 140px; text-align: center; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative;';
             card.onmouseenter = function() { this.style.transform = 'translateY(-3px)'; this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; };
             card.onmouseleave = function() { this.style.transform = ''; this.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'; };
-            const actionsDiv = document.createElement('div');
-            actionsDiv.style.cssText = 'position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; z-index: 10;';
-            const editBtn = document.createElement('span');
-            editBtn.style.cssText = 'width: 22px; height: 22px; border-radius: 50%; background: #17a2b8; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;';
-            editBtn.innerHTML = '✎';
-            editBtn.title = '编辑';
-            editBtn.onclick = function(e) { e.stopPropagation(); editMember(m.id); };
-            const delBtn = document.createElement('span');
-            delBtn.style.cssText = 'width: 22px; height: 22px; border-radius: 50%; background: #dc3545; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;';
-            delBtn.innerHTML = '×';
-            delBtn.title = '删除';
-            delBtn.onclick = function(e) { e.stopPropagation(); deleteMember(m.id); };
-            actionsDiv.appendChild(editBtn);
-            actionsDiv.appendChild(delBtn);
-            card.appendChild(actionsDiv);
+            if (typeof canEditTeamMembers === 'function' && canEditTeamMembers()) {
+                const actionsDiv = document.createElement('div');
+                actionsDiv.style.cssText = 'position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; z-index: 10;';
+                const editBtn = document.createElement('span');
+                editBtn.style.cssText = 'width: 22px; height: 22px; border-radius: 50%; background: #17a2b8; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+                editBtn.innerHTML = '✎';
+                editBtn.title = '编辑';
+                editBtn.onclick = function(e) { e.stopPropagation(); editMember(m.id); };
+                const delBtn = document.createElement('span');
+                delBtn.style.cssText = 'width: 22px; height: 22px; border-radius: 50%; background: #dc3545; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+                delBtn.innerHTML = '×';
+                delBtn.title = '删除';
+                delBtn.onclick = function(e) { e.stopPropagation(); deleteMember(m.id); };
+                actionsDiv.appendChild(editBtn);
+                actionsDiv.appendChild(delBtn);
+                card.appendChild(actionsDiv);
+            }
             card.onclick = function() { showMemberDetail(m.id); };
             let avatar;
             if (m.avatar) {
@@ -14399,6 +14429,16 @@ ${JSON.stringify(excelDataArray, null, 2)}
             card.appendChild(titleEl);
             return card;
         }
+
+        function createAddMemberCard(category) {
+            const card = document.createElement('div');
+            card.style.cssText = 'background: #fff; border-radius: 8px; padding: 16px; width: 140px; text-align: center; cursor: pointer; transition: all 0.2s; border: 2px dashed #c5cbe0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 140px; color: #667eea;';
+            card.onmouseenter = function() { this.style.borderColor = '#667eea'; this.style.background = '#f5f7ff'; };
+            card.onmouseleave = function() { this.style.borderColor = '#c5cbe0'; this.style.background = '#fff'; };
+            card.onclick = function() { showAddMemberModal(category); };
+            card.innerHTML = '<div style="font-size: 32px; line-height: 1; margin-bottom: 8px;">＋</div><div style="font-size: 13px; font-weight: 600;">增加人员</div>';
+            return card;
+        }
         
         function renderTeamMembers() {
             const categories = { advisor: 'memberGridAdvisor', '2022': 'memberGrid2022', '2023': 'memberGrid2023', '2024': 'memberGrid2024', '2025': 'memberGrid2025', '2026': 'memberGrid2026' };
@@ -14408,15 +14448,23 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 const members = teamMemberData.filter(m => m.category === cat);
                 grid.innerHTML = '';
                 members.forEach(m => { grid.appendChild(createMemberCard(m)); });
+                if (typeof canEditTeamMembers !== 'function' || canEditTeamMembers()) {
+                    grid.appendChild(createAddMemberCard(cat));
+                }
             });
         }
         
-        function showAddMemberModal() {
+        function showAddMemberModal(preselectCategory) {
+            if (typeof canEditTeamMembers === 'function' && !canEditTeamMembers()) {
+                alert('当前角色无「团队成员档案（编辑）」权限');
+                return;
+            }
             editingMemberId = null;
             document.getElementById('memberEditModalTitle').textContent = '新增成员';
             document.getElementById('memberName').value = '';
-            document.getElementById('memberCategory').value = '';
-            document.getElementById('memberTitle').value = '';
+            document.getElementById('memberCategory').value = preselectCategory || '';
+            const defaultTitles = { advisor: '导师', '2022': '2022级硕士研究生', '2023': '2023级硕士研究生', '2024': '2024级硕士研究生', '2025': '2025级硕士研究生', '2026': '2026级硕士研究生' };
+            document.getElementById('memberTitle').value = (preselectCategory && defaultTitles[preselectCategory]) ? defaultTitles[preselectCategory] : '';
             document.getElementById('memberResearch').value = '';
             document.getElementById('memberEducation').value = '';
             document.getElementById('memberPhone').value = '';
@@ -14430,6 +14478,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
         function closeMemberEditModal() { document.getElementById('memberEditModal').style.display = 'none'; }
         
         function editMember(id) {
+            if (typeof canEditTeamMembers === 'function' && !canEditTeamMembers()) {
+                alert('当前角色无「团队成员档案（编辑）」权限');
+                return;
+            }
             const m = teamMemberData.find(d => d.id === id);
             if (!m) return;
             editingMemberId = id;
@@ -14471,11 +14523,20 @@ ${JSON.stringify(excelDataArray, null, 2)}
             }
             saveTeamMemberData();
             renderTeamMembers();
+            const single = document.getElementById('memberCategorySingle');
+            if (single && single.style.display !== 'none') {
+                const activeNav = document.querySelector('.member-nav-item.active');
+                if (activeNav) activeNav.click();
+            }
             closeMemberEditModal();
             alert('保存成功！');
         }
         
         function deleteMember(id) {
+            if (typeof canEditTeamMembers === 'function' && !canEditTeamMembers()) {
+                alert('当前角色无「团队成员档案（编辑）」权限');
+                return;
+            }
             if (!confirm('确定要删除该成员吗？')) return;
             teamMemberData = teamMemberData.filter(d => d.id !== id);
             saveTeamMemberData();
@@ -14658,14 +14719,20 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 document.getElementById('memberCategoryAll').style.display = 'none';
                 document.getElementById('memberCategorySingle').style.display = 'block';
                 const members = teamMemberData.filter(m => m.category === category);
-                const categoryLabels = { advisor: ' 导师', '2022': '2022级', '2023': '2023级', '2024': '2024级', '2025': '2025级', '2026': '2026级' };
+                const categoryLabels = { advisor: '导师', '2022': '2022级', '2023': '2023级', '2024': '2024级', '2025': '2025级', '2026': '2026级' };
                 const single = document.getElementById('memberCategorySingle');
                 single.innerHTML = `<div style="margin-bottom: 24px;">
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold;">${categoryLabels[category]}</div>
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${categoryLabels[category]}</span>
+                        <button type="button" onclick="showAddMemberModal('${category}')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
+                    </div>
                     <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="singleMemberGrid"></div>
                 </div>`;
                 const grid = document.getElementById('singleMemberGrid');
                 members.forEach(m => { grid.appendChild(createMemberCard(m)); });
+                if (typeof canEditTeamMembers !== 'function' || canEditTeamMembers()) {
+                    grid.appendChild(createAddMemberCard(category));
+                }
             }
         }
         
@@ -14682,6 +14749,9 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 if (!grid) return;
                 grid.innerHTML = '';
                 filtered.filter(m => m.category === cat).forEach(m => { grid.appendChild(createMemberCard(m)); });
+                if (typeof canEditTeamMembers !== 'function' || canEditTeamMembers()) {
+                    grid.appendChild(createAddMemberCard(cat));
+                }
             });
         }
         
@@ -17102,53 +17172,125 @@ ${ocrText}`
     const ACCOUNTS_PER_PAGE = 10;
 
     function initAccountSystem() {
-        accountData = JSON.parse(localStorage.getItem('accountData') || 'null');
+        // 登录前先拉云端账号与权限，保证全局一致
+        var start = function() {
+            accountData = JSON.parse(localStorage.getItem('accountData') || 'null');
 
-        // 确保 5 个默认账号始终存在（兼容旧缓存）
-        const defaults = [
-            { id: 1, studentId: 'admin', realName: '张教授', role: 'admin', group: '', grade: '', research: '城市安全智能监控', phone: '13800001001', email: 'zhang@university.edu.cn', mustChangePwd: false, firstLogin: false },
-            { id: 2, studentId: 'leader01', realName: '王师兄', role: 'leader', group: '第一小组', grade: '2024级', research: '多源数据融合分析', phone: '13800001002', email: 'wang@university.edu.cn', mustChangePwd: true, firstLogin: true },
-            { id: 3, studentId: 'stu001', realName: '李明', role: 'student', group: '第一小组', grade: '2025级', research: '深度学习目标检测', phone: '13800001003', email: 'liming@university.edu.cn', mustChangePwd: true, firstLogin: true },
-            { id: 4, studentId: 'stu002', realName: '赵芳', role: 'student', group: '第二小组', grade: '2025级', research: '自然语言处理', phone: '13800001004', email: 'zhaofang@university.edu.cn', mustChangePwd: true, firstLogin: true },
-            { id: 5, studentId: 'visitor01', realName: '陈交换生', role: 'visitor', group: '', grade: '', research: '', phone: '', email: 'chen@other.edu.cn', mustChangePwd: true, firstLogin: true }
-        ];
+            // 确保 5 个默认账号始终存在（兼容旧缓存）
+            const defaults = [
+                { id: 1, studentId: 'admin', realName: '张教授', role: 'admin', group: '', grade: '', research: '城市安全智能监控', phone: '13800001001', email: 'zhang@university.edu.cn', mustChangePwd: false, firstLogin: false },
+                { id: 2, studentId: 'leader01', realName: '王师兄', role: 'leader', group: '第一小组', grade: '2024级', research: '多源数据融合分析', phone: '13800001002', email: 'wang@university.edu.cn', mustChangePwd: true, firstLogin: true },
+                { id: 3, studentId: 'stu001', realName: '李明', role: 'student', group: '第一小组', grade: '2025级', research: '深度学习目标检测', phone: '13800001003', email: 'liming@university.edu.cn', mustChangePwd: true, firstLogin: true },
+                { id: 4, studentId: 'stu002', realName: '赵芳', role: 'student', group: '第二小组', grade: '2025级', research: '自然语言处理', phone: '13800001004', email: 'zhaofang@university.edu.cn', mustChangePwd: true, firstLogin: true },
+                { id: 5, studentId: 'visitor01', realName: '陈交换生', role: 'visitor', group: '', grade: '', research: '', phone: '', email: 'chen@other.edu.cn', mustChangePwd: true, firstLogin: true }
+            ];
 
-        if (!accountData) { accountData = []; }
+            if (!accountData) { accountData = []; }
+            let changed = false;
+            defaults.forEach(def => {
+                if (!accountData.find(a => a.studentId === def.studentId)) {
+                    const maxId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) : 0;
+                    accountData.push({
+                        ...def, id: Math.max(def.id, maxId + 1),
+                        status: 'active', password: DEFAULT_PASSWORD,
+                        lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
+                        loginFailCount: 0, lockedUntil: null, avatar: ''
+                    });
+                    changed = true;
+                }
+            });
+            if (changed) saveAccountData();
+            loginLogData = JSON.parse(localStorage.getItem('loginLogData') || '[]');
+            permissionMatrix = JSON.parse(localStorage.getItem('permissionMatrix') || 'null');
+            if (!permissionMatrix) {
+                permissionMatrix = JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS));
+                savePermissionData();
+            } else {
+                mergePermissionMatrixDefaults();
+            }
+            const p = localStorage.getItem('passwordPolicy'); if (p) passwordPolicy = JSON.parse(p);
+            const a = localStorage.getItem('loginAttempts'); if (a) loginAttempts = JSON.parse(a);
+
+            // Token 免登录（24h）
+            const session = JSON.parse(localStorage.getItem('currentSession') || 'null');
+            if (session && Date.now() - session.loginTime < TOKEN_EXPIRE_MS) {
+                const user = accountData.find(u => u.id === session.userId && u.status === 'active');
+                if (user) { currentUser = user; enterSystem(); return; }
+            }
+            if (session) localStorage.removeItem('currentSession');
+
+            document.getElementById('loginOverlay').classList.add('active'); initLoginMotion();
+            document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+            document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
+        };
+
+        if (typeof pullAllFromCloud === 'function') {
+            pullAllFromCloud({ silent: true }).then(start).catch(function() { start(); });
+        } else {
+            start();
+        }
+    }
+
+    function mergePermissionMatrixDefaults() {
+        if (!Array.isArray(permissionMatrix)) {
+            permissionMatrix = JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS));
+            savePermissionData();
+            return;
+        }
         let changed = false;
-        defaults.forEach(def => {
-            if (!accountData.find(a => a.studentId === def.studentId)) {
-                const maxId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) : 0;
-                accountData.push({
-                    ...def, id: Math.max(def.id, maxId + 1),
-                    status: 'active', password: DEFAULT_PASSWORD,
-                    lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
-                    loginFailCount: 0, lockedUntil: null, avatar: ''
-                });
+        DEFAULT_PERMISSIONS.forEach(function(defRow) {
+            if (!permissionMatrix.find(function(p) { return p[0] === defRow[0]; })) {
+                permissionMatrix.push(JSON.parse(JSON.stringify(defRow)));
                 changed = true;
             }
         });
-        if (changed) saveAccountData();
-        loginLogData = JSON.parse(localStorage.getItem('loginLogData') || '[]');
-        permissionMatrix = JSON.parse(localStorage.getItem('permissionMatrix') || 'null');
-        if (!permissionMatrix) { permissionMatrix = JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS)); savePermissionData(); }
-        const p = localStorage.getItem('passwordPolicy'); if (p) passwordPolicy = JSON.parse(p);
-        const a = localStorage.getItem('loginAttempts'); if (a) loginAttempts = JSON.parse(a);
-
-        // Token 免登录（24h）
-        const session = JSON.parse(localStorage.getItem('currentSession') || 'null');
-        if (session && Date.now() - session.loginTime < TOKEN_EXPIRE_MS) {
-            const user = accountData.find(u => u.id === session.userId && u.status === 'active');
-            if (user) { currentUser = user; enterSystem(); return; }
-        }
-        if (session) localStorage.removeItem('currentSession');
-
-        document.getElementById('loginOverlay').classList.add('active'); initLoginMotion();
-        document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
-        document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
+        if (changed) savePermissionData();
     }
 
-    function saveAccountData() { localStorage.setItem('accountData', JSON.stringify(accountData)); }
-    function savePermissionData() { localStorage.setItem('permissionMatrix', JSON.stringify(permissionMatrix)); }
+    function saveAccountData() {
+        localStorage.setItem('accountData', JSON.stringify(accountData));
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
+    }
+    function savePermissionData() {
+        localStorage.setItem('permissionMatrix', JSON.stringify(permissionMatrix));
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('permissionMatrix', JSON.stringify(permissionMatrix)); } catch (e) {}
+    }
+
+    /** 云端拉取后刷新账号/权限内存与界面（全局同步核心） */
+    function onCloudAccountPermissionHydrated() {
+        try {
+            var rawAcc = localStorage.getItem('accountData');
+            if (rawAcc) accountData = JSON.parse(rawAcc);
+        } catch (e) {}
+        try {
+            var rawPerm = localStorage.getItem('permissionMatrix');
+            if (rawPerm) {
+                permissionMatrix = JSON.parse(rawPerm);
+                mergePermissionMatrixDefaults();
+            }
+        } catch (e) {}
+        try {
+            var rawPolicy = localStorage.getItem('passwordPolicy');
+            if (rawPolicy) passwordPolicy = JSON.parse(rawPolicy);
+        } catch (e) {}
+
+        if (currentUser) {
+            var fresh = accountData.find(function(a) { return a.id === currentUser.id; });
+            if (fresh) {
+                currentUser = fresh;
+                if (fresh.status !== 'active') {
+                    alert('当前账号已被禁用，请重新登录');
+                    currentUser = null;
+                    localStorage.removeItem('currentSession');
+                    document.getElementById('loginOverlay').classList.add('active');
+                    initLoginMotion();
+                    return;
+                }
+                updateHeaderUserInfo();
+                applyRolePermissions();
+            }
+        }
+    }
 
     // ===== 2. 登录 / 登出 =====
 
@@ -17299,8 +17441,13 @@ ${ocrText}`
     }
 
     function enterSystem() {
-        // 登录后先拉云端，保证看到其他人的最新增删改
-        syncFromCloudAndRefresh({ silent: false }).catch(function(e){ console.warn(e); });
+        // 登录后先拉云端，保证账号权限与全站数据全局一致
+        syncFromCloudAndRefresh({ silent: false }).then(function() {
+            updateHeaderUserInfo();
+            applyRolePermissions();
+            try { if (typeof renderPermissionMatrix === 'function') renderPermissionMatrix(); } catch (e) {}
+            try { if (typeof renderAccountTable === 'function') renderAccountTable(); } catch (e) {}
+        }).catch(function(e){ console.warn(e); applyRolePermissions(); });
 
         document.getElementById('loginOverlay').classList.remove('active');
         updateHeaderUserInfo();
@@ -17339,41 +17486,45 @@ ${ocrText}`
         return perm[roleIndex] === true;
     }
 
+    function canEditTeamMembers() {
+        return hasPermission('团队成员档案（编辑）');
+    }
+
     function applyRolePermissions() {
         if (!currentUser) return;
         const role = currentUser.role;
 
-        // 根据角色隐藏/显示侧边栏菜单项
+        // 侧边栏：以权限矩阵为准（全局同步后各端一致）
         const menuVisibility = {
-            'member_archive': role !== 'visitor',
-            'role_permission': role === 'admin',
-            'task_management': role !== 'visitor',
-            'weekly_report': role !== 'visitor',
-            'longitudinal_project': role !== 'visitor',
-            'horizontal_project': role !== 'visitor',
-            'school_project': role !== 'visitor',
-            'patent_management': role !== 'visitor',
-            'paper_management': role !== 'visitor',
-            'standard_management': role !== 'visitor',
-            'software_copyright': role !== 'visitor',
-            'model_training': role !== 'visitor',
-            'data_annotation': role !== 'visitor',
-            'chat': role !== 'visitor',
-            'openai': role !== 'visitor',
-            'literature_analysis': role !== 'visitor',
-            'excel': role !== 'visitor',
-            'document_analysis': role !== 'visitor',
+            'member_archive': hasPermission('团队成员档案（查看全组）') || hasPermission('团队成员档案（仅自己）'),
+            'role_permission': hasPermission('角色权限管理'),
+            'task_management': hasPermission('内部任务待办（查看全部）') || hasPermission('内部任务待办（查看自己的）'),
+            'weekly_report': hasPermission('团队工作周报（查看全部）') || hasPermission('团队工作周报（提交自己的）'),
+            'longitudinal_project': hasPermission('项目管理（查看）'),
+            'horizontal_project': hasPermission('项目管理（查看）'),
+            'school_project': hasPermission('项目管理（查看）'),
+            'patent_management': hasPermission('成果管理（查看）'),
+            'paper_management': hasPermission('成果管理（查看）'),
+            'standard_management': hasPermission('成果管理（查看）'),
+            'software_copyright': hasPermission('成果管理（查看）'),
+            'model_training': hasPermission('智能工具（全部）'),
+            'data_annotation': hasPermission('智能工具（全部）'),
+            'chat': hasPermission('智能工具（全部）'),
+            'openai': hasPermission('智能工具（全部）'),
+            'literature_analysis': hasPermission('智能工具（全部）'),
+            'excel': hasPermission('智能工具（全部）'),
+            'document_analysis': hasPermission('智能工具（全部）'),
             'notice_publish': role === 'admin' || role === 'leader',
             'news_management': role === 'admin',
             'meeting_management': role !== 'visitor',
-            'literature_library': true,
-            'dataset_library': role !== 'visitor',
-            'project_report': role !== 'visitor',
-            'shared_files': true,
-            'account_permission': role === 'admin' || role === 'leader',
-            'system_config': role === 'admin',
-            'operation_log': role === 'admin',
-            'data_backup': role === 'admin',
+            'literature_library': hasPermission('资源中心（查看）'),
+            'dataset_library': hasPermission('资源中心（查看）') && role !== 'visitor',
+            'project_report': hasPermission('资源中心（查看）') && role !== 'visitor',
+            'shared_files': hasPermission('资源中心（查看）'),
+            'account_permission': hasPermission('账号管理（查看列表）') || hasPermission('账号管理（新建/删除）'),
+            'system_config': hasPermission('系统设置'),
+            'operation_log': hasPermission('操作日志'),
+            'data_backup': hasPermission('数据备份'),
         };
 
         Object.entries(menuVisibility).forEach(([moduleId, visible]) => {
@@ -17395,24 +17546,31 @@ ${ocrText}`
             }
         }
 
-        // 账号权限页面：非管理员隐藏部分标签
-        if (role === 'leader') {
-            const tabs = document.querySelectorAll('#accountTabNav .tab-btn');
-            tabs.forEach(t => {
-                const onclick = t.getAttribute('onclick');
-                if (onclick && (onclick.includes('accountRegister') || onclick.includes('loginSecurity'))) {
-                    t.style.display = 'none';
-                }
-            });
-        }
+        // 账号权限页面：无新建权限时隐藏注册/导入等标签
+        const tabs = document.querySelectorAll('#accountTabNav .tab-btn');
+        tabs.forEach(t => {
+            const onclick = t.getAttribute('onclick') || '';
+            if (onclick.includes('accountRegister') || onclick.includes('accountImport')) {
+                t.style.display = hasPermission('账号管理（新建/删除）') ? '' : 'none';
+            }
+            if (onclick.includes('loginSecurity')) {
+                t.style.display = (role === 'admin') ? '' : 'none';
+            }
+        });
 
         // 按钮级权限控制
         applyButtonPermissions();
+        applyMemberArchivePermissions();
     }
 
     function applyButtonPermissions() {
         if (!currentUser) return;
         const role = currentUser.role;
+
+        // 先恢复，再按权限隐藏（避免同步后状态残留）
+        document.querySelectorAll('[data-perm="export"], [data-perm="batch-edit"], [data-perm="delete"], [data-perm="global-manage"], [data-perm="manage"], [data-perm="member-edit"], [data-perm="member-export"]').forEach(btn => {
+            btn.style.display = '';
+        });
 
         // 学生账号：隐藏导出、批量编辑、删除等管理按钮
         if (role === 'student') {
@@ -17434,6 +17592,26 @@ ${ocrText}`
                 btn.style.display = 'none';
             });
         }
+
+        // 成员档案编辑按钮：跟权限矩阵
+        document.querySelectorAll('[data-perm="member-edit"]').forEach(btn => {
+            btn.style.display = canEditTeamMembers() ? '' : 'none';
+        });
+        document.querySelectorAll('[data-perm="account-create"]').forEach(btn => {
+            btn.style.display = hasPermission('账号管理（新建/删除）') ? '' : 'none';
+        });
+    }
+
+    function applyMemberArchivePermissions() {
+        const canEdit = canEditTeamMembers();
+        document.querySelectorAll('#member_archive [data-perm="member-edit"]').forEach(btn => {
+            btn.style.display = canEdit ? '' : 'none';
+        });
+        document.querySelectorAll('#member_archive .member-category-section button').forEach(btn => {
+            if ((btn.textContent || '').indexOf('增加人员') >= 0) {
+                btn.style.display = canEdit ? '' : 'none';
+            }
+        });
     }
 
     // ===== 4. 账号管理 - 列表 =====
@@ -17494,7 +17672,7 @@ ${ocrText}`
     function filterAccountTable() { accountPage = 1; renderAccountTable(); }
 
     function showAddAccountModal() {
-        if (currentUser && currentUser.role !== 'admin') { alert('只有导师可以新建账号'); return; }
+        if (!hasPermission('账号管理（新建/删除）')) { alert('当前角色无「账号管理（新建/删除）」权限'); return; }
         document.body.appendChild(createAccountModal('新建账号'));
     }
 
@@ -17584,6 +17762,14 @@ ${ocrText}`
     }
 
     function saveAccountFromModal(editId, modalId) {
+        if (!editId && !hasPermission('账号管理（新建/删除）')) {
+            alert('当前角色无「账号管理（新建/删除）」权限');
+            return;
+        }
+        if (editId && !hasPermission('账号管理（查看列表）') && currentUser.role !== 'admin') {
+            alert('当前角色无权编辑账号');
+            return;
+        }
         const studentId = document.getElementById('modalStudentId').value.trim();
         const realName = document.getElementById('modalRealName').value.trim();
         const role = document.getElementById('modalRole').value;
@@ -17669,6 +17855,7 @@ ${ocrText}`
     }
 
     function deleteAccount(id) {
+        if (!hasPermission('账号管理（新建/删除）')) { alert('当前角色无「账号管理（新建/删除）」权限'); return; }
         if (!confirm('确定要删除此账号吗？此操作不可恢复。')) return;
         const account = accountData.find(a => a.id === id);
         accountData = accountData.filter(a => a.id !== id);
@@ -18068,8 +18255,16 @@ ${ocrText}`
 
     function savePermissionMatrix() {
         if (currentUser && currentUser.role !== 'admin') { alert('只有导师可以修改权限配置'); return; }
-        savePermissionData(); applyRolePermissions();
-        alert('权限配置已保存');
+        savePermissionData();
+        applyRolePermissions();
+        try {
+            if (typeof cloudUpsert === 'function') {
+                cloudUpsert('permissionMatrix', JSON.stringify(permissionMatrix)).then(function() {
+                    if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('权限配置已同步到云端（全局生效）', false);
+                });
+            }
+        } catch (e) {}
+        alert('权限配置已保存，并将同步到所有终端');
     }
 
     function resetPermissionMatrix() {
