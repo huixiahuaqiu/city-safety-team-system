@@ -89,3 +89,6 @@ temp/
 # ---- 备份文件 ----
 *.backup
 *.orig
+
+# local secrets
+1
