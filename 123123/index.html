@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -15,7 +15,8 @@
     <script>
         tailwind.config = {
             corePlugins: {
-                preflight: false
+                preflight: false,
+                container: false
             }
         }
     </script>
@@ -81,8 +82,9 @@
         }
         
         /* 主容器 */
-        .container {
+        .app-shell {
             display: flex;
+            width: 100%;
             min-height: calc(100vh - 60px);
         }
         
@@ -496,7 +498,7 @@
         
         /* 响应式设计 */
         @media (max-width: 768px) {
-            .container {
+            .app-shell {
                 flex-direction: column;
             }
             
@@ -1783,7 +1785,7 @@
         </div>
     
     <!-- 主容器 -->
-    <div class="container">
+    <div class="app-shell">
         <!-- 左侧菜单 -->
         <div class="sidebar">
             <div class="nav-item active" onclick="showModule('home')">
@@ -5113,7 +5115,7 @@
                         <p style="font-size: 14px; color: #999; margin-bottom: 24px;">点击右上角按钮上传第一个文件，开始团队协作</p>
                         <button class="btn" onclick="showAddFileModal()" style="padding: 12px 32px; font-size: 14px;">📥 上传文件</button>
                     </div>
-                    <div id="fileList"></div>
+                    <div id="sharedFileList"></div>
                     <div id="filePagination" style="display:none;margin-top:20px;background:#fff;border-radius:12px;padding:16px 24px;box-shadow:0 1px 3px rgba(0,0,0,0.04);justify-content:space-between;align-items:center;">
                         <div style="font-size:13px;color:#666;">
                             共 <strong id="fileTotalCount" style="color:#7c3aed;">0</strong> 个文件，第 <span id="fileCurrentPage">1</span>/<span id="fileTotalPages">1</span> 页
@@ -19982,7 +19984,7 @@ ${ocrText}`
     }
 
     function renderFileList() {
-        const container = document.getElementById('fileList');
+        const container = document.getElementById('sharedFileList');
         const emptyState = document.getElementById('fileEmptyState');
         const batchActionBar = document.getElementById('batchActionBar');
         const pagination = document.getElementById('filePagination');
