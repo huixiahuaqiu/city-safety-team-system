@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -7752,6 +7752,11 @@
             try { if (typeof renderFileList === 'function') renderFileList(); } catch (e) {}
             try { if (typeof renderAccountTable === 'function') renderAccountTable(); } catch (e) {}
             try { if (typeof renderPermissionMatrix === 'function') renderPermissionMatrix(); } catch (e) {}
+            try { if (typeof populateOwnerSelects === 'function') populateOwnerSelects(); } catch (e) {}
+            try { if (typeof renderTaskList === 'function') renderTaskList(); } catch (e) {}
+            try { if (typeof renderNoticeList === 'function') renderNoticeList(); } catch (e) {}
+            try { if (typeof populateWeeklyReportOwnerSelects === 'function') populateWeeklyReportOwnerSelects(); } catch (e) {}
+            try { if (typeof renderWeeklyReportList === 'function') renderWeeklyReportList(); } catch (e) {}
             try { if (typeof renderLiteratureList === 'function') renderLiteratureList(); } catch (e) {}
             try { if (typeof renderDatasetList === 'function') renderDatasetList(); } catch (e) {}
             try { if (typeof renderReportList === 'function') renderReportList(); } catch (e) {}
@@ -17688,7 +17693,7 @@ ${ocrText}`
         const menuVisibility = {
             'member_archive': hasPermission('团队成员档案（查看全组）') || hasPermission('团队成员档案（仅自己）'),
             'role_permission': hasPermission('角色权限管理'),
-            'task_management': hasPermission('内部任务待办（查看全部）') || hasPermission('内部任务待办（查看自己的）'),
+            'task_management': true,
             'weekly_report': hasPermission('团队工作周报（查看全部）') || hasPermission('团队工作周报（提交自己的）'),
             'longitudinal_project': hasPermission('项目管理（查看）'),
             'horizontal_project': hasPermission('项目管理（查看）'),
@@ -17704,7 +17709,7 @@ ${ocrText}`
             'literature_analysis': hasPermission('智能工具（全部）'),
             'excel': hasPermission('智能工具（全部）'),
             'document_analysis': hasPermission('智能工具（全部）'),
-            'notice_publish': role === 'admin' || role === 'leader',
+            'notice_publish': true,
             'news_management': role === 'admin',
             'meeting_management': role !== 'visitor',
             'literature_library': hasPermission('资源中心（查看）'),
@@ -18618,32 +18623,54 @@ ${ocrText}`
         const stored = localStorage.getItem('taskData');
         if (stored) {
             taskData = JSON.parse(stored);
+            migrateTaskDataToRealTeam();
         } else {
-            taskData = [
-                { id: 1, title: '完成项目中期汇报PPT制作', priority: 'high', owner: '张三', deadline: '2026-07-05 18:00', status: 'overdue', description: '制作项目中期汇报PPT，包含项目进展、成果展示、下一步计划等内容' },
-                { id: 2, title: '整理团队上半年成果汇总文档', priority: 'high', owner: '李四', deadline: '2026-07-08 18:00', status: 'progress', description: '整理团队上半年的科研成果、论文发表、项目进展等内容' },
-                { id: 3, title: '更新团队成员档案信息', priority: 'medium', owner: '王五', deadline: '2026-07-12 18:00', status: 'pending', description: '更新所有团队成员的档案信息，包括个人简介、研究方向等' },
-                { id: 4, title: '团队周例会会议纪要整理', priority: 'low', owner: '赵六', deadline: '2026-07-06 12:00', status: 'completed', description: '整理上周周例会的会议纪要，分发到团队群' },
-                { id: 5, title: '撰写学术论文初稿', priority: 'high', owner: '张三', deadline: '2026-07-15 23:59', status: 'progress', description: '撰写关于城市安全数智创新的学术论文初稿' },
-                { id: 6, title: '准备项目答辩材料', priority: 'high', owner: '李四', deadline: '2026-07-10 18:00', status: 'pending', description: '准备项目中期答辩所需的所有材料' },
-                { id: 7, title: '数据清洗与预处理', priority: 'medium', owner: '王五', deadline: '2026-07-18 18:00', status: 'pending', description: '对采集的城市安全数据进行清洗和预处理' },
-                { id: 8, title: '文献综述撰写', priority: 'medium', owner: '赵六', deadline: '2026-07-20 18:00', status: 'pending', description: '撰写关于研究方向的文献综述' },
-                { id: 9, title: '系统测试用例编写', priority: 'low', owner: '张三', deadline: '2026-07-22 18:00', status: 'pending', description: '编写系统功能测试用例' },
-                { id: 10, title: '周报模板更新', priority: 'low', owner: '李四', deadline: '2026-07-09 12:00', status: 'completed', description: '更新团队周报模板' },
-                { id: 11, title: '安全漏洞扫描', priority: 'high', owner: '王五', deadline: '2026-07-07 18:00', status: 'pending', description: '对系统进行安全漏洞扫描' },
-                { id: 12, title: '数据库备份方案制定', priority: 'medium', owner: '赵六', deadline: '2026-07-25 18:00', status: 'pending', description: '制定数据库定期备份方案' },
-                { id: 13, title: '用户反馈整理', priority: 'low', owner: '张三', deadline: '2026-07-28 18:00', status: 'pending', description: '整理用户反馈意见，形成改进清单' },
-                { id: 14, title: '技术文档更新', priority: 'medium', owner: '李四', deadline: '2026-07-30 18:00', status: 'pending', description: '更新系统技术文档' },
-                { id: 15, title: '代码审查', priority: 'high', owner: '王五', deadline: '2026-07-07 23:59', status: 'progress', description: '审查新提交的代码' },
-                { id: 16, title: '性能优化', priority: 'medium', owner: '赵六', deadline: '2026-08-01 18:00', status: 'pending', description: '对系统进行性能优化' },
-                { id: 17, title: '演示视频制作', priority: 'low', owner: '张三', deadline: '2026-08-05 18:00', status: 'pending', description: '制作系统演示视频' }
-            ];
+            taskData = buildRealTeamDefaultTasks();
             saveTaskData();
         }
     }
 
+    function getRealTeamOwnerNames() {
+        const members = Array.isArray(teamMemberData) ? teamMemberData : [];
+        const students = members.filter(m => m && m.category !== 'advisor').map(m => m.name).filter(Boolean);
+        const advisors = members.filter(m => m && m.category === 'advisor').map(m => m.name).filter(Boolean);
+        return [...new Set([...students, ...advisors])].filter(Boolean);
+    }
+
+    function addDaysForTask(days, hour) {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        d.setHours(hour || 18, 0, 0, 0);
+        return d.toISOString().slice(0, 16).replace('T', ' ');
+    }
+
+    function buildRealTeamDefaultTasks() {
+        const owners = getRealTeamOwnerNames();
+        const pick = idx => owners[idx % Math.max(owners.length, 1)] || (currentUser && currentUser.realName) || '团队成员';
+        return [
+            { id: 1, title: '完善团队成员档案与头像信息', priority: 'high', owner: pick(0), deadline: addDaysForTask(1, 18), status: 'pending', description: '补全个人简介、联系方式、研究方向、教育背景，并确保成员档案与账号权限同步。', visibility: 'all', publisher: currentUser?.realName || '系统' },
+            { id: 2, title: '汇总城市安全方向近期文献', priority: 'medium', owner: pick(1), deadline: addDaysForTask(3, 18), status: 'pending', description: '围绕城市安全、智能监测、结构风险评估等方向整理近期重点文献，上传到资源中心。', visibility: 'all', publisher: currentUser?.realName || '系统' },
+            { id: 3, title: '整理项目与成果台账', priority: 'medium', owner: pick(2), deadline: addDaysForTask(5, 18), status: 'progress', description: '核对纵向项目、横向项目、论文、专利、软著等台账，确保负责人和成果信息准确。', visibility: 'all', publisher: currentUser?.realName || '系统' },
+            { id: 4, title: '提交本周团队工作周报', priority: 'high', owner: pick(3), deadline: addDaysForTask(2, 20), status: 'pending', description: '每位成员按实际工作提交周报，导师和组长统一查看审核。', visibility: 'all', publisher: currentUser?.realName || '系统' },
+            { id: 5, title: '准备组会汇报材料', priority: 'high', owner: pick(4), deadline: addDaysForTask(4, 12), status: 'pending', description: '准备本周组会汇报，包括研究进展、问题清单、下周计划。', visibility: 'all', publisher: currentUser?.realName || '系统' }
+        ];
+    }
+
+    function migrateTaskDataToRealTeam() {
+        const demoOwners = ['张三', '李四', '王五', '赵六'];
+        const hasDemo = Array.isArray(taskData) && taskData.some(t => demoOwners.includes(t.owner));
+        if (!hasDemo) {
+            taskData = (taskData || []).map(t => ({ ...t, visibility: 'all', publisher: t.publisher || '系统' }));
+            return;
+        }
+        taskData = buildRealTeamDefaultTasks();
+        saveTaskData();
+    }
+
     function saveTaskData() {
+        taskData = (taskData || []).map(t => ({ ...t, visibility: 'all', publisher: t.publisher || (currentUser?.realName || '系统') }));
         localStorage.setItem('taskData', JSON.stringify(taskData));
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('taskData', JSON.stringify(taskData)); } catch (e) {}
     }
 
     function populateOwnerSelects() {
@@ -19037,7 +19064,7 @@ ${ocrText}`
         closeTaskModal();
         populateOwnerSelects();
         renderTaskList();
-        alert('保存成功！');
+        alert('保存成功！该任务已同步到云端，所有成员都可以看见。');
     }
 
     function showTaskDetail(id) {
@@ -19138,20 +19165,45 @@ ${ocrText}`
         const stored = localStorage.getItem('weeklyReportData');
         if (stored) {
             weeklyReportData = JSON.parse(stored);
+            migrateWeeklyReportDataToRealTeam();
         } else {
-            weeklyReportData = [
-                { id: 1, weekRange: '2026-07-06 至 2026-07-12', owner: '张三', content: '1. 完成项目中期汇报PPT初稿\n2. 整理了上周实验数据\n3. 参加了组会讨论', nextWeek: '1. 修改PPT内容\n2. 进行新的实验\n3. 撰写论文大纲', problems: '实验设备故障，影响进度', notes: '', status: 'pending', submitTime: '2026-07-12 14:30', reviewComment: '' },
-                { id: 2, weekRange: '2026-07-06 至 2026-07-12', owner: '李四', content: '1. 完成团队上半年成果汇总\n2. 更新了项目文档\n3. 协助指导师弟实验', nextWeek: '1. 准备项目答辩材料\n2. 继续完善成果文档', problems: '暂无', notes: '', status: 'approved', submitTime: '2026-07-12 16:00', reviewComment: '完成良好，继续保持' },
-                { id: 3, weekRange: '2026-07-06 至 2026-07-12', owner: '王五', content: '1. 数据清洗工作完成80%\n2. 学习了新的数据分析方法', nextWeek: '1. 完成数据清洗\n2. 开始数据分析', problems: '数据量较大，处理时间长', notes: '', status: 'pending', submitTime: '2026-07-12 17:30', reviewComment: '' },
-                { id: 4, weekRange: '2026-06-29 至 2026-07-05', owner: '赵六', content: '1. 整理周例会纪要\n2. 更新周报模板\n3. 文献阅读5篇', nextWeek: '1. 继续文献阅读\n2. 撰写文献综述', problems: '暂无', notes: '', status: 'approved', submitTime: '2026-07-05 15:00', reviewComment: '工作认真' },
-                { id: 5, weekRange: '2026-06-29 至 2026-07-05', owner: '张三', content: '1. 实验方案设计完成\n2. 采购实验材料', nextWeek: '1. 开始实验\n2. 记录实验数据', problems: '材料采购周期较长', notes: '', status: 'rejected', submitTime: '2026-07-05 13:00', reviewComment: '请补充实验安全评估' }
-            ];
+            weeklyReportData = buildRealTeamDefaultWeeklyReports();
+            saveWeeklyReportData();
+        }
+    }
+
+    function getCurrentWeekRangeText() {
+        const now = new Date();
+        const day = now.getDay() || 7;
+        const start = new Date(now);
+        start.setDate(now.getDate() - day + 1);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        const fmt = d => d.toISOString().slice(0, 10);
+        return fmt(start) + ' 至 ' + fmt(end);
+    }
+
+    function buildRealTeamDefaultWeeklyReports() {
+        const owners = getRealTeamOwnerNames();
+        const pick = idx => owners[idx % Math.max(owners.length, 1)] || (currentUser && currentUser.realName) || '团队成员';
+        const weekRange = getCurrentWeekRangeText();
+        return [
+            { id: 1, weekRange, owner: pick(0), content: '1. 核对个人档案和账号信息\n2. 整理本周研究进展\n3. 上传相关资料到资源中心', nextWeek: '1. 继续推进课题任务\n2. 根据组会意见完善材料', problems: '暂无', notes: '', status: 'pending', submitTime: new Date().toLocaleString('zh-CN'), reviewComment: '' },
+            { id: 2, weekRange, owner: pick(1), content: '1. 整理城市安全相关文献\n2. 更新项目/成果台账\n3. 准备组会汇报材料', nextWeek: '1. 完成文献摘要\n2. 补充实验或数据说明', problems: '部分资料需要进一步核对', notes: '', status: 'approved', submitTime: new Date().toLocaleString('zh-CN'), reviewComment: '已同步归档' }
+        ];
+    }
+
+    function migrateWeeklyReportDataToRealTeam() {
+        const demoOwners = ['张三', '李四', '王五', '赵六'];
+        if (Array.isArray(weeklyReportData) && weeklyReportData.some(r => demoOwners.includes(r.owner))) {
+            weeklyReportData = buildRealTeamDefaultWeeklyReports();
             saveWeeklyReportData();
         }
     }
 
     function saveWeeklyReportData() {
         localStorage.setItem('weeklyReportData', JSON.stringify(weeklyReportData));
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('weeklyReportData', JSON.stringify(weeklyReportData)); } catch (e) {}
     }
 
     function populateWeeklyReportOwnerSelects() {
@@ -19495,24 +19547,42 @@ ${ocrText}`
         const stored = localStorage.getItem('noticeData');
         if (stored) {
             noticeData = JSON.parse(stored);
+            migrateNoticeDataToRealTeam();
         } else {
-            const now = new Date();
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            noticeData = [
-                { id: 1, title: '关于开展安全检查的通知', type: 'notice', content: '为确保实验室安全，定于本周周五下午3:00进行安全检查，请各课题组做好准备工作。', startTime: now.toISOString().replace('T', ' ').substring(0, 16), endTime: tomorrow.toISOString().replace('T', ' ').substring(0, 16), publishTime: '2026-07-12 09:00', publisher: '张三' },
-                { id: 2, title: '学术报告预告', type: 'announcement', content: '本周六上午10:00，特邀XXX教授来我校做学术报告，主题为"城市安全数智创新前沿"。地点：学术报告厅。', startTime: now.toISOString().replace('T', ' ').substring(0, 16), endTime: '', publishTime: '2026-07-11 14:30', publisher: '李四' },
-                { id: 3, title: '周例会通知', type: 'meeting', content: '本周三下午2:00召开周例会，请各位成员汇报本周工作进展。地点：会议室A。', startTime: '', endTime: '', publishTime: '2026-07-10 10:00', publisher: '王五' },
-                { id: 4, title: '紧急通知：暴雨预警', type: 'urgent', content: '接气象部门通知，未来24小时将有暴雨，请大家注意出行安全，实验室设备做好防水措施。', startTime: '', endTime: '', publishTime: '2026-07-09 16:00', publisher: '赵六' },
-                { id: 5, title: '年度考核通知', type: 'notice', content: '年度考核工作即将开始，请各位成员准备好年度总结材料，于下周五前提交。', startTime: '', endTime: '', publishTime: '2026-07-08 11:00', publisher: '张三' }
-            ];
+            noticeData = buildRealTeamDefaultNotices();
             saveNoticeData();
         }
     }
 
+    function buildRealTeamDefaultNotices() {
+        const now = new Date();
+        const weekEnd = new Date(now);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        const publisher = currentUser?.realName || '团队管理员';
+        const nowStr = now.toISOString().replace('T', ' ').substring(0, 16);
+        const endStr = weekEnd.toISOString().replace('T', ' ').substring(0, 16);
+        return [
+            { id: 1, title: '团队成员信息统一维护通知', type: 'notice', content: '请各位成员核对自己的姓名、年级、联系方式、研究方向、头像等信息。成员档案将同步到账号权限、任务负责人、周报提交人等功能中。', startTime: nowStr, endTime: endStr, publishTime: now.toLocaleString('zh-CN'), publisher, audience: 'all' },
+            { id: 2, title: '本周组会安排', type: 'meeting', content: '本周组会请围绕城市安全、智能监测、结构风险评估、项目推进情况进行汇报。请提前准备进展、问题和下一步计划。', startTime: nowStr, endTime: '', publishTime: now.toLocaleString('zh-CN'), publisher, audience: 'all' },
+            { id: 3, title: '资源中心与成果台账维护要求', type: 'announcement', content: '论文、专利、项目、数据集、报告等资料请及时上传或登记，保证团队资料统一归档、全员可查。', startTime: nowStr, endTime: '', publishTime: now.toLocaleString('zh-CN'), publisher, audience: 'all' }
+        ];
+    }
+
+    function migrateNoticeDataToRealTeam() {
+        const demoPublishers = ['张三', '李四', '王五', '赵六'];
+        const hasDemo = Array.isArray(noticeData) && noticeData.some(n => demoPublishers.includes(n.publisher));
+        if (hasDemo) {
+            noticeData = buildRealTeamDefaultNotices();
+            saveNoticeData();
+            return;
+        }
+        noticeData = (noticeData || []).map(n => ({ ...n, audience: 'all' }));
+    }
+
     function saveNoticeData() {
+        noticeData = (noticeData || []).map(n => ({ ...n, audience: 'all' }));
         localStorage.setItem('noticeData', JSON.stringify(noticeData));
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('noticeData', JSON.stringify(noticeData)); } catch (e) {}
     }
 
     function updateNoticeStats() {
@@ -19682,14 +19752,15 @@ ${ocrText}`
                 startTime, 
                 endTime, 
                 publishTime: new Date().toLocaleString('zh-CN'),
-                publisher 
+                publisher,
+                audience: 'all'
             });
         }
 
         saveNoticeData();
         closeNoticeModal();
         renderNoticeList();
-        alert('发布成功！');
+        alert('发布成功！该信息已同步到云端，所有成员都可以收到。');
     }
 
     function showNoticeDetail(id) {
