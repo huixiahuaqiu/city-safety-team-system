@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -10,6 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <!-- PDF.js 库用于 PDF 文件解析 -->
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
+    <!-- Mammoth 用于浏览器端解析 Word(docx)，避免静态站点依赖后端接口 -->
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -7745,6 +7747,7 @@
             var result = await pullAllFromCloud(options || {});
             hydrateInMemoryFromLocalStorage();
             try { if (typeof onCloudAccountPermissionHydrated === 'function') onCloudAccountPermissionHydrated(); } catch (e) {}
+            try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (e) {}
             try { if (typeof renderTeamMembers === 'function') renderTeamMembers(); } catch (e) {}
             try { if (typeof renderFileList === 'function') renderFileList(); } catch (e) {}
             try { if (typeof renderAccountTable === 'function') renderAccountTable(); } catch (e) {}
@@ -14380,9 +14383,122 @@ ${JSON.stringify(excelDataArray, null, 2)}
             localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData));
         }
         
-        function saveTeamMemberData() { 
-            localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData)); 
+        function saveTeamMemberData() {
+            teamMemberData = normalizeTeamMembers(teamMemberData);
+            syncTeamMembersAcrossSystem();
+            localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData));
+            try { if (typeof cloudUpsert === 'function') cloudUpsert('teamMemberData', JSON.stringify(teamMemberData)); } catch (e) {}
             if (typeof populateOwnerSelects === 'function') populateOwnerSelects();
+            if (typeof populateWeeklyReportOwnerFilter === 'function') populateWeeklyReportOwnerFilter();
+            if (typeof renderAccountTable === 'function') renderAccountTable();
+        }
+
+        function normalizeMemberCategory(value, title) {
+            const raw = String(value || '').trim();
+            if (raw === 'advisor' || raw === '导师') return 'advisor';
+            const source = raw + ' ' + String(title || '');
+            const yearMatch = source.match(/20(22|23|24|25|26)/);
+            if (yearMatch) return '20' + yearMatch[1];
+            if (/教授|导师|博士后|高级工程师/.test(source) && !/研究生|硕士|博士生/.test(source)) return 'advisor';
+            return raw || '2024';
+        }
+
+        function normalizeTeamMembers(list) {
+            const seen = new Set();
+            let nextId = Array.isArray(list) && list.length > 0 ? Math.max(...list.map(m => Number(m.id) || 0)) + 1 : 1;
+            return (Array.isArray(list) ? list : []).map(function(m) {
+                const copy = Object.assign({}, m);
+                copy.name = String(copy.name || '').trim();
+                copy.category = normalizeMemberCategory(copy.category, copy.title);
+                copy.title = String(copy.title || '').trim() || (copy.category === 'advisor' ? '导师' : copy.category + '级硕士研究生');
+                if (!copy.id) copy.id = nextId++;
+                return copy;
+            }).filter(function(m) {
+                if (!m.name) return false;
+                const key = (m.name + '|' + (m.email || '') + '|' + (m.phone || '')).toLowerCase();
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        function getMemberRole(member) {
+            return member.category === 'advisor' ? 'admin' : 'student';
+        }
+
+        function getMemberStudentId(member) {
+            const emailPrefix = member.email && String(member.email).split('@')[0];
+            if (emailPrefix && /^[a-zA-Z0-9_.-]{3,}$/.test(emailPrefix)) return emailPrefix;
+            const phoneDigits = String(member.phone || '').replace(/\D/g, '');
+            if (phoneDigits.length >= 6) return phoneDigits;
+            return 'member' + member.id;
+        }
+
+        function syncTeamMembersAcrossSystem() {
+            const members = normalizeTeamMembers(teamMemberData);
+
+            // 同步旧版“团队成员/个人信息库”模块，避免两套成员数据不一致。
+            const legacyMembers = members.map(function(m) {
+                return {
+                    id: m.id,
+                    name: m.name,
+                    position: m.title || '',
+                    field: m.research || '',
+                    email: m.email || '',
+                    phone: m.phone || '',
+                    avatar: m.avatar || ''
+                };
+            });
+            localStorage.setItem('memberData', JSON.stringify(legacyMembers));
+            try { if (typeof cloudUpsert === 'function') cloudUpsert('memberData', JSON.stringify(legacyMembers)); } catch (e) {}
+
+            if (typeof accountData !== 'undefined' && Array.isArray(accountData)) {
+                let changed = false;
+                let nextId = accountData.length > 0 ? Math.max(...accountData.map(a => Number(a.id) || 0)) + 1 : 1;
+                members.forEach(function(m) {
+                    const studentId = getMemberStudentId(m);
+                    let acc = accountData.find(function(a) {
+                        return a.realName === m.name || (m.email && a.email === m.email) || (studentId && a.studentId === studentId);
+                    });
+                    const patch = {
+                        realName: m.name,
+                        role: getMemberRole(m),
+                        grade: m.category === 'advisor' ? '' : (m.category + '级'),
+                        research: m.research || '',
+                        phone: m.phone || '',
+                        email: m.email || '',
+                        avatar: m.avatar || ''
+                    };
+                    if (acc) {
+                        Object.keys(patch).forEach(function(k) {
+                            if ((patch[k] || '') !== (acc[k] || '')) {
+                                acc[k] = patch[k];
+                                changed = true;
+                            }
+                        });
+                    } else {
+                        accountData.push(Object.assign({
+                            id: nextId++,
+                            studentId: studentId,
+                            group: '',
+                            status: 'active',
+                            password: (typeof DEFAULT_PASSWORD !== 'undefined' ? DEFAULT_PASSWORD : '123456'),
+                            mustChangePwd: true,
+                            firstLogin: true,
+                            lastLogin: '',
+                            lastLoginIp: '',
+                            createdAt: new Date().toISOString().split('T')[0],
+                            loginFailCount: 0,
+                            lockedUntil: null
+                        }, patch));
+                        changed = true;
+                    }
+                });
+                if (changed) {
+                    localStorage.setItem('accountData', JSON.stringify(accountData));
+                    try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
+                }
+            }
         }
         
         function createMemberCard(m) {
@@ -14772,6 +14888,120 @@ ${JSON.stringify(excelDataArray, null, 2)}
             return localStorage.getItem('openaiApiKey') || localStorage.getItem('aliyunApiKey') || '';
         }
 
+        async function readMemberImportDocument(file) {
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            if (ext === 'txt') {
+                return await file.text();
+            }
+            if (ext === 'docx') {
+                if (!window.mammoth) {
+                    throw new Error('Word 解析库未加载，请刷新页面后重试');
+                }
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                return result.value || '';
+            }
+            if (ext === 'pdf') {
+                if (!window.pdfjsLib) {
+                    throw new Error('PDF 解析库未加载，请刷新页面后重试');
+                }
+                if (window.pdfjsLib.GlobalWorkerOptions) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
+                }
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const pages = [];
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    pages.push(content.items.map(item => item.str).join(' '));
+                }
+                return pages.join('\n');
+            }
+            throw new Error('仅支持 docx、pdf、txt 文件');
+        }
+
+        function extractFieldFromText(text, labels) {
+            for (const label of labels) {
+                const pattern = new RegExp(label + '\\s*[：:]\\s*([^\\n\\r；;]+)', 'i');
+                const match = text.match(pattern);
+                if (match && match[1]) return match[1].trim();
+            }
+            return '';
+        }
+
+        function guessImportedMemberName(text, fileName) {
+            const fromField = extractFieldFromText(text, ['姓名', '名字', 'Name']);
+            if (fromField) {
+                const clean = fromField.replace(/\s+/g, '').match(/[\u4e00-\u9fa5]{2,4}/);
+                if (clean) return clean[0];
+            }
+            const base = fileName.replace(/\.[^.]+$/, '').split(/[+_—\-\s]/)[0];
+            const fromFile = base.match(/[\u4e00-\u9fa5]{2,4}/);
+            if (fromFile) return fromFile[0];
+            const fallback = text.match(/(?:^|\s)([\u4e00-\u9fa5]{2,4})(?:\s|，|,)/);
+            return fallback ? fallback[1] : '';
+        }
+
+        function parseImportedMembersFromText(text, fileName) {
+            const cleaned = String(text || '').replace(/\r/g, '\n').replace(/\n{2,}/g, '\n').trim();
+            const phoneFromFile = (fileName.match(/1[3-9]\d{9}/) || [])[0] || '';
+            const phone = extractFieldFromText(cleaned, ['电话', '手机号', '手机', '联系电话']) || (cleaned.match(/1[3-9]\d{9}/) || [phoneFromFile])[0] || '';
+            const email = extractFieldFromText(cleaned, ['邮箱', '电子邮箱', 'Email']) || (cleaned.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/) || [''])[0];
+            const name = guessImportedMemberName(cleaned, fileName);
+            const title = extractFieldFromText(cleaned, ['职称', '身份', '职位', '岗位']) || '';
+            const research = extractFieldFromText(cleaned, ['研究方向', '研究领域', '方向']) || '';
+            const education = extractFieldFromText(cleaned, ['教育背景', '学习经历', '学历']) || '';
+            const projects = extractFieldFromText(cleaned, ['主持项目', '科研项目', '项目经历']) || '';
+            const awards = extractFieldFromText(cleaned, ['获奖情况', '荣誉奖励', '奖励']) || '';
+            const yearMatch = (cleaned + ' ' + fileName + ' ' + title).match(/20(22|23|24|25|26)/);
+            const category = normalizeMemberCategory(yearMatch ? ('20' + yearMatch[1]) : '', title + ' ' + cleaned.slice(0, 300));
+            const finalTitle = title || (category === 'advisor' ? '导师' : category + '级硕士研究生');
+            const bio = cleaned.slice(0, 600);
+
+            if (!name) return [];
+            return [normalizeTeamMembers([{
+                name: name,
+                category: category,
+                title: finalTitle,
+                research: research,
+                education: education,
+                phone: phone,
+                email: email,
+                projects: projects,
+                awards: awards,
+                bio: bio,
+                avatar: '',
+                fileName: fileName
+            }])[0]].filter(Boolean);
+        }
+
+        function renderPendingImportMembers(importImages) {
+            const resultDiv = document.getElementById('importMembersResult');
+            if (pendingImportMembers.length === 0) {
+                resultDiv.innerHTML = `<div style="padding:12px; background:#fff3e0; border-radius:6px; color:#e65100;">⚠ 未从文档中提取到成员信息，请检查文档内容是否包含姓名/电话/年级等字段</div>`;
+                return;
+            }
+            let html = `<div style="padding:12px; background:#e8f5e9; border-radius:6px; color:#2e7d32; margin-bottom:12px;">✓ 成功识别 ${pendingImportMembers.length} 位成员，点击确认导入后会同步到账号权限和云端</div>`;
+            html += '<div style="max-height:300px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:8px;">';
+            pendingImportMembers.forEach((m, idx) => {
+                const catLabels = { advisor: '导师', '2022': '2022级', '2023': '2023级', '2024': '2024级', '2025': '2025级', '2026': '2026级' };
+                const avatarSrc = importImages && importImages[idx] ? importImages[idx] : '';
+                const avatarHtml = avatarSrc ? `<img src="${avatarSrc}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; margin-right:12px;" />` : `<div style="width:40px; height:40px; border-radius:50%; background:#667eea; color:white; display:flex; justify-content:center; align-items:center; font-size:14px; margin-right:12px;">${(m.name || '未')[0]}</div>`;
+                html += `<div style="padding:8px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center;">
+                    ${avatarHtml}
+                    <div style="flex:1;">
+                        <strong>${m.name || '未知'}</strong>
+                        <span style="color:#888; margin-left:8px;">${m.title || ''}</span>
+                        <div style="font-size:12px;color:#999;margin-top:2px;">${m.phone || ''} ${m.email || ''}</div>
+                    </div>
+                    <span style="font-size:12px; padding:2px 8px; background:#f0f0ff; border-radius:10px; color:#667eea;">${catLabels[m.category] || m.category || '未分类'}</span>
+                </div>`;
+            });
+            html += '</div>';
+            resultDiv.innerHTML = html;
+        }
+
         function showImportMembersModal() {
             const modal = document.getElementById('importMembersModal');
             if (!modal) {
@@ -14795,8 +15025,8 @@ ${JSON.stringify(excelDataArray, null, 2)}
                             <input type="file" id="csvFileInput" accept=".csv" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
                         </div>
                         <div id="docImportSection" style="display:none; margin-bottom:16px;">
-                            <p style="color:#666; font-size:13px; margin-bottom:8px;">上传 Word(.docx) 或 PDF 文档，AI 自动提取成员信息</p>
-                            <input type="file" id="docFileInput" accept=".docx,.pdf" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                            <p style="color:#666; font-size:13px; margin-bottom:8px;">上传 Word(.docx)、PDF 或 TXT 文档，系统在浏览器本地自动提取成员信息</p>
+                            <input type="file" id="docFileInput" accept=".docx,.pdf,.txt" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
                             <div id="importMembersResult" style="margin-top:12px;"></div>
                         </div>
                         <div id="importMembersLoading" style="display:none; text-align:center; padding:20px;">
@@ -14892,70 +15122,17 @@ ${JSON.stringify(excelDataArray, null, 2)}
                     const file = e.target.files[0];
                     if (!file) return;
 
-                    const apiKey = getApiKey();
-                    if (!apiKey) {
-                        alert('请先在系统设置中配置阿里云百炼 API Key！\n\n（系统管理 → 系统设置 → 阿里云百炼 API Key）');
-                        docInput.value = '';
-                        return;
-                    }
-
                     document.getElementById('importMembersLoading').style.display = 'block';
                     document.getElementById('confirmImportBtn').disabled = true;
                     document.getElementById('importMembersResult').innerHTML = '';
                     pendingImportMembers = [];
 
                     try {
-                        const formData = new FormData();
-                        formData.append('file', file);
-                        formData.append('apiKey', apiKey);
-
-                        const response = await fetch('/api/import-members', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        const data = await response.json();
-
-                        if (!response.ok) {
-                            throw new Error(data.error || '导入失败');
-                        }
-
-                        pendingImportMembers = data.members || [];
-                        const importImages = data.images || [];
-                        const resultDiv = document.getElementById('importMembersResult');
-
-                        if (pendingImportMembers.length === 0) {
-                            resultDiv.innerHTML = `<div style="padding:12px; background:#fff3e0; border-radius:6px; color:#e65100;">⚠ 未从文档中提取到成员信息，请检查文档内容</div>`;
-                        } else {
-                            let html = `<div style="padding:12px; background:#e8f5e9; border-radius:6px; color:#2e7d32; margin-bottom:12px;">✓ 成功提取 ${pendingImportMembers.length} 位成员信息，${importImages.length} 张图片：</div>`;
-                            html += '<div style="max-height:300px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:8px;">';
-                            pendingImportMembers.forEach((m, idx) => {
-                                const catLabels = { advisor: '导师', '2022': '2022级', '2023': '2023级', '2024': '2024级', '2025': '2025级', '2026': '2026级' };
-                                const avatarIdx = m.avatarImageIndex !== undefined && m.avatarImageIndex >= 0 && m.avatarImageIndex < importImages.length ? m.avatarImageIndex : -1;
-                                const avatarSrc = avatarIdx >= 0 ? importImages[avatarIdx] : '';
-                                const avatarHtml = avatarSrc ? `<img src="${avatarSrc}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; margin-right:12px;" />` : `<div style="width:40px; height:40px; border-radius:50%; background:#667eea; color:white; display:flex; justify-content:center; align-items:center; font-size:14px; margin-right:12px;">${(m.name || '未')[0]}</div>`;
-                                html += `<div style="padding:8px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center;">
-                                    ${avatarHtml}
-                                    <div style="flex:1;">
-                                        <strong>${m.name || '未知'}</strong>
-                                        <span style="color:#888; margin-left:8px;">${m.title || ''}</span>
-                                    </div>
-                                    <span style="font-size:12px; padding:2px 8px; background:#f0f0ff; border-radius:10px; color:#667eea;">${catLabels[m.category] || m.category || '未分类'}</span>
-                                </div>`;
-                            });
-                            html += '</div>';
-                            resultDiv.innerHTML = html;
-                        }
-
-                        if (importImages.length > 0) {
-                            pendingImportMembers.forEach(m => {
-                                if (m.avatarImageIndex !== undefined && m.avatarImageIndex >= 0 && m.avatarImageIndex < importImages.length) {
-                                    m.avatar = importImages[m.avatarImageIndex];
-                                }
-                            });
-                        }
+                        const text = await readMemberImportDocument(file);
+                        pendingImportMembers = parseImportedMembersFromText(text, file.name);
+                        renderPendingImportMembers([]);
                     } catch (error) {
-                        document.getElementById('importMembersResult').innerHTML = `<div style="padding:12px; background:#ffebee; border-radius:6px; color:#c62828;">✗ 导入失败：${error.message}</div>`;
+                        document.getElementById('importMembersResult').innerHTML = `<div style="padding:12px; background:#ffebee; border-radius:6px; color:#c62828;">✗ 识别失败：${error.message}</div>`;
                     } finally {
                         document.getElementById('importMembersLoading').style.display = 'none';
                         document.getElementById('confirmImportBtn').disabled = false;
@@ -14971,12 +15148,15 @@ ${JSON.stringify(excelDataArray, null, 2)}
             }
 
             let count = 0;
+            let updated = 0;
+            pendingImportMembers = normalizeTeamMembers(pendingImportMembers);
             pendingImportMembers.forEach(m => {
-                const newId = teamMemberData.length > 0 ? Math.max(...teamMemberData.map(d => d.id)) + 1 : 1;
-                teamMemberData.push({
-                    id: newId,
+                const idx = teamMemberData.findIndex(function(d) {
+                    return d.name === m.name || (m.email && d.email === m.email) || (m.phone && d.phone === m.phone);
+                });
+                const next = {
                     name: m.name || '',
-                    category: m.category || '2024',
+                    category: normalizeMemberCategory(m.category || '2024', m.title),
                     title: m.title || '',
                     research: m.research || '',
                     education: m.education || '',
@@ -14986,15 +15166,25 @@ ${JSON.stringify(excelDataArray, null, 2)}
                     awards: m.awards || '',
                     bio: m.bio || '',
                     avatar: m.avatar || '',
-                    fileName: ''
-                });
-                count++;
+                    fileName: m.fileName || ''
+                };
+                if (idx >= 0) {
+                    teamMemberData[idx] = Object.assign({}, teamMemberData[idx], next, {
+                        id: teamMemberData[idx].id,
+                        avatar: next.avatar || teamMemberData[idx].avatar || ''
+                    });
+                    updated++;
+                } else {
+                    const newId = teamMemberData.length > 0 ? Math.max(...teamMemberData.map(d => Number(d.id) || 0)) + 1 : 1;
+                    teamMemberData.push(Object.assign({ id: newId }, next));
+                    count++;
+                }
             });
 
             saveTeamMemberData();
             renderTeamMembers();
             closeImportMembersModal();
-            alert(`成功导入 ${count} 条成员记录`);
+            alert(`导入完成：新增 ${count} 条，更新 ${updated} 条。成员、账号权限和云端已同步。`);
         }
         
         function parseCSVLine(line) {
