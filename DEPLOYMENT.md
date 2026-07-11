@@ -56,20 +56,18 @@ python mlops_report.py --endpoint http://<portal-host>:8000/api/mlops/report --j
 
 ## 标注文件全员共享
 
-标注数据集默认上传到 Supabase Storage 桶 `annotations`，任务元数据走现有云端同步，因此团队成员都能查看并导出真实文件。
-
-开通步骤（只需一次）：
-
-1. 打开 Supabase Dashboard → SQL Editor
-2. 执行 `123123/supabase_annotations_storage.sql`
-3. 确认本机已配置 `123123/config.local.js` 与 `123123/.env` 中的 `SUPABASE_URL` / `SUPABASE_KEY`
-4. 重启 `python start_web.py` 后重新创建标注任务并上传
+标注数据集会先落到本机网关，再自动打包分片写入现有 Supabase `patents` 同步通道（`classification=__APP_SYNC_BLOB__`），**不依赖 Storage 桶**，团队成员均可导出真实 ZIP。
 
 上传优先级：
 
-1. 云端共享（全员可见）
-2. 本机网关备份（同一门户实例可导出）
-3. 浏览器 IndexedDB（仅本机兜底，不作为团队共享）
+1. 本机网关落盘
+2. 自动发布到团队云端分片（全员可见）
+3. 可选 Supabase Storage 桶（若已执行 `supabase_annotations_storage.sql`）
+4. 浏览器 IndexedDB（仅本机兜底）
+
+若旧任务只有本机备份、尚未上云：打开任务详情 → **发布到团队云端**。
+
+可选：若仍想使用 Storage 桶，可执行 `123123/supabase_annotations_storage.sql`。
 
 ## 安全要求
 

@@ -24417,11 +24417,11 @@ ${ocrText}`
         const metaRows = await supabaseRequest(
             'GET',
             'patents?classification=eq.' + encodeURIComponent(mark) + '&patent_number=eq.' + encodeURIComponent(metaPn),
-            { select: 'abstract', limit: 1 }
+            { select: 'summary', limit: 1 }
         );
-        if (!metaRows || !metaRows.length || !metaRows[0].abstract) return false;
+        if (!metaRows || !metaRows.length || !metaRows[0].summary) return false;
         let meta;
-        try { meta = JSON.parse(metaRows[0].abstract); } catch (e) { return false; }
+        try { meta = JSON.parse(metaRows[0].summary); } catch (e) { return false; }
         const chunks = Number(meta.chunks || 0);
         if (!chunks) return false;
         const parts = [];
@@ -24430,12 +24430,12 @@ ${ocrText}`
             const rows = await supabaseRequest(
                 'GET',
                 'patents?classification=eq.' + encodeURIComponent(mark) + '&patent_number=eq.' + encodeURIComponent(pn),
-                { select: 'abstract', limit: 1 }
+                { select: 'summary', limit: 1 }
             );
-            if (!rows || !rows.length || !rows[0].abstract) {
+            if (!rows || !rows.length || !rows[0].summary) {
                 throw new Error('缺少云端分片 ' + i);
             }
-            const bin = atob(String(rows[0].abstract));
+            const bin = atob(String(rows[0].summary));
             const arr = new Uint8Array(bin.length);
             for (let j = 0; j < bin.length; j++) arr[j] = bin.charCodeAt(j);
             parts.push(arr);

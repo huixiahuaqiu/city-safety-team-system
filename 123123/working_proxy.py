@@ -193,7 +193,7 @@ def push_jobs_to_cloud(jobs):
             SUPABASE_URL + '/rest/v1/patents'
             + '?classification=eq.' + urllib.parse.quote(CLOUD_SYNC_MARK)
             + '&patent_number=eq.' + urllib.parse.quote(CLOUD_SYNC_PN)
-            + '&select=id,abstract'
+            + '&select=id,summary'
         )
         req = urllib.request.Request(q, headers=headers, method='GET')
         with urllib.request.urlopen(req, timeout=15) as resp:
@@ -203,7 +203,7 @@ def push_jobs_to_cloud(jobs):
         if rows:
             row_id = rows[0].get('id')
             try:
-                existing = json.loads(rows[0].get('abstract') or '[]')
+                existing = json.loads(rows[0].get('summary') or '[]')
             except Exception:
                 existing = []
         if not isinstance(existing, list):
@@ -229,14 +229,16 @@ def push_jobs_to_cloud(jobs):
         merged.sort(key=lambda x: str(x.get('lastReportAt') or x.get('updatedAt') or ''), reverse=True)
 
         body = {
+            'patent_type': '同步',
+            'name': 'APP_SYNC:modelTrainingData',
             'classification': CLOUD_SYNC_MARK,
             'patent_number': CLOUD_SYNC_PN,
-            'title': 'APP_SYNC:modelTrainingData',
-            'abstract': json.dumps(merged, ensure_ascii=False),
-            'inventors': 'system',
+            'summary': json.dumps(merged, ensure_ascii=False),
+            'inventor': 'system',
             'applicant': 'system',
             'application_date': _today(),
-            'status': 'synced',
+            'status': 'SYNC',
+            'remark': 'mlops-cloud-sync',
         }
         data = json.dumps(body).encode('utf-8')
         if row_id:
@@ -378,7 +380,7 @@ def _blob_chunk_pn(task_id, index):
     return ANNOTATION_BLOB_PREFIX + str(task_id) + '_c' + str(index)
 
 
-def _upsert_patent_row(patent_number, title, abstract, headers):
+def _upsert_patent_row(patent_number, title, summary, headers):
     q = (
         SUPABASE_URL + '/rest/v1/patents'
         + '?classification=eq.' + urllib.parse.quote(ANNOTATION_BLOB_MARK)
@@ -389,14 +391,14 @@ def _upsert_patent_row(patent_number, title, abstract, headers):
     with urllib.request.urlopen(req, timeout=30) as resp:
         rows = json.loads(resp.read().decode('utf-8'))
     body = {
-        'classification': ANNOTATION_BLOB_MARK,
+        'patent_type': '同步',
+        'name': str(title)[:200],
         'patent_number': patent_number,
-        'title': title[:200],
-        'abstract': abstract,
-        'inventors': 'system',
+        'classification': ANNOTATION_BLOB_MARK,
+        'status': 'SYNC',
         'applicant': 'system',
-        'application_date': _today(),
-        'status': 'synced',
+        'summary': summary,
+        'remark': 'annotation-cloud-blob',
     }
     data = json.dumps(body, ensure_ascii=False).encode('utf-8')
     if rows:
@@ -409,19 +411,19 @@ def _upsert_patent_row(patent_number, title, abstract, headers):
         resp.read()
 
 
-def _get_patent_abstract(patent_number, headers):
+def _get_patent_summary(patent_number, headers):
     q = (
         SUPABASE_URL + '/rest/v1/patents'
         + '?classification=eq.' + urllib.parse.quote(ANNOTATION_BLOB_MARK)
         + '&patent_number=eq.' + urllib.parse.quote(patent_number)
-        + '&select=abstract'
+        + '&select=summary'
     )
     req = urllib.request.Request(q, headers=headers, method='GET')
     with urllib.request.urlopen(req, timeout=30) as resp:
         rows = json.loads(resp.read().decode('utf-8'))
     if not rows:
         return None
-    return rows[0].get('abstract')
+    return rows[0].get('summary')
 
 
 def share_annotation_task_to_cloud(task_id):
@@ -463,7 +465,7 @@ def share_annotation_task_to_cloud(task_id):
 
 def fetch_annotation_task_from_cloud(task_id):
     headers = _supabase_headers()
-    meta_raw = _get_patent_abstract(_blob_meta_pn(task_id), headers)
+    meta_raw = _get_patent_summary(_blob_meta_pn(task_id), headers)
     if not meta_raw:
         raise FileNotFoundError('cloud share meta not found')
     meta = json.loads(meta_raw)
@@ -472,7 +474,7 @@ def fetch_annotation_task_from_cloud(task_id):
         raise FileNotFoundError('cloud share empty')
     parts = []
     for idx in range(chunks):
-        b64 = _get_patent_abstract(_blob_chunk_pn(task_id, idx), headers)
+        b64 = _get_patent_summary(_blob_chunk_pn(task_id, idx), headers)
         if not b64:
             raise FileNotFoundError('missing cloud chunk %s' % idx)
         parts.append(base64.b64decode(b64))
@@ -561,6 +563,10 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self._json(200, {'ok': True, 'share': meta})
             except FileNotFoundError as e:
                 self._json(404, {'ok': False, 'error': str(e)})
+            except urllib.error.HTTPError as e:
+                detail = e.read().decode('utf-8', errors='ignore')
+                audit_event('annotation_share_failed', ip=self.client_address[0], taskId=task_id, error=detail or str(e))
+                self._json(400, {'ok': False, 'error': detail or str(e)})
             except Exception as e:
                 audit_event('annotation_share_failed', ip=self.client_address[0], taskId=task_id, error=str(e))
                 self._json(400, {'ok': False, 'error': str(e)})
