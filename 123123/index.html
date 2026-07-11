@@ -4200,43 +4200,114 @@
             
 
             
-            <!-- 模型训练管理 -->
-            <div id="model_training" class="module">
-                <div class="card">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                        <h2>🧠 模型训练管理</h2>
-                        <button class="btn" onclick="showAddModelModal()">+ 新建模型</button>
-                    </div>
-                    <div style="display:flex;gap:16px;margin-bottom:20px;">
-                        <div style="flex:1;background:#f5f5f5;padding:16px;border-radius:8px;">
-                            <div style="font-size:24px;font-weight:bold;color:#6a1b9a;">12</div>
-                            <div style="font-size:13px;color:#666;">总模型数</div>
+            <!-- 模型训练管理：本机 + 远程双环境台账 -->
+            <div id="model_training" class="module" style="padding:0;">
+                <div style="padding:24px; background:#fff; border-bottom:1px solid #f0f0f0;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                        <div>
+                            <h1 style="font-size:24px; font-weight:700; color:#111827; margin:0;">模型训练台账</h1>
+                            <p style="font-size:14px; color:#6b7280; margin:6px 0 0;">本机与远程训练任务台账 · 支持 MLOps 自动上报同步</p>
                         </div>
-                        <div style="flex:1;background:#e8f5e9;padding:16px;border-radius:8px;">
-                            <div style="font-size:24px;font-weight:bold;color:#2e7d32;">3</div>
-                            <div style="font-size:13px;color:#666;">训练中</div>
-                        </div>
-                        <div style="flex:1;background:#fff3e0;padding:16px;border-radius:8px;">
-                            <div style="font-size:24px;font-weight:bold;color:#f57c00;">9</div>
-                            <div style="font-size:13px;color:#666;">已完成</div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" onclick="toggleMlopsPanel()" style="padding:10px 16px; font-size:13px;">MLOps 接入</button>
+                            <button class="btn btn-secondary" onclick="pullMlopsJobs(true)" style="padding:10px 16px; font-size:13px;">立即同步</button>
+                            <button class="btn" onclick="showAddModelModal()" style="padding:10px 20px; font-size:13px;">＋ 登记训练任务</button>
                         </div>
                     </div>
-                    <div style="overflow-x:auto;">
-                        <table style="width:100%;border-collapse:collapse;">
-                            <thead>
-                                <tr style="background:#f5f5f5;">
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">模型名称</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">类型</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">状态</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">精度</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">创建时间</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="modelTrainingTable"></tbody>
-                        </table>
+                    <div id="mlopsPanel" style="display:none; margin-top:14px; padding:14px 16px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;">
+                        <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+                            <div style="flex:1; min-width:240px;">
+                                <div style="font-size:13px; font-weight:600; color:#111827; margin-bottom:6px;">自动 MLOps</div>
+                                <div style="font-size:12px; color:#6b7280; line-height:1.7;">
+                                    训练脚本向本机接口上报后，台账自动合并并推送云端。远程机器也可对可访问的本机地址 POST。
+                                </div>
+                                <div style="margin-top:8px; font-size:12px; color:#374151;">
+                                    上报地址：<code id="mlopsEndpointText" style="background:#fff;padding:2px 6px;border-radius:4px;">http://127.0.0.1:8000/api/mlops/report</code>
+                                    · Token：<code style="background:#fff;padding:2px 6px;border-radius:4px;">city-safety-mlops</code>
+                                </div>
+                                <div style="margin-top:6px; font-size:12px; color:#9ca3af;" id="mlopsSyncHint">尚未自动同步</div>
+                            </div>
+                            <div style="font-size:12px; color:#374151; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; max-width:420px; font-family:ui-monospace,Consolas,monospace; line-height:1.55; word-break:break-all;">
+                                python mlops_report.py --job-id exp-1 --name 裂缝检测 --status training --progress 40 --env local
+                            </div>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:#374151; cursor:pointer;">
+                            <input type="checkbox" id="mlopsAutoPoll" checked onchange="setMlopsAutoPoll(this.checked)">
+                            进入本页后每 8 秒自动拉取 MLOps 状态
+                        </label>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; margin-top:18px;">
+                        <div onclick="setModelTrainingStatusFilter(''); setModelTrainingEnvFilter('');" style="cursor:pointer; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#4f46e5; line-height:1;" id="mtStatTotal">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">全部任务</div>
+                        </div>
+                        <div onclick="setModelTrainingEnvFilter('local')" style="cursor:pointer; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#2563eb; line-height:1;" id="mtStatLocal">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">本机</div>
+                        </div>
+                        <div onclick="setModelTrainingEnvFilter('remote')" style="cursor:pointer; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#7c3aed; line-height:1;" id="mtStatRemote">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">远程</div>
+                        </div>
+                        <div onclick="setModelTrainingStatusFilter('training')" style="cursor:pointer; background:#fff7ed; border:1px solid #ffedd5; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#ea580c; line-height:1;" id="mtStatTraining">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">训练中</div>
+                        </div>
+                        <div onclick="setModelTrainingStatusFilter('completed')" style="cursor:pointer; background:#f0fdf4; border:1px solid #dcfce7; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#16a34a; line-height:1;" id="mtStatCompleted">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">已完成</div>
+                        </div>
+                        <div onclick="setModelTrainingStatusFilter('failed')" style="cursor:pointer; background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#dc2626; line-height:1;" id="mtStatFailed">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">失败</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+                        <input type="text" id="modelTrainingSearch" placeholder="搜索名称、服务器、任务号、负责人..." oninput="renderModelTrainingList()" style="flex:1; min-width:200px; padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px;">
+                        <select id="modelTrainingEnvFilter" onchange="renderModelTrainingList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部环境</option>
+                            <option value="local">本机</option>
+                            <option value="remote">远程</option>
+                        </select>
+                        <select id="modelTrainingTypeFilter" onchange="renderModelTrainingList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部架构</option>
+                            <option value="YOLOv8">YOLOv8 检测</option>
+                            <option value="Qwen3-VL">Qwen3-VL 多模态</option>
+                            <option value="ResNet">ResNet 分类</option>
+                            <option value="其他">其他</option>
+                        </select>
+                        <select id="modelTrainingStatusFilter" onchange="renderModelTrainingList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部状态</option>
+                            <option value="pending">待启动</option>
+                            <option value="training">训练中</option>
+                            <option value="completed">已完成</option>
+                            <option value="failed">失败</option>
+                        </select>
+                        <select id="modelTrainingOwnerFilter" onchange="renderModelTrainingList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部成员</option>
+                        </select>
                     </div>
                 </div>
+                <div style="padding:20px 24px 28px; background:#f8fafc;">
+                    <div id="modelTrainingList" style="display:flex; flex-direction:column; gap:12px;"></div>
+                    <div id="modelTrainingEmpty" style="display:none; text-align:center; padding:48px 16px; color:#9ca3af; background:#fff; border-radius:14px; border:1px dashed #e5e7eb;">
+                        暂无匹配的训练任务，可点击右上角登记本机或远程任务
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模型详情抽屉 -->
+            <div id="modelDetailOverlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.42); z-index:999;" onclick="closeModelDetailDrawer()"></div>
+            <div id="modelDetailDrawer" style="display:none; position:fixed; top:0; right:0; width:min(440px,100%); height:100%; background:#fff; z-index:1000; box-shadow:-12px 0 40px rgba(15,23,42,.12); overflow:auto;">
+                <div style="padding:18px 20px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#fff; z-index:1;">
+                    <div>
+                        <div id="modelDetailStatus" style="display:inline-block; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; margin-bottom:6px;"></div>
+                        <h3 id="modelDetailTitle" style="margin:0; font-size:18px; color:#111827;"></h3>
+                    </div>
+                    <button onclick="closeModelDetailDrawer()" style="width:32px;height:32px;border:none;background:#f3f4f6;border-radius:50%;cursor:pointer;font-size:16px;">×</button>
+                </div>
+                <div id="modelDetailBody" style="padding:20px;"></div>
+                <div id="modelDetailActions" style="padding:16px 20px 24px; border-top:1px solid #f0f0f0; display:flex; gap:10px; flex-wrap:wrap; position:sticky; bottom:0; background:#fff;"></div>
             </div>
             
             <!-- AI数据标注工具 -->
@@ -7766,6 +7837,8 @@
             try { if (typeof renderNoticeList === 'function') renderNoticeList(); } catch (e) {}
             try { if (typeof populateWeeklyReportOwnerSelects === 'function') populateWeeklyReportOwnerSelects(); } catch (e) {}
             try { if (typeof renderWeeklyReportList === 'function') renderWeeklyReportList(); } catch (e) {}
+            try { if (typeof renderModelTrainingList === 'function') renderModelTrainingList(); } catch (e) {}
+            try { if (typeof renderAnnotationList === 'function') renderAnnotationList(); } catch (e) {}
             try { if (typeof updateLongitudinalFilterCounts === 'function') updateLongitudinalFilterCounts(); if (typeof applyLongitudinalFilters === 'function') applyLongitudinalFilters(); } catch (e) {}
             try { if (typeof updateHorizontalFilterCounts === 'function') updateHorizontalFilterCounts(); if (typeof applyHorizontalFilters === 'function') applyHorizontalFilters(); } catch (e) {}
             try { if (typeof updateSchoolFilterCounts === 'function') updateSchoolFilterCounts(); if (typeof applySchoolFilters === 'function') applySchoolFilters(); } catch (e) {}
@@ -14620,6 +14693,8 @@ ${JSON.stringify(excelDataArray, null, 2)}
             reconcilePeopleFieldList(typeof datasetData !== 'undefined' ? datasetData : null, ['uploader'], 'datasetData');
             reconcilePeopleFieldList(typeof reportData !== 'undefined' ? reportData : null, ['uploader'], 'reportData');
             reconcilePeopleFieldList(typeof sharedFileData !== 'undefined' ? sharedFileData : null, ['uploader'], 'sharedFileData');
+            reconcilePeopleFieldList(typeof modelTrainingData !== 'undefined' ? modelTrainingData : null, ['owner'], 'modelTrainingData');
+            reconcilePeopleFieldList(typeof annotationData !== 'undefined' ? annotationData : null, ['owner'], 'annotationData');
 
             if (typeof meetingData !== 'undefined' && Array.isArray(meetingData)) {
                 let meetingChanged = false;
@@ -22816,119 +22891,670 @@ ${ocrText}`
 
     // ===== 智能工具模块 =====
 
-    // 模型训练管理
+    // 模型训练台账（本机 + 远程双环境 + MLOps 自动同步）
     let modelTrainingData = [];
+    let modelTrainingFilterStatus = '';
+    let modelTrainingFilterEnv = '';
+    let mlopsPollTimer = null;
+    let mlopsAutoPollEnabled = true;
+    let mlopsLastSyncAt = '';
+
+    function getModelOwnerNames() {
+        if (typeof getRealTeamOwnerNames === 'function') return getRealTeamOwnerNames();
+        return (teamMemberData || []).map(m => m.name).filter(Boolean);
+    }
+
+    function pickModelOwner(idx) {
+        const owners = getModelOwnerNames();
+        if (!owners.length) return (currentUser && currentUser.realName) || '团队成员';
+        return owners[idx % owners.length];
+    }
+
+    function modelEnvMeta(env) {
+        if (env === 'remote') return { text: '远程', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' };
+        return { text: '本机', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' };
+    }
+
+    function modelStatusMeta(status) {
+        if (status === 'completed') return { text: '已完成', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' };
+        if (status === 'training') return { text: '训练中', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' };
+        if (status === 'failed') return { text: '失败', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+        return { text: '待启动', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' };
+    }
+
+    function toggleMlopsPanel() {
+        const el = document.getElementById('mlopsPanel');
+        if (!el) return;
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        const ep = document.getElementById('mlopsEndpointText');
+        if (ep) ep.textContent = (location.origin || 'http://127.0.0.1:8000') + '/api/mlops/report';
+    }
+
+    function setMlopsAutoPoll(on) {
+        mlopsAutoPollEnabled = !!on;
+        localStorage.setItem('mlopsAutoPoll', mlopsAutoPollEnabled ? '1' : '0');
+        if (mlopsAutoPollEnabled) startMlopsPolling();
+        else stopMlopsPolling();
+    }
+
+    function startMlopsPolling() {
+        stopMlopsPolling();
+        if (!mlopsAutoPollEnabled) return;
+        pullMlopsJobs(false);
+        mlopsPollTimer = setInterval(function() {
+            const mod = document.getElementById('model_training');
+            if (!mod || !mod.classList.contains('active')) return;
+            pullMlopsJobs(false);
+        }, 8000);
+    }
+
+    function stopMlopsPolling() {
+        if (mlopsPollTimer) {
+            clearInterval(mlopsPollTimer);
+            mlopsPollTimer = null;
+        }
+    }
+
+    function mergeMlopsJobsIntoTraining(jobs) {
+        if (!Array.isArray(jobs) || !jobs.length) return false;
+        let changed = false;
+        jobs.forEach(function(job) {
+            const jid = String(job.jobId || '').trim();
+            if (!jid) return;
+            let idx = modelTrainingData.findIndex(function(m) { return String(m.jobId || '') === jid; });
+            const patch = {
+                jobId: jid,
+                name: job.name || jid,
+                code: job.code || jid,
+                type: job.type || '其他',
+                scenario: job.scenario || '城市安全监测',
+                env: job.env === 'local' ? 'local' : 'remote',
+                server: job.server || '',
+                owner: job.owner || '',
+                dataset: job.dataset || '',
+                status: job.status || 'training',
+                metric: job.metric || '',
+                progress: job.progress != null ? Number(job.progress) : 0,
+                logUrl: job.logUrl || '',
+                weightPath: job.weightPath || '',
+                description: job.description || '',
+                updatedAt: job.updatedAt || new Date().toISOString().split('T')[0],
+                lastReportAt: job.lastReportAt || '',
+                syncSource: 'mlops'
+            };
+            if (!patch.owner && typeof pickModelOwner === 'function') patch.owner = pickModelOwner(0);
+            if (idx === -1) {
+                const newId = modelTrainingData.length > 0 ? Math.max.apply(null, modelTrainingData.map(function(m) { return Number(m.id) || 0; })) + 1 : 1;
+                modelTrainingData.unshift(Object.assign({ id: newId, createdAt: patch.updatedAt }, patch));
+                changed = true;
+            } else {
+                const prev = modelTrainingData[idx];
+                const next = Object.assign({}, prev, patch, {
+                    id: prev.id,
+                    createdAt: prev.createdAt || patch.updatedAt,
+                    owner: patch.owner || prev.owner
+                });
+                const same = JSON.stringify({
+                    s: prev.status, p: prev.progress, m: prev.metric, u: prev.updatedAt, l: prev.lastReportAt, w: prev.weightPath, g: prev.logUrl
+                }) === JSON.stringify({
+                    s: next.status, p: next.progress, m: next.metric, u: next.updatedAt, l: next.lastReportAt, w: next.weightPath, g: next.logUrl
+                });
+                if (!same) {
+                    modelTrainingData[idx] = next;
+                    changed = true;
+                }
+            }
+        });
+        return changed;
+    }
+
+    async function pullMlopsJobs(showToast) {
+        const hint = document.getElementById('mlopsSyncHint');
+        try {
+            if (showToast && typeof syncFromCloudAndRefresh === 'function') {
+                try { await syncFromCloudAndRefresh({ silent: true }); } catch (e) {}
+            }
+            const resp = await fetch('/api/mlops/jobs', { cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            const jobs = (data && data.jobs) || [];
+            const changed = mergeMlopsJobsIntoTraining(jobs);
+            if (changed) saveModelTrainingData();
+            mlopsLastSyncAt = new Date().toLocaleString('zh-CN');
+            if (hint) hint.textContent = '最近同步：' + mlopsLastSyncAt + ' · 收到 ' + jobs.length + ' 条 MLOps 任务' + (changed ? '（已更新台账）' : '');
+            renderModelTrainingList();
+            if (showToast) {
+                if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner(changed ? 'MLOps 状态已更新' : 'MLOps 已同步（无变更）', false);
+                else alert(changed ? 'MLOps 状态已更新' : 'MLOps 已同步（无变更）');
+            }
+        } catch (e) {
+            if (hint) hint.textContent = '本机 MLOps 接口不可用（请用 start_web.py 启动）。云端同步仍可用。';
+            if (showToast) {
+                if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('无法连接本机 MLOps，请确认本地服务已启动', true);
+                else alert('无法连接本机 MLOps 接口');
+            }
+        }
+    }
+
+    function buildTeamDefaultModelTraining() {
+        return [
+            { id: 1, name: '结构裂缝检测-YOLOv8', code: 'Crack-YOLOv8', type: 'YOLOv8', scenario: '结构损伤诊断', env: 'local', server: '本机-RTX4090', jobId: 'exp-crack-0612', status: 'completed', metric: 'mAP 94.6%', progress: 100, owner: pickModelOwner(2), dataset: 'CrackDataset-CQ', logUrl: 'http://127.0.0.1:6006/#scalars', weightPath: 'D:/experiments/crack-yolov8/best.pt', createdAt: '2026-05-18', updatedAt: '2026-06-12', description: '本机训练：混凝土构件表面裂缝检测。' },
+            { id: 2, name: '振动图像损伤诊断-Qwen3VL', code: 'VibDamage-Qwen3VL', type: 'Qwen3-VL', scenario: '结构振动测试', env: 'remote', server: 'gpu-lab-02', jobId: 'job-vib-0711', status: 'training', metric: 'Acc 86.2%', progress: 68, owner: pickModelOwner(2), dataset: 'VibImage-Tower', logUrl: 'http://gpu-lab-02:6006/#scalars', weightPath: '/data/exp/vib-qwen3vl/last.pt', createdAt: '2026-07-01', updatedAt: '2026-07-11', description: '远程训练：图像+振动多模态损伤诊断。' },
+            { id: 3, name: '城市区域灾害风险识别', code: 'UrbanRisk-ResNet', type: 'ResNet', scenario: '城市灾害风险', env: 'remote', server: 'gpu-lab-01', jobId: 'job-risk-0620', status: 'completed', metric: 'F1 91.8%', progress: 100, owner: pickModelOwner(1), dataset: 'UrbanRisk-2025', logUrl: '', weightPath: '/nas/models/urban-risk/best.pth', createdAt: '2026-05-28', updatedAt: '2026-06-20', description: '远程训练：城市区域灾害风险场景分类。' },
+            { id: 4, name: '输电塔损伤摄影测量', code: 'TowerDamage-YOLOv8', type: 'YOLOv8', scenario: '结构损伤诊断', env: 'remote', server: 'gpu-lab-02', jobId: 'job-tower-0710', status: 'training', metric: 'mAP 79.4%', progress: 52, owner: pickModelOwner(6), dataset: 'TowerUAV-Iter', logUrl: 'http://gpu-lab-02:6006/#scalars', weightPath: '/data/exp/tower-yolo/last.pt', createdAt: '2026-07-03', updatedAt: '2026-07-10', description: '远程训练：无人机摄影测量输电塔损伤检测。' },
+            { id: 5, name: '装配式节点损伤识别', code: 'PCJoint-Qwen3VL', type: 'Qwen3-VL', scenario: '结构抗震', env: 'local', server: '本机-RTX4090', jobId: 'exp-pcjoint-0630', status: 'completed', metric: 'Acc 93.1%', progress: 100, owner: pickModelOwner(1), dataset: 'PCJoint-Damage', logUrl: 'http://127.0.0.1:6006/#scalars', weightPath: 'D:/experiments/pcjoint/best.pt', createdAt: '2026-06-08', updatedAt: '2026-06-30', description: '本机训练：装配式梁柱节点损伤识别。' },
+            { id: 6, name: '工地安全帽佩戴检测', code: 'Helmet-YOLOv8', type: 'YOLOv8', scenario: '城市安全监测', env: 'local', server: '本机-RTX3060', jobId: 'exp-helmet-0618', status: 'completed', metric: 'mAP 96.2%', progress: 100, owner: pickModelOwner(4), dataset: 'HelmetDataset', logUrl: '', weightPath: 'D:/experiments/helmet/best.pt', createdAt: '2026-06-02', updatedAt: '2026-06-18', description: '本机训练：施工现场安全帽检测。' },
+            { id: 7, name: '烟雾火灾早期预警', code: 'SmokeFire-YOLOv8', type: 'YOLOv8', scenario: '城市安全监测', env: 'remote', server: 'gpu-lab-01', jobId: 'job-smoke-0605', status: 'completed', metric: 'mAP 95.0%', progress: 100, owner: pickModelOwner(5), dataset: 'SmokeFire-Mix', logUrl: '', weightPath: '/nas/models/smoke-fire/best.pt', createdAt: '2026-05-22', updatedAt: '2026-06-05', description: '远程训练：烟雾与明火联合检测。' },
+            { id: 8, name: '三维数字模型构件分割', code: 'BIMSeg-Qwen3VL', type: 'Qwen3-VL', scenario: '三维数字模型', env: 'local', server: '本机-RTX4090', jobId: 'exp-bimseg-0708', status: 'pending', metric: '—', progress: 0, owner: pickModelOwner(7), dataset: 'Struct3D-Parts', logUrl: '', weightPath: 'D:/experiments/bimseg/', createdAt: '2026-07-08', updatedAt: '2026-07-08', description: '本机待启动：三维数字模型构件语义分割。' }
+        ];
+    }
+
+    function saveModelTrainingData() {
+        localStorage.setItem('modelTrainingData', JSON.stringify(modelTrainingData));
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('modelTrainingData', JSON.stringify(modelTrainingData)); } catch (e) {}
+    }
+
+    function normalizeModelTrainingItem(m, idx) {
+        const next = Object.assign({}, m);
+        if (!next.code) next.code = next.name || ('model-' + (next.id || idx));
+        if (!next.scenario) next.scenario = '城市安全监测';
+        if (next.accuracy && !next.metric) next.metric = next.accuracy;
+        if (next.progress == null) {
+            next.progress = next.status === 'completed' ? 100 : (next.status === 'training' ? 50 : 0);
+        }
+        if (!next.env) next.env = (idx % 2 === 0) ? 'local' : 'remote';
+        if (!next.server) next.server = next.env === 'local' ? '本机-RTX4090' : 'gpu-lab-01';
+        if (!next.jobId) next.jobId = next.code || ('job-' + (next.id || idx));
+        if (next.logUrl == null) next.logUrl = '';
+        if (next.weightPath == null) next.weightPath = '';
+        if (!next.updatedAt) next.updatedAt = next.createdAt || '';
+        if (!['pending', 'training', 'completed', 'failed'].includes(next.status)) {
+            next.status = next.status === 'completed' ? 'completed' : 'pending';
+        }
+        return next;
+    }
+
+    function migrateModelTrainingToTeam() {
+        const demoNames = ['YOLOv8-Safety', 'Qwen3-VL-Violence', 'YOLOv8-Object', 'YOLOv8-Sign'];
+        if (!Array.isArray(modelTrainingData) || !modelTrainingData.length) {
+            modelTrainingData = buildTeamDefaultModelTraining();
+            saveModelTrainingData();
+            return;
+        }
+        if (modelTrainingData.some(m => demoNames.includes(m.name))) {
+            modelTrainingData = buildTeamDefaultModelTraining();
+            saveModelTrainingData();
+            return;
+        }
+        // 旧台账无 env 字段时，升级为本机/远程双环境示例
+        if (modelTrainingData.every(function(m) { return !m.env; })) {
+            modelTrainingData = buildTeamDefaultModelTraining();
+            saveModelTrainingData();
+            return;
+        }
+        let changed = false;
+        const owners = new Set(getModelOwnerNames());
+        modelTrainingData = modelTrainingData.map(function(m, idx) {
+            const before = JSON.stringify(m);
+            const next = normalizeModelTrainingItem(m, idx);
+            if (!next.owner || (owners.size && !owners.has(next.owner))) {
+                next.owner = typeof replaceUnknownOwnerWithTeamMember === 'function'
+                    ? replaceUnknownOwnerWithTeamMember(next.owner)
+                    : pickModelOwner(0);
+            }
+            if (JSON.stringify(next) !== before) changed = true;
+            return next;
+        });
+        if (changed) saveModelTrainingData();
+    }
 
     function initModelTraining() {
         const saved = localStorage.getItem('modelTrainingData');
         if (saved) {
-            modelTrainingData = JSON.parse(saved);
+            try { modelTrainingData = JSON.parse(saved); } catch (e) { modelTrainingData = []; }
         } else {
-            modelTrainingData = [
-                { id: 1, name: 'YOLOv8-Safety', type: 'YOLOv8', status: 'completed', accuracy: '95.2%', createdAt: '2026-06-15', description: '城市安全目标检测模型' },
-                { id: 2, name: 'Qwen3-VL-Safety', type: 'Qwen3-VL', status: 'training', accuracy: '88.5%', createdAt: '2026-07-01', description: '多模态安全识别模型' },
-                { id: 3, name: 'YOLOv8-Fire', type: 'YOLOv8', status: 'completed', accuracy: '97.1%', createdAt: '2026-05-20', description: '火灾检测专用模型' },
-                { id: 4, name: 'Qwen3-VL-Fall', type: 'Qwen3-VL', status: 'training', accuracy: '76.3%', createdAt: '2026-07-05', description: '跌倒检测模型' },
-                { id: 5, name: 'YOLOv8-Crowd', type: 'YOLOv8', status: 'completed', accuracy: '92.8%', createdAt: '2026-06-01', description: '人群密度分析模型' },
-                { id: 6, name: 'YOLOv8-Vehicle', type: 'YOLOv8', status: 'completed', accuracy: '94.5%', createdAt: '2026-05-10', description: '车辆检测模型' },
-                { id: 7, name: 'Qwen3-VL-Smoke', type: 'Qwen3-VL', status: 'completed', accuracy: '91.2%', createdAt: '2026-06-20', description: '烟雾识别模型' },
-                { id: 8, name: 'YOLOv8-Person', type: 'YOLOv8', status: 'training', accuracy: '82.0%', createdAt: '2026-07-03', description: '行人检测优化模型' },
-                { id: 9, name: 'Qwen3-VL-Helmet', type: 'Qwen3-VL', status: 'completed', accuracy: '96.8%', createdAt: '2026-06-10', description: '安全帽检测模型' },
-                { id: 10, name: 'YOLOv8-Sign', type: 'YOLOv8', status: 'completed', accuracy: '89.5%', createdAt: '2026-05-25', description: '交通标志识别模型' },
-                { id: 11, name: 'Qwen3-VL-Violence', type: 'Qwen3-VL', status: 'completed', accuracy: '85.3%', createdAt: '2026-06-25', description: '暴力行为识别模型' },
-                { id: 12, name: 'YOLOv8-Object', type: 'YOLOv8', status: 'completed', accuracy: '93.7%', createdAt: '2026-05-05', description: '通用物体检测模型' }
-            ];
-            localStorage.setItem('modelTrainingData', JSON.stringify(modelTrainingData));
+            modelTrainingData = [];
         }
+        migrateModelTrainingToTeam();
+        populateModelTrainingOwnerFilter();
+        const auto = localStorage.getItem('mlopsAutoPoll');
+        mlopsAutoPollEnabled = auto !== '0';
+        const chk = document.getElementById('mlopsAutoPoll');
+        if (chk) chk.checked = mlopsAutoPollEnabled;
+        const ep = document.getElementById('mlopsEndpointText');
+        if (ep) ep.textContent = (location.origin || 'http://127.0.0.1:8000') + '/api/mlops/report';
         renderModelTrainingList();
+        startMlopsPolling();
+    }
+
+    function populateModelTrainingOwnerFilter() {
+        const sel = document.getElementById('modelTrainingOwnerFilter');
+        if (!sel) return;
+        const current = sel.value;
+        const owners = getModelOwnerNames();
+        sel.innerHTML = '<option value="">全部成员</option>' + owners.map(o => `<option value="${escHtml(o)}">${escHtml(o)}</option>`).join('');
+        if (current && owners.includes(current)) sel.value = current;
+    }
+
+    function updateModelTrainingStats() {
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        set('mtStatTotal', modelTrainingData.length);
+        set('mtStatLocal', modelTrainingData.filter(m => m.env === 'local').length);
+        set('mtStatRemote', modelTrainingData.filter(m => m.env === 'remote').length);
+        set('mtStatTraining', modelTrainingData.filter(m => m.status === 'training').length);
+        set('mtStatCompleted', modelTrainingData.filter(m => m.status === 'completed').length);
+        set('mtStatFailed', modelTrainingData.filter(m => m.status === 'failed').length);
+    }
+
+    function setModelTrainingStatusFilter(status) {
+        modelTrainingFilterStatus = status || '';
+        const sel = document.getElementById('modelTrainingStatusFilter');
+        if (sel) sel.value = modelTrainingFilterStatus;
+        renderModelTrainingList();
+    }
+
+    function setModelTrainingEnvFilter(env) {
+        modelTrainingFilterEnv = env || '';
+        const sel = document.getElementById('modelTrainingEnvFilter');
+        if (sel) sel.value = modelTrainingFilterEnv;
+        renderModelTrainingList();
+    }
+
+    function getFilteredModelTraining() {
+        const q = ((document.getElementById('modelTrainingSearch') || {}).value || '').trim().toLowerCase();
+        const type = (document.getElementById('modelTrainingTypeFilter') || {}).value || '';
+        const status = (document.getElementById('modelTrainingStatusFilter') || {}).value || modelTrainingFilterStatus || '';
+        const env = (document.getElementById('modelTrainingEnvFilter') || {}).value || modelTrainingFilterEnv || '';
+        const owner = (document.getElementById('modelTrainingOwnerFilter') || {}).value || '';
+        return modelTrainingData.filter(function(m) {
+            if (type && m.type !== type) return false;
+            if (status && m.status !== status) return false;
+            if (env && m.env !== env) return false;
+            if (owner && m.owner !== owner) return false;
+            if (!q) return true;
+            const blob = [m.name, m.code, m.scenario, m.owner, m.dataset, m.server, m.jobId, m.weightPath, m.description].join(' ').toLowerCase();
+            return blob.indexOf(q) !== -1;
+        });
     }
 
     function renderModelTrainingList() {
-        const table = document.getElementById('modelTrainingTable');
-        if (!table) return;
-        
-        let html = '';
-        modelTrainingData.forEach(item => {
-            const statusColor = item.status === 'completed' ? '#2e7d32' : item.status === 'training' ? '#f57c00' : '#888';
-            const statusText = item.status === 'completed' ? '已完成' : item.status === 'training' ? '训练中' : '待训练';
-            html += `<tr>
-                <td style="padding:10px;border-bottom:1px solid #eee;"><strong>${escHtml(item.name)}</strong></td>
-                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.type)}</td>
-                <td style="padding:10px;border-bottom:1px solid #eee;"><span style="color:${statusColor};font-weight:bold;">${statusText}</span></td>
-                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.accuracy)}</td>
-                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.createdAt)}</td>
-                <td style="padding:10px;border-bottom:1px solid #eee;">
-                    <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="viewModelDetail(${item.id})">查看</button>
-                    <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-left:4px;" onclick="downloadModel(${item.id})">下载</button>
-                </td>
-            </tr>`;
-        });
-        table.innerHTML = html;
+        const list = document.getElementById('modelTrainingList');
+        const empty = document.getElementById('modelTrainingEmpty');
+        if (!list) return;
+        updateModelTrainingStats();
+        populateModelTrainingOwnerFilter();
+        const rows = getFilteredModelTraining();
+        if (!rows.length) {
+            list.innerHTML = '';
+            if (empty) empty.style.display = 'block';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+        list.innerHTML = rows.map(function(item) {
+            const st = modelStatusMeta(item.status);
+            const ev = modelEnvMeta(item.env);
+            const progress = Math.max(0, Math.min(100, Number(item.progress) || 0));
+            const barColor = item.status === 'completed' ? '#22c55e' : (item.status === 'failed' ? '#ef4444' : '#f59e0b');
+            return `<div style="background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:16px 18px; display:grid; grid-template-columns:1fr auto; gap:14px; align-items:center;">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                        <strong style="font-size:15px; color:#111827;">${escHtml(item.name)}</strong>
+                        <span style="font-size:11px; color:${ev.color}; background:${ev.bg}; border:1px solid ${ev.border}; padding:2px 8px; border-radius:999px; font-weight:600;">${ev.text}</span>
+                        <span style="font-size:11px; color:#6366f1; background:#eef2ff; padding:2px 8px; border-radius:999px;">${escHtml(item.type)}</span>
+                        <span style="font-size:11px; color:${st.color}; background:${st.bg}; border:1px solid ${st.border}; padding:2px 8px; border-radius:999px; font-weight:600;">${st.text}</span>
+                        ${item.syncSource === 'mlops' ? '<span style="font-size:11px; color:#0f766e; background:#ccfbf1; border:1px solid #99f6e4; padding:2px 8px; border-radius:999px; font-weight:600;">MLOps</span>' : ''}
+                        <span style="font-size:11px; color:#6b7280; background:#f3f4f6; padding:2px 8px; border-radius:999px;">${escHtml(item.scenario || '城市安全')}</span>
+                    </div>
+                    <div style="font-size:12px; color:#9ca3af; margin-bottom:8px;">
+                        ${escHtml(item.server || '-')} · 任务 ${escHtml(item.jobId || '-')} · 负责人 ${escHtml(item.owner || '-')} · ${escHtml(item.dataset || '-')}
+                        ${item.lastReportAt ? ' · 上报 ' + escHtml(item.lastReportAt) : ''}
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="flex:1; height:8px; background:#f3f4f6; border-radius:999px; overflow:hidden; max-width:280px;">
+                            <div style="width:${progress}%; height:100%; background:${barColor};"></div>
+                        </div>
+                        <span style="font-size:12px; color:#6b7280; min-width:70px;">${escHtml(item.metric || item.accuracy || '—')}</span>
+                        <span style="font-size:12px; color:#9ca3af;">${escHtml(item.updatedAt || item.createdAt || '')}</span>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                    <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="viewModelDetail(${item.id})">详情</button>
+                    ${item.logUrl ? `<button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="openModelLogUrl(${item.id})">打开日志</button>` : ''}
+                    ${item.weightPath ? `<button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="copyModelWeightPath(${item.id})">复制权重路径</button>` : ''}
+                    <button class="btn" style="padding:6px 12px;font-size:12px;" onclick="showUpdateModelStatusModal(${item.id})">更新状态</button>
+                </div>
+            </div>`;
+        }).join('');
     }
 
-    function showAddModelModal() {
+    function showAddModelModal(editId) {
+        const editing = editId != null ? modelTrainingData.find(m => m.id === editId) : null;
+        const owners = getModelOwnerNames();
+        const ownerOpts = owners.map(o => `<option value="${escHtml(o)}">${escHtml(o)}</option>`).join('');
+        const myName = currentUser ? (currentUser.realName || '') : '';
         const modalId = 'addModelModal_' + Date.now();
         const modal = document.createElement('div');
         modal.id = modalId;
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
-        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
-            <h3 style="margin-bottom:20px;color:#333;">新建模型训练</h3>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">模型名称 <span style="color:red;">*</span></label>
-                <input type="text" id="modelName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入模型名称">
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.45);z-index:2000;display:flex;justify-content:center;align-items:center;padding:16px;';
+        modal.innerHTML = `<div style="background:#fff;padding:24px;border-radius:16px;width:100%;max-width:620px;max-height:90vh;overflow:auto;box-shadow:0 20px 50px rgba(15,23,42,.18);">
+            <h3 style="margin:0 0 6px;color:#111827;font-size:18px;">${editing ? '编辑训练任务' : '登记训练任务'}</h3>
+            <p style="margin:0 0 18px;font-size:12px;color:#6b7280;">本机或远程环境登记后同步云端；训练请在对应机器执行，此处不启动进程</p>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">模型名称 <span style="color:red;">*</span></label>
+                <input type="text" id="modelName" value="${escHtml(editing ? editing.name : '')}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="如：结构裂缝检测-YOLOv8">
             </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">模型类型</label>
-                <select id="modelType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
-                    <option value="YOLOv8">YOLOv8</option>
-                    <option value="Qwen3-VL">Qwen3-VL</option>
-                    <option value="其他">其他</option>
-                </select>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">训练环境 <span style="color:red;">*</span></label>
+                    <select id="modelEnv" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+                        <option value="local">本机</option>
+                        <option value="remote">远程服务器</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">服务器 / 机器 <span style="color:red;">*</span></label>
+                    <input type="text" id="modelServer" value="${escHtml(editing ? (editing.server || '') : '本机-RTX4090')}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="本机-RTX4090 或 gpu-lab-02">
+                </div>
             </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">描述</label>
-                <textarea id="modelDesc" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;height:60px;" placeholder="请输入模型描述"></textarea>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">模型架构</label>
+                    <select id="modelType" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+                        <option value="YOLOv8">YOLOv8 检测</option>
+                        <option value="Qwen3-VL">Qwen3-VL 多模态</option>
+                        <option value="ResNet">ResNet 分类</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">应用场景</label>
+                    <select id="modelScenario" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+                        <option value="结构损伤诊断">结构损伤诊断</option>
+                        <option value="结构振动测试">结构振动测试</option>
+                        <option value="结构抗震">结构抗震</option>
+                        <option value="城市灾害风险">城市灾害风险</option>
+                        <option value="三维数字模型">三维数字模型</option>
+                        <option value="城市安全监测">城市安全监测</option>
+                    </select>
+                </div>
             </div>
-            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">负责人 <span style="color:red;">*</span></label>
+                    <select id="modelOwner" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+                        ${ownerOpts || '<option value="">暂无成员</option>'}
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">任务号 / 实验目录</label>
+                    <input type="text" id="modelJobId" value="${escHtml(editing ? (editing.jobId || '') : '')}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="如：exp-crack-0612">
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">数据集</label>
+                    <input type="text" id="modelDataset" value="${escHtml(editing ? (editing.dataset || '') : '')}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="如：CrackDataset-CQ">
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">初始状态</label>
+                    <select id="modelStatus" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+                        <option value="pending">待启动</option>
+                        <option value="training">训练中</option>
+                        <option value="completed">已完成</option>
+                        <option value="failed">失败</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">日志 / TensorBoard 链接</label>
+                <input type="text" id="modelLogUrl" value="${escHtml(editing ? (editing.logUrl || '') : '')}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="http://127.0.0.1:6006 或远程 TB 地址">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">权重路径</label>
+                <input type="text" id="modelWeightPath" value="${escHtml(editing ? (editing.weightPath || '') : '')}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="本机 D:/exp/... 或 /nas/models/...">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;color:#374151;">任务说明</label>
+                <textarea id="modelDesc" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;height:72px;resize:vertical;" placeholder="简述训练目标与部署环境">${escHtml(editing ? (editing.description || '') : '')}</textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;">
                 <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
-                <button class="btn" onclick="addModel('${modalId}')">开始训练</button>
+                <button class="btn" onclick="saveModelTrainingForm('${modalId}', ${editing ? editing.id : 'null'})">${editing ? '保存' : '登记并同步'}</button>
             </div></div>`;
         document.body.appendChild(modal);
+        if (editing) {
+            document.getElementById('modelEnv').value = editing.env || 'local';
+            document.getElementById('modelType').value = editing.type || 'YOLOv8';
+            document.getElementById('modelScenario').value = editing.scenario || '结构损伤诊断';
+            document.getElementById('modelStatus').value = editing.status || 'pending';
+            if (editing.owner) document.getElementById('modelOwner').value = editing.owner;
+        } else {
+            const ownerSel = document.getElementById('modelOwner');
+            if (ownerSel && myName && owners.includes(myName)) ownerSel.value = myName;
+            document.getElementById('modelEnv').addEventListener('change', function() {
+                const server = document.getElementById('modelServer');
+                if (!server) return;
+                if (this.value === 'local' && (!server.value || server.value.indexOf('gpu-') === 0)) server.value = '本机-RTX4090';
+                if (this.value === 'remote' && (!server.value || server.value.indexOf('本机') === 0)) server.value = 'gpu-lab-02';
+            });
+        }
+    }
+
+    function saveModelTrainingForm(modalId, editId) {
+        const name = document.getElementById('modelName').value.trim();
+        const env = document.getElementById('modelEnv').value;
+        const server = document.getElementById('modelServer').value.trim();
+        const type = document.getElementById('modelType').value;
+        const scenario = document.getElementById('modelScenario').value;
+        const owner = document.getElementById('modelOwner').value;
+        const jobId = document.getElementById('modelJobId').value.trim();
+        const dataset = document.getElementById('modelDataset').value.trim();
+        const status = document.getElementById('modelStatus').value;
+        const logUrl = document.getElementById('modelLogUrl').value.trim();
+        const weightPath = document.getElementById('modelWeightPath').value.trim();
+        const desc = document.getElementById('modelDesc').value.trim();
+        if (!name) { alert('请输入模型名称'); return; }
+        if (!server) { alert('请填写服务器 / 机器名称'); return; }
+        if (!owner) { alert('请选择负责人'); return; }
+        const today = new Date().toISOString().split('T')[0];
+        const progress = status === 'completed' ? 100 : (status === 'training' ? 10 : (status === 'failed' ? 0 : 0));
+        const payload = {
+            name,
+            code: name.replace(/\s+/g, '-'),
+            env,
+            server,
+            type,
+            scenario,
+            owner,
+            jobId: jobId || name.replace(/\s+/g, '-'),
+            dataset: dataset || '未命名数据集',
+            status,
+            metric: status === 'training' ? '训练中' : (status === 'pending' ? '—' : (status === 'failed' ? '失败' : '已完成')),
+            progress,
+            logUrl,
+            weightPath,
+            description: desc,
+            updatedAt: today
+        };
+        if (editId) {
+            const idx = modelTrainingData.findIndex(m => m.id === editId);
+            if (idx !== -1) {
+                modelTrainingData[idx] = Object.assign({}, modelTrainingData[idx], payload);
+            }
+        } else {
+            const newId = modelTrainingData.length > 0 ? Math.max(...modelTrainingData.map(m => m.id)) + 1 : 1;
+            modelTrainingData.unshift(Object.assign({ id: newId, createdAt: today }, payload));
+        }
+        saveModelTrainingData();
+        document.getElementById(modalId).remove();
+        renderModelTrainingList();
+        alert(editId ? '任务已更新并同步' : '训练任务已登记并同步');
     }
 
     function addModel(modalId) {
-        const name = document.getElementById('modelName').value.trim();
-        const type = document.getElementById('modelType').value;
-        const desc = document.getElementById('modelDesc').value.trim();
-        
-        if (!name) { alert('请输入模型名称'); return; }
-        
-        const newId = modelTrainingData.length > 0 ? Math.max(...modelTrainingData.map(m => m.id)) + 1 : 1;
-        modelTrainingData.push({ 
-            id: newId, 
-            name, 
-            type, 
-            status: 'training', 
-            accuracy: '0%', 
-            createdAt: new Date().toISOString().split('T')[0], 
-            description: desc 
-        });
-        localStorage.setItem('modelTrainingData', JSON.stringify(modelTrainingData));
-        document.getElementById(modalId).remove();
-        renderModelTrainingList();
-        alert('训练任务已创建！');
+        saveModelTrainingForm(modalId, null);
     }
 
     function viewModelDetail(id) {
         const model = modelTrainingData.find(m => m.id === id);
         if (!model) return;
-        alert(`模型详情：\n名称：${model.name}\n类型：${model.type}\n状态：${model.status === 'completed' ? '已完成' : model.status === 'training' ? '训练中' : '待训练'}\n精度：${model.accuracy}\n创建时间：${model.createdAt}\n描述：${model.description || '无'}`);
+        const st = modelStatusMeta(model.status);
+        const ev = modelEnvMeta(model.env);
+        const overlay = document.getElementById('modelDetailOverlay');
+        const drawer = document.getElementById('modelDetailDrawer');
+        const statusEl = document.getElementById('modelDetailStatus');
+        const titleEl = document.getElementById('modelDetailTitle');
+        const body = document.getElementById('modelDetailBody');
+        const actions = document.getElementById('modelDetailActions');
+        if (!drawer || !body) return;
+        statusEl.textContent = st.text + ' · ' + ev.text;
+        statusEl.style.cssText = `display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;margin-bottom:6px;color:${st.color};background:${st.bg};border:1px solid ${st.border};`;
+        titleEl.textContent = model.name;
+        body.innerHTML = `
+            <div style="font-size:13px;color:#6b7280;margin-bottom:14px;">${escHtml(model.code || '')}</div>
+            <div style="display:grid;gap:12px;font-size:14px;color:#374151;">
+                <div><div style="font-size:12px;color:#9ca3af;">环境 / 服务器</div><div>${ev.text} · ${escHtml(model.server || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">任务号</div><div>${escHtml(model.jobId || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">架构 / 场景</div><div>${escHtml(model.type)} · ${escHtml(model.scenario || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">负责人</div><div>${escHtml(model.owner || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">数据集</div><div>${escHtml(model.dataset || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">指标 / 进度</div><div>${escHtml(model.metric || model.accuracy || '—')} · ${Number(model.progress) || 0}%</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">日志链接</div><div style="word-break:break-all;">${model.logUrl ? `<a href="${escHtml(model.logUrl)}" target="_blank" rel="noopener">${escHtml(model.logUrl)}</a>` : '未填写'}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">权重路径</div><div style="word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:12px;">${escHtml(model.weightPath || '未填写')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">创建 / 更新</div><div>${escHtml(model.createdAt || '-')} / ${escHtml(model.updatedAt || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">同步来源</div><div>${model.syncSource === 'mlops' ? 'MLOps 自动上报' : '人工登记'} ${model.lastReportAt ? '· 最近上报 ' + escHtml(model.lastReportAt) : ''}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">说明</div><div style="line-height:1.7;">${escHtml(model.description || '暂无')}</div></div>
+                <div style="padding:10px 12px;background:#f8fafc;border-radius:10px;font-size:12px;color:#6b7280;line-height:1.6;">
+                    训练在本机或远程执行。可用 <code>mlops_report.py</code> 向 <code>/api/mlops/report</code> 自动上报进度；门户会定时拉取并同步云端。
+                </div>
+            </div>`;
+        let act = `<button class="btn btn-secondary" onclick="closeModelDetailDrawer()">关闭</button>`;
+        act += `<button class="btn btn-secondary" onclick="showAddModelModal(${model.id})">编辑</button>`;
+        act += `<button class="btn" onclick="showUpdateModelStatusModal(${model.id})">更新状态</button>`;
+        if (model.logUrl) act += `<button class="btn btn-secondary" onclick="openModelLogUrl(${model.id})">打开日志</button>`;
+        if (model.weightPath) act += `<button class="btn btn-secondary" onclick="copyModelWeightPath(${model.id})">复制权重路径</button>`;
+        if (model.status === 'pending') act += `<button class="btn" onclick="markModelTrainingStatus(${model.id}, 'training')">标记为训练中</button>`;
+        if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'leader' || model.owner === currentUser.realName)) {
+            act += `<button class="btn btn-secondary" style="color:#dc2626;" onclick="deleteModelTraining(${model.id})">删除</button>`;
+        }
+        actions.innerHTML = act;
+        overlay.style.display = 'block';
+        drawer.style.display = 'block';
+    }
+
+    function closeModelDetailDrawer() {
+        const overlay = document.getElementById('modelDetailOverlay');
+        const drawer = document.getElementById('modelDetailDrawer');
+        if (overlay) overlay.style.display = 'none';
+        if (drawer) drawer.style.display = 'none';
+    }
+
+    function openModelLogUrl(id) {
+        const model = modelTrainingData.find(m => m.id === id);
+        if (!model || !model.logUrl) { alert('未填写日志链接'); return; }
+        window.open(model.logUrl, '_blank', 'noopener');
+    }
+
+    function copyModelWeightPath(id) {
+        const model = modelTrainingData.find(m => m.id === id);
+        if (!model || !model.weightPath) { alert('未填写权重路径'); return; }
+        const text = model.weightPath;
+        const done = function() { alert('已复制权重路径：\n' + text); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(function() {
+                window.prompt('请手动复制权重路径', text);
+            });
+        } else {
+            window.prompt('请手动复制权重路径', text);
+        }
+    }
+
+    function showUpdateModelStatusModal(id) {
+        const model = modelTrainingData.find(m => m.id === id);
+        if (!model) return;
+        const modalId = 'updateModelStatus_' + Date.now();
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.45);z-index:2100;display:flex;justify-content:center;align-items:center;padding:16px;';
+        modal.innerHTML = `<div style="background:#fff;padding:24px;border-radius:16px;width:100%;max-width:420px;box-shadow:0 20px 50px rgba(15,23,42,.18);">
+            <h3 style="margin:0 0 6px;font-size:17px;">更新任务状态</h3>
+            <p style="margin:0 0 14px;font-size:12px;color:#6b7280;">${escHtml(model.name)} · ${escHtml(model.server || '')}</p>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">状态</label>
+                <select id="mtUpdateStatus" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+                    <option value="pending">待启动</option>
+                    <option value="training">训练中</option>
+                    <option value="completed">已完成</option>
+                    <option value="failed">失败</option>
+                </select>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">指标（可手填）</label>
+                <input type="text" id="mtUpdateMetric" value="${escHtml(model.metric || '')}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="如：mAP 94.6%">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">进度 %</label>
+                <input type="number" id="mtUpdateProgress" min="0" max="100" value="${Number(model.progress) || 0}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
+                <button class="btn" onclick="applyModelStatusUpdate(${id}, '${modalId}')">保存</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+        document.getElementById('mtUpdateStatus').value = model.status || 'pending';
+    }
+
+    function applyModelStatusUpdate(id, modalId) {
+        const model = modelTrainingData.find(m => m.id === id);
+        if (!model) return;
+        const status = document.getElementById('mtUpdateStatus').value;
+        const metric = document.getElementById('mtUpdateMetric').value.trim();
+        let progress = parseInt(document.getElementById('mtUpdateProgress').value, 10);
+        if (isNaN(progress)) progress = 0;
+        progress = Math.max(0, Math.min(100, progress));
+        if (status === 'completed') progress = 100;
+        model.status = status;
+        model.metric = metric || model.metric || '—';
+        model.progress = progress;
+        model.updatedAt = new Date().toISOString().split('T')[0];
+        saveModelTrainingData();
+        document.getElementById(modalId).remove();
+        renderModelTrainingList();
+        viewModelDetail(id);
+    }
+
+    function markModelTrainingStatus(id, status) {
+        const model = modelTrainingData.find(m => m.id === id);
+        if (!model) return;
+        model.status = status;
+        if (status === 'training') {
+            model.progress = Math.max(Number(model.progress) || 0, 5);
+            if (!model.metric || model.metric === '—') model.metric = '训练中';
+        }
+        if (status === 'completed') {
+            model.progress = 100;
+            if (!model.metric || model.metric === '训练中' || model.metric === '—') model.metric = '已完成';
+        }
+        model.updatedAt = new Date().toISOString().split('T')[0];
+        saveModelTrainingData();
+        renderModelTrainingList();
+        viewModelDetail(id);
+    }
+
+    function startModelTraining(id) { markModelTrainingStatus(id, 'training'); }
+    function completeModelTraining(id) { markModelTrainingStatus(id, 'completed'); }
+
+    function deleteModelTraining(id) {
+        if (!confirm('确认删除该训练任务？')) return;
+        modelTrainingData = modelTrainingData.filter(m => m.id !== id);
+        saveModelTrainingData();
+        closeModelDetailDrawer();
+        renderModelTrainingList();
     }
 
     function downloadModel(id) {
-        const model = modelTrainingData.find(m => m.id === id);
-        if (!model) return;
-        alert(`正在下载模型：${model.name}\n\n文件格式：.pt (PyTorch权重)\n预计大小：256MB\n\n下载链接已生成`);
+        copyModelWeightPath(id);
     }
 
     // AI数据标注工具
