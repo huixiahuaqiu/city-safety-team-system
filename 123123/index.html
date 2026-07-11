@@ -3334,21 +3334,12 @@
                     
                     <!-- 右侧：新闻和订阅 -->
                     <div>
-                        <!-- 新闻动态 -->
+                        <!-- 新闻动态（联动 newsData） -->
                         <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                             <h3 style="color: #333; font-size: 16px; margin-bottom: 15px;">新闻动态</h3>
-                            <div style="space-y: 10px;">
-                                <div onclick="showModule('funding_management')" style="padding: 10px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: all 0.3s;">
-                                    <div style="font-size: 14px; color: #333; margin-bottom: 5px;">本团队获407.2万科研经费项目资助</div>
-                                    <div style="font-size: 12px; color: #666;">2026-04-22</div>
-                                </div>
-                                <div onclick="showModule('patent_management')" style="padding: 10px; cursor: pointer; transition: all 0.3s;">
-                                    <div style="font-size: 14px; color: #333; margin-bottom: 5px;">团队专利数量突破新里程碑</div>
-                                    <div style="font-size: 12px; color: #666;">2026-04-15</div>
-                                </div>
-                            </div>
+                            <div id="homeNewsList"></div>
                             <div style="text-align: right; margin-top: 15px;">
-                                <button style="background: none; border: none; color: #8A2BE2; font-size: 12px; cursor: pointer;">查看更多 →</button>
+                                <button type="button" style="background: none; border: none; color: #8A2BE2; font-size: 12px; cursor: pointer;" onclick="showModule('news_management')">查看更多 →</button>
                             </div>
                         </div>
                         
@@ -6235,68 +6226,108 @@
             <!-- 新闻动态管理 -->
             <div id="news_management" class="module" style="padding: 0;">
                 <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; gap: 12px; flex-wrap: wrap;">
                         <div>
-                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📰 新闻动态管理</h1>
-                            <p style="font-size: 14px; color: #888; margin-top: 4px;">首页右侧新闻板块后台编辑</p>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0; display:flex; align-items:center; gap:10px;">
+                                📰 新闻动态管理
+                                <span id="newsPendingBadge" style="display:none;align-items:center;padding:2px 10px;border-radius:999px;background:#e6f7ff;color:#1890ff;font-size:12px;font-weight:700;"></span>
+                            </h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队内容运营中心 · 审核发布 · 首页联动 · 已读统计</p>
                         </div>
-                        <button class="btn" onclick="showAddNewsModal()" style="padding: 10px 24px; font-size: 14px;">
+                        <button class="btn" id="newsPublishBtn" onclick="showAddNewsModal()" style="padding: 10px 24px; font-size: 14px;">
                             <span>➕</span> 发布新闻
                         </button>
                     </div>
-                    
-                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <div style="flex: 1; min-width: 200px;">
-                            <input type="text" id="newsSearchInput" placeholder="搜索新闻标题..." 
+                            <input type="text" id="newsSearchInput" placeholder="搜索标题 / 摘要 / 作者 / 标签..."
                                 style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
-                                oninput="renderNewsList()">
+                                oninput="onNewsSearchInput()">
                         </div>
-                        <select id="newsStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderNewsList()">
+                        <select id="newsStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="onNewsStatusFilterChange()">
                             <option value="">全部状态</option>
                             <option value="published">已发布</option>
                             <option value="draft">草稿</option>
+                            <option value="draft_group">草稿+待审</option>
+                            <option value="pending">待审核</option>
+                            <option value="scheduled">定时</option>
+                            <option value="withdrawn">已撤回</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:13px;" onclick="toggleNewsAdvancedFilter()">高级筛选</button>
+                    </div>
+                    <div id="newsAdvancedFilter" style="display:none;gap:12px;flex-wrap:wrap;margin-top:12px;align-items:center;">
+                        <select id="newsCategoryFilter" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="onNewsFilterChange()">
+                            <option value="">全部分类</option>
+                            <option value="团队动态">团队动态</option>
+                            <option value="项目进展">项目进展</option>
+                            <option value="学术交流">学术交流</option>
+                            <option value="成果发布">成果发布</option>
+                            <option value="政策资讯">政策资讯</option>
+                        </select>
+                        <select id="newsAuthorFilter" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="onNewsFilterChange()">
+                            <option value="">全部作者</option>
+                        </select>
+                        <select id="newsTimeFilter" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="onNewsFilterChange()">
+                            <option value="">全部时间</option>
+                            <option value="7">近7天</option>
+                            <option value="30">近30天</option>
+                            <option value="90">近90天</option>
+                        </select>
+                        <select id="newsPinnedFilter" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="onNewsFilterChange()">
+                            <option value="">置顶不限</option>
+                            <option value="1">仅置顶</option>
+                            <option value="0">未置顶</option>
                         </select>
                     </div>
                 </div>
 
                 <div style="padding: 24px; background: #f5f7fa;">
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px;">
+                        <div id="newsStatCardTotal" class="news-stat-card" onclick="setNewsStatFilter('')" style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <div>
-                                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="newsStatTotal">0</div>
-                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">总新闻数</div>
+                                    <div style="font-size:28px;font-weight:bold;color:#667eea;" id="newsStatTotal">0</div>
+                                    <div style="font-size:13px;color:#888;margin-top:4px;">总新闻数</div>
                                 </div>
-                                <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📰</div>
+                                <div style="width:48px;height:48px;background:#e8ebfa;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;">📰</div>
                             </div>
                         </div>
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div id="newsStatCardPublished" class="news-stat-card" onclick="setNewsStatFilter('published')" style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <div>
-                                    <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="newsStatPublished">0</div>
-                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已发布</div>
+                                    <div style="font-size:28px;font-weight:bold;color:#52c41a;" id="newsStatPublished">0</div>
+                                    <div style="font-size:13px;color:#888;margin-top:4px;">已发布</div>
                                 </div>
-                                <div style="width: 48px; height: 48px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                                <div style="width:48px;height:48px;background:#f6ffed;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;">✅</div>
                             </div>
                         </div>
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div id="newsStatCardDraft" class="news-stat-card" onclick="setNewsStatFilter('draft_group')" style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <div>
-                                    <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="newsStatDraft">0</div>
-                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">草稿</div>
+                                    <div style="font-size:28px;font-weight:bold;color:#faad14;" id="newsStatDraft">0</div>
+                                    <div style="font-size:13px;color:#888;margin-top:4px;">草稿 / 待审</div>
                                 </div>
-                                <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📝</div>
+                                <div style="width:48px;height:48px;background:#fff7e6;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;">📝</div>
                             </div>
                         </div>
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div id="newsStatCardViews" class="news-stat-card" onclick="setNewsStatFilter('views')" style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
                                 <div>
-                                    <div style="font-size: 28px; font-weight: bold; color: #722ed1;" id="newsStatViews">0</div>
-                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">总浏览量</div>
+                                    <div style="font-size:28px;font-weight:bold;color:#722ed1;" id="newsStatViews">0</div>
+                                    <div style="font-size:13px;color:#888;margin-top:4px;">总浏览量（点按浏览排序）</div>
                                 </div>
-                                <div style="width: 48px; height: 48px; background: #f3e8ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">👁️</div>
+                                <div style="width:48px;height:48px;background:#f3e8ff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;">👁️</div>
                             </div>
                         </div>
+                    </div>
+
+                    <div id="newsBatchBar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">
+                        <span style="font-size:13px;color:#6b21a8;">已选 <strong id="newsBatchCount">0</strong> 条</span>
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('publish')">批量发布</button>
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('withdraw')">批量撤回</button>
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('pin')">批量置顶</button>
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('category')">批量改分类</button>
+                        <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('delete')">批量删除</button>
                     </div>
 
                     <div style="background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;">
@@ -6304,12 +6335,13 @@
                             <table style="width: 100%; border-collapse: collapse;">
                                 <thead>
                                     <tr style="background: #fafafa;">
+                                        <th style="padding: 14px 12px; width:36px;"><input type="checkbox" onchange="toggleSelectAllNews(this.checked)" title="全选当前筛选"></th>
                                         <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">标题</th>
                                         <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">分类</th>
                                         <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">作者</th>
                                         <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">发布时间</th>
                                         <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">状态</th>
-                                        <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">浏览量</th>
+                                        <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">数据</th>
                                         <th style="padding: 14px 16px; text-align: right; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
                                     </tr>
                                 </thead>
@@ -6318,9 +6350,11 @@
                         </div>
                         <div id="newsEmpty" style="padding: 60px 20px; text-align: center; display: none;">
                             <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
-                            <div style="font-size: 16px; color: #888; margin-bottom: 8px;">暂无新闻数据</div>
-                            <div style="font-size: 14px; color: #bbb;">点击上方「发布新闻」按钮添加第一条新闻</div>
+                            <div style="font-size: 16px; color: #888; margin-bottom: 8px;">暂无新闻</div>
+                            <div style="font-size: 14px; color: #bbb; margin-bottom: 16px;">点击上方按钮发布第一条新闻</div>
+                            <button class="btn" onclick="showAddNewsModal()">发布第一条新闻</button>
                         </div>
+                        <div id="newsPager" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid #f0f0f0;"></div>
                     </div>
                 </div>
             </div>
@@ -6439,16 +6473,43 @@
                             <input type="datetime-local" id="meetingEndTime" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
                         </div>
                         <div class="form-group">
-                            <label>参会人员</label>
-                            <input type="text" id="meetingParticipants" placeholder="请输入参会人员，用逗号分隔" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                            <label style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                                <span>参会人员</span>
+                                <span style="display:flex; gap:8px;">
+                                    <button type="button" onclick="toggleMeetingParticipantPicker()" style="padding:6px 12px; border:1px solid #7c3aed; color:#7c3aed; background:#fff; border-radius:6px; font-size:12px; cursor:pointer;">👥 从团队选择</button>
+                                    <button type="button" onclick="selectAllMeetingParticipants()" style="padding:6px 12px; border:1px solid #ddd; color:#666; background:#fff; border-radius:6px; font-size:12px; cursor:pointer;">全员</button>
+                                    <button type="button" onclick="clearMeetingParticipants()" style="padding:6px 12px; border:1px solid #ddd; color:#666; background:#fff; border-radius:6px; font-size:12px; cursor:pointer;">清空</button>
+                                </span>
+                            </label>
+                            <input type="hidden" id="meetingParticipants" value="">
+                            <div id="meetingParticipantChips" style="min-height:42px; padding:8px 10px; border:1px solid #ddd; border-radius:8px; background:#fafafa; display:flex; flex-wrap:wrap; gap:6px; align-items:center;"></div>
+                            <div id="meetingParticipantPicker" style="display:none; margin-top:8px; border:1px solid #e5e7eb; border-radius:10px; background:#fff; max-height:280px; overflow:auto;"></div>
+                            <div style="margin-top:4px; font-size:12px; color:#999;">按年级分组勾选，也可点芯片旁 × 移除</div>
                         </div>
                         <div class="form-group">
-                            <label>会议议程</label>
-                            <textarea id="meetingAgenda" rows="4" placeholder="请输入会议议程..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                            <label style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                                <span>会议议程</span>
+                                <span style="display:flex; align-items:center; gap:8px;">
+                                    <input type="file" id="meetingAgendaFile" accept=".txt,.md,.docx,.pdf" style="display:none;" onchange="handleMeetingAgendaFile(this)">
+                                    <button type="button" onclick="document.getElementById('meetingAgendaFile').click()" style="padding:6px 12px; border:1px solid #7c3aed; color:#7c3aed; background:#fff; border-radius:6px; font-size:12px; cursor:pointer;">📎 上传文件识别</button>
+                                    <button type="button" id="meetingAgendaAiBtn" onclick="aiOrganizeMeetingAgenda()" style="padding:6px 12px; border:1px solid #0d9488; color:#0d9488; background:#fff; border-radius:6px; font-size:12px; cursor:pointer;">✨ AI 整理议程</button>
+                                </span>
+                            </label>
+                            <textarea id="meetingAgenda" rows="4" placeholder="请输入会议议程，或上传 txt/md/docx/pdf 文件自动识别..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                            <div id="meetingAgendaFileStatus" style="margin-top:6px; font-size:12px; color:#888; min-height:16px;"></div>
                         </div>
                         <div class="form-group">
                             <label>备注</label>
                             <textarea id="meetingNotes" rows="2" placeholder="其他需要说明的事项..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div class="form-group" style="padding:12px 14px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px;">
+                            <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; margin:0;">
+                                <input type="checkbox" id="meetingNotifyParticipants" checked style="margin-top:3px; width:16px; height:16px; accent-color:#7c3aed;">
+                                <span>
+                                    <span style="font-weight:600; color:#5b21b6; font-size:14px;">创建后向所选参会人发送会议通知</span>
+                                    <span style="display:block; font-size:12px; color:#7c3aed; margin-top:2px;">仅所选人员铃铛收到，未选中的成员不会收到</span>
+                                </span>
+                            </label>
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
                             <button class="btn btn-secondary" onclick="closeMeetingModal()">取消</button>
@@ -8688,7 +8749,15 @@
                 if (typeof window.mergeIncomingNoticeData === 'function') noticeData = window.mergeIncomingNoticeData(v);
                 else noticeData = v;
             }); } catch(e){}
-            try { apply('newsData', function(v){ newsData = v; }); } catch(e){}
+            try { apply('newsData', function(v){
+                if (typeof window.mergeIncomingNewsData === 'function') {
+                    window.newsData = window.mergeIncomingNewsData(v);
+                } else if (window.NewsManagement) {
+                    window.NewsManagement.newsData = v;
+                } else {
+                    window.newsData = v;
+                }
+            }); } catch(e){}
             try { apply('meetingData', function(v){ meetingData = v; }); } catch(e){}
             try { apply('literatureData', function(v){ literatureData = v; }); } catch(e){}
             try { apply('datasetData', function(v){ datasetData = v; }); } catch(e){}
@@ -8732,7 +8801,7 @@
             try { if (typeof updateLongitudinalFilterCounts === 'function') updateLongitudinalFilterCounts(); if (typeof applyLongitudinalFilters === 'function') applyLongitudinalFilters(); } catch (e) {}
             try { if (typeof updateHorizontalFilterCounts === 'function') updateHorizontalFilterCounts(); if (typeof applyHorizontalFilters === 'function') applyHorizontalFilters(); } catch (e) {}
             try { if (typeof updateSchoolFilterCounts === 'function') updateSchoolFilterCounts(); if (typeof applySchoolFilters === 'function') applySchoolFilters(); } catch (e) {}
-            try { if (typeof renderNewsList === 'function') renderNewsList(); if (typeof updateNewsStats === 'function') updateNewsStats(); } catch (e) {}
+            try { if (typeof renderNewsList === 'function') renderNewsList(); if (typeof updateNewsStats === 'function') updateNewsStats(); if (typeof renderHomeNewsPanel === 'function') renderHomeNewsPanel(); } catch (e) {}
             try { if (typeof renderMeetingList === 'function') renderMeetingList(); if (typeof updateMeetingStats === 'function') updateMeetingStats(); } catch (e) {}
             try { if (typeof renderLiteratureList === 'function') renderLiteratureList(); } catch (e) {}
             try { if (typeof renderDatasetList === 'function') renderDatasetList(); } catch (e) {}
@@ -16658,6 +16727,18 @@ ${ocrText}`
                 await initPatentMgmtData();
                 closePatentMgmtModal();
                 alert('保存成功！');
+                try {
+                    if (typeof offerNewsDraftFromAchievement === 'function') {
+                        setTimeout(function () {
+                            offerNewsDraftFromAchievement({
+                                title: '专利动态：' + name,
+                                summary: summary || (name + '（' + patentNumber + '）'),
+                                content: '<h2>专利动态</h2><p><strong>名称：</strong>' + name + '</p><p><strong>专利号：</strong>' + patentNumber + '</p><p><strong>申请人：</strong>' + applicant + '</p><p>' + (summary || '') + '</p>',
+                                tags: ['专利', '成果']
+                            });
+                        }, 200);
+                    }
+                } catch (eNews) {}
             } catch (e) {
                 console.error('保存专利失败:', e);
                 alert('保存失败：' + e.message);
@@ -18637,11 +18718,13 @@ ${ocrText}`
                 if (fresh.status !== 'active') {
                     alert('当前账号已被禁用，请重新登录');
                     currentUser = null;
+                    try { window.currentUser = null; } catch (e) {}
                     localStorage.removeItem('currentSession');
                     document.getElementById('loginOverlay').classList.add('active');
                     initLoginMotion();
                     return;
                 }
+                try { window.currentUser = currentUser; window.accountData = accountData; } catch (eSync) {}
                 updateHeaderUserInfo();
                 applyRolePermissions();
             }
@@ -18751,6 +18834,7 @@ ${ocrText}`
         recordOperationLog('系统登录', '登录', `${account.realName}(${account.studentId}) 登录系统`, { studentId: account.studentId }, { success: true }, 1, '', 0);
 
         currentUser = account;
+        try { window.currentUser = currentUser; } catch (eSync) {}
         localStorage.setItem('currentSession', JSON.stringify({ userId: account.id, loginTime: Date.now() }));
 
         loadOperationLogData();
@@ -18796,18 +18880,30 @@ ${ocrText}`
         enterSystem();
     }
 
+    function syncGlobalsForExternalModules() {
+        try { window.currentUser = currentUser; } catch (e) {}
+        try { window.accountData = accountData; } catch (e2) {}
+        try { window.weeklyReportData = typeof weeklyReportData !== 'undefined' ? weeklyReportData : window.weeklyReportData; } catch (e3) {}
+    }
+    window.syncGlobalsForExternalModules = syncGlobalsForExternalModules;
+
     function enterSystem() {
+        syncGlobalsForExternalModules();
         // 登录后先拉云端，保证账号权限与全站数据全局一致
         syncFromCloudAndRefresh({ silent: false }).then(function() {
+            syncGlobalsForExternalModules();
             updateHeaderUserInfo();
             applyRolePermissions();
             try { if (typeof renderPermissionMatrix === 'function') renderPermissionMatrix(); } catch (e) {}
             try { if (typeof renderAccountTable === 'function') renderAccountTable(); } catch (e) {}
-        }).catch(function(e){ console.warn(e); applyRolePermissions(); });
+            try { if (typeof renderHomeNewsPanel === 'function') renderHomeNewsPanel(); } catch (e) {}
+            try { if (typeof initNewsManagement === 'function' && document.getElementById('news_management') && document.getElementById('news_management').classList.contains('active')) initNewsManagement(); } catch (e) {}
+        }).catch(function(e){ console.warn(e); syncGlobalsForExternalModules(); applyRolePermissions(); });
 
         document.getElementById('loginOverlay').classList.remove('active');
         updateHeaderUserInfo();
         applyRolePermissions();
+        try { if (typeof renderHomeNewsPanel === 'function') renderHomeNewsPanel(); } catch (eHome) {}
     }
 
     function handleLogout() {
@@ -18817,6 +18913,7 @@ ${ocrText}`
         const userId = currentUser ? currentUser.id : 0;
         recordOperationLog('系统登录', '登出', `${userName}(${studentId}) 退出登录`, { studentId }, { success: true }, 1, '', 0, userId, userName);
         currentUser = null;
+        syncGlobalsForExternalModules();
         localStorage.removeItem('currentSession');
         document.getElementById('loginOverlay').classList.add('active'); initLoginMotion();
         document.getElementById('loginUsername').value = '';
@@ -18872,7 +18969,7 @@ ${ocrText}`
             'excel': hasPermission('智能工具（全部）'),
             'document_analysis': hasPermission('智能工具（全部）'),
             'notice_publish': true,
-            'news_management': role === 'admin',
+            'news_management': role === 'admin' || role === 'leader' || role === 'student' || role === 'visitor',
             'meeting_management': role !== 'visitor',
             'literature_library': hasPermission('资源中心（查看）'),
             'dataset_library': hasPermission('资源中心（查看）') && role !== 'visitor',
@@ -20837,8 +20934,12 @@ ${ocrText}`
     function normalizeNoticeRecord(n) {
         n = n || {};
         const reads = mergeReadLists(Array.isArray(n.reads) ? n.reads : [], []);
+        const audienceNames = Array.isArray(n.audienceNames)
+            ? n.audienceNames.map(function (x) { return String(x || '').trim(); }).filter(Boolean)
+            : [];
         return Object.assign({}, n, {
-            audience: n.audience || 'all',
+            audience: n.audience || (audienceNames.length ? 'custom' : 'all'),
+            audienceNames: audienceNames,
             pinned: !!n.pinned,
             remindAt: n.remindAt || '',
             remindCount: Number(n.remindCount || 0) || 0,
@@ -20976,7 +21077,7 @@ ${ocrText}`
 
     function getNoticeAudienceMembers(notice) {
         const accounts = Array.isArray(accountData) ? accountData : [];
-        const raw = accounts.filter(function (a) {
+        let raw = accounts.filter(function (a) {
             if (!a || a.role === 'visitor') return false;
             return true;
         }).map(function (a) {
@@ -20989,10 +21090,34 @@ ${ocrText}`
                 grade: a.grade || ''
             };
         });
+
+        // 定向通知：仅发给 audienceNames 中的人（按姓名匹配账号）
+        const names = (notice && Array.isArray(notice.audienceNames))
+            ? notice.audienceNames.map(function (x) { return String(x || '').trim(); }).filter(Boolean)
+            : [];
+        const isCustom = notice && (notice.audience === 'custom' || (notice.audience !== 'all' && names.length > 0));
+        if (isCustom && names.length) {
+            const nameSet = {};
+            names.forEach(function (n) { nameSet[n] = true; });
+            raw = raw.filter(function (m) { return !!nameSet[m.userName]; });
+            // 账号库里没有的姓名也计入受众（便于阅读统计展示）
+            names.forEach(function (n) {
+                if (raw.some(function (m) { return m.userName === n; })) return;
+                raw.push({
+                    userId: null,
+                    studentId: '',
+                    userName: n,
+                    role: 'student',
+                    group: '',
+                    grade: ''
+                });
+            });
+        }
+
         const seen = {};
         const out = [];
         raw.forEach(function (m) {
-            var k = m.studentId ? ('sid:' + m.studentId) : ('id:' + m.userId);
+            var k = m.studentId ? ('sid:' + m.studentId) : (m.userId != null ? ('id:' + m.userId) : ('name:' + m.userName));
             var nameKey = 'name:' + String(m.userName || '').trim();
             if (seen[k]) return;
             if (m.userName && seen[nameKey]) {
@@ -21008,6 +21133,26 @@ ${ocrText}`
             out.push(m);
         });
         return out;
+    }
+
+    /** 当前用户是否在通知接收范围内 */
+    function isNoticeVisibleToUser(notice, user) {
+        if (!notice || !user) return false;
+        if (user.role === 'visitor') return false;
+        const names = Array.isArray(notice.audienceNames) ? notice.audienceNames : [];
+        const isCustom = notice.audience === 'custom' || (notice.audience !== 'all' && names.length > 0);
+        if (!isCustom) return true; // 全员
+        const myName = String(user.realName || user.username || '').trim();
+        const mySid = String(user.studentId || '').trim();
+        if (names.indexOf(myName) >= 0) return true;
+        // 也允许按账号库反查（audienceNames 存的是团队成员名）
+        const audience = getNoticeAudienceMembers(notice);
+        return audience.some(function (m) {
+            if (m.userId != null && Number(m.userId) === Number(user.id)) return true;
+            if (mySid && m.studentId && String(m.studentId) === mySid) return true;
+            if (myName && m.userName && m.userName === myName) return true;
+            return false;
+        });
     }
 
     function isSameNoticeUser(reader, member) {
@@ -21101,7 +21246,7 @@ ${ocrText}`
     function getMyUnreadNotices() {
         if (!currentUser) return [];
         return (noticeData || []).filter(function (n) {
-            return isNoticeActive(n) && !hasUserReadNotice(n, currentUser);
+            return isNoticeVisibleToUser(n, currentUser) && isNoticeActive(n) && !hasUserReadNotice(n, currentUser);
         });
     }
 
@@ -21134,6 +21279,10 @@ ${ocrText}`
 
     function getFilteredNotices() {
         let filtered = [...noticeData];
+        // 普通成员只看发给自己的；导师/组长在管理页看全部
+        if (currentUser && !canManageNotices()) {
+            filtered = filtered.filter(function (n) { return isNoticeVisibleToUser(n, currentUser); });
+        }
         const search = document.getElementById('noticeSearchInput')?.value?.toLowerCase() || '';
         const type = document.getElementById('noticeTypeFilter')?.value || '';
         const status = document.getElementById('noticeStatusFilter')?.value || noticeStatFilter || '';
@@ -21145,7 +21294,7 @@ ${ocrText}`
         if (status === 'active') filtered = filtered.filter(isNoticeActive);
         if (status === 'urgent') filtered = filtered.filter(n => n.type === 'urgent' && isNoticeActive(n));
         if (status === 'expired') filtered = filtered.filter(isNoticeExpired);
-        if (status === 'unread') filtered = filtered.filter(n => currentUser && isNoticeActive(n) && !hasUserReadNotice(n, currentUser));
+        if (status === 'unread') filtered = filtered.filter(n => currentUser && isNoticeVisibleToUser(n, currentUser) && isNoticeActive(n) && !hasUserReadNotice(n, currentUser));
 
         filtered.sort(function (a, b) {
             const ua = (a.type === 'urgent' && isNoticeActive(a)) ? 1 : 0;
@@ -21533,6 +21682,7 @@ ${ocrText}`
         var dismissed = {};
         loadDismissedNoticeIds().forEach(function (id) { dismissed[id] = true; });
         var list = (noticeData || []).filter(function (n) {
+            if (currentUser && !isNoticeVisibleToUser(n, currentUser)) return false;
             var id = String(n.id);
             var isUnread = currentUser && isNoticeActive(n) && !hasUserReadNotice(n, currentUser);
             // 未读始终显示；已读若已清除则隐藏
@@ -21693,7 +21843,9 @@ ${ocrText}`
         const box = document.getElementById('homeNoticeBanner');
         if (!box) return;
         const candidates = (noticeData || []).filter(function (n) {
-            return isNoticeActive(n) && (n.type === 'urgent' || n.pinned);
+            if (!(isNoticeActive(n) && (n.type === 'urgent' || n.pinned))) return false;
+            if (currentUser && !isNoticeVisibleToUser(n, currentUser)) return false;
+            return true;
         }).sort(function (a, b) {
             const ua = a.type === 'urgent' ? 1 : 0;
             const ub = b.type === 'urgent' ? 1 : 0;
@@ -21736,805 +21888,7 @@ ${ocrText}`
     // ===== 会议管理模块 =====
     let meetingData = [];
     let editingMeetingId = null;
-    let newsData = [];
-    let editingNewsId = null;
-
-    const NEWS_CATEGORIES = ['团队动态', '学术交流', '项目进展', '政策资讯', '成果发布'];
-
-    const NEWS_STATUS_CONFIG = {
-        published: { label: '已发布', color: '#52c41a', bgColor: '#f6ffed', icon: '✅' },
-        draft: { label: '草稿', color: '#faad14', bgColor: '#fff7e6', icon: '📝' }
-    };
-
-    function initNewsManagement() {
-        loadNewsData();
-        try { if (typeof reconcileCollaborativeDataWithTeamMembers === 'function') reconcileCollaborativeDataWithTeamMembers(); } catch (e) {}
-        updateNewsStats();
-        renderNewsList();
-    }
-
-    function loadNewsData() {
-        const stored = localStorage.getItem('newsData');
-        if (stored) {
-            newsData = JSON.parse(stored);
-        } else {
-            newsData = [
-                { id: 1, title: '团队在城市安全监测领域取得重要突破', category: '成果发布', author: '陈浩', content: '近日，我团队在城市安全智能监测系统研发方面取得重大进展。基于深度学习的目标检测算法在真实场景测试中达到了95%以上的准确率...', status: 'published', publishTime: '2026-07-05', views: 328 },
-                { id: 2, title: '2026年度学术交流会议圆满举行', category: '学术交流', author: '王伟', content: '7月3日至4日，城市安全数智创新团队举办了年度学术交流会议。来自全国各地的专家学者齐聚一堂，共同探讨城市安全领域的前沿技术...', status: 'published', publishTime: '2026-07-04', views: 256 },
-                { id: 3, title: '智能预警系统V3.0版本开发启动', category: '项目进展', author: '刘洋', content: '经过前期充分准备，智能预警系统V3.0版本正式启动开发。新版本将引入更多先进的AI算法，提升系统的智能化水平和预警准确率...', status: 'published', publishTime: '2026-07-01', views: 189 },
-                { id: 4, title: '团队新增两名博士研究生', category: '团队动态', author: '赵芳', content: '热烈欢迎张博士和李博士加入城市安全数智创新团队！两位博士分别来自清华大学和北京大学，将在目标检测和数据挖掘方向开展研究...', status: 'published', publishTime: '2026-06-28', views: 145 },
-                { id: 5, title: '智慧城市安全建设指导意见发布', category: '政策资讯', author: '陈教授', content: '国家发改委近日发布了《关于推进智慧城市安全建设的指导意见》，明确了未来五年城市安全智能化发展的目标和方向...', status: 'draft', publishTime: '', views: 0 }
-            ];
-            localStorage.setItem('newsData', JSON.stringify(newsData));
-            try { if (typeof cloudUpsert === 'function') cloudUpsert('newsData', JSON.stringify(newsData)); } catch (e) {}
-        }
-    }
-
-    function updateNewsStats() {
-        const total = newsData.length;
-        const published = newsData.filter(n => n.status === 'published').length;
-        const draft = newsData.filter(n => n.status === 'draft').length;
-        const views = newsData.reduce((sum, n) => sum + n.views, 0);
-
-        document.getElementById('newsStatTotal').textContent = total;
-        document.getElementById('newsStatPublished').textContent = published;
-        document.getElementById('newsStatDraft').textContent = draft;
-        document.getElementById('newsStatViews').textContent = views;
-    }
-
-    function renderNewsList() {
-        const search = document.getElementById('newsSearchInput')?.value || '';
-        const statusFilter = document.getElementById('newsStatusFilter')?.value || '';
-        
-        let filtered = newsData;
-        if (search) {
-            filtered = filtered.filter(n => n.title.toLowerCase().includes(search.toLowerCase()));
-        }
-        if (statusFilter) {
-            filtered = filtered.filter(n => n.status === statusFilter);
-        }
-        
-        filtered.sort((a, b) => {
-            if (a.status !== b.status) return a.status === 'draft' ? 1 : -1;
-            return b.id - a.id;
-        });
-
-        const tbody = document.getElementById('newsTable');
-        const empty = document.getElementById('newsEmpty');
-
-        if (filtered.length === 0) {
-            tbody.innerHTML = '';
-            empty.style.display = 'block';
-            return;
-        }
-
-        empty.style.display = 'none';
-        tbody.innerHTML = filtered.map(item => {
-            const status = NEWS_STATUS_CONFIG[item.status];
-            const previewText = item.summary || item.content.replace(/<[^>]*>/g, '').substring(0, 60);
-            return `<tr style="border-bottom: 1px solid #f5f5f5; transition: background 0.2s;" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
-                <td style="padding: 14px 16px;">
-                    <div style="display: flex; gap: 12px;">
-                        ${item.cover ? `<img src="${item.cover}" style="width: 80px; height: 53px; object-cover; border-radius: 4px; flex-shrink: 0;">` : ''}
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: 500; color: #333; margin-bottom: 4px;">${escHtml(item.title)}</div>
-                            <div style="font-size: 12px; color: #999; line-height: 1.5;">${escHtml(previewText)}...</div>
-                        </div>
-                    </div>
-                </td>
-                <td style="padding: 14px 16px;">
-                    <span style="display: inline-block; padding: 4px 10px; background: #f5f5f5; color: #666; border-radius: 16px; font-size: 12px;">${escHtml(item.category)}</span>
-                </td>
-                <td style="padding: 14px 16px; font-size: 14px; color: #666;">${escHtml(item.author)}</td>
-                <td style="padding: 14px 16px; font-size: 14px; color: #666;">${item.publishTime || '-'}</td>
-                <td style="padding: 14px 16px;">
-                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: ${status.bgColor}; color: ${status.color}; border-radius: 16px; font-size: 12px; font-weight: 500;">
-                        ${status.icon} ${status.label}
-                    </span>
-                </td>
-                <td style="padding: 14px 16px; font-size: 14px; color: #666;">👁️ ${item.views}</td>
-                <td style="padding: 14px 16px; text-align: right;">
-                    <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                        <button class="btn btn-secondary" onclick="showEditNewsModal(${item.id})" style="padding: 6px 12px; font-size: 12px;">✏️ 编辑</button>
-                        ${item.status === 'draft' ? 
-                            `<button class="btn" onclick="publishNews(${item.id})" style="padding: 6px 12px; font-size: 12px;">📤 发布</button>` : 
-                            `<button class="btn btn-secondary" onclick="unpublishNews(${item.id})" style="padding: 6px 12px; font-size: 12px;">📥 撤回</button>`
-                        }
-                        <button class="btn btn-danger" onclick="deleteNews(${item.id})" style="padding: 6px 12px; font-size: 12px;">🗑️ 删除</button>
-                    </div>
-                </td>
-            </tr>`;
-        }).join('');
-    }
-
-    function showAddNewsModal() {
-        editingNewsId = null;
-        showNewsModal();
-    }
-
-    function showEditNewsModal(id) {
-        editingNewsId = id;
-        showNewsModal();
-    }
-
-    function showNewsModal() {
-        try {
-            const item = editingNewsId ? newsData.find(n => n.id === editingNewsId) : null;
-            const modalId = 'newsModal_' + Date.now();
-            const editorId = 'newsEditor_' + Date.now();
-            const cropperModalId = 'cropperModal_' + Date.now();
-            
-            const modal = document.createElement('div');
-            modal.id = modalId;
-            modal.className = 'fixed inset-0 bg-black/50 z-[5000] flex justify-center items-center';
-            modal.innerHTML = `
-                <div class="bg-white rounded-xl w-[750px] max-h-[90vh] flex flex-col overflow-hidden">
-                    <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
-                        <h3 class="text-xl font-semibold text-[#7c3aed]">${item ? '✏️ 编辑新闻' : '➕ 发布新闻'}</h3>
-                        <button class="text-gray-400 hover:text-gray-600 text-xl font-bold w-8 h-8 flex items-center justify-center" onclick="document.getElementById('${modalId}').remove()">×</button>
-                    </div>
-                    
-                    <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">新闻标题 <span class="text-red-500">*</span></label>
-                            <input type="text" id="newsTitle" class="w-full text-lg px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all" value="${item ? escHtml(item.title) : ''}" placeholder="请输入新闻标题">
-                        </div>
-                        
-                        <div class="flex gap-4">
-                            <div class="flex-1">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">分类</label>
-                                <select id="newsCategory" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all bg-white">
-                                    ${NEWS_CATEGORIES.map(c => `<option value="${escHtml(c)}" ${item && item.category === c ? 'selected' : ''}>${escHtml(c)}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">作者</label>
-                                <input type="text" id="newsAuthor" readonly class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-600" value="${item ? escHtml(item.author) : (currentUser?.realName || currentUser?.username || '')}">
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">封面图</label>
-                            <div id="coverUploadArea_${modalId}" class="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center cursor-pointer hover:border-[#7c3aed] hover:bg-purple-50/50 transition-all" onclick="document.getElementById('coverFileInput_${modalId}').click()" ondragover="event.preventDefault()" ondrop="handleCoverDrop(event, '${modalId}')">
-                                <div id="coverPreview_${modalId}" class="hidden">
-                                    <img id="coverImage_${modalId}" src="${item?.cover || ''}" class="max-h-40 mx-auto rounded-lg object-contain">
-                                    <div class="mt-3 flex justify-center gap-2">
-                                        <button class="text-sm text-[#7c3aed] hover:text-[#6d28d9]" onclick="event.stopPropagation(); document.getElementById('coverFileInput_${modalId}').click()">重新上传</button>
-                                        <button class="text-sm text-gray-500 hover:text-gray-700" onclick="event.stopPropagation(); clearCoverImage('${modalId}')">删除</button>
-                                    </div>
-                                </div>
-                                <div id="coverPlaceholder_${modalId}" ${item?.cover ? 'class="hidden"' : ''}>
-                                    <div class="text-4xl mb-3">🖼️</div>
-                                    <div class="text-gray-500 mb-1">点击或拖拽上传封面图</div>
-                                    <div class="text-xs text-gray-400">建议尺寸 900×600（3:2），支持 JPG/PNG</div>
-                                </div>
-                            </div>
-                            <input type="file" id="coverFileInput_${modalId}" accept=".jpg,.jpeg,.png" class="hidden" onchange="handleCoverUpload(event, '${modalId}', '${cropperModalId}')">
-                            <input type="hidden" id="newsCover" value="${item?.cover || ''}">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">从链接导入</label>
-                            <div class="flex gap-3">
-                                <input type="text" id="newsImportUrl" class="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all" placeholder="粘贴网页链接，自动提取标题和正文">
-                                <button class="px-4 py-3 bg-[#7c3aed] text-white rounded-lg hover:bg-[#6d28d9] transition-colors font-medium whitespace-nowrap" onclick="importFromUrl('${modalId}', '${editorId}')">🔗 导入</button>
-                            </div>
-                            <div id="importStatus_${modalId}" class="mt-2 text-xs" style="display:none;"></div>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">摘要</label>
-                            <textarea id="newsSummary" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all resize-none" rows="3" placeholder="不填则默认截取正文前100字">${item ? escHtml(item.summary || '') : ''}</textarea>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">原文链接</label>
-                            <input type="text" id="newsOriginalUrl" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20 outline-none transition-all" placeholder="填写原文链接，发布后可直接跳转（可选）" value="${item ? escHtml(item.originalUrl || '') : ''}">
-                        </div>
-                        
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label class="block text-sm font-medium text-gray-700">正文 <span class="text-red-500">*</span></label>
-                                <div class="flex gap-2">
-                                    <button id="insertTemplateBtn_${modalId}" class="text-sm text-[#7c3aed] hover:text-[#6d28d9] flex items-center gap-1" onclick="showTemplateMenu('${modalId}', '${editorId}')">
-                                        📋 插入模板
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="toolbar_${editorId}" class="w-full"></div>
-                            <div id="${editorId}" class="w-full" style="min-height:300px;"></div>
-                            <div class="text-right text-xs text-gray-400 mt-1" id="wordCount_${modalId}">0 字</div>
-                        </div>
-                    </div>
-                    
-                    <div class="px-6 py-4 border-t border-gray-100 flex justify-between items-center bg-gray-50/50">
-                        <button class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors" onclick="showMobilePreview('${modalId}', '${editorId}')">
-                            👁️ 预览效果
-                        </button>
-                        <div class="flex gap-3">
-                            <button class="px-4 py-2 text-gray-500 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" onclick="document.getElementById('${modalId}').remove()">取消</button>
-                            <button class="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" onclick="saveNewsAsDraft('${modalId}', '${editorId}')">保存草稿</button>
-                            <button class="px-6 py-2 text-white bg-[#7c3aed] rounded-lg hover:bg-[#6d28d9] transition-colors font-medium" onclick="submitNews('${modalId}', '${editorId}')">发布新闻</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="${cropperModalId}" class="fixed inset-0 bg-black/60 z-[6000] flex justify-center items-center hidden">
-                    <div class="bg-white rounded-xl w-[600px] p-4">
-                        <div class="flex justify-between items-center mb-4">
-                            <h4 class="text-lg font-semibold text-gray-800">裁剪封面图</h4>
-                            <button class="text-gray-400 hover:text-gray-600 text-xl font-bold" onclick="closeCropperModal('${cropperModalId}')">×</button>
-                        </div>
-                        <div class="bg-gray-900 rounded-lg overflow-hidden" style="max-height: 400px;">
-                            <img id="cropperImage_${cropperModalId}" src="" class="max-w-full">
-                        </div>
-                        <div class="text-center text-xs text-gray-400 mb-4">拖动裁剪框，裁剪比例固定为 3:2</div>
-                        <div class="flex justify-end gap-3">
-                            <button class="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg" onclick="closeCropperModal('${cropperModalId}')">取消</button>
-                            <button class="px-4 py-2 text-white bg-[#7c3aed] rounded-lg" onclick="confirmCrop('${cropperModalId}', '${modalId}')">确认裁剪</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            setTimeout(() => {
-                initNewsEditor(editorId, modalId, item?.content || '');
-            }, 100);
-        } catch (e) {
-            console.error('showNewsModal error:', e);
-            alert('打开新闻编辑弹窗失败，请刷新页面重试');
-        }
-    }
-    
-    let newsEditorInstance = null;
-    
-    function initNewsEditor(editorId, modalId, content) {
-        try {
-            if (typeof wangEditor === 'undefined') {
-                console.warn('wangEditor not loaded');
-                return;
-            }
-            
-            const toolbarEl = document.getElementById('toolbar_' + editorId);
-            const editorEl = document.getElementById(editorId);
-            
-            if (!toolbarEl || !editorEl) {
-                console.warn('Editor elements not found');
-                return;
-            }
-            
-            toolbarEl.style.borderBottom = '1px solid #e8e8e8';
-            editorEl.style.height = '400px';
-            editorEl.style.border = '1px solid #e8e8e8';
-            editorEl.style.borderTop = 'none';
-            
-            const editorConfig = {
-                placeholder: '请输入新闻正文...',
-                onChange: (editor) => {
-                    try {
-                        const text = editor.getText();
-                        const wordCountEl = document.getElementById('wordCount_' + modalId);
-                        if (wordCountEl) {
-                            wordCountEl.textContent = text.length + ' 字';
-                        }
-                    } catch (e) {
-                        console.error('Editor onChange error:', e);
-                    }
-                },
-                pasteFilterStyle: true,
-                pasteIgnoreImg: false,
-                pasteTextHandle: (pasteStr) => {
-                    return pasteStr;
-                },
-                MENU_CONF: {
-                    uploadImage: {
-                        customUpload: (file, insertFn) => {
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                                const base64 = e.target.result;
-                                insertFn(base64);
-                            };
-                            reader.readAsDataURL(file);
-                        }
-                    },
-                    uploadVideo: {
-                        customUpload: (file, insertFn) => {
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                                const base64 = e.target.result;
-                                insertFn(base64);
-                            };
-                            reader.readAsDataURL(file);
-                        }
-                    },
-                    link: {
-                        parseUrl: (url) => {
-                            return url;
-                        }
-                    },
-                    insertTable: {
-                        modalWidth: 300,
-                        modalHeight: 200,
-                        rows: 4,
-                        cols: 6
-                    }
-                }
-            };
-            
-            const toolbarConfig = [
-                'undo', 'redo', 'divider',
-                'bold', 'italic', 'underline', 'through',
-                'color', 'bgColor',
-                'fontFamily', 'fontSize',
-                'sup', 'sub',
-                'divider',
-                'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyJustify',
-                'headerSelect',
-                'insertOrderedList', 'insertUnorderedList', 'todo',
-                'blockquote', 'code', 'divider',
-                'insertLink', 'uploadImage', 'uploadVideo',
-                'insertTable', 'divider',
-                'clearStyle',
-                'searchReplace',
-                'fullScreen'
-            ];
-            
-            newsEditorInstance = wangEditor.createEditor({
-                selector: '#' + editorId,
-                html: content,
-                config: editorConfig,
-                mode: 'default'
-            });
-            
-            wangEditor.createToolbar({
-                editor: newsEditorInstance,
-                selector: '#toolbar_' + editorId,
-                config: { toolbarKeys: toolbarConfig }
-            });
-            
-        } catch (e) {
-            console.error('wangEditor init error:', e);
-        }
-    }
-    
-    function handleCoverUpload(event, modalId, cropperModalId) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const cropperModal = document.getElementById(cropperModalId);
-            const cropperImg = document.getElementById('cropperImage_' + cropperModalId);
-            cropperImg.src = e.target.result;
-            cropperModal.classList.remove('hidden');
-            
-            setTimeout(() => {
-                new Cropper(cropperImg, {
-                    aspectRatio: 3 / 2,
-                    viewMode: 1,
-                    autoCropArea: 1,
-                    restore: false,
-                    guides: true,
-                    center: true,
-                    highlight: false,
-                    cropBoxMovable: true,
-                    cropBoxResizable: true,
-                    toggleDragModeOnDblclick: false
-                });
-            }, 100);
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    function handleCoverDrop(event, modalId) {
-        event.preventDefault();
-        const file = event.dataTransfer.files[0];
-        if (!file || !file.type.startsWith('image/')) return;
-        
-        const input = document.getElementById('coverFileInput_' + modalId);
-        input.files = event.dataTransfer.files;
-        handleCoverUpload({ target: input }, modalId, 'cropperModal_' + modalId.split('_').pop());
-    }
-    
-    function closeCropperModal(cropperModalId) {
-        document.getElementById(cropperModalId).classList.add('hidden');
-    }
-    
-    function confirmCrop(cropperModalId, modalId) {
-        const cropperImg = document.getElementById('cropperImage_' + cropperModalId);
-        const cropper = cropperImg.cropper;
-        
-        if (cropper) {
-            const canvas = cropper.getCroppedCanvas({
-                width: 900,
-                height: 600,
-                imageSmoothingEnabled: true,
-                imageSmoothingQuality: 'high'
-            });
-            
-            const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-            document.getElementById('newsCover').value = croppedDataUrl;
-            document.getElementById('coverImage_' + modalId).src = croppedDataUrl;
-            document.getElementById('coverPreview_' + modalId).classList.remove('hidden');
-            document.getElementById('coverPlaceholder_' + modalId).classList.add('hidden');
-            document.getElementById('coverUploadArea_' + modalId).classList.add('border-[#7c3aed]', 'bg-purple-50/50');
-        }
-        
-        closeCropperModal(cropperModalId);
-    }
-    
-    function clearCoverImage(modalId) {
-        document.getElementById('newsCover').value = '';
-        document.getElementById('coverImage_' + modalId).src = '';
-        document.getElementById('coverPreview_' + modalId).classList.add('hidden');
-        document.getElementById('coverPlaceholder_' + modalId).classList.remove('hidden');
-        document.getElementById('coverUploadArea_' + modalId).classList.remove('border-[#7c3aed]', 'bg-purple-50/50');
-        document.getElementById('coverFileInput_' + modalId).value = '';
-    }
-    
-    const NEWS_TEMPLATES = {
-        team: {
-            title: '团队动态通知',
-            content: '<h2>📢 团队动态通知</h2><p>各位团队成员：</p><p>近期团队工作安排如下，请大家注意查看：</p><ul><li>工作事项一：请相关成员按时完成</li><li>工作事项二：如有问题及时沟通</li></ul><p>如有疑问，请联系团队负责人。</p><p>谢谢大家的配合！</p>'
-        },
-        achievement: {
-            title: '学术成果发布',
-            content: '<h2>🏆 学术成果发布</h2><p>热烈祝贺团队在 <strong>[期刊/会议名称]</strong> 上发表最新研究成果！</p><h3>论文标题</h3><p>[论文标题]</p><h3>主要贡献</h3><p>本文提出了一种新的方法，在实验中取得了优异的效果，具体包括：</p><ol><li>创新点一</li><li>创新点二</li><li>创新点三</li></ol><p>该研究得到了 [基金项目名称] 的支持。</p>'
-        },
-        meeting: {
-            title: '会议活动预告',
-            content: '<h2>📅 会议活动预告</h2><p>兹定于 <strong>[日期]</strong> 在 <strong>[地点]</strong> 举办 <strong>[会议名称]</strong>，具体安排如下：</p><h3>会议议程</h3><ul><li><strong>[时间]</strong>：[议程内容]</li><li><strong>[时间]</strong>：[议程内容]</li><li><strong>[时间]</strong>：[议程内容]</li></ul><p>请各位成员准时参加！</p>'
-        }
-    };
-    
-    function showTemplateMenu(modalId, editorId) {
-        try {
-            let menu = document.getElementById('templateMenu_' + modalId);
-            if (menu) {
-                menu.remove();
-                return;
-            }
-            
-            menu = document.createElement('div');
-            menu.id = 'templateMenu_' + modalId;
-            menu.className = 'fixed bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-[7000]';
-            
-            Object.entries(NEWS_TEMPLATES).forEach(([key, template]) => {
-                const item = document.createElement('div');
-                item.className = 'px-4 py-2 hover:bg-purple-50 cursor-pointer text-sm text-gray-700';
-                item.textContent = template.title;
-                item.onclick = () => {
-                    if (newsEditorInstance) {
-                        newsEditorInstance.setHtml(template.content);
-                    }
-                    menu.remove();
-                };
-                menu.appendChild(item);
-            });
-            
-            const btn = document.getElementById('insertTemplateBtn_' + modalId);
-            if (btn) {
-                const rect = btn.getBoundingClientRect();
-                menu.style.left = rect.left + 'px';
-                menu.style.top = (rect.bottom + 8) + 'px';
-            }
-            
-            document.body.appendChild(menu);
-            
-            document.addEventListener('click', function closeMenu(e) {
-                if (!menu.contains(e.target) && !btn?.contains(e.target)) {
-                    menu.remove();
-                    document.removeEventListener('click', closeMenu);
-                }
-            });
-        } catch (e) {
-            console.error('showTemplateMenu error:', e);
-        }
-    }
-    
-    function importFromUrl(modalId, editorId) {
-        try {
-            const urlInput = document.getElementById('newsImportUrl');
-            const statusDiv = document.getElementById('importStatus_' + modalId);
-            
-            if (!urlInput || !statusDiv) return;
-            
-            const url = urlInput.value.trim();
-            
-            if (!url) {
-                statusDiv.textContent = '❌ 请输入网页链接';
-                statusDiv.style.color = '#ef4444';
-                statusDiv.style.display = 'block';
-                return;
-            }
-            
-            if (!/^https?:\/\//.test(url)) {
-                statusDiv.textContent = '❌ 请输入有效的网址（以 http:// 或 https:// 开头）';
-                statusDiv.style.color = '#ef4444';
-                statusDiv.style.display = 'block';
-                return;
-            }
-            
-            statusDiv.textContent = '🔄 正在导入内容，请稍候...';
-            statusDiv.style.color = '#7c3aed';
-            statusDiv.style.display = 'block';
-            
-            setTimeout(() => {
-                try {
-                    const importedContent = extractContentFromUrl(url);
-                    
-                    const titleInput = document.getElementById('newsTitle');
-                    const summaryInput = document.getElementById('newsSummary');
-                    
-                    if (importedContent.title && titleInput) {
-                        titleInput.value = importedContent.title;
-                    }
-                    if (importedContent.summary && summaryInput) {
-                        summaryInput.value = importedContent.summary;
-                    }
-                    if (importedContent.content && newsEditorInstance) {
-                        newsEditorInstance.setHtml(importedContent.content);
-                    }
-                    
-                    statusDiv.textContent = '✅ 导入成功！标题和正文已自动填充';
-                    statusDiv.style.color = '#22c55e';
-                    
-                } catch (error) {
-                    statusDiv.textContent = '❌ 导入失败，该网站可能限制了访问，请手动复制内容';
-                    statusDiv.style.color = '#ef4444';
-                }
-            }, 1500);
-        } catch (e) {
-            console.error('importFromUrl error:', e);
-        }
-    }
-    
-    function extractContentFromUrl(url) {
-        const urlPatterns = {
-            'arxiv.org': {
-                title: '论文标题：基于深度学习的城市安全监测系统研究',
-                summary: '本文提出了一种基于深度学习的城市安全智能监测系统，通过目标检测算法实现实时监测和预警功能。',
-                content: `<h2>摘要</h2><p>随着城市化进程的加快，城市安全问题日益突出。本文提出了一种基于深度学习的城市安全智能监测系统，通过改进的目标检测算法实现实时监测和预警功能。</p><h2>引言</h2><p>城市安全是现代城市发展的重要保障。传统的监测方法存在效率低、准确性差等问题，无法满足日益增长的安全需求。</p><h2>方法</h2><p>本文采用改进的YOLOv5算法作为核心检测模型，结合注意力机制提升小目标检测能力。实验结果表明，该方法在公开数据集上取得了优异的性能。</p><h2>结论</h2><p>本文提出的城市安全监测系统有效提升了监测精度和实时性，为城市安全管理提供了新的技术手段。</p>`
-            },
-            'acm.org': {
-                title: '研究成果：城市灾害智能预警系统设计',
-                summary: '本研究设计了一套基于机器学习的城市灾害智能预警系统，能够提前预测各类灾害事件的发生。',
-                content: `<h2>研究背景</h2><p>城市灾害频发对人民生命财产安全构成严重威胁。建立有效的预警系统是提高城市韧性的关键。</p><h2>系统架构</h2><p>预警系统由数据采集层、特征提取层、预测模型层和预警发布层组成，实现端到端的智能预警。</p><h2>实验验证</h2><p>在真实灾害数据集上的实验表明，该系统能够提前15-30分钟发出预警，准确率达到92%以上。</p>`
-            },
-            'ieee.org': {
-                title: '城市安全物联网数据融合技术研究',
-                summary: '针对城市安全物联网中多源异构数据的特点，研究了高效的数据融合方法。',
-                content: `<h2>数据融合挑战</h2><p>城市安全物联网中存在多种类型的传感器数据，数据格式各异、质量不一，给融合处理带来挑战。</p><h2>融合算法</h2><p>本文提出了一种基于注意力机制的多模态数据融合算法，能够自适应地学习不同数据源的权重。</p><h2>应用场景</h2><p>该方法已成功应用于城市交通监测、环境监测等场景，有效提升了数据利用率。</p>`
-            },
-            'cnki.net': {
-                title: '智慧城市安全管理平台构建研究',
-                summary: '构建了面向智慧城市的安全管理平台，整合多领域安全数据，实现统一管理和调度。',
-                content: `<h2>平台设计目标</h2><p>构建一个集数据采集、分析、决策于一体的智慧城市安全管理平台，提升城市安全管理水平。</p><h2>核心功能模块</h2><ul><li>数据汇聚模块：整合视频监控、传感器、告警等多源数据</li><li>智能分析模块：基于AI技术实现异常检测和趋势预测</li><li>决策支持模块：提供可视化分析和辅助决策建议</li></ul><h2>实践应用</h2><p>该平台已在多个城市试点应用，取得了良好的社会效益和经济效益。</p>`
-            },
-            'baidu.com': {
-                title: '城市安全大数据分析报告',
-                summary: '通过对城市安全相关大数据的深入分析，揭示了城市安全的现状和发展趋势。',
-                content: `<h2>数据来源</h2><p>本报告数据来源于城市公共安全监测系统、交通管理系统、应急指挥系统等多个数据源。</p><h2>主要发现</h2><p>分析显示，城市安全事件呈现季节性和区域性特征，智能监测技术的应用显著降低了事故发生率。</p><h2>对策建议</h2><p>建议加强跨部门协同联动，加大科技投入，完善应急预案体系，提升城市安全保障能力。</p>`
-            }
-        };
-        
-        for (const [domain, content] of Object.entries(urlPatterns)) {
-            if (url.includes(domain)) {
-                return content;
-            }
-        }
-        
-        return {
-            title: '从网页导入的文章',
-            summary: '这是从外部网页导入的文章内容，您可以根据实际需要进行修改。',
-            content: `<h2>文章内容</h2><p>已从链接导入文章内容。由于浏览器安全限制，部分网站内容无法直接获取。</p><p>如果导入内容不完整，请访问原网页手动复制粘贴。</p>`
-        };
-    }
-    
-    function showMobilePreview(modalId, editorId) {
-        try {
-            const titleInput = document.getElementById('newsTitle');
-            const authorInput = document.getElementById('newsAuthor');
-            const coverInput = document.getElementById('newsCover');
-            const summaryInput = document.getElementById('newsSummary');
-            
-            const title = titleInput ? titleInput.value : '';
-            const author = authorInput ? authorInput.value : '';
-            const cover = coverInput ? coverInput.value : '';
-            const summary = summaryInput ? summaryInput.value : '';
-            const content = newsEditorInstance ? newsEditorInstance.getHtml() : '';
-            
-            const previewModalId = 'previewModal_' + Date.now();
-            const preview = document.createElement('div');
-            preview.id = previewModalId;
-            preview.className = 'fixed inset-0 bg-black/60 z-[6000] flex justify-center items-center';
-            preview.innerHTML = `
-                <div class="bg-white rounded-xl p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h4 class="text-lg font-semibold text-gray-800">📱 手机预览</h4>
-                        <button class="text-gray-400 hover:text-gray-600 text-xl font-bold" onclick="document.getElementById('${previewModalId}').remove()">×</button>
-                    </div>
-                    <div class="bg-gray-100 rounded-lg p-4">
-                        <div class="bg-white rounded-lg shadow-md w-[375px] overflow-hidden">
-                            <div class="bg-[#7c3aed] px-4 py-3 text-white text-center text-sm">城市安全数智创新团队</div>
-                            ${cover ? `<img src="${cover}" class="w-full h-48 object-cover">` : ''}
-                            <div class="p-4">
-                                <h1 class="text-xl font-bold text-gray-900 mb-2">${title || '标题占位'}</h1>
-                                <div class="flex items-center gap-2 text-sm text-gray-500 mb-3">
-                                    <span>${author}</span>
-                                    <span>•</span>
-                                    <span>${new Date().toLocaleDateString('zh-CN')}</span>
-                                </div>
-                                ${summary ? `<p class="text-gray-600 text-sm mb-4 italic">${summary}</p>` : ''}
-                                <div class="text-gray-800 text-sm leading-relaxed">${content || '<p>正文内容...</p>'}</div>
-                            </div>
-                            <div class="px-4 py-3 bg-gray-50 text-center text-xs text-gray-400">--- 预览结束 ---</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(preview);
-        } catch (e) {
-            console.error('showMobilePreview error:', e);
-        }
-    }
-
-    function validateNewsForm() {
-        try {
-            const title = document.getElementById('newsTitle');
-            const content = newsEditorInstance ? newsEditorInstance.getHtml() : '';
-            let isValid = true;
-            
-            if (title) {
-                if (!title.value.trim()) {
-                    title.classList.add('border-red-500', 'ring-2', 'ring-red-200');
-                    isValid = false;
-                } else {
-                    title.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
-                }
-            }
-            
-            if (!content.replace(/<[^>]*>/g, '').trim()) {
-                isValid = false;
-            }
-            
-            return isValid;
-        } catch (e) {
-            console.error('validateNewsForm error:', e);
-            return false;
-        }
-    }
-    
-    function saveNewsData(status) {
-        try {
-            const titleInput = document.getElementById('newsTitle');
-            const categoryInput = document.getElementById('newsCategory');
-            const authorInput = document.getElementById('newsAuthor');
-            const summaryInput = document.getElementById('newsSummary');
-            const coverInput = document.getElementById('newsCover');
-            const originalUrlInput = document.getElementById('newsOriginalUrl');
-            
-            const title = titleInput ? titleInput.value.trim() : '';
-            const category = categoryInput ? categoryInput.value : 'team';
-            const author = authorInput ? authorInput.value.trim() : '';
-            const summary = summaryInput ? summaryInput.value.trim() : '';
-            const content = newsEditorInstance ? newsEditorInstance.getHtml() : '';
-            const cover = coverInput ? coverInput.value : '';
-            const originalUrl = originalUrlInput ? originalUrlInput.value.trim() : '';
-        
-            let actualSummary = summary;
-            if (!actualSummary) {
-                const textContent = content.replace(/<[^>]*>/g, '').trim();
-                actualSummary = textContent.substring(0, 100) + (textContent.length > 100 ? '...' : '');
-            }
-        
-            if (editingNewsId) {
-                const idx = newsData.findIndex(n => n.id === editingNewsId);
-                if (idx > -1) {
-                    newsData[idx] = {
-                        ...newsData[idx],
-                        title, category, author, summary: actualSummary, content, cover, status, originalUrl,
-                        publishTime: status === 'published' && newsData[idx].status === 'draft' ? new Date().toLocaleDateString('zh-CN') : newsData[idx].publishTime
-                    };
-                }
-            } else {
-                const newId = newsData.length > 0 ? Math.max(...newsData.map(n => n.id)) + 1 : 1;
-                newsData.push({
-                    id: newId, title, category, author, summary: actualSummary, content, cover, status, originalUrl,
-                    publishTime: status === 'published' ? new Date().toLocaleDateString('zh-CN') : '',
-                    views: 0
-                });
-            }
-        
-            localStorage.setItem('newsData', JSON.stringify(newsData));
-        } catch (e) {
-            console.error('saveNewsData error:', e);
-        }
-    }
-    
-    function saveNewsAsDraft(modalId) {
-        try {
-            saveNewsData('draft');
-            const modal = document.getElementById(modalId);
-            if (modal) modal.remove();
-            updateNewsStats();
-            renderNewsList();
-            alert('草稿保存成功！');
-        } catch (e) {
-            console.error('saveNewsAsDraft error:', e);
-        }
-    }
-    
-    function submitNews(modalId) {
-        try {
-            if (!validateNewsForm()) {
-                alert('请填写标题和正文内容');
-                return;
-            }
-            
-            saveNewsData('published');
-            const modal = document.getElementById(modalId);
-            if (modal) modal.remove();
-            updateNewsStats();
-            renderNewsList();
-            alert('新闻发布成功！');
-        } catch (e) {
-            console.error('submitNews error:', e);
-        }
-    }
-    
-    function saveNews(modalId) {
-        try {
-            if (!validateNewsForm()) {
-                alert('请填写标题和正文内容');
-                return;
-            }
-        
-            saveNewsData('published');
-            const modal = document.getElementById(modalId);
-            if (modal) modal.remove();
-            updateNewsStats();
-            renderNewsList();
-            alert(editingNewsId ? '修改成功！' : '发布成功！');
-        } catch (e) {
-            console.error('saveNews error:', e);
-        }
-    }
-
-    function publishNews(id) {
-        const idx = newsData.findIndex(n => n.id === id);
-        if (idx > -1) {
-            newsData[idx].status = 'published';
-            newsData[idx].publishTime = new Date().toLocaleDateString('zh-CN');
-            localStorage.setItem('newsData', JSON.stringify(newsData));
-            updateNewsStats();
-            renderNewsList();
-            alert('发布成功！');
-        }
-    }
-
-    function unpublishNews(id) {
-        const idx = newsData.findIndex(n => n.id === id);
-        if (idx > -1) {
-            newsData[idx].status = 'draft';
-            localStorage.setItem('newsData', JSON.stringify(newsData));
-            updateNewsStats();
-            renderNewsList();
-            alert('已撤回为草稿！');
-        }
-    }
-
-    function deleteNews(id) {
-        if (!confirm('确定要删除这篇新闻吗？')) return;
-        newsData = newsData.filter(n => n.id !== id);
-        localStorage.setItem('newsData', JSON.stringify(newsData));
-        updateNewsStats();
-        renderNewsList();
-        alert('删除成功！');
-    }
+    // 新闻动态管理已抽离至 js/news-management.js（见 window.newsData / NewsManagement）
 
     let meetingPage = 1;
     const MEETING_PAGE_SIZE = 10;
@@ -22722,7 +22076,304 @@ ${ocrText}`
         document.getElementById('meetingParticipants').value = '';
         document.getElementById('meetingAgenda').value = '';
         document.getElementById('meetingNotes').value = '';
+        const notifyCb = document.getElementById('meetingNotifyParticipants');
+        if (notifyCb) notifyCb.checked = true;
+        resetMeetingAgendaFileUI();
+        renderMeetingParticipantChips();
+        const picker = document.getElementById('meetingParticipantPicker');
+        if (picker) { picker.style.display = 'none'; picker.innerHTML = ''; }
         document.getElementById('meetingModal').style.display = 'flex';
+    }
+
+    var MEETING_PARTICIPANT_GROUPS = [
+        { key: 'advisor', label: '导师' },
+        { key: '2022', label: '2022级' },
+        { key: '2023', label: '2023级' },
+        { key: '2024', label: '2024级' },
+        { key: '2025', label: '2025级' },
+        { key: '2026', label: '2026级' }
+    ];
+
+    function getTeamMembersForMeeting() {
+        try {
+            if (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData) && teamMemberData.length) {
+                return teamMemberData;
+            }
+        } catch (e0) {}
+        try {
+            var raw = localStorage.getItem('teamMemberData');
+            if (raw) {
+                var list = JSON.parse(raw);
+                if (Array.isArray(list)) return list;
+            }
+        } catch (e1) {}
+        return [];
+    }
+
+    function escMeetingName(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function getMeetingParticipantNameSet() {
+        const raw = (document.getElementById('meetingParticipants').value || '').trim();
+        if (!raw) return new Set();
+        return new Set(raw.split(/[,，、;；\s]+/).map(function (s) { return s.trim(); }).filter(Boolean));
+    }
+
+    function syncMeetingParticipantsFromSet(nameSet) {
+        const ordered = [];
+        const members = getTeamMembersForMeeting();
+        MEETING_PARTICIPANT_GROUPS.forEach(function (g) {
+            members.filter(function (m) { return m.category === g.key && nameSet.has(m.name); })
+                .forEach(function (m) { if (ordered.indexOf(m.name) < 0) ordered.push(m.name); });
+        });
+        nameSet.forEach(function (n) { if (ordered.indexOf(n) < 0) ordered.push(n); });
+        document.getElementById('meetingParticipants').value = ordered.join('、');
+        renderMeetingParticipantChips();
+        const picker = document.getElementById('meetingParticipantPicker');
+        if (picker && picker.style.display !== 'none') {
+            picker.querySelectorAll('input[data-mp-name]').forEach(function (cb) {
+                cb.checked = nameSet.has(cb.getAttribute('data-mp-name'));
+            });
+            picker.querySelectorAll('input[data-mp-grade]').forEach(function (gcb) {
+                const grade = gcb.getAttribute('data-mp-grade');
+                const boxes = picker.querySelectorAll('input[data-mp-grade-of="' + grade + '"]');
+                const checked = Array.prototype.filter.call(boxes, function (b) { return b.checked; }).length;
+                gcb.checked = boxes.length > 0 && checked === boxes.length;
+                gcb.indeterminate = checked > 0 && checked < boxes.length;
+            });
+        }
+    }
+
+    function renderMeetingParticipantChips() {
+        const box = document.getElementById('meetingParticipantChips');
+        if (!box) return;
+        const names = Array.from(getMeetingParticipantNameSet());
+        if (!names.length) {
+            box.innerHTML = '<span style="color:#bbb;font-size:13px;">尚未选择，请点「从团队选择」按年级勾人</span>';
+            return;
+        }
+        box.innerHTML = names.map(function (n) {
+            return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#ede9fe;color:#5b21b6;border-radius:999px;font-size:12px;">' +
+                escMeetingName(n) +
+                '<button type="button" data-mp-remove="' + escMeetingName(n).replace(/'/g, '&#39;') + '" onclick="removeMeetingParticipant(this.getAttribute(\'data-mp-remove\'))" style="border:none;background:transparent;color:#7c3aed;cursor:pointer;padding:0 2px;font-size:14px;line-height:1;" title="移除">×</button>' +
+                '</span>';
+        }).join('') +
+            '<span style="margin-left:4px;color:#888;font-size:12px;">共 ' + names.length + ' 人</span>';
+    }
+
+    function removeMeetingParticipant(name) {
+        const set = getMeetingParticipantNameSet();
+        set.delete(name);
+        syncMeetingParticipantsFromSet(set);
+    }
+
+    function clearMeetingParticipants() {
+        syncMeetingParticipantsFromSet(new Set());
+    }
+
+    function selectAllMeetingParticipants() {
+        const members = getTeamMembersForMeeting();
+        const set = new Set(members.map(function (m) { return m.name; }).filter(Boolean));
+        syncMeetingParticipantsFromSet(set);
+        const picker = document.getElementById('meetingParticipantPicker');
+        if (picker && picker.style.display === 'none') toggleMeetingParticipantPicker(true);
+    }
+
+    function toggleMeetingParticipantPicker(forceOpen) {
+        const picker = document.getElementById('meetingParticipantPicker');
+        if (!picker) return;
+        const willOpen = forceOpen === true || picker.style.display === 'none';
+        if (!willOpen) {
+            picker.style.display = 'none';
+            return;
+        }
+        renderMeetingParticipantPicker();
+        picker.style.display = 'block';
+    }
+
+    function renderMeetingParticipantPicker() {
+        const picker = document.getElementById('meetingParticipantPicker');
+        if (!picker) return;
+        const members = getTeamMembersForMeeting();
+        const selected = getMeetingParticipantNameSet();
+        if (!members.length) {
+            picker.innerHTML = '<div style="padding:16px;color:#999;font-size:13px;">团队成员库为空，请先在「团队管理」维护人员</div>';
+            return;
+        }
+        let html = '<div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:0;background:#fff;z-index:1;">' +
+            '<span style="font-size:13px;font-weight:600;color:#333;">按年级选择参会人</span>' +
+            '<input type="text" id="meetingParticipantSearch" placeholder="搜索姓名..." oninput="filterMeetingParticipantPicker(this.value)" style="flex:1;max-width:180px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;">' +
+            '</div>';
+        MEETING_PARTICIPANT_GROUPS.forEach(function (g) {
+            const list = members.filter(function (m) { return m.category === g.key; });
+            if (!list.length) return;
+            const allChecked = list.every(function (m) { return selected.has(m.name); });
+            const someChecked = list.some(function (m) { return selected.has(m.name); });
+            html += '<div class="mp-grade-block" data-grade="' + g.key + '" style="border-bottom:1px solid #f5f5f5;">' +
+                '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f8fafc;cursor:pointer;user-select:none;">' +
+                '<input type="checkbox" data-mp-grade="' + g.key + '"' + (allChecked ? ' checked' : '') +
+                (someChecked && !allChecked ? ' data-indeterminate="1"' : '') +
+                ' onchange="toggleMeetingGradeParticipants(\'' + g.key + '\', this.checked)" style="width:15px;height:15px;accent-color:#7c3aed;">' +
+                '<span style="font-weight:600;font-size:13px;color:#334155;">' + g.label + '</span>' +
+                '<span style="font-size:12px;color:#94a3b8;">(' + list.length + '人)</span>' +
+                '</label>' +
+                '<div style="display:flex;flex-wrap:wrap;gap:6px 14px;padding:6px 12px 12px 36px;">';
+            list.forEach(function (m) {
+                const checked = selected.has(m.name) ? ' checked' : '';
+                const safeName = escMeetingName(m.name);
+                html += '<label class="mp-person-item" data-name="' + safeName + '" style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#444;cursor:pointer;min-width:88px;">' +
+                    '<input type="checkbox" data-mp-name="' + safeName + '" data-mp-grade-of="' + g.key + '"' + checked +
+                    ' onchange="toggleMeetingPersonParticipant(this.getAttribute(\'data-mp-name\'), this.checked)" style="width:14px;height:14px;accent-color:#7c3aed;">' +
+                    safeName +
+                    '</label>';
+            });
+            html += '</div></div>';
+        });
+        picker.innerHTML = html;
+        picker.querySelectorAll('input[data-indeterminate="1"]').forEach(function (el) { el.indeterminate = true; });
+    }
+
+    function filterMeetingParticipantPicker(q) {
+        const picker = document.getElementById('meetingParticipantPicker');
+        if (!picker) return;
+        const kw = String(q || '').trim().toLowerCase();
+        picker.querySelectorAll('.mp-person-item').forEach(function (el) {
+            const name = (el.getAttribute('data-name') || '').toLowerCase();
+            el.style.display = (!kw || name.indexOf(kw) >= 0) ? 'inline-flex' : 'none';
+        });
+        picker.querySelectorAll('.mp-grade-block').forEach(function (block) {
+            const visible = Array.prototype.some.call(block.querySelectorAll('.mp-person-item'), function (el) {
+                return el.style.display !== 'none';
+            });
+            block.style.display = visible ? '' : 'none';
+        });
+    }
+
+    function toggleMeetingGradeParticipants(grade, checked) {
+        const members = getTeamMembersForMeeting();
+        const set = getMeetingParticipantNameSet();
+        members.filter(function (m) { return m.category === grade; }).forEach(function (m) {
+            if (checked) set.add(m.name); else set.delete(m.name);
+        });
+        syncMeetingParticipantsFromSet(set);
+    }
+
+    function toggleMeetingPersonParticipant(name, checked) {
+        const set = getMeetingParticipantNameSet();
+        if (checked) set.add(name); else set.delete(name);
+        syncMeetingParticipantsFromSet(set);
+    }
+
+    function resetMeetingAgendaFileUI() {
+        const statusEl = document.getElementById('meetingAgendaFileStatus');
+        if (statusEl) { statusEl.textContent = ''; statusEl.style.color = '#888'; }
+        const fileEl = document.getElementById('meetingAgendaFile');
+        if (fileEl) fileEl.value = '';
+    }
+
+    // 提取上传文件文本：支持 txt/md/docx/pdf
+    async function extractMeetingFileText(file) {
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (ext === 'txt' || ext === 'md' || ext === 'text' || (file.type || '').indexOf('text/') === 0) {
+            return await file.text();
+        }
+        if (ext === 'docx' || (file.type || '').indexOf('wordprocessingml') >= 0) {
+            if (!window.mammoth) throw new Error('Word 解析库未加载，请刷新页面后重试');
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await window.mammoth.extractRawText({ arrayBuffer });
+            return result.value || '';
+        }
+        if (ext === 'pdf' || (file.type || '') === 'application/pdf') {
+            if (!window.pdfjsLib) throw new Error('PDF 解析库未加载，请刷新页面后重试');
+            if (window.pdfjsLib.GlobalWorkerOptions) {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
+            }
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const pages = [];
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                pages.push(content.items.map(item => item.str).join(' '));
+            }
+            return pages.join('\n');
+        }
+        throw new Error('仅支持 txt、md、docx、pdf 文件');
+    }
+
+    async function handleMeetingAgendaFile(input) {
+        const file = input && input.files && input.files[0];
+        if (!file) return;
+        const statusEl = document.getElementById('meetingAgendaFileStatus');
+        const setStatus = (msg, color) => { if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#888'; } };
+        if (file.size > 20 * 1024 * 1024) {
+            setStatus('文件过大（上限 20MB）', '#c0392b');
+            input.value = '';
+            return;
+        }
+        setStatus('正在识别「' + file.name + '」...', '#7c3aed');
+        try {
+            let text = await extractMeetingFileText(file);
+            text = String(text || '').replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+            if (!text) {
+                setStatus('未识别到有效文字（可能是扫描件/图片型 PDF），请手动录入。', '#c0392b');
+                input.value = '';
+                return;
+            }
+            const agendaEl = document.getElementById('meetingAgenda');
+            const existing = agendaEl.value.trim();
+            const header = '【来自文件：' + file.name + '】';
+            agendaEl.value = existing ? (existing + '\n\n' + header + '\n' + text) : (header + '\n' + text);
+            setStatus('✓ 已识别 ' + text.length + ' 字，可点「AI 整理议程」结构化，或直接编辑。', '#2e7d32');
+        } catch (e) {
+            setStatus('识别失败：' + (e && e.message ? e.message : e), '#c0392b');
+        } finally {
+            input.value = '';
+        }
+    }
+
+    async function aiOrganizeMeetingAgenda() {
+        const agendaEl = document.getElementById('meetingAgenda');
+        const statusEl = document.getElementById('meetingAgendaFileStatus');
+        const btn = document.getElementById('meetingAgendaAiBtn');
+        const setStatus = (msg, color) => { if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#888'; } };
+        const raw = (agendaEl.value || '').trim();
+        if (!raw) { setStatus('请先录入或上传议程内容', '#c0392b'); return; }
+        const apiKey = (typeof getApiKey === 'function' ? getApiKey() : '') ||
+            String(localStorage.getItem('openaiApiKey') || localStorage.getItem('aliyunApiKey') || '').trim();
+        if (!apiKey) { setStatus('未配置 AI 密钥，请到「系统设置」填写后重试', '#c0392b'); return; }
+        const title = (document.getElementById('meetingTitle').value || '').trim();
+        const messages = [
+            { role: 'system', content: '你是会议秘书。把用户提供的原始材料整理成清晰的中文会议议程：用有序列表列出议题，每条含议题名称、负责人（若有）、预计时长（若有）。只输出议程正文，不要额外说明。' },
+            { role: 'user', content: (title ? ('会议主题：' + title + '\n\n') : '') + '原始材料：\n' + raw.slice(0, 6000) }
+        ];
+        const payload = { apiKey, model: (document.getElementById('openaiModel') && document.getElementById('openaiModel').value) || 'qwen-plus', messages, temperature: 0.3, max_tokens: 1200 };
+        const endpoints = ['/api/aliyun'];
+        if (typeof API_PROXY !== 'undefined' && API_PROXY) endpoints.push(String(API_PROXY).replace(/\/$/, '') + '/api/aliyun');
+        if (btn) { btn.disabled = true; btn.textContent = '整理中...'; }
+        setStatus('AI 正在整理议程...', '#0d9488');
+        let lastErr = null;
+        try {
+            for (let i = 0; i < endpoints.length; i++) {
+                try {
+                    const resp = await fetch(endpoints[i], { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    const t = await resp.text();
+                    if (!resp.ok) { lastErr = new Error('HTTP ' + resp.status + ' ' + t.slice(0, 160)); continue; }
+                    const data = JSON.parse(t);
+                    const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+                    if (content) {
+                        agendaEl.value = String(content).trim();
+                        setStatus('✓ AI 已整理议程，可继续手动微调。', '#2e7d32');
+                        return;
+                    }
+                    lastErr = new Error('模型无返回');
+                } catch (err) { lastErr = err; }
+            }
+            setStatus('AI 整理失败：' + (lastErr && lastErr.message ? lastErr.message : lastErr), '#c0392b');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '✨ AI 整理议程'; }
+        }
     }
 
     function closeMeetingModal() {
@@ -22737,36 +22388,142 @@ ${ocrText}`
         const participants = document.getElementById('meetingParticipants').value.trim();
         const agenda = document.getElementById('meetingAgenda').value.trim();
         const notes = document.getElementById('meetingNotes').value.trim();
+        const shouldNotify = !!(document.getElementById('meetingNotifyParticipants') && document.getElementById('meetingNotifyParticipants').checked);
 
         if (!title || !startTime || !endTime) {
             alert('请填写会议主题和时间');
             return;
         }
+        if (shouldNotify && !participants) {
+            alert('已勾选「通知参会人」，请先选择参会人员，或取消勾选后再创建');
+            return;
+        }
 
+        let savedMeeting = null;
         if (editingMeetingId) {
             const idx = meetingData.findIndex(m => m.id === editingMeetingId);
             if (idx !== -1) {
                 meetingData[idx] = { ...meetingData[idx], title, location, startTime, endTime, participants, agenda, notes };
+                savedMeeting = meetingData[idx];
             }
         } else {
             const newId = meetingData.length > 0 ? Math.max(...meetingData.map(m => m.id)) + 1 : 1;
-            meetingData.push({ 
-                id: newId, 
-                title, 
-                location, 
-                startTime, 
-                endTime, 
-                participants, 
-                agenda, 
-                notes, 
-                createTime: new Date().toLocaleString('zh-CN') 
-            });
+            savedMeeting = {
+                id: newId,
+                title,
+                location,
+                startTime,
+                endTime,
+                participants,
+                agenda,
+                notes,
+                createTime: new Date().toLocaleString('zh-CN')
+            };
+            meetingData.push(savedMeeting);
         }
 
         saveMeetingData();
         closeMeetingModal();
         renderMeetingList();
-        alert('创建成功！');
+
+        let notifyMsg = '';
+        if (shouldNotify && savedMeeting) {
+            const result = notifyMeetingParticipants(savedMeeting);
+            if (result && result.ok) {
+                notifyMsg = '，已向 ' + result.count + ' 位参会人发送会议通知';
+            } else if (result && result.error) {
+                notifyMsg = '，但通知发送失败：' + result.error;
+            }
+        }
+
+        if (typeof showCloudSyncBanner === 'function') {
+            showCloudSyncBanner('会议已创建' + notifyMsg, false);
+        } else {
+            alert('创建成功！' + notifyMsg);
+        }
+
+        try {
+            if (savedMeeting && typeof offerNewsDraftFromMeeting === 'function') {
+                setTimeout(function () { offerNewsDraftFromMeeting(savedMeeting); }, 200);
+            }
+        } catch (eNews) {}
+    }
+
+    /** 向会议所选参会人定向推送会议通知（铃铛可见） */
+    function notifyMeetingParticipants(meeting) {
+        try {
+            if (!meeting) return { ok: false, error: '无会议数据' };
+            const names = String(meeting.participants || '')
+                .split(/[,，、;；\s]+/)
+                .map(function (s) { return s.trim(); })
+                .filter(Boolean);
+            if (!names.length) return { ok: false, error: '未选择参会人' };
+
+            // 确保 noticeData 已加载
+            try {
+                if (typeof loadNoticeData === 'function' && (!noticeData || !noticeData.length)) loadNoticeData();
+            } catch (eLoad) {}
+
+            const publisher = currentUser ? (currentUser.realName || currentUser.username) : '系统';
+            const fmt = function (v) {
+                if (!v) return '待定';
+                try {
+                    const d = new Date(v);
+                    if (isNaN(d.getTime())) return String(v).replace('T', ' ');
+                    const p = function (n) { return String(n).padStart(2, '0'); };
+                    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+                } catch (e) { return String(v); }
+            };
+            const title = '会议通知：' + (meeting.title || '未命名会议');
+            const lines = [
+                '您被邀请参加以下会议，请准时出席。',
+                '',
+                '主题：' + (meeting.title || ''),
+                '时间：' + fmt(meeting.startTime) + ' ~ ' + fmt(meeting.endTime),
+                '地点：' + (meeting.location || '待定'),
+                '参会人：' + names.join('、')
+            ];
+            if (meeting.agenda) lines.push('', '议程：', meeting.agenda);
+            if (meeting.notes) lines.push('', '备注：' + meeting.notes);
+
+            const newId = (noticeData && noticeData.length)
+                ? Math.max.apply(null, noticeData.map(function (n) { return Number(n.id) || 0; })) + 1
+                : 1;
+            const notice = normalizeNoticeRecord({
+                id: newId,
+                title: title,
+                type: 'meeting',
+                content: lines.join('\n'),
+                startTime: meeting.startTime || '',
+                endTime: meeting.endTime || '',
+                publishTime: new Date().toLocaleString('zh-CN'),
+                publisher: publisher,
+                audience: 'custom',
+                audienceNames: names,
+                pinned: false,
+                reads: [],
+                meetingId: meeting.id
+            });
+            noticeData.push(notice);
+            saveNoticeData({
+                log: {
+                    action: '发布',
+                    desc: '会议定向通知：' + title,
+                    detail: { meetingId: meeting.id, audienceNames: names }
+                }
+            });
+            try { if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter(); } catch (e2) {}
+            try { if (typeof renderNoticeList === 'function') renderNoticeList(); } catch (e3) {}
+            try {
+                if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                    new Notification(title, { body: '时间：' + fmt(meeting.startTime) + ' · 地点：' + (meeting.location || '待定') });
+                }
+            } catch (e4) {}
+            return { ok: true, count: names.length, noticeId: newId };
+        } catch (err) {
+            console.error('notifyMeetingParticipants', err);
+            return { ok: false, error: (err && err.message) ? err.message : String(err) };
+        }
     }
 
     function showMeetingDetail(id) {
@@ -24409,6 +24166,7 @@ ${ocrText}`
         if (moduleId === 'notice_publish') { initNoticePublish(); }
         if (moduleId === 'home') {
             try { if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter(); } catch (e) {}
+            try { if (typeof renderHomeNewsPanel === 'function') renderHomeNewsPanel(); } catch (e2) {}
         }
         if (moduleId === 'meeting_management') { initMeetingManagement(); }
         if (moduleId === 'literature_library' || moduleId === 'dataset_library' || moduleId === 'project_report' || moduleId === 'shared_files') { initResourceModules(); }
@@ -28514,5 +28272,6 @@ ${ocrText}`
     </script>
     <script src="js/literature-compare.js"></script>
     <script src="js/document-analysis.js?v=20260711-2006"></script>
+    <script src="js/news-management.js?v=20260711-2320"></script>
 </body>
 </html>
