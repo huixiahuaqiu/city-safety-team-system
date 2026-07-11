@@ -28,7 +28,7 @@ copy .env.example .env
 copy config.example.js config.local.js
 ```
 
-`config.local.js` 中的 Supabase 配置用于浏览器端云同步，`ANNOTATION_UPLOAD_TOKEN` 用于本机标注上传接口鉴权。
+`config.local.js` 用于本机覆盖（上传 token 等）。公开云同步默认读可提交的 `config.js`。`ANNOTATION_UPLOAD_TOKEN` 用于本机标注上传鉴权。百炼大模型密钥仅保存在浏览器 localStorage（「OpenAI入口」），不进云同步。
 
 4. 安装依赖：
 
@@ -37,6 +37,13 @@ python -m pip install -r requirements.txt
 ```
 
 当前 Python 网关仅使用标准库，保留 `requirements.txt` 作为依赖管理入口。
+
+## 智能对话问答
+
+- 知识库通过 `knowledgeData` 云端同步，团队成员互相可见。
+- 未配置百炼密钥：知识库 TopK 检索本地回答。
+- 已配置密钥：优先本机 `/api/aliyun`，其次远程 `API_PROXY`，失败回退知识库。
+- 普通成员可维护自己添加的知识；`admin` / `leader` 可管理全部。
 
 ## 启动服务
 

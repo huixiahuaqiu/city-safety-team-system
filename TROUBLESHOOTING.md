@@ -8,9 +8,17 @@
 
 ## 云同步不可用
 
-- 确认 `123123/config.local.js` 中存在 `SUPABASE_URL` 与 `SUPABASE_KEY`。
+- 确认已加载 `123123/config.js`（GitHub Pages）或本机 `config.local.js` 覆盖了 `SUPABASE_URL` / `SUPABASE_KEY`。
 - 确认 `123123/.env` 中同样配置了服务端 Supabase 参数，否则 MLOps 台账不会服务端推云。
-- 浏览器控制台若提示 `Supabase 未配置`，说明前端本地配置未生效。
+- 浏览器控制台若提示 `Supabase 未配置`，说明前端配置未生效。
+
+## 智能对话无回答 / 一直知识库模式
+
+- 知识库模式：未配置百炼密钥时的预期行为，仍可按知识条目检索回答。
+- 大模型模式：在「OpenAI入口」保存阿里云百炼 API Key 后刷新对话页，角标应变为「大模型模式」。
+- 大模型失败会自动回退知识库，并在气泡下方显示失败原因。
+- 本机代理需 `python start_web.py`；否则会尝试远程 `API_PROXY`。
+- 知识库不同步：确认 `knowledgeData` 在云端同步键中，且 Pages 已部署含 `config.js` 的版本。
 
 ## 标注文件上传失败
 
