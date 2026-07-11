@@ -1,0 +1,173 @@
+资深全栈视角：文献对比分析模块 最终形态设计
+站在课题组科研生产力工具的定位上，它不该是 “勾选出个表格” 的简单演示页面，而要覆盖文献入库→多维度对比→AI 深度分析→成果导出复用的完整链路，成为研究生写论文、做算法选型、开组会的高频刚需工具，同时深度融入你整套团队管理系统，而非孤立功能。
+下面从产品交互、前端架构、后端设计、全系统联动、落地节奏五个维度，讲清楚它应该有的样子。
+一、整体页面架构：左库右析 + 多视图切换
+保留你现有的左右分栏布局，但右侧做成Tab 多视图，适配不同科研场景，一个模块顶四个用。
+左侧：文献筛选与选择区（分层筛选，高效选稿）
+从上到下四层结构，解决 “文献多了找不到、选起来慢” 的痛点：
+顶部操作栏
+主操作：添加文献、导入（下拉选择：手动添加 / CSV 导入 / BibTeX 导入 / PDF 解析导入）
+次操作：导出 CSV、批量删除、保存为对比模板
+筛选区（折叠式，不占空间）
+全文搜索框：搜标题、作者、关键词
+标签快捷筛选：点击 #目标检测 /# 语义分割 /# 多模态等标签，一键过滤
+高级筛选：年份区间、会议 / 期刊类型、是否开源、精度范围
+排序：按发表年份、引用量、mAP 精度、FPS 速度 升降序
+文献列表区
+卡片式条目：标题（超长省略） + 一作・年份・会议 + 标签组 + 核心指标速览（mAP/FPS） + 复选框
+悬浮交互：鼠标悬浮弹出摘要预览，不用点进详情
+分组折叠：支持按 “我的收藏 / 目标检测组 / 分割组” 折叠分组
+底部选中栏
+实时显示已选数量（如 已选 3/10）、清空选择按钮
+超过 10 篇自动禁用其余复选框，给出提示
+右侧：多视图对比结果区（Tab 切换，场景化输出）
+四个视图 Tab，对应四个核心科研场景，按需切换：
+1. 表格对比视图（核心基础，写论文用）
+这是最常用的视图，做可配置维度的横向对比表，不是固定死字段。
+维度可自定义：顶部有「对比维度设置」，用户可勾选要显示的维度（基础信息、核心创新、骨干网络、精度指标、速度、参数量、数据集、优缺点、适用场景等），保存为个人模板，下次直接用
+智能高亮规则：
+mAP 最高、FPS 最快的自动标绿加粗
+参数量最小的标蓝
+指标差异超过 30% 的自动标黄，一眼看出差距
+交互细节：首列（维度名）固定，横向滚动查看多篇文献；支持拖拽文献列调整顺序；双击单元格可临时编辑备注
+2. 可视化对比视图（做汇报 / 算法选型用）
+专门给组会 PPT、项目选型做的可视化页面，不用自己再去 Excel 画图。
+精度 - 速度散点图（CV 算法选型神器）：X 轴为推理速度 FPS，Y 轴为精度 mAP，每篇文献是一个点，悬浮显示详情。一眼就能看出哪些算法 “又快又准”，非常适合工地边缘部署选型
+多维度雷达图：选取 5-6 个核心维度（精度、速度、参数量、开源成熟度、部署难度、场景适配性），多篇文献叠加对比，适合综合评估
+性能柱状图：单维度横向对比，比如只比 mAP、只比参数量
+3. AI 深度综述视图（写文献综述 / 开题用）
+不是简单生成一段话，而是结构化输出，直接能用在论文的「相关工作」章节。
+输出结构固定为四段：
+核心异同总结：200 字概括多篇文献的技术路线分歧、性能代差
+技术演进脉络：按时间线梳理算法迭代逻辑，比如从两阶段到一阶段、从 CNN 到 Transformer
+场景化选型建议：针对你的工地安全检测场景，分别给出「云端高精度方案」「边缘端实时方案」「低光照复杂场景方案」推荐
+创新点启发：基于现有算法不足，给出可研究的改进方向
+交互：SSE 流式逐字输出，底部有「继续追问」输入框，可针对细节提问；支持一键复制、一键插入周报、导出为 Word
+4. 技术时间线视图（梳理研究现状用）
+选中的文献按发表年份纵向排布，形成技术发展时间轴：
+每个节点标注：论文名称、核心创新点、标志性性能突破
+自动连线标注技术传承关系（比如 YOLOv5→YOLOv8 的演进）
+适合快速生成论文引言里的研究现状梳理，也适合新生快速了解领域发展
+二、前端架构设计（组件化、可扩展）
+作为全栈工程师，不会把所有逻辑堆在一个页面里，而是做组件化拆分，后续迭代加功能不返工：
+plaintext
+views/literature/compare/
+├─ index.vue              # 主页面，左右布局 + Tab切换
+├─ components/
+│  ├─ LiteratureList.vue  # 左侧文献列表 + 筛选
+│  ├─ LiteratureCard.vue  # 单条文献卡片组件
+│  ├─ CompareTabs.vue     # 右侧Tab容器
+│  ├─ TableView.vue       # 表格对比视图
+│  ├─ ChartView.vue       # 可视化视图（封装ECharts）
+│  ├─ AiReviewView.vue    # AI综述视图
+│  └─ TimelineView.vue    # 时间线视图
+└─ utils/
+   ├─ compareUtils.js     # 高亮计算、排序逻辑
+   └─ chartOptions.js     # 图表配置项
+关键技术细节
+状态驱动：选中的文献列表用 ref 响应式管理，所有右侧视图统一监听这个数组，勾选即实时更新，无需点击 “对比” 按钮，那两个按钮可以降级为 “强制刷新对比” 和 “AI 一键对比”
+虚拟列表：文献超过 100 篇时，用虚拟滚动保证页面不卡顿
+对比结果缓存：同一组文献的对比结果、AI 生成结果存入本地缓存，切换 Tab、刷新页面不用重新生成
+主题统一：完全复用你系统的紫色主题色、圆角、阴影规范，和整体 UI 风格无缝衔接
+三、后端与数据层设计（可扩展、高性能）
+3.1 数据库设计（三张核心表，灵活扩展）
+1. 文献主表 literature
+存通用基础字段，扩展字段用 JSON 或关联表，不用频繁改表结构：
+sql
+CREATE TABLE `literature` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `title` varchar(500) NOT NULL COMMENT '标题',
+  `authors` varchar(500) DEFAULT NULL COMMENT '作者',
+  `year` int DEFAULT NULL COMMENT '发表年份',
+  `venue` varchar(100) DEFAULT NULL COMMENT '会议/期刊',
+  `abstract` text COMMENT '摘要',
+  `keywords` varchar(500) DEFAULT NULL COMMENT '关键词标签，逗号分隔',
+  `doi` varchar(100) DEFAULT NULL COMMENT 'DOI编号',
+  `paper_url` varchar(500) DEFAULT NULL COMMENT '论文链接',
+  `file_id` bigint DEFAULT NULL COMMENT '关联PDF文件ID',
+  `ext_info` json DEFAULT NULL COMMENT '扩展属性：mAP、FPS、骨干网络等',
+  `creator_id` bigint DEFAULT NULL COMMENT '创建人',
+  `is_shared` tinyint DEFAULT 1 COMMENT '是否全组共享',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_year` (`year`),
+  KEY `idx_creator` (`creator_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文献库表';
+把 mAP、FPS、骨干网络等领域属性放进 ext_info JSON 字段，后续新增对比维度不用改表结构，非常灵活。
+2. 对比模板表 literature_compare_template
+保存用户自定义的对比维度组合，不用每次重新勾选：
+sql
+CREATE TABLE `literature_compare_template` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `template_name` varchar(100) NOT NULL,
+  `dimensions` json NOT NULL COMMENT '对比维度数组',
+  `creator_id` bigint DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='对比模板表';
+3. AI 对比结果缓存表 literature_compare_cache
+同一组文献重复对比时，直接返回缓存结果，节省 Token、提升速度：
+sql
+CREATE TABLE `literature_compare_cache` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `literature_ids` varchar(500) NOT NULL COMMENT '文献ID组合，排序后拼接',
+  `ai_result` text COMMENT 'AI生成的对比结果',
+  `model` varchar(50) DEFAULT NULL COMMENT '所用模型',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ids` (`literature_ids`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对比结果缓存表';
+3.2 核心接口设计
+表格
+接口	说明	备注
+GET /literature/list	分页 + 筛选查询文献列表	支持多条件过滤
+POST /literature/add	手动添加文献	
+POST /literature/import/csv	CSV 批量导入	
+POST /literature/import/bibtex	BibTeX 格式导入	适配 Zotero/EndNote
+POST /literature/import/pdf	PDF 解析导入	联动文档智能解析模块
+GET /literature/compare/table	获取表格对比数据	传入文献 ID 数组 + 维度数组
+POST /literature/compare/ai	AI 一键对比	SSE 流式返回
+GET /literature/compare/chart	获取可视化图表数据	返回结构化数据，前端渲染
+3.3 AI 能力抽象层
+不把模型写死，复用你系统「智能对话问答」的大模型抽象层，支持切换 GPT、Claude、GLM 等模型；同时做结果缓存，相同文献组合不用重复调用，节省成本。
+四、全系统联动设计（融入整体，而非孤立模块）
+这是全栈工程师和纯前端开发的核心区别：一个模块要能盘活整个系统的数据流。
+联动「文献资料库」
+共用同一张文献主表，对比模块只是文献库的一个功能入口，数据不重复录入；在文献详情页也可以直接加入对比。
+联动「团队工作周报」
+AI 对比结果页增加「插入本周周报」按钮，自动把文献调研成果追加到学生当周周报的 “本周进展” 里，不用学生复制粘贴。
+联动「项目管理」
+支持将对比结果关联到具体科研项目（如 “工地安全检测项目”），项目档案中自动留存算法调研记录，项目结题时可一键导出所有调研资料。
+联动「团队共享文件库」
+对比结果导出的 Excel、Word、PDF 文件，可一键保存到共享文件库，标注为 “文献调研成果”，全组成员可查阅。
+联动「文档智能解析」
+上传论文 PDF 后，自动提取标题、作者、摘要、核心指标，自动入库到文献库，可直接用于对比，解决手动录入的繁琐。
+权限联动
+复用现有 RBAC 体系：
+学生：只能管理自己导入的文献，可查看全组共享文献
+导师：可查看、管理全组所有文献，可设置文献共享范围
+五、细节体验优化（资深工程师的差异化）
+这些细节不影响功能可用，但决定了好不好用、学生愿不愿意用：
+实时对比：勾选 / 取消勾选立刻刷新右侧结果，去掉冗余的 “对比选中文献” 按钮，只保留 “AI 一键对比”
+对比记忆：页面刷新后，自动恢复上次选中的文献和视图
+键盘快捷键：Ctrl+A 全选、Esc 清空选择、回车触发 AI 对比
+智能去重：导入文献时，根据 DOI / 标题自动去重，避免重复录入
+DOI 补全：手动添加时，只输入 DOI，自动拉取完整的作者、年份、摘要、引用量，不用手动填
+导出格式适配：导出 Word 时自动套用学校论文格式，导出 PPT 时自动生成对比幻灯片
+六、落地节奏建议（分三期，渐进式交付）
+一期：MVP 可用版
+完成左侧文献列表 + 基础筛选
+右侧表格对比视图（固定 6 个核心维度）
+手动添加 + CSV 导入导出
+基础勾选交互
+二期：增强好用版
+新增可视化视图（散点图 + 雷达图）
+对接 AI 一键对比，结构化输出
+支持 BibTeX 导入、对比维度自定义
+对比模板保存
+三期：高阶闭环版
+技术时间线视图
+PDF 解析自动入库
+全系统联动（周报、项目、文件库）
+DOI 自动补全、文献去重
+高级筛选与排序
+按照这个方案做出来，这个模块就不再是大赛里的 “凑数页面”，而是真的能提升课题组科研效率的生产力工具，也是整个系统里非常亮眼的创新点。

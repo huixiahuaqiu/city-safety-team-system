@@ -58,9 +58,12 @@ SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
 ANNOTATION_STORAGE_BUCKET = os.environ.get('ANNOTATION_STORAGE_BUCKET', 'annotations')
 ANNOTATION_BLOB_CHUNK_SIZE = int(os.environ.get('ANNOTATION_BLOB_CHUNK_SIZE', str(160 * 1024)))
 ANNOTATION_BLOB_MAX_BYTES = int(os.environ.get('ANNOTATION_BLOB_MAX_BYTES', str(40 * 1024 * 1024)))
+BAIDU_OCR_API_KEY = os.environ.get('BAIDU_OCR_API_KEY', '')
+BAIDU_OCR_SECRET_KEY = os.environ.get('BAIDU_OCR_SECRET_KEY', '')
 CLOUD_SYNC_MARK = '__APP_SYNC__'
 CLOUD_SYNC_PN = '__SYNC_KV__modelTrainingData'
 
+_baidu_ocr_token = {'access_token': '', 'expire_at': 0}
 _store_lock = threading.Lock()
 
 os.makedirs(os.path.dirname(AUDIT_LOG_PATH), exist_ok=True)
@@ -81,6 +84,55 @@ def _now_iso():
 
 def _today():
     return datetime.now().strftime('%Y-%m-%d')
+
+
+def get_baidu_ocr_token():
+    """Fetch/cache Baidu OCR access_token from env credentials."""
+    if not BAIDU_OCR_API_KEY or not BAIDU_OCR_SECRET_KEY:
+        raise RuntimeError('百度 OCR 未配置：请在 .env 设置 BAIDU_OCR_API_KEY 与 BAIDU_OCR_SECRET_KEY')
+    now = time.time()
+    if _baidu_ocr_token['access_token'] and now < _baidu_ocr_token['expire_at']:
+        return _baidu_ocr_token['access_token']
+    token_url = (
+        'https://aip.baidubce.com/oauth/2.0/token'
+        '?grant_type=client_credentials'
+        '&client_id=%s&client_secret=%s'
+        % (urllib.parse.quote(BAIDU_OCR_API_KEY), urllib.parse.quote(BAIDU_OCR_SECRET_KEY))
+    )
+    with urllib.request.urlopen(token_url, timeout=20) as resp:
+        data = json.loads(resp.read().decode('utf-8'))
+    token = data.get('access_token')
+    if not token:
+        raise RuntimeError('获取百度 OCR token 失败: %s' % json.dumps(data, ensure_ascii=False)[:240])
+    _baidu_ocr_token['access_token'] = token
+    _baidu_ocr_token['expire_at'] = now + max(60, int(data.get('expires_in', 2592000)) - 300)
+    return token
+
+
+def run_baidu_ocr(image_b64, accurate=False):
+    """Call Baidu OCR. image_b64 should be raw base64 without data-url prefix."""
+    image_b64 = (image_b64 or '').strip()
+    if image_b64.startswith('data:'):
+        image_b64 = image_b64.split(',', 1)[-1]
+    if not image_b64:
+        raise ValueError('image required')
+    if len(image_b64) > 5_500_000:
+        raise ValueError('image too large for OCR (keep under ~4MB)')
+    token = get_baidu_ocr_token()
+    path = 'accurate_basic' if accurate else 'general_basic'
+    ocr_url = 'https://aip.baidubce.com/rest/2.0/ocr/v1/%s?access_token=%s' % (path, token)
+    body = urllib.parse.urlencode({
+        'image': image_b64,
+        'detect_direction': 'true',
+    }).encode('utf-8')
+    req = urllib.request.Request(
+        ocr_url,
+        data=body,
+        headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        method='POST',
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return json.loads(resp.read().decode('utf-8'))
 
 
 def load_mlops_store():
@@ -642,6 +694,26 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self.send_error(500, f'Internal server error: {e}')
             return
 
+        if path.startswith('/api/baidu-ocr'):
+            try:
+                request_data = json.loads((post_data or b'{}').decode('utf-8') or '{}')
+            except json.JSONDecodeError as e:
+                self._json(400, {'error': 'invalid json: %s' % e})
+                return
+            image = request_data.get('image') or ''
+            accurate = bool(request_data.get('accurate'))
+            try:
+                result = run_baidu_ocr(image, accurate=accurate)
+                audit_event('baidu_ocr_ok', ip=self.client_address[0], words=len(result.get('words_result') or []))
+                self._json(200, result)
+            except RuntimeError as e:
+                audit_event('baidu_ocr_denied', ip=self.client_address[0], error=str(e))
+                self._json(503, {'error': str(e)})
+            except Exception as e:
+                audit_event('baidu_ocr_failed', ip=self.client_address[0], error=str(e))
+                self._json(500, {'error': str(e)})
+            return
+
         self.send_error(404, 'Not found')
 
     def do_GET(self):
@@ -754,7 +826,10 @@ def run_server(port=8000):
         httpd = ThreadingHTTPServer(server_address, WorkingProxyHandler)
         logger.info('server running at http://localhost:%s', port)
         logger.info('api proxy: http://localhost:%s/api/aliyun', port)
+        logger.info('baidu ocr: POST http://localhost:%s/api/baidu-ocr', port)
         logger.info('mlops report: POST http://localhost:%s/api/mlops/report', port)
+        if not BAIDU_OCR_API_KEY or not BAIDU_OCR_SECRET_KEY:
+            logger.warning('BAIDU_OCR_* is not configured; scanned PDF OCR will fall back to cloud worker if available')
         logger.info('annotation upload: POST http://localhost:%s/api/annotation/upload', port)
         logger.info('annotation export: GET http://localhost:%s/api/annotation/export?taskId=...', port)
         if not MLOPS_TOKEN:

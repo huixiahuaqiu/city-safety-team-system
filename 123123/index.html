@@ -587,6 +587,253 @@
             transform: translateY(-3px);
             box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
         }
+
+        /* ===== 文献对比分析 ===== */
+        .lit-hero {
+            position: relative; overflow: hidden; border-radius: 16px; padding: 16px 18px; margin-bottom: 16px;
+            background: radial-gradient(circle at top right, rgba(129,140,248,0.25), transparent 46%), linear-gradient(135deg, #eef2ff 0%, #f5f3ff 55%, #fff 100%);
+            border: 1px solid #e0e7ff;
+        }
+        .lit-hero::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.4) 48%, transparent 72%);
+            transform: translateX(-120%); animation: shimmerSweep 5.2s ease-in-out infinite; pointer-events: none;
+        }
+        .lit-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #4f46e5; background: #eef2ff; border: 1px solid #c7d2fe; }
+        .lit-layout { display: grid; grid-template-columns: minmax(300px, 0.95fr) minmax(0, 1.35fr); gap: 16px; align-items: stretch; min-height: 620px; }
+        @media (max-width: 1100px) { .lit-layout { grid-template-columns: 1fr; } }
+        .lit-left, .lit-right { border: 1px solid #e5e7eb; border-radius: 16px; background: linear-gradient(180deg, #fff, #fafafa); display: flex; flex-direction: column; min-height: 560px; overflow: hidden; }
+        .lit-left-head { padding: 12px 14px; border-bottom: 1px solid #eef2ff; }
+        .lit-left > .form-control, .lit-chips, .lit-filters { margin-left: 12px; margin-right: 12px; }
+        .lit-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; max-height: 72px; overflow-y: auto; }
+        .lit-chip { border: 1px solid #ddd6fe; background: #fff; color: #5b21b6; border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; transition: all 0.15s ease; }
+        .lit-chip span { color: #9ca3af; margin-left: 2px; }
+        .lit-chip:hover, .lit-chip.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+        .lit-chip.active span, .lit-chip:hover span { color: rgba(255,255,255,0.8); }
+        .lit-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .lit-list { flex: 1; overflow-y: auto; padding: 0 12px 12px; max-height: 420px; }
+        .lit-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; background: #fff; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; animation: chatBubbleIn 0.28s ease both; }
+        .lit-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(79,70,229,0.1); border-color: #c7d2fe; }
+        .lit-card.selected { border-color: #7c3aed; background: linear-gradient(180deg, #f5f3ff, #fff); box-shadow: inset 3px 0 0 #7c3aed; }
+        .lit-card.disabled { opacity: 0.55; }
+        .lit-card-main { display: flex; gap: 8px; align-items: flex-start; }
+        .lit-card-title { font-size: 13px; font-weight: 700; color: #111827; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+        .lit-card-meta { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .lit-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        .lit-card-tags span { font-size: 11px; color: #6366f1; background: #eef2ff; padding: 1px 6px; border-radius: 999px; }
+        .lit-metrics { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        .lit-metrics span { font-size: 11px; font-weight: 600; color: #0f766e; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 6px; border-radius: 6px; }
+        .lit-card-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+        .lit-selection-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; border-top: 1px solid #eef2ff; background: rgba(238,242,255,0.55); font-size: 12px; color: #4b5563; }
+        .lit-tabs { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #eef2ff; background: #fafafa; flex-wrap: wrap; }
+        .lit-tab { border: 1px solid transparent; background: transparent; color: #6b7280; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
+        .lit-tab:hover { background: #eef2ff; color: #4f46e5; }
+        .lit-tab.active { background: #4f46e5; color: #fff; box-shadow: 0 8px 18px rgba(79,70,229,0.25); }
+        .lit-pane { flex: 1; overflow: auto; padding: 12px; min-height: 480px; }
+        .lit-empty, .lit-empty-pane { text-align: center; color: #9ca3af; padding: 48px 16px; font-size: 13px; }
+        .lit-empty-ico { font-size: 40px; margin-bottom: 8px; }
+        .lit-dim-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; font-size: 12px; color: #4b5563; }
+        .lit-dim-check { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .lit-table-wrap { overflow: auto; max-height: 520px; border: 1px solid #e5e7eb; border-radius: 12px; }
+        .lit-compare-table { border-collapse: collapse; min-width: 720px; width: 100%; font-size: 12px; }
+        .lit-compare-table th, .lit-compare-table td { border-bottom: 1px solid #f1f5f9; padding: 10px 12px; vertical-align: top; background: #fff; }
+        .lit-compare-table thead th { position: sticky; top: 0; z-index: 2; background: linear-gradient(180deg, #f5f3ff, #eef2ff); color: #4c1d95; }
+        .lit-compare-table .sticky-col { position: sticky; left: 0; z-index: 1; background: #fafafa; min-width: 110px; font-weight: 600; }
+        .lit-compare-table thead .sticky-col { z-index: 3; background: #ede9fe; }
+        .lit-th-sub { font-weight: 500; color: #6b7280; font-size: 11px; margin-top: 4px; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lit-cell-best { background: #ecfdf5 !important; color: #047857; font-weight: 700; }
+        .lit-cell-gap { background: #fffbeb !important; color: #b45309; }
+        .lit-legend { display: flex; gap: 10px; margin-top: 10px; font-size: 12px; }
+        .lit-legend span { padding: 2px 8px; border-radius: 6px; }
+        .lit-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (max-width: 900px) { .lit-chart-grid { grid-template-columns: 1fr; } }
+        .lit-chart-card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 12px; background: #fff; }
+        .lit-chart-title { font-size: 13px; font-weight: 700; color: #312e81; margin-bottom: 6px; }
+        .lit-ai-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+        .lit-ai-hint { font-size: 12px; color: #6b7280; margin-bottom: 10px; }
+        .lit-ai-result { white-space: pre-wrap; line-height: 1.8; font-size: 13px; color: #1f2937; background: linear-gradient(180deg, #faf5ff, #fff); border: 1px solid #e9d5ff; border-radius: 12px; padding: 14px; }
+        .lit-ai-placeholder, .lit-ai-loading, .lit-ai-error { border-radius: 12px; padding: 16px; font-size: 13px; }
+        .lit-ai-placeholder { background: #f8fafc; border: 1px dashed #cbd5e1; color: #64748b; }
+        .lit-ai-loading { background: #eef2ff; color: #4338ca; display: flex; align-items: center; gap: 10px; }
+        .lit-ai-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+        .lit-ai-meta { font-size: 12px; color: #9ca3af; margin-top: 8px; }
+        .lit-ai-follow { display: flex; gap: 8px; margin-top: 12px; }
+        .lit-timeline { position: relative; padding-left: 18px; }
+        .lit-tl-item { position: relative; padding: 0 0 18px 18px; border-left: 2px solid #c7d2fe; }
+        .lit-tl-item:last-child { border-left-color: transparent; }
+        .lit-tl-year { position: absolute; left: -18px; top: 0; width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(79,70,229,0.28); }
+        .lit-tl-card { margin-left: 28px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fff; animation: chatBubbleIn 0.3s ease both; }
+        .lit-tl-title { font-weight: 700; font-size: 14px; color: #111827; }
+        .lit-tl-meta { font-size: 12px; color: #6b7280; margin: 4px 0; }
+        .lit-tl-innov { font-size: 13px; color: #374151; line-height: 1.6; }
+        .lit-tl-link { margin: 6px 0 0 46px; font-size: 12px; color: #7c3aed; }
+        .lit-modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .lit-modal { background: #fff; border-radius: 16px; width: 100%; max-width: 720px; max-height: 90vh; overflow: auto; box-shadow: 0 24px 60px rgba(15,23,42,0.22); }
+        .lit-modal-head, .lit-modal-foot { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid #eef2ff; }
+        .lit-modal-foot { border-bottom: none; border-top: 1px solid #eef2ff; justify-content: flex-end; gap: 8px; }
+        .lit-modal-body { padding: 16px 18px; }
+        .lit-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .lit-form-grid .full { grid-column: 1 / -1; }
+        .lit-form-grid label { display: block; font-size: 12px; color: #4b5563; margin-bottom: 4px; }
+
+        /* ===== 文档智能解析 ===== */
+        .doc-hero {
+            position: relative; overflow: hidden; border-radius: 16px; padding: 16px 18px; margin-bottom: 16px;
+            background: radial-gradient(circle at top right, rgba(99,102,241,0.22), transparent 46%), linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%, #fff 100%);
+            border: 1px solid #e0e7ff;
+        }
+        .doc-hero::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.42) 48%, transparent 72%);
+            transform: translateX(-120%); animation: shimmerSweep 5.2s ease-in-out infinite; pointer-events: none;
+        }
+        .doc-status-pill {
+            display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px;
+            font-size: 12px; font-weight: 700; color: #64748b; background: #f1f5f9; border: 1px solid #e2e8f0;
+        }
+        .doc-status-pill.busy { color: #4338ca; background: #eef2ff; border-color: #c7d2fe; }
+        .doc-status-pill.ok { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+        .doc-status-pill.err { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: minmax(240px, 0.78fr) minmax(0, 1.28fr) minmax(280px, 0.92fr);
+            gap: 14px; min-height: 560px; align-items: stretch;
+        }
+        @media (max-width: 1280px) {
+            .doc-layout { grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.4fr); }
+            .doc-chat { grid-column: 1 / -1; min-height: 360px; }
+        }
+        @media (max-width: 900px) { .doc-layout { grid-template-columns: 1fr; } }
+        .doc-left, .doc-right, .doc-chat {
+            border: 1px solid #e5e7eb; border-radius: 16px; background: linear-gradient(180deg, #fff, #fafafa);
+            padding: 14px; display: flex; flex-direction: column; min-height: 520px;
+        }
+        .doc-upload-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .doc-upload-row.doc-upload-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+        @media (max-width: 720px) { .doc-upload-row.doc-upload-row-3 { grid-template-columns: 1fr; } }
+        @media (max-width: 520px) { .doc-upload-row { grid-template-columns: 1fr; } }
+        .doc-upload-zone.folder.whole { border-color: #67e8f9; background: linear-gradient(180deg, #f0fdfa, #ecfeff); }
+        .doc-upload-zone.folder.whole .doc-upload-title { color: #0e7490; }
+        .doc-upload-zone.folder.whole:hover, .doc-upload-zone.folder.whole.dragover {
+            border-color: #0891b2; box-shadow: 0 14px 28px rgba(8,145,178,0.14);
+            background: linear-gradient(180deg, #ecfeff, #cffafe);
+        }
+        .doc-upload-zone {
+            border: 2px dashed #c7d2fe; border-radius: 14px; padding: 22px 10px; text-align: center; cursor: pointer;
+            background: linear-gradient(180deg, #f8fafc, #eef2ff); transition: all 0.2s ease;
+        }
+        .doc-upload-zone.folder { border-color: #99f6e4; background: linear-gradient(180deg, #f8fafc, #ecfdf5); }
+        .doc-upload-zone:hover, .doc-upload-zone.dragover {
+            border-color: #7c3aed; transform: translateY(-2px); box-shadow: 0 14px 28px rgba(79,70,229,0.12);
+            background: linear-gradient(180deg, #eef2ff, #e0e7ff);
+        }
+        .doc-upload-zone.folder:hover, .doc-upload-zone.folder.dragover {
+            border-color: #0d9488; box-shadow: 0 14px 28px rgba(13,148,136,0.12);
+            background: linear-gradient(180deg, #ecfdf5, #ccfbf1);
+        }
+        .doc-upload-ico { font-size: 28px; margin-bottom: 6px; }
+        .doc-upload-title { font-size: 13px; font-weight: 700; color: #312e81; }
+        .doc-upload-zone.folder .doc-upload-title { color: #115e59; }
+        .doc-upload-desc { font-size: 11px; color: #6b7280; margin-top: 4px; line-height: 1.5; }
+        .doc-tips { margin-top: 12px; font-size: 12px; color: #6b7280; line-height: 1.8; background: #f8fafc; border-radius: 12px; padding: 10px 12px; border: 1px solid #eef2ff; }
+        .doc-scan-report {
+            font-size: 12px; line-height: 1.7; color: #334155; background: #fffbeb; border: 1px solid #fde68a;
+            border-radius: 12px; padding: 10px 12px;
+        }
+        .doc-scan-report strong { color: #92400e; }
+        .doc-scan-report .muted { color: #78716c; }
+        .doc-lib-title { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; }
+        .doc-lib-item {
+            display: flex; gap: 8px; align-items: flex-start; padding: 10px; border-radius: 10px; border: 1px solid #e5e7eb;
+            background: #fff; cursor: pointer; margin-bottom: 8px; transition: all 0.15s ease;
+        }
+        .doc-lib-item:hover { border-color: #c7d2fe; background: #f8fafc; }
+        .doc-lib-item.active { border-color: #6366f1; background: #eef2ff; box-shadow: 0 0 0 1px rgba(99,102,241,0.25); }
+        .doc-lib-item.err { border-color: #fecaca; background: #fef2f2; }
+        .doc-lib-item .name { font-size: 12px; font-weight: 700; color: #111827; word-break: break-all; line-height: 1.4; }
+        .doc-lib-item .sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .doc-lib-badge {
+            flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px;
+            background: #ecfdf5; color: #047857;
+        }
+        .doc-lib-badge.err { background: #fef2f2; color: #b91c1c; }
+        .doc-lib-badge.busy { background: #eef2ff; color: #4338ca; }
+        .doc-file-card {
+            position: relative; display: flex; gap: 10px; align-items: center; padding: 12px; border-radius: 12px;
+            border: 1px solid #e5e7eb; background: #fff; overflow: hidden; animation: chatBubbleIn 0.28s ease both;
+        }
+        .doc-file-card.ok { border-color: #a7f3d0; background: #f0fdf4; }
+        .doc-file-card.err { border-color: #fecaca; background: #fef2f2; }
+        .doc-file-icon { font-size: 28px; }
+        .doc-file-name { font-size: 13px; font-weight: 700; color: #111827; word-break: break-all; }
+        .doc-file-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .doc-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #e0e7ff; }
+        .doc-progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #a78bfa, #4f46e5); transition: width 0.25s ease; }
+        .doc-result-shell { flex: 1; min-height: 360px; border: 1px solid #eef2ff; border-radius: 14px; background: #fff; overflow: hidden; display: flex; flex-direction: column; }
+        .doc-tabs { display: flex; gap: 6px; padding: 10px; border-bottom: 1px solid #eef2ff; background: #fafafa; flex-wrap: wrap; }
+        .doc-tab { border: none; background: transparent; color: #6b7280; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .doc-tab:hover { background: #eef2ff; color: #4f46e5; }
+        .doc-tab.active { background: #4f46e5; color: #fff; }
+        .doc-pane { flex: 1; overflow: auto; padding: 14px; }
+        .doc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .doc-actions .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+        .doc-empty { text-align: center; color: #94a3b8; padding: 64px 20px; }
+        .doc-empty-ico { font-size: 48px; margin-bottom: 10px; }
+        .doc-empty-title { font-size: 16px; font-weight: 700; color: #475569; }
+        .doc-empty-desc { font-size: 13px; margin-top: 8px; line-height: 1.6; }
+        .doc-empty-steps { display: flex; justify-content: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        .doc-empty-steps span { background: #eef2ff; color: #4f46e5; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; }
+        .doc-loading { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 220px; color: #4338ca; font-size: 14px; }
+        .doc-error { margin: 16px; padding: 14px; border-radius: 12px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 13px; line-height: 1.7; }
+        .doc-card-soft { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; background: linear-gradient(180deg, #fff, #fafafa); animation: chatBubbleIn 0.28s ease both; }
+        .doc-card-title { font-size: 14px; font-weight: 700; color: #312e81; margin-bottom: 8px; }
+        .doc-meta-line { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
+        .doc-preview-text, .doc-prose { font-size: 13px; line-height: 1.8; color: #1f2937; white-space: pre-wrap; word-break: break-word; }
+        .doc-preview-text { max-height: 280px; overflow: auto; background: #f8fafc; border-radius: 10px; padding: 12px; border: 1px solid #eef2ff; }
+        .doc-stat-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .doc-stat-row span { font-size: 12px; color: #4f46e5; background: #eef2ff; border-radius: 999px; padding: 3px 10px; font-weight: 600; }
+        .doc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+        .doc-chips span { font-size: 12px; color: #5b21b6; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 999px; padding: 2px 8px; }
+        .doc-chips .muted { color: #9ca3af; background: #f3f4f6; border-color: #e5e7eb; }
+        .doc-kv { margin-bottom: 12px; }
+        .doc-ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: #374151; line-height: 1.7; }
+        .doc-tree-item { margin-bottom: 10px; font-size: 13px; color: #1f2937; }
+        .doc-tree-children { padding-left: 16px; margin-top: 4px; color: #4b5563; }
+        .doc-hint { color: #94a3b8; font-size: 13px; padding: 24px; text-align: center; }
+        .doc-chat-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+        .doc-chat-title { font-size: 15px; font-weight: 800; color: #111827; }
+        .doc-chat-sub { font-size: 12px; color: #6b7280; margin-top: 2px; line-height: 1.5; }
+        .doc-chat-stream {
+            flex: 1; overflow: auto; min-height: 280px; max-height: 480px; padding: 10px;
+            border: 1px solid #eef2ff; border-radius: 12px; background: #fff;
+        }
+        .doc-chat-row { display: flex; margin-bottom: 10px; }
+        .doc-chat-row.user { justify-content: flex-end; }
+        .doc-chat-row.assistant { justify-content: flex-start; }
+        .doc-chat-bubble {
+            max-width: 92%; padding: 10px 12px; border-radius: 14px; font-size: 13px; line-height: 1.65;
+            white-space: pre-wrap; word-break: break-word; animation: chatBubbleIn 0.25s ease both;
+        }
+        .doc-chat-bubble.user { background: linear-gradient(135deg,#6366f1,#4f46e5); color: #fff; border-bottom-right-radius: 4px; }
+        .doc-chat-bubble.assistant { background: #f8fafc; color: #1f2937; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }
+        .doc-chat-label { font-size: 11px; font-weight: 700; margin-bottom: 4px; opacity: 0.85; }
+        .doc-chat-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+        .doc-chat-suggest button {
+            border: 1px solid #e0e7ff; background: #eef2ff; color: #4338ca; border-radius: 999px;
+            padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+        }
+        .doc-chat-suggest button:hover { background: #e0e7ff; }
+        .doc-chat-input-row { display: flex; gap: 8px; margin-top: 8px; }
+        .doc-chat-input-row textarea {
+            flex: 1; min-height: 64px; max-height: 120px; resize: vertical; border: 1px solid #e5e7eb;
+            border-radius: 12px; padding: 10px 12px; font-size: 13px; font-family: inherit; line-height: 1.5;
+        }
+        .doc-chat-input-row textarea:focus { outline: none; border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+        .doc-chat-send {
+            align-self: stretch; min-width: 72px; border: none; border-radius: 12px; color: #fff; font-weight: 700;
+            background: linear-gradient(135deg,#7c3aed,#4f46e5); cursor: pointer; padding: 0 14px;
+        }
+        .doc-chat-send:disabled { opacity: 0.45; cursor: not-allowed; }
         
         /* 主内容区 */
         .main-content {
@@ -695,6 +942,11 @@
             box-shadow: inset 3px 0 0 #7c3aed;
         }
         
+        .data-table tbody tr:hover {
+            background: #f8f7ff;
+            box-shadow: inset 3px 0 0 #7c3aed;
+        }
+
         /* 按钮样式 */
         .btn {
             background: linear-gradient(135deg, #8b5cf6, #7c3aed 50%, #4f46e5);
@@ -4778,38 +5030,66 @@
             
             <!-- 文献对比分析 -->
             <div id="literature_analysis" class="module">
-                <div class="card">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                        <h2>📄 文献对比分析</h2>
-                        <div style="display:flex;gap:10px;">
-                            <button class="btn btn-success" onclick="showAddLiteratureModal()">➕ 添加文献</button>
-                            <button class="btn btn-secondary" onclick="document.getElementById('literatureCsvInput').click()">📥 导入CSV</button>
-                            <button class="btn btn-secondary" onclick="exportLiteratureCsv()">📤 导出CSV</button>
-                            <button class="btn" onclick="compareSelectedLiterature()">🔄 对比选中文献</button>
-                            <button class="btn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);" onclick="aiCompareSelectedLiterature()">✨ AI 一键对比</button>
+                <div class="card" style="padding:20px 22px;">
+                    <div class="lit-hero">
+                        <div style="position:relative;z-index:1;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+                            <div>
+                                <div style="font-size:12px;color:#6366f1;font-weight:700;margin-bottom:6px;">入库 → 对比 → AI 综述 → 导出复用</div>
+                                <h2 style="margin:0 0 6px;font-size:22px;color:#111827;">文献对比分析</h2>
+                                <div style="font-size:13px;color:#4b5563;line-height:1.6;max-width:640px;">面向算法选型、组会汇报与论文相关工作。勾选即实时刷新；支持表格高亮、可视化、AI 综述、时间线，并可插入周报 / 保存到共享文件库。</div>
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                                <span id="litSelectedBadge" class="lit-badge">0 篇已选</span>
+                                <div class="lit-dropdown">
+                                    <button class="btn btn-success" style="padding:8px 12px;font-size:13px;" onclick="showAddLiteratureModal()">+ 添加文献</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="document.getElementById('literatureCsvInput').click()">导入 CSV</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="document.getElementById('literatureBibInput').click()">导入 BibTeX</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="syncFromLiteratureLibrary()">同步文献库</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="exportLiteratureCsv()">导出 CSV</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;color:#dc2626;" onclick="batchDeleteSelectedLiterature()">批量删除</button>
+                                    <button class="btn" style="padding:8px 12px;font-size:13px;background:linear-gradient(135deg,#7c3aed,#4f46e5);" onclick="aiCompareSelectedLiterature(true)">✨ AI 综述</button>
+                                </div>
+                            </div>
                         </div>
-                        <input type="file" id="literatureCsvInput" accept=".csv" style="display:none;" onchange="importLiteratureCsv(event)">
                     </div>
-                    <div style="display:flex;gap:20px;">
-                        <div style="flex:1;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                                <h4>文献列表 <span id="literatureCount" style="font-weight:normal;color:#888;font-size:13px;"></span></h4>
-                                <div style="display:flex;gap:5px;">
-                                    <input type="text" id="literatureSearch" placeholder="搜索文献..." style="width:150px;padding:5px;border:1px solid #ddd;border-radius:4px;font-size:13px;" oninput="renderLiteratureCompareList()">
-                                </div>
+                    <input type="file" id="literatureCsvInput" accept=".csv,text/csv" style="display:none;" onchange="importLiteratureCsv(event)">
+                    <input type="file" id="literatureBibInput" accept=".bib,text/plain" style="display:none;" onchange="importLiteratureBibtex(event)">
+
+                    <div class="lit-layout">
+                        <aside class="lit-left">
+                            <div class="lit-left-head">
+                                <strong>文献库 <span id="literatureCount" style="font-weight:500;color:#9ca3af;font-size:12px;"></span></strong>
                             </div>
-                            <div id="literatureCompareList" style="max-height:500px;overflow-y:auto;"></div>
-                        </div>
-                        <div style="flex:1;">
-                            <h4>对比结果</h4>
-                            <div id="literatureCompareResult" style="border:1px solid #ddd;border-radius:8px;padding:15px;min-height:400px;">
-                                <div style="text-align:center;color:#888;padding:80px 20px;">
-                                    <div style="font-size:48px;margin-bottom:10px;">📊</div>
-                                    <div>请从左侧选择需要对比的文献</div>
-                                    <div style="font-size:13px;margin-top:5px;">（支持多选，最多10篇）</div>
-                                </div>
+                            <input type="text" id="literatureSearch" class="form-control" placeholder="搜索标题 / 作者 / 关键词 / DOI" style="margin-bottom:10px;" oninput="renderLiteratureCompareList()">
+                            <div id="litTagChips" class="lit-chips"></div>
+                            <div class="lit-filters">
+                                <select id="litFieldFilter" class="form-control" onchange="onLitFilterChange()"><option value="">全部领域</option></select>
+                                <select id="litSortKey" class="form-control" onchange="onLitFilterChange()">
+                                    <option value="year_desc">年份 ↓</option>
+                                    <option value="year_asc">年份 ↑</option>
+                                    <option value="map_desc">mAP ↓</option>
+                                    <option value="fps_desc">FPS ↓</option>
+                                    <option value="title">标题</option>
+                                </select>
+                                <input type="number" id="litYearFrom" class="form-control" placeholder="年起" onchange="renderLiteratureCompareList()" min="1990" max="2030">
+                                <input type="number" id="litYearTo" class="form-control" placeholder="年止" onchange="renderLiteratureCompareList()" min="1990" max="2030">
                             </div>
-                        </div>
+                            <div id="literatureCompareList" class="lit-list"></div>
+                            <div id="litSelectionBar" class="lit-selection-bar"></div>
+                        </aside>
+
+                        <section class="lit-right">
+                            <div class="lit-tabs">
+                                <button type="button" class="lit-tab active" id="litTab_table" onclick="switchLitTab('table')">表格对比</button>
+                                <button type="button" class="lit-tab" id="litTab_chart" onclick="switchLitTab('chart')">可视化</button>
+                                <button type="button" class="lit-tab" id="litTab_ai" onclick="switchLitTab('ai')">AI 综述</button>
+                                <button type="button" class="lit-tab" id="litTab_timeline" onclick="switchLitTab('timeline')">技术时间线</button>
+                            </div>
+                            <div id="litPane_table" class="lit-pane"></div>
+                            <div id="litPane_chart" class="lit-pane" style="display:none;"></div>
+                            <div id="litPane_ai" class="lit-pane" style="display:none;"></div>
+                            <div id="litPane_timeline" class="lit-pane" style="display:none;"></div>
+                        </section>
                     </div>
                 </div>
             </div>
@@ -5046,40 +5326,86 @@
             
             <!-- 文档智能解析 -->
             <div id="document_analysis" class="module">
-                <div class="card">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                        <h2>📑 文档智能解析</h2>
-                        <button class="btn btn-secondary" onclick="clearDocumentAnalysis()">🗑️ 清空</button>
+                <div class="card" style="padding:20px 22px;">
+                    <div class="doc-hero">
+                        <div style="position:relative;z-index:1;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+                            <div>
+                                <div style="font-size:12px;color:#6366f1;font-weight:700;margin-bottom:6px;">上传 / 批量导入 → 解析+OCR → 大模型联析 → 文档问答</div>
+                                <h2 style="margin:0 0 6px;font-size:22px;color:#111827;">文档智能解析</h2>
+                                <div style="font-size:13px;color:#4b5563;line-height:1.6;max-width:680px;">支持单文件、目录内多选，以及一键导入整个文件夹；扫描 PDF 自动 OCR；可调用百炼大模型联析，并在右侧窗口基于文档内容问答。</div>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <span id="docStatusPill" class="doc-status-pill">待上传</span>
+                                <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="clearDocumentAnalysis()">清空</button>
+                            </div>
+                        </div>
                     </div>
-                    <div style="display:flex;gap:20px;">
-                        <div style="flex:1;">
-                            <div style="background:#f5f5f5;padding:40px;border-radius:8px;text-align:center;border:2px dashed #ddd;cursor:pointer;" onclick="document.getElementById('documentUploadInput').click()">
-                                <input type="file" id="documentUploadInput" accept=".doc,.docx,.pdf,.txt" style="display:none;" onchange="handleDocumentUpload(event)">
-                                <div style="font-size:48px;margin-bottom:10px;">📁</div>
-                                <div>点击或拖拽上传文档</div>
-                                <div style="font-size:13px;color:#888;margin-top:5px;">支持 .doc .docx .pdf .txt 格式</div>
-                            </div>
-                            <div id="documentInfo" style="margin-top:20px;display:none;">
-                                <div style="background:#e8f5e9;padding:15px;border-radius:8px;">
-                                    <div style="font-weight:bold;color:#2e7d32;">✅ 文件上传成功</div>
-                                    <div id="documentFileName" style="font-size:13px;color:#666;margin-top:5px;"></div>
+
+                    <div class="doc-layout">
+                        <aside class="doc-left">
+                            <div class="doc-upload-row doc-upload-row-3">
+                                <div id="docUploadZone" class="doc-upload-zone">
+                                    <div class="doc-upload-ico">📄</div>
+                                    <div class="doc-upload-title">上传文件</div>
+                                    <div class="doc-upload-desc">单文件/多选<br>≤30MB</div>
+                                </div>
+                                <div id="docMultiZone" class="doc-upload-zone folder">
+                                    <div class="doc-upload-ico">📑</div>
+                                    <div class="doc-upload-title">多选文件</div>
+                                    <div class="doc-upload-desc">进入目录后<br>Ctrl+A 全选</div>
+                                </div>
+                                <div id="docFolderZone" class="doc-upload-zone folder whole">
+                                    <div class="doc-upload-ico">📁</div>
+                                    <div class="doc-upload-title">整个文件夹</div>
+                                    <div class="doc-upload-desc">一键导入全目录<br>也可拖拽到此</div>
                                 </div>
                             </div>
-                        </div>
-                        <div style="flex:2;">
-                            <div id="documentAnalysisResult" style="border:1px solid #ddd;border-radius:8px;padding:15px;min-height:400px;">
-                                <div style="text-align:center;color:#888;padding:80px 20px;">
-                                    <div style="font-size:48px;margin-bottom:10px;">🤖</div>
-                                    <div>上传文档后，AI将自动解析内容</div>
-                                    <div style="font-size:13px;margin-top:5px;">提取关键信息、生成摘要、分析结构</div>
+                            <input type="file" id="documentUploadInput" accept=".pdf,.docx,.txt,.md,application/pdf,text/plain" multiple style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1">
+                            <input type="file" id="documentFolderInput" multiple style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1">
+                            <div id="documentInfo" style="display:none;margin-top:12px;"></div>
+                            <div id="docScanReport" style="display:none;margin-top:10px;"></div>
+                            <div id="docLibraryList" class="doc-lib"></div>
+                            <div class="doc-tips">
+                                <div><strong>解析引擎</strong>：PDF.js · Mammoth · 纯文本 · 百度 OCR</div>
+                                <div><strong>整个文件夹</strong>：点「整个文件夹」选中目录后点上传；系统可能不列出文件名，属正常。也可把文件夹拖到该框</div>
+                                <div><strong>多选文件</strong>：想先看到文件时用「多选文件」进入目录后 Ctrl+A</div>
+                            </div>
+                        </aside>
+
+                        <section class="doc-right">
+                            <div id="documentAnalysisResult" class="doc-result-shell"></div>
+                            <div class="doc-actions">
+                                <button class="btn" id="docBtnSummary" disabled onclick="extractDocumentSummary()">提取摘要</button>
+                                <button class="btn" id="docBtnKeys" disabled onclick="extractDocumentKeyPoints()">提取关键点</button>
+                                <button class="btn" id="docBtnStruct" disabled onclick="extractDocumentStructure()">分析结构</button>
+                                <button class="btn" id="docBtnAi" disabled style="background:linear-gradient(135deg,#7c3aed,#4f46e5);" onclick="aiEnhanceDocument()">✨ AI 增强摘要</button>
+                                <button class="btn" id="docBtnAiAll" disabled style="background:linear-gradient(135deg,#db2777,#7c3aed);" onclick="aiAnalyzeCorpus()">🧠 文件夹联析</button>
+                                <button class="btn" id="docBtnOcr" disabled style="background:linear-gradient(135deg,#0f766e,#0ea5e9);" onclick="ocrCurrentPdf(true)">🔍 OCR 识别</button>
+                                <button class="btn btn-secondary" id="docBtnLit" disabled onclick="pushDocToLiteratureCompare()">入库文献对比</button>
+                                <button class="btn btn-secondary" id="docBtnWeekly" disabled onclick="insertDocToWeeklyReport()">插入周报</button>
+                                <button class="btn btn-secondary" id="docBtnShare" disabled onclick="saveDocResultToShared()">保存共享文件</button>
+                            </div>
+                        </section>
+
+                        <aside class="doc-chat">
+                            <div class="doc-chat-head">
+                                <div>
+                                    <div class="doc-chat-title">文档问答</div>
+                                    <div class="doc-chat-sub" id="docChatContextHint">上传文档后，可基于当前/全部文档向大模型提问</div>
                                 </div>
+                                <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="clearDocChat()">清空对话</button>
                             </div>
-                            <div style="display:flex;gap:10px;margin-top:15px;">
-                                <button class="btn" onclick="extractDocumentSummary()">📋 提取摘要</button>
-                                <button class="btn" onclick="extractDocumentKeyPoints()">🔑 提取关键点</button>
-                                <button class="btn" onclick="extractDocumentStructure()">📐 分析结构</button>
+                            <div id="docChatStream" class="doc-chat-stream"></div>
+                            <div class="doc-chat-suggest">
+                                <button type="button" onclick="askDocChatPreset('请用中文概括当前文档的核心要点')">概括要点</button>
+                                <button type="button" onclick="askDocChatPreset('这份材料里有哪些强制条款或关键指标？')">关键指标</button>
+                                <button type="button" onclick="askDocChatPreset('对比文件夹内文档的异同与可借鉴点')">对比异同</button>
                             </div>
-                        </div>
+                            <div class="doc-chat-input-row">
+                                <textarea id="docChatInput" placeholder="基于已解析文档提问，例如：加固适用范围是什么？" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDocChatMessage();}"></textarea>
+                                <button class="doc-chat-send" id="docChatSendBtn" onclick="sendDocChatMessage()" disabled>发送</button>
+                            </div>
+                        </aside>
                     </div>
                 </div>
             </div>
@@ -5955,7 +6281,7 @@
                             <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📚 文献资料库</h1>
                             <p style="font-size: 14px; color: #888; margin-top: 4px;">团队文献资料收集与管理</p>
                         </div>
-                        <button class="btn" onclick="showAddLiteratureModal()" style="padding: 10px 24px; font-size: 14px;">
+                        <button class="btn" onclick="showLibraryLiteratureModal()" style="padding: 10px 24px; font-size: 14px;">
                             <span>📥</span> 添加文献
                         </button>
                     </div>
@@ -5970,7 +6296,7 @@
                         <div style="font-size: 64px; margin-bottom: 16px;">📚</div>
                         <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无文献资料</h3>
                         <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击上方按钮添加文献</p>
-                        <button class="btn" onclick="showAddLiteratureModal()">📥 添加文献</button>
+                        <button class="btn" onclick="showLibraryLiteratureModal()">📥 添加文献</button>
                     </div>
                     <div id="literatureList"></div>
                 </div>
@@ -10450,6 +10776,7 @@
         
         // OpenAI 功能
         const API_PROXY = 'https://dawn-night-d7ae.1970238795.workers.dev';
+        window.API_PROXY = API_PROXY;
         const PORT = 3000;
         
         // 更新 API Key 显示
@@ -22705,8 +23032,8 @@ ${ocrText}`
         }
     }
 
-    // 文献添加弹窗
-    function showAddLiteratureModal() {
+    // 文献资料库添加弹窗（与对比模块解耦）
+    function showLibraryLiteratureModal() {
         const modal = document.createElement('div');
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
         modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
@@ -26124,892 +26451,9 @@ ${ocrText}`
         updateChatStats();
     }
 
-    // ===== 文献对比分析 =====
-    let compareLiteratureData = [];
-    let selectedLiteratures = [];
-    let editingLiteratureId = null;
+    // 文献对比分析已抽离至 js/literature-compare.js（工程化模块）
 
-    function initLiteratureAnalysis() {
-        const saved = localStorage.getItem('compareLiteratureData');
-        if (saved) {
-            compareLiteratureData = JSON.parse(saved);
-        } else {
-            compareLiteratureData = [
-                { id: 1, title: 'YOLOv8: Optimal Speed and Accuracy of Object Detection', author: 'Glenn Jocher', journal: 'arXiv', year: '2023', field: '计算机视觉', summary: 'YOLOv8是Ultralytics公司发布的最新目标检测模型，在速度和精度上达到了最优平衡，支持多种任务包括检测、分割、分类等。', keywords: ['YOLOv8', '目标检测', '深度学习'] },
-                { id: 2, title: 'Qwen-VL: A Versatile Vision-Language Model for Understanding and Generation', author: 'Alibaba Cloud', journal: 'arXiv', year: '2024', field: '多模态', summary: 'Qwen-VL是阿里云发布的多模态大模型，具备强大的视觉理解和图文生成能力，支持多种视觉任务。', keywords: ['Qwen-VL', '多模态', '大模型'] },
-                { id: 3, title: 'Deep Residual Learning for Image Recognition', author: 'He Kaiming', journal: 'CVPR', year: '2016', field: '计算机视觉', summary: 'ResNet通过引入残差连接解决了深度神经网络训练中的梯度消失问题，极大地推动了深度学习的发展。', keywords: ['ResNet', '深度学习', '图像识别'] },
-                { id: 4, title: 'Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks', author: 'Ren Shaoqing', journal: 'NIPS', year: '2015', field: '计算机视觉', summary: 'Faster R-CNN引入区域建议网络(RPN)，将目标检测速度提升到实时水平，成为两阶段检测算法的标杆。', keywords: ['Faster R-CNN', '目标检测', 'RPN'] },
-                { id: 5, title: 'Mask R-CNN', author: 'He Kaiming', journal: 'ICCV', year: '2017', field: '计算机视觉', summary: 'Mask R-CNN在Faster R-CNN基础上增加了实例分割分支，实现了目标检测和实例分割的统一框架。', keywords: ['Mask R-CNN', '实例分割', '目标检测'] },
-                { id: 6, title: 'Transformer: Attention Is All You Need', author: 'Vaswani', journal: 'NIPS', year: '2017', field: '自然语言处理', summary: 'Transformer架构引入自注意力机制，成为现代大语言模型的基础，彻底改变了NLP领域。', keywords: ['Transformer', '注意力机制', 'NLP'] },
-                { id: 7, title: 'Vision Transformer (ViT)', author: 'Dosovitskiy', journal: 'ICLR', year: '2021', field: '计算机视觉', summary: 'ViT将Transformer架构应用于计算机视觉领域，开创了视觉Transformer的先河。', keywords: ['ViT', 'Transformer', '图像分类'] },
-                { id: 8, title: 'EfficientDet: Scalable and Efficient Object Detection', author: 'Tan Mingxing', journal: 'CVPR', year: '2020', field: '计算机视觉', summary: 'EfficientDet通过复合缩放策略实现了检测模型的高效扩展，在精度和效率之间取得了良好平衡。', keywords: ['EfficientDet', '目标检测', '模型压缩'] },
-                { id: 9, title: 'YOLOv5: Real-Time Object Detection', author: 'Ultralytics', journal: 'arXiv', year: '2020', field: '计算机视觉', summary: 'YOLOv5是Ultralytics发布的目标检测模型，以其易用性和良好的性能成为工业界广泛使用的检测框架。', keywords: ['YOLOv5', '目标检测', '实时'] },
-                { id: 10, title: 'Cityscapes: Semantic Understanding of Urban Street Scenes', author: 'Cordts', journal: 'CVPR', year: '2016', field: '计算机视觉', summary: 'Cityscapes是一个大规模城市场景语义分割数据集，包含50个城市的街景图像，推动了城市场景理解的研究。', keywords: ['Cityscapes', '语义分割', '城市场景'] },
-                { id: 11, title: 'SSD: Single Shot MultiBox Detector', author: 'Liu Wei', journal: 'ECCV', year: '2016', field: '计算机视觉', summary: 'SSD是一种单次检测算法，通过在不同尺度特征图上进行检测，实现了较好的精度和速度平衡。', keywords: ['SSD', '目标检测', '单次检测'] },
-                { id: 12, title: 'MobileNetV2: Inverted Residuals and Linear Bottlenecks', author: 'Sandler', journal: 'CVPR', year: '2018', field: '计算机视觉', summary: 'MobileNetV2采用倒残差结构和线性瓶颈，在保持精度的同时大幅减少了模型参数量，适合移动端部署。', keywords: ['MobileNet', '轻量化', '移动端'] },
-                { id: 13, title: 'GPT-3: Language Models are Few-Shot Learners', author: 'Brown', journal: 'NeurIPS', year: '2020', field: '自然语言处理', summary: 'GPT-3是一个拥有1750亿参数的超大语言模型，展示了大模型在少样本学习方面的强大能力。', keywords: ['GPT-3', '大语言模型', '少样本'] },
-                { id: 14, title: 'BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding', author: 'Devlin', journal: 'NAACL', year: '2019', field: '自然语言处理', summary: 'BERT通过双向Transformer进行预训练，在多项NLP任务上取得了突破性进展。', keywords: ['BERT', '预训练', 'NLP'] },
-                { id: 15, title: 'DETR: End-to-End Object Detection with Transformers', author: 'Carion', journal: 'ECCV', year: '2020', field: '计算机视觉', summary: 'DETR首次将Transformer引入目标检测领域，实现了端到端的检测流程，无需复杂的后处理。', keywords: ['DETR', 'Transformer', '目标检测'] }
-            ];
-            localStorage.setItem('compareLiteratureData', JSON.stringify(compareLiteratureData));
-        }
-        renderLiteratureCompareList();
-    }
-
-    function renderLiteratureCompareList() {
-        const list = document.getElementById('literatureCompareList');
-        const count = document.getElementById('literatureCount');
-        const search = document.getElementById('literatureSearch')?.value || '';
-        
-        if (!list) return;
-        
-        const filtered = search ? compareLiteratureData.filter(item => 
-            item.title.toLowerCase().includes(search.toLowerCase()) ||
-            item.author.toLowerCase().includes(search.toLowerCase()) ||
-            item.keywords.some(k => k.toLowerCase().includes(search.toLowerCase()))
-        ) : compareLiteratureData;
-        
-        if (count) count.textContent = `(${filtered.length}篇)`;
-        
-        let html = '';
-        filtered.forEach(item => {
-            const isSelected = selectedLiteratures.includes(item.id);
-            html += `<div style="padding:12px;border:1px solid ${isSelected ? '#6a1b9a' : '#eee'};border-radius:6px;margin-bottom:8px;" onclick="toggleLiteratureSelection(${item.id})">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleLiteratureSelection(${item.id})" style="margin:0;">
-                    <div style="flex:1;cursor:pointer;">
-                        <div style="font-weight:bold;font-size:14px;">${escHtml(item.title)}</div>
-                        <div style="font-size:12px;color:#666;">${escHtml(item.author)} | ${escHtml(item.journal)} ${item.year}</div>
-                        <div style="font-size:12px;color:#8a2be2;margin-top:4px;">${item.keywords.map(k => `#${k}`).join(' ')}</div>
-                    </div>
-                    <div style="display:flex;gap:5px;">
-                        <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="event.stopPropagation();showEditLiteratureModal(${item.id})">✏️</button>
-                        <button class="btn btn-danger" style="padding:4px 8px;font-size:12px;" onclick="event.stopPropagation();deleteLiterature(${item.id})">🗑️</button>
-                    </div>
-                </div>
-            </div>`;
-        });
-        list.innerHTML = html;
-    }
-
-    function toggleLiteratureSelection(id) {
-        const idx = selectedLiteratures.indexOf(id);
-        if (idx > -1) {
-            selectedLiteratures.splice(idx, 1);
-        } else {
-            if (selectedLiteratures.length >= 10) {
-                alert('最多只能选择10篇文献进行对比');
-                return;
-            }
-            selectedLiteratures.push(id);
-        }
-        renderLiteratureCompareList();
-    }
-
-    function showAddLiteratureModal() {
-        editingLiteratureId = null;
-        showLiteratureModal();
-    }
-
-    function showEditLiteratureModal(id) {
-        editingLiteratureId = id;
-        showLiteratureModal();
-    }
-
-    function showLiteratureModal() {
-        const item = editingLiteratureId ? compareLiteratureData.find(l => l.id === editingLiteratureId) : null;
-        const modalId = 'literatureModal_' + Date.now();
-        
-        const modal = document.createElement('div');
-        modal.id = modalId;
-        modal.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;justify-content:center;align-items:center;z-index:5000;`;
-        
-        modal.innerHTML = `
-            <div style="background:white;border-radius:12px;width:550px;max-height:90vh;overflow-y:auto;padding:24px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                    <h3 style="margin:0;color:#6a1b9a;">${item ? '✏️ 编辑文献' : '➕ 添加文献'}</h3>
-                    <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()" style="padding:5px 10px;">×</button>
-                </div>
-                
-                <div style="display:flex;flex-direction:column;gap:12px;">
-                    <div>
-                        <label style="font-size:13px;font-weight:bold;color:#333;">📄 上传PDF文件</label>
-                        <div style="border:2px dashed #ddd;border-radius:8px;padding:20px;text-align:center;cursor:pointer;" 
-                             id="pdfUploadArea_${modalId}" 
-                             onclick="document.getElementById('pdfFileInput_${modalId}').click()">
-                            <div style="font-size:32px;margin-bottom:10px;">📁</div>
-                            <div style="color:#666;">点击选择PDF文件或拖拽到此处</div>
-                            <div style="font-size:12px;color:#999;margin-top:5px;">支持 .pdf 格式，自动提取标题、作者、摘要</div>
-                        </div>
-                        <input type="file" id="pdfFileInput_${modalId}" accept=".pdf" style="display:none;" 
-                               onchange="handlePdfUpload(event, '${modalId}')">
-                        <div id="pdfFileInfo_${modalId}" style="margin-top:10px;font-size:13px;color:#666;display:none;"></div>
-                        <div id="pdfParseStatus_${modalId}" style="margin-top:5px;font-size:12px;color:#4CAF50;display:none;">🔄 正在解析PDF...</div>
-                    </div>
-                    
-                    <div>
-                        <label style="font-size:13px;font-weight:bold;color:#333;">文献标题 <span style="color:red;">*</span></label>
-                        <input type="text" id="litTitle" class="form-control" value="${item ? escHtml(item.title) : ''}" placeholder="请输入文献标题">
-                    </div>
-                    
-                    <div>
-                        <label style="font-size:13px;font-weight:bold;color:#333;">作者</label>
-                        <input type="text" id="litAuthor" class="form-control" value="${item ? escHtml(item.author) : ''}" placeholder="请输入作者">
-                    </div>
-                    
-                    <div style="display:flex;gap:12px;">
-                        <div style="flex:1;">
-                            <label style="font-size:13px;font-weight:bold;color:#333;">期刊</label>
-                            <input type="text" id="litJournal" class="form-control" value="${item ? escHtml(item.journal) : ''}" placeholder="请输入期刊">
-                        </div>
-                        <div style="flex:1;">
-                            <label style="font-size:13px;font-weight:bold;color:#333;">年份</label>
-                            <input type="text" id="litYear" class="form-control" value="${item ? item.year : ''}" placeholder="请输入年份">
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label style="font-size:13px;font-weight:bold;color:#333;">研究领域</label>
-                        <input type="text" id="litField" class="form-control" value="${item ? escHtml(item.field) : ''}" placeholder="请输入研究领域">
-                    </div>
-                    
-                    <div>
-                        <label style="font-size:13px;font-weight:bold;color:#333;">关键词</label>
-                        <input type="text" id="litKeywords" class="form-control" value="${item ? item.keywords.join(', ') : ''}" placeholder="多个关键词用逗号分隔">
-                    </div>
-                    
-                    <div>
-                        <label style="font-size:13px;font-weight:bold;color:#333;">摘要</label>
-                        <textarea id="litSummary" class="form-control" rows="4" placeholder="请输入文献摘要">${item ? escHtml(item.summary) : ''}</textarea>
-                    </div>
-                </div>
-                
-                <div style="display:flex;gap:10px;margin-top:20px;">
-                    <button class="btn btn-success" onclick="saveLiterature('${modalId}')">${item ? '保存修改' : '添加文献'}</button>
-                    <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-    }
-
-    async function handlePdfUpload(event, modalId) {
-        const file = event.target.files[0];
-        if (!file || !file.name.endsWith('.pdf')) {
-            alert('请选择PDF文件');
-            return;
-        }
-        
-        const uploadArea = document.getElementById('pdfUploadArea_' + modalId);
-        const fileInfo = document.getElementById('pdfFileInfo_' + modalId);
-        const parseStatus = document.getElementById('pdfParseStatus_' + modalId);
-        
-        uploadArea.style.borderColor = '#4CAF50';
-        uploadArea.style.backgroundColor = '#f1f8e9';
-        fileInfo.textContent = `📄 ${file.name} | ${formatFileSize(file.size)}`;
-        fileInfo.style.display = 'block';
-        parseStatus.style.display = 'block';
-        
-        try {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
-            
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            
-            let fullText = '';
-            const maxPages = Math.min(pdf.numPages, 3);
-            
-            for (let i = 1; i <= maxPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(item => item.str).join('\n');
-                fullText += pageText + '\n\n';
-            }
-            
-            const extracted = extractInfoFromPdf(fullText);
-            
-            if (!document.getElementById('litTitle').value.trim() && extracted.title) {
-                document.getElementById('litTitle').value = extracted.title;
-            }
-            if (!document.getElementById('litAuthor').value.trim() && extracted.author) {
-                document.getElementById('litAuthor').value = extracted.author;
-            }
-            if (!document.getElementById('litSummary').value.trim() && extracted.summary) {
-                document.getElementById('litSummary').value = extracted.summary;
-            }
-            if (!document.getElementById('litYear').value.trim() && extracted.year) {
-                document.getElementById('litYear').value = extracted.year;
-            }
-            if (!document.getElementById('litKeywords').value.trim() && extracted.keywords.length > 0) {
-                document.getElementById('litKeywords').value = extracted.keywords.join(', ');
-            }
-            
-            parseStatus.textContent = '✅ PDF解析完成，已自动填充信息';
-            parseStatus.style.color = '#4CAF50';
-            
-        } catch (error) {
-            console.error('PDF解析失败:', error);
-            parseStatus.textContent = '❌ PDF解析失败，请手动填写信息';
-            parseStatus.style.color = '#f44336';
-        }
-    }
-
-    function extractInfoFromPdf(text) {
-        const result = {
-            title: '',
-            author: '',
-            summary: '',
-            year: '',
-            keywords: []
-        };
-        
-        const lines = text.split('\n').filter(l => l.trim());
-        
-        const titleLines = [];
-        for (let i = 0; i < Math.min(lines.length, 5); i++) {
-            const line = lines[i].trim();
-            if (line.length > 15 && line.length < 100 && !line.match(/^\d/) && !line.toLowerCase().includes('abstract')) {
-                titleLines.push(line);
-            } else {
-                break;
-            }
-        }
-        result.title = titleLines.join(' ').trim();
-        
-        const authorPatterns = [
-            /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+(?:,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)*)/,
-            /作者\s*[：:]\s*(.+)/
-        ];
-        for (const pattern of authorPatterns) {
-            const match = text.match(pattern);
-            if (match && match[1]) {
-                result.author = match[1].trim();
-                break;
-            }
-        }
-        
-        const yearMatch = text.match(/(\d{4})/);
-        if (yearMatch) {
-            const year = parseInt(yearMatch[1]);
-            if (year >= 1990 && year <= new Date().getFullYear()) {
-                result.year = year.toString();
-            }
-        }
-        
-        const abstractMatch = text.match(/(?:Abstract|摘要|ABSTRACT)\s*[：:]\s*(.+?)(?:\n\n|\n[A-Z]|$)/s);
-        if (abstractMatch && abstractMatch[1]) {
-            result.summary = abstractMatch[1].trim().substring(0, 500);
-        } else if (lines.length > 10) {
-            const startIdx = lines.findIndex(l => l.toLowerCase().includes('abstract') || l.includes('摘要'));
-            if (startIdx > -1) {
-                result.summary = lines.slice(startIdx + 1, startIdx + 10).join(' ').trim().substring(0, 500);
-            }
-        }
-        
-        if (!result.summary && lines.length > 5) {
-            result.summary = lines.slice(Math.min(lines.length, 30)).join(' ').trim().substring(0, 500);
-        }
-        
-        result.keywords = extractKeywords(result.summary || text).slice(0, 5);
-        
-        return result;
-    }
-
-    function saveLiterature(modalId) {
-        const title = document.getElementById('litTitle').value.trim();
-        const author = document.getElementById('litAuthor').value.trim();
-        const journal = document.getElementById('litJournal').value.trim();
-        const year = document.getElementById('litYear').value.trim();
-        const field = document.getElementById('litField').value.trim();
-        const keywordsStr = document.getElementById('litKeywords').value.trim();
-        const summary = document.getElementById('litSummary').value.trim();
-        
-        if (!title) {
-            alert('请输入文献标题');
-            return;
-        }
-        
-        const keywords = keywordsStr ? keywordsStr.split(/[,，]/).map(k => k.trim()).filter(k => k) : [];
-        
-        if (editingLiteratureId) {
-            const idx = compareLiteratureData.findIndex(l => l.id === editingLiteratureId);
-            if (idx > -1) {
-                compareLiteratureData[idx] = {
-                    id: editingLiteratureId,
-                    title, author, journal, year, field, summary, keywords
-                };
-            }
-        } else {
-            const newId = compareLiteratureData.length > 0 ? Math.max(...compareLiteratureData.map(l => l.id)) + 1 : 1;
-            compareLiteratureData.push({
-                id: newId,
-                title, author, journal, year, field, summary, keywords
-            });
-        }
-        
-        localStorage.setItem('compareLiteratureData', JSON.stringify(compareLiteratureData));
-        renderLiteratureCompareList();
-        document.getElementById(modalId).remove();
-    }
-
-    function deleteLiterature(id) {
-        if (!confirm('确定要删除这篇文献吗？')) return;
-        
-        compareLiteratureData = compareLiteratureData.filter(l => l.id !== id);
-        selectedLiteratures = selectedLiteratures.filter(lid => lid !== id);
-        localStorage.setItem('compareLiteratureData', JSON.stringify(compareLiteratureData));
-        renderLiteratureCompareList();
-    }
-
-    function importLiteratureCsv(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const content = e.target.result;
-            const lines = content.split('\n');
-            const headers = lines[0].split(',').map(h => h.trim());
-            
-            let importedCount = 0;
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-                
-                const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
-                const item = {};
-                
-                headers.forEach((header, idx) => {
-                    item[header] = values[idx] || '';
-                });
-                
-                if (item.title || item['文献标题']) {
-                    const newId = compareLiteratureData.length > 0 ? Math.max(...compareLiteratureData.map(l => l.id)) + 1 : 1;
-                    compareLiteratureData.push({
-                        id: newId,
-                        title: item.title || item['文献标题'] || '',
-                        author: item.author || item['作者'] || '',
-                        journal: item.journal || item['期刊'] || '',
-                        year: item.year || item['年份'] || '',
-                        field: item.field || item['研究领域'] || '',
-                        summary: item.summary || item['摘要'] || '',
-                        keywords: (item.keywords || item['关键词'] || '').split(/[,，]/).map(k => k.trim()).filter(k => k)
-                    });
-                    importedCount++;
-                }
-            }
-            
-            localStorage.setItem('compareLiteratureData', JSON.stringify(compareLiteratureData));
-            renderLiteratureCompareList();
-            alert(`成功导入 ${importedCount} 篇文献`);
-        };
-        
-        reader.readAsText(file);
-        event.target.value = '';
-    }
-
-    function exportLiteratureCsv() {
-        if (compareLiteratureData.length === 0) {
-            alert('暂无文献数据可导出');
-            return;
-        }
-        
-        let csv = '文献标题,作者,期刊,年份,研究领域,关键词,摘要\n';
-        
-        compareLiteratureData.forEach(item => {
-            const title = `"${item.title.replace(/"/g, '""')}"`;
-            const author = `"${item.author.replace(/"/g, '""')}"`;
-            const journal = `"${item.journal.replace(/"/g, '""')}"`;
-            const year = `"${item.year}"`;
-            const field = `"${item.field.replace(/"/g, '""')}"`;
-            const keywords = `"${item.keywords.join(', ').replace(/"/g, '""')}"`;
-            const summary = `"${item.summary.replace(/"/g, '""').replace(/\n/g, ' ')}"`;
-            
-            csv += `${title},${author},${journal},${year},${field},${keywords},${summary}\n`;
-        });
-        
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'literature_data.csv';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    function compareSelectedLiterature() {
-        if (selectedLiteratures.length < 2) {
-            alert('请至少选择2篇文献进行对比');
-            return;
-        }
-        
-        const selected = compareLiteratureData.filter(l => selectedLiteratures.includes(l.id));
-        const result = document.getElementById('literatureCompareResult');
-        
-        let html = `<div style="margin-bottom:20px;">
-            <div style="font-weight:bold;color:#6a1b9a;margin-bottom:10px;">📊 文献对比分析报告</div>
-            <div style="font-size:13px;color:#666;">共对比 ${selected.length} 篇文献</div>
-        </div>`;
-        
-        html += `<div style="margin-bottom:20px;">
-            <h4 style="margin-bottom:10px;">📝 基本信息对比</h4>
-            <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                <thead><tr style="background:#f5f5f5;">
-                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">文献</th>
-                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">作者</th>
-                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">期刊</th>
-                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">年份</th>
-                    <th style="padding:8px;text-align:left;border:1px solid #ddd;">领域</th>
-                </tr></thead>
-                <tbody>`;
-        
-        selected.forEach(item => {
-            html += `<tr>
-                <td style="padding:8px;border:1px solid #ddd;"><strong>${escHtml(item.title)}</strong></td>
-                <td style="padding:8px;border:1px solid #ddd;">${escHtml(item.author)}</td>
-                <td style="padding:8px;border:1px solid #ddd;">${escHtml(item.journal)}</td>
-                <td style="padding:8px;border:1px solid #ddd;">${item.year}</td>
-                <td style="padding:8px;border:1px solid #ddd;">${escHtml(item.field)}</td>
-            </tr>`;
-        });
-        
-        html += `</tbody></table>
-        </div>`;
-        
-        html += `<div style="margin-bottom:20px;">
-            <h4 style="margin-bottom:10px;">🎯 研究方向对比</h4>`;
-        
-        const keywordsMap = {};
-        selected.forEach(item => {
-            item.keywords.forEach(k => {
-                keywordsMap[k] = (keywordsMap[k] || 0) + 1;
-            });
-        });
-        
-        html += `<div style="display:flex;flex-wrap:wrap;gap:8px;">`;
-        Object.keys(keywordsMap).forEach(k => {
-            const count = keywordsMap[k];
-            const opacity = count / selected.length;
-            html += `<span style="padding:6px 12px;background:#e8eaf6;color:#3949ab;border-radius:4px;font-size:13px;">${k} (${count})</span>`;
-        });
-        html += `</div>
-        </div>`;
-        
-        html += `<div>
-            <h4 style="margin-bottom:10px;">📋 摘要对比</h4>`;
-        
-        selected.forEach(item => {
-            html += `<div style="margin-bottom:15px;padding:10px;background:#f8f9fa;border-radius:6px;">
-                <div style="font-weight:bold;color:#6a1b9a;margin-bottom:5px;">${escHtml(item.title)}</div>
-                <div style="font-size:13px;color:#666;line-height:1.6;">${escHtml(item.summary)}</div>
-            </div>`;
-        });
-        
-        html += `</div>`;
-
-        html += `<div id="literatureAiCompareBlock" style="margin-top:20px;"></div>`;
-
-        result.innerHTML = html;
-    }
-
-    async function aiCompareSelectedLiterature() {
-        if (selectedLiteratures.length < 2) {
-            alert('请至少选择2篇文献进行 AI 对比');
-            return;
-        }
-        const apiKey = (typeof getChatApiKey === 'function' ? getChatApiKey() : (localStorage.getItem('openaiApiKey') || ''));
-        if (!apiKey) {
-            alert('未配置百炼 API 密钥，请先到「智能工具 → OpenAI入口」保存密钥后再试。');
-            return;
-        }
-        // 先渲染基础对比表，保证有承载容器
-        compareSelectedLiterature();
-        const block = document.getElementById('literatureAiCompareBlock');
-        if (block) {
-            block.innerHTML = '<div style="border:1px solid #e0e7ff;border-radius:12px;padding:16px;background:linear-gradient(180deg,#faf5ff,#fff);">' +
-                '<div style="font-weight:700;color:#4c1d95;margin-bottom:10px;">✨ AI 对比分析</div>' +
-                '<div class="team-chat-typing" aria-label="正在分析"><span></span><span></span><span></span></div></div>';
-        }
-        const selected = compareLiteratureData.filter(function(l) { return selectedLiteratures.includes(l.id); });
-        const listText = selected.map(function(l, i) {
-            return (i + 1) + '. 《' + (l.title || '') + '》\n作者：' + (l.author || '') + '；期刊：' + (l.journal || '') + '；年份：' + (l.year || '') + '；领域：' + (l.field || '') +
-                '\n关键词：' + ((l.keywords || []).join('、')) + '\n摘要：' + (l.summary || '');
-        }).join('\n\n');
-        const messages = [
-            { role: 'system', content: '你是科研文献分析助手。请基于给定文献信息做结构化对比，输出：1) 研究问题与目标差异；2) 方法/技术路线对比；3) 创新点与贡献；4) 局限与适用场景；5) 一句话总体结论。用简体中文，条理清晰，不要编造未提供的信息。' },
-            { role: 'user', content: '请对比以下 ' + selected.length + ' 篇文献：\n\n' + listText }
-        ];
-        try {
-            const endpoint = (typeof API_PROXY !== 'undefined' && API_PROXY ? String(API_PROXY).replace(/\/$/, '') : '') + '/api/aliyun';
-            const resp = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    apiKey: apiKey,
-                    model: (document.getElementById('openaiModel') && document.getElementById('openaiModel').value) || 'qwen-plus',
-                    messages: messages,
-                    temperature: 0.3,
-                    max_tokens: 1800
-                })
-            });
-            const text = await resp.text();
-            if (!resp.ok) throw new Error('HTTP ' + resp.status + ' ' + text.slice(0, 160));
-            const data = JSON.parse(text);
-            const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-            if (!content) throw new Error('模型无返回内容');
-            const b2 = document.getElementById('literatureAiCompareBlock');
-            if (b2) {
-                b2.innerHTML = '<div style="border:1px solid #e0e7ff;border-radius:12px;padding:16px;background:linear-gradient(180deg,#faf5ff,#fff);">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-                    '<div style="font-weight:700;color:#4c1d95;">✨ AI 对比分析</div>' +
-                    '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="copyAiCompareResult(this)">复制</button></div>' +
-                    '<div style="font-size:13px;line-height:1.8;color:#1f2937;white-space:pre-wrap;">' + escHtml(String(content).trim()) + '</div></div>';
-            }
-            if (typeof recordOperationLog === 'function') {
-                recordOperationLog('文献对比', 'AI对比', 'AI 对比 ' + selected.length + ' 篇文献', { count: selected.length }, { success: true }, 1, '', 0);
-            }
-        } catch (e) {
-            const b3 = document.getElementById('literatureAiCompareBlock');
-            if (b3) {
-                b3.innerHTML = '<div style="border:1px solid #fecaca;border-radius:12px;padding:16px;background:#fef2f2;color:#b91c1c;font-size:13px;">AI 对比失败：' + escHtml(e && e.message ? e.message : String(e)) + '<br>请确认本地代理已启动（start_web.py）且密钥有效。</div>';
-            }
-        }
-    }
-
-    function copyAiCompareResult(btn) {
-        const box = btn && btn.closest ? btn.closest('div').parentNode.querySelector('div[style*="white-space:pre-wrap"]') : null;
-        const text = box ? box.textContent : '';
-        if (!text) return;
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(function() {
-                const old = btn.textContent; btn.textContent = '已复制'; setTimeout(function() { btn.textContent = old; }, 1500);
-            });
-        }
-    }
-
-    // ===== 文档智能解析 =====
-    let currentDocument = null;
-    let documentContent = '';
-
-    function initDocumentAnalysis() {
-        currentDocument = null;
-        documentContent = '';
-        document.getElementById('documentInfo').style.display = 'none';
-        document.getElementById('documentAnalysisResult').innerHTML = `<div style="text-align:center;color:#888;padding:80px 20px;">
-            <div style="font-size:48px;margin-bottom:10px;">🤖</div>
-            <div>上传文档后，AI将自动解析内容</div>
-            <div style="font-size:13px;margin-top:5px;">支持 .txt .doc .docx .pdf 格式</div>
-        </div>`;
-    }
-
-    function handleDocumentUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        currentDocument = {
-            name: file.name,
-            type: file.type,
-            size: file.size
-        };
-        
-        document.getElementById('documentFileName').textContent = `文件名：${file.name} | 大小：${formatFileSize(file.size)} | 类型：${file.type}`;
-        document.getElementById('documentInfo').style.display = 'block';
-        
-        const result = document.getElementById('documentAnalysisResult');
-        result.innerHTML = `<div style="text-align:center;color:#888;padding:40px 20px;">
-            <div style="font-size:36px;margin-bottom:10px;">🔄</div>
-            <div>正在解析文档...</div>
-            <div style="font-size:13px;margin-top:5px;">${file.name}</div>
-        </div>`;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            documentContent = e.target.result;
-            showDocumentContentPreview();
-        };
-        
-        if (file.name.endsWith('.txt')) {
-            reader.readAsText(file, 'utf-8');
-        } else if (file.name.endsWith('.csv')) {
-            reader.readAsText(file, 'utf-8');
-        } else {
-            reader.readAsText(file, 'utf-8');
-        }
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-
-    function showDocumentContentPreview() {
-        const result = document.getElementById('documentAnalysisResult');
-        const preview = documentContent.substring(0, 1000);
-        const fullLength = documentContent.length;
-        
-        result.innerHTML = `<div style="padding:10px;">
-            <div style="background:#e8f5e9;padding:15px;border-radius:8px;margin-bottom:15px;">
-                <div style="font-weight:bold;color:#2e7d32;margin-bottom:5px;">✅ 文档解析完成</div>
-                <div style="font-size:13px;color:#666;">共 ${fullLength} 字符，已提取完整文本内容</div>
-            </div>
-            <div style="font-size:14px;line-height:1.8;color:#333;">
-                <strong style="color:#6a1b9a;">文档内容预览：</strong><br>
-                <div style="background:#f8f9fa;padding:15px;border-radius:6px;margin-top:10px;max-height:200px;overflow-y:auto;">
-                    ${escHtml(preview)}${fullLength > 1000 ? '...' : ''}
-                </div>
-            </div>
-        </div>`;
-    }
-
-    function extractDocumentSummary() {
-        if (!currentDocument || !documentContent) {
-            alert('请先上传文档');
-            return;
-        }
-        
-        const sentences = documentContent.split(/[。！？\n\r]/).filter(s => s.trim().length > 10);
-        const summary = sentences.slice(0, 3).join('。') + '。';
-        const corePoints = extractCorePoints();
-        
-        const result = document.getElementById('documentAnalysisResult');
-        result.innerHTML = `<div style="padding:10px;">
-            <div style="background:#fff3e0;padding:15px;border-radius:8px;margin-bottom:15px;">
-                <div style="font-weight:bold;color:#f57c00;margin-bottom:5px;">📋 文档摘要提取</div>
-            </div>
-            <div style="font-size:14px;line-height:1.8;color:#333;">
-                <strong>文档标题：</strong>${escHtml(currentDocument.name)}<br><br>
-                <strong>摘要内容：</strong><br>
-                ${escHtml(summary || '文档内容较短，无法生成摘要')}<br><br>
-                <strong>核心观点：</strong><br>
-                ${corePoints.map(p => `• ${escHtml(p)}`).join('<br>')}
-            </div>
-        </div>`;
-    }
-
-    function extractCorePoints() {
-        const points = [];
-        const lines = documentContent.split('\n').filter(l => l.trim());
-        
-        lines.forEach(line => {
-            if (line.includes('关键词') || line.includes('Key words')) {
-                points.push('关键词：' + line.replace(/关键词[：:]|Key words[：:]/gi, '').trim());
-            } else if (line.includes('摘要') || line.includes('Abstract')) {
-                points.push('摘要提示：文档包含摘要部分');
-            } else if (line.match(/^[\d一二三四五六七八九十]+[\.、]/)) {
-                points.push(line.substring(0, 50));
-            }
-        });
-        
-        if (points.length === 0) {
-            const wordCount = documentContent.split(/\s+/).length;
-            const charCount = documentContent.length;
-            points.push(`文档字数：约 ${wordCount} 词，${charCount} 字符`);
-            points.push('建议阅读全文以了解核心内容');
-        }
-        
-        return points.slice(0, 5);
-    }
-
-    function extractDocumentKeyPoints() {
-        if (!currentDocument || !documentContent) {
-            alert('请先上传文档');
-            return;
-        }
-        
-        const keywords = extractKeywords(documentContent);
-        const numbers = extractNumbers(documentContent);
-        const names = extractNames(documentContent);
-        const dates = extractDates(documentContent);
-        
-        const result = document.getElementById('documentAnalysisResult');
-        result.innerHTML = `<div style="padding:10px;">
-            <div style="background:#e3f2fd;padding:15px;border-radius:8px;margin-bottom:15px;">
-                <div style="font-weight:bold;color:#1565c0;margin-bottom:5px;">🔑 关键信息提取</div>
-            </div>
-            <div style="font-size:14px;line-height:2;color:#333;">
-                <strong>📌 核心关键词：</strong><br>
-                ${keywords.length > 0 ? keywords.map(k => `<span style="padding:4px 8px;background:#f5f5f5;border-radius:4px;margin-right:5px;">${escHtml(k)}</span>`).join('') : '暂无关键词'}<br><br>
-                
-                <strong>📊 重要数据：</strong><br>
-                ${numbers.length > 0 ? numbers.map(n => `• ${escHtml(n)}<br>`).join('') : '暂无数据'}<br>
-                
-                <strong>👤 相关人员：</strong><br>
-                ${names.length > 0 ? names.map(n => `• ${escHtml(n)}<br>`).join('') : '暂无人员信息'}<br>
-                
-                <strong>📅 时间信息：</strong><br>
-                ${dates.length > 0 ? dates.map(d => `• ${escHtml(d)}<br>`).join('') : '暂无时间信息'}
-            </div>
-        </div>`;
-    }
-
-    function extractKeywords(text) {
-        const commonWords = ['的', '是', '在', '有', '和', '了', '我', '你', '他', '她', '它', '这', '那', '为', '与', '及', '等', '一些', '一个', '这种', '这些', '因为', '所以', '但是', '如果', '可以', '可能', '应该', '需要', '已经', '正在', '将会', '已经', '曾经', '能够', '必须', '应该', '可能', '可以', '会', '要', '能', '应', '该', '可', '着', '过', '也', '还', '都', '就', '不', '很', '更', '最', '太', '又', '再', '也', '还', '都', '就'];
-        const words = text.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ').split(/\s+/);
-        const wordCount = {};
-        
-        words.forEach(word => {
-            if (word.length >= 2 && !commonWords.includes(word)) {
-                wordCount[word] = (wordCount[word] || 0) + 1;
-            }
-        });
-        
-        return Object.entries(wordCount)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .map(entry => entry[0]);
-    }
-
-    function extractNumbers(text) {
-        const patterns = [
-            /(\d+(?:\.\d+)?)\s*%/g,
-            /(\d+(?:\.\d+)?)\s*(秒|毫秒|分钟|小时|天|周|月|年)/g,
-            /(\d+(?:,\d+)?)\s*(个|种|项|篇|人|次|元|万元|亿)/g,
-            /(\d+(?:,\d+)?)\s*(图像|图片|样本|数据|记录)/g,
-            /准确率\s*[：:]\s*(\d+(?:\.\d+)?)/g,
-            /精度\s*[：:]\s*(\d+(?:\.\d+)?)/g,
-            /误差\s*[：:]\s*(\d+(?:\.\d+)?)/g
-        ];
-        
-        const results = [];
-        patterns.forEach(pattern => {
-            let match;
-            while ((match = pattern.exec(text)) !== null) {
-                results.push(match[0]);
-            }
-        });
-        
-        return [...new Set(results)].slice(0, 8);
-    }
-
-    function extractNames(text) {
-        const patterns = [
-            /([\u4e00-\u9fa5]{2,4})\s*(教授|副教授|研究员|博士|硕士|老师)/g,
-            /作者\s*[：:]\s*([\u4e00-\u9fa5]{2,4}(?:、[\u4e00-\u9fa5]{2,4})*)/g,
-            /团队\s*[：:]\s*([\u4e00-\u9fa5]{2,4})/g,
-            /机构\s*[：:]\s*([\u4e00-\u9fa5]{2,})/g
-        ];
-        
-        const results = [];
-        patterns.forEach(pattern => {
-            let match;
-            while ((match = pattern.exec(text)) !== null) {
-                results.push(match[1]);
-            }
-        });
-        
-        return [...new Set(results)].slice(0, 5);
-    }
-
-    function extractDates(text) {
-        const patterns = [
-            /(\d{4})\s*年\s*(\d{1,2})\s*月/g,
-            /(\d{4})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})/g,
-            /(\d{4})\s*年/g,
-            /起始时间\s*[：:]\s*(\d{4}年\d{1,2}月)/g,
-            /发表时间\s*[：:]\s*(\d{4}年\d{1,2}月)/g,
-            /时间\s*[：:]\s*(\d{4}年\d{1,2}月)/g
-        ];
-        
-        const results = [];
-        patterns.forEach(pattern => {
-            let match;
-            while ((match = pattern.exec(text)) !== null) {
-                results.push(match[0]);
-            }
-        });
-        
-        return [...new Set(results)].slice(0, 5);
-    }
-
-    function extractDocumentStructure() {
-        if (!currentDocument || !documentContent) {
-            alert('请先上传文档');
-            return;
-        }
-        
-        const structure = analyzeDocumentStructure(documentContent);
-        
-        const result = document.getElementById('documentAnalysisResult');
-        let html = `<div style="padding:10px;">
-            <div style="background:#f3e5f5;padding:15px;border-radius:8px;margin-bottom:15px;">
-                <div style="font-weight:bold;color:#6a1b9a;margin-bottom:5px;">📐 文档结构分析</div>
-            </div>
-            <div style="font-size:14px;line-height:2;color:#333;">
-                <strong>文档层次结构：</strong><br><br>`;
-        
-        if (structure.length > 0) {
-            structure.forEach(section => {
-                html += `<div style="padding-left:${section.level * 20}px;">
-                    <div style="font-weight:bold;">${escHtml(section.title)}</div>`;
-                if (section.children && section.children.length > 0) {
-                    html += `<div style="padding-left:20px;margin-top:5px;">`;
-                    section.children.forEach(child => {
-                        html += `${escHtml(child.title)}<br>`;
-                    });
-                    html += `</div>`;
-                }
-                html += `</div><br>`;
-            });
-        } else {
-            html += `<div style="color:#888;">无法识别文档结构，请检查文档格式</div><br>`;
-        }
-        
-        const lines = documentContent.split('\n').filter(l => l.trim());
-        const totalLines = lines.length;
-        const emptyLines = documentContent.split('\n').filter(l => !l.trim()).length;
-        const paragraphCount = lines.filter(l => l.length > 20).length;
-        
-        html += `<strong>📊 文档统计：</strong><br>
-            • 总行数：${totalLines} 行<br>
-            • 空行数：${emptyLines} 行<br>
-            • 段落数：${paragraphCount} 段<br>
-            • 字符数：${documentContent.length} 字符
-            </div>
-        </div>`;
-        
-        result.innerHTML = html;
-    }
-
-    function analyzeDocumentStructure(text) {
-        const lines = text.split('\n').filter(l => l.trim());
-        const structure = [];
-        let currentSection = null;
-        
-        lines.forEach(line => {
-            const level1Match = line.match(/^([\d一二三四五六七八九十]+)[\.、]\s+(.+)$/);
-            const level2Match = line.match(/^([\d一二三四五六七八九十]+\.[\d一二三四五六七八九十]+)[\.、]\s+(.+)$/);
-            
-            if (level1Match) {
-                currentSection = {
-                    title: line,
-                    level: 1,
-                    children: []
-                };
-                structure.push(currentSection);
-            } else if (level2Match && currentSection) {
-                currentSection.children.push({
-                    title: line,
-                    level: 2
-                });
-            }
-        });
-        
-        return structure;
-    }
-
-    function clearDocumentAnalysis() {
-        currentDocument = null;
-        documentContent = '';
-        document.getElementById('documentUploadInput').value = '';
-        document.getElementById('documentInfo').style.display = 'none';
-        document.getElementById('documentAnalysisResult').innerHTML = `<div style="text-align:center;color:#888;padding:80px 20px;">
-            <div style="font-size:48px;margin-bottom:10px;">🤖</div>
-            <div>上传文档后，AI将自动解析内容</div>
-            <div style="font-size:13px;margin-top:5px;">支持 .txt .doc .docx .pdf 格式</div>
-        </div>`;
-    }
+    // 文档智能解析已抽离至 js/document-analysis.js
 
     // ===== 数据备份管理模块 =====
     let backupData = [];
@@ -28260,5 +27704,7 @@ ${ocrText}`
     }
 
     </script>
+    <script src="js/literature-compare.js"></script>
+    <script src="js/document-analysis.js?v=20260711-2006"></script>
 </body>
 </html>
