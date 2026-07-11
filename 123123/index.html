@@ -289,8 +289,8 @@
             backdrop-filter: blur(12px);
             position: sticky;
             top: 0;
-            z-index: 100;
-            overflow: hidden;
+            z-index: 1000;
+            overflow: visible;
         }
         .top-nav::before {
             content: '';
@@ -300,6 +300,8 @@
             transform: translateX(-120%);
             animation: shimmerSweep 4.8s ease-in-out infinite;
             pointer-events: none;
+            border-radius: inherit;
+            overflow: hidden;
         }
         @keyframes navGradientShift {
             0%, 100% { background-position: 0% 50%; }
@@ -438,6 +440,89 @@
             transform: translateY(-1px);
             text-decoration: none;
         }
+        .global-notice-wrap { position: relative; display: inline-flex; align-items: center; margin-left: 6px; z-index: 1100; }
+        .global-notice-bell {
+            position: relative; width: 38px; height: 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.08); color: #fff; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 16px;
+        }
+        .global-notice-bell:hover { background: rgba(255,255,255,0.16); transform: translateY(-1px); }
+        .global-notice-badge {
+            position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px;
+            border-radius: 999px; background: #ef4444; color: #fff; font-size: 11px; font-weight: 800;
+            display: none; align-items: center; justify-content: center; line-height: 1;
+            box-shadow: 0 0 0 2px rgba(76,29,149,0.9);
+        }
+        .global-notice-badge.show { display: inline-flex; }
+        .global-notice-panel {
+            display: none; position: fixed; width: 380px; max-width: calc(100vw - 24px);
+            background: #fff; color: #111827; border-radius: 14px; border: 1px solid #e5e7eb;
+            box-shadow: 0 18px 40px rgba(15,23,42,0.22); z-index: 3000; overflow: hidden;
+        }
+        .global-notice-panel.open { display: block; animation: chatBubbleIn 0.2s ease both; }
+        .global-notice-panel-head {
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+            padding: 12px 14px; border-bottom: 1px solid #f1f5f9; background: linear-gradient(135deg,#eef2ff,#fff);
+        }
+        .global-notice-panel-head strong { font-size: 14px; color: #312e81; }
+        .global-notice-panel-list { max-height: 420px; overflow: auto; }
+        .global-notice-item {
+            padding: 12px 14px; border-bottom: 1px solid #f8fafc; cursor: pointer; transition: background 0.15s;
+        }
+        .global-notice-item:hover { background: #eef2ff; }
+        .global-notice-item.unread .title { font-weight: 800; color: #111827; }
+        .global-notice-item .title { font-size: 13px; color: #334155; margin-bottom: 4px; }
+        .global-notice-item .meta { font-size: 11px; color: #94a3b8; display: flex; gap: 8px; flex-wrap: wrap; }
+        .global-notice-item .loc {
+            margin-top: 6px; font-size: 11px; font-weight: 700; color: #4f46e5;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .global-notice-empty { padding: 28px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+        .global-notice-empty .btn { margin-top: 10px; }
+        .home-notice-banner {
+            display: none; margin-bottom: 16px; border-radius: 12px; padding: 14px 16px;
+            background: linear-gradient(135deg, #fff1f2, #eef2ff); border: 1px solid #fecdd3;
+            box-shadow: 0 8px 20px rgba(244,63,94,0.08);
+        }
+        .home-notice-banner.show { display: block; }
+        .home-notice-banner .row { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+        .home-notice-banner .label { font-size: 12px; font-weight: 800; color: #be123c; margin-bottom: 4px; }
+        .home-notice-banner .title { font-size: 15px; font-weight: 800; color: #111827; }
+        .home-notice-banner .desc { font-size: 12px; color: #64748b; margin-top: 4px; line-height: 1.5; }
+        .notice-stat-card {
+            background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            cursor: pointer; transition: all 0.18s ease; border: 2px solid transparent;
+        }
+        .notice-stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(15,23,42,0.08); }
+        .notice-stat-card.active { border-color: #818cf8; background: #eef2ff; }
+        @media (max-width: 1100px) {
+            .notice-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 640px) {
+            .notice-stat-grid { grid-template-columns: 1fr !important; }
+        }
+        .notice-unread-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; display: inline-block; margin-right: 6px;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
+        }
+        .notice-read-panel { margin-top: 18px; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+        .notice-read-panel-head {
+            display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+            padding: 12px 14px; background: #f8fafc; border-bottom: 1px solid #eef2ff;
+        }
+        .notice-read-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+        @media (max-width: 640px) { .notice-read-cols { grid-template-columns: 1fr; } }
+        .notice-read-col { padding: 12px 14px; min-height: 0; }
+        .notice-read-col + .notice-read-col { border-left: 1px solid #eef2ff; }
+        @media (max-width: 640px) { .notice-read-col + .notice-read-col { border-left: none; border-top: 1px solid #eef2ff; } }
+        .notice-read-col h4 { margin: 0 0 10px; font-size: 13px; color: #334155; }
+        .notice-read-col ul { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; }
+        .notice-read-col li {
+            font-size: 12px; color: #475569; padding: 7px 8px; border-radius: 8px; margin-bottom: 4px;
+            background: #fff; border: 1px solid #f1f5f9; display: flex; justify-content: space-between; gap: 8px;
+        }
+        .notice-read-col li.unread { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+        .notice-read-col li.read { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
         
         /* 主容器 */
         .app-shell {
@@ -789,7 +874,7 @@
         .doc-card-title { font-size: 14px; font-weight: 700; color: #312e81; margin-bottom: 8px; }
         .doc-meta-line { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
         .doc-preview-text, .doc-prose { font-size: 13px; line-height: 1.8; color: #1f2937; white-space: pre-wrap; word-break: break-word; }
-        .doc-preview-text { max-height: 280px; overflow: auto; background: #f8fafc; border-radius: 10px; padding: 12px; border: 1px solid #eef2ff; }
+        .doc-preview-text { max-height: min(52vh, 420px); overflow: auto; background: #f8fafc; border-radius: 10px; padding: 12px; border: 1px solid #eef2ff; }
         .doc-stat-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
         .doc-stat-row span { font-size: 12px; color: #4f46e5; background: #eef2ff; border-radius: 999px; padding: 3px 10px; font-weight: 600; }
         .doc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -804,7 +889,7 @@
         .doc-chat-title { font-size: 15px; font-weight: 800; color: #111827; }
         .doc-chat-sub { font-size: 12px; color: #6b7280; margin-top: 2px; line-height: 1.5; }
         .doc-chat-stream {
-            flex: 1; overflow: auto; min-height: 280px; max-height: 480px; padding: 10px;
+            flex: 1 1 auto; overflow: auto; min-height: 180px; max-height: 320px; padding: 10px;
             border: 1px solid #eef2ff; border-radius: 12px; background: #fff;
         }
         .doc-chat-row { display: flex; margin-bottom: 10px; }
@@ -834,6 +919,42 @@
             background: linear-gradient(135deg,#7c3aed,#4f46e5); cursor: pointer; padding: 0 14px;
         }
         .doc-chat-send:disabled { opacity: 0.45; cursor: not-allowed; }
+        .doc-ai-ports {
+            margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0; flex-shrink: 0;
+        }
+        .doc-ai-ports-head {
+            display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px;
+        }
+        .doc-ai-ports-title { font-size: 12px; font-weight: 800; color: #334155; letter-spacing: 0.02em; }
+        .doc-ai-ports-sub { font-size: 11px; color: #94a3b8; }
+        .doc-ai-ports-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        }
+        .doc-ai-port {
+            display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 12px;
+            text-decoration: none; border: 1px solid transparent; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+            background: #fff; min-height: 52px;
+        }
+        .doc-ai-port:hover { transform: translateY(-2px); box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08); }
+        .doc-ai-port .mark {
+            width: 30px; height: 30px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0;
+        }
+        .doc-ai-port .meta { min-width: 0; }
+        .doc-ai-port .name { font-size: 12px; font-weight: 800; color: #0f172a; line-height: 1.2; }
+        .doc-ai-port .desc { font-size: 10px; color: #64748b; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .doc-ai-port.deepseek { border-color: #dbeafe; background: linear-gradient(135deg, #eff6ff, #fff); }
+        .doc-ai-port.deepseek .mark { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+        .doc-ai-port.doubao { border-color: #ffedd5; background: linear-gradient(135deg, #fff7ed, #fff); }
+        .doc-ai-port.doubao .mark { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .doc-ai-port.kimi { border-color: #e2e8f0; background: linear-gradient(135deg, #f8fafc, #fff); }
+        .doc-ai-port.kimi .mark { background: linear-gradient(135deg, #334155, #0f172a); }
+        .doc-ai-port.gemini { border-color: #e9d5ff; background: linear-gradient(135deg, #faf5ff, #fff); }
+        .doc-ai-port.gemini .mark { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+        .doc-ai-port.qwen { border-color: #d1fae5; background: linear-gradient(135deg, #ecfdf5, #fff); }
+        .doc-ai-port.qwen .mark { background: linear-gradient(135deg, #059669, #0d9488); }
+        .doc-ai-port.gemini-app { border-color: #fce7f3; background: linear-gradient(135deg, #fdf2f8, #fff); }
+        .doc-ai-port.gemini-app .mark { background: linear-gradient(135deg, #db2777, #7c3aed); }
         
         /* 主内容区 */
         .main-content {
@@ -2870,6 +2991,22 @@
                 <a href="#" onclick="showModule('projects')">团队项目</a>
                 <a href="#" onclick="showModule('members')">团队成员</a>
                 <a href="#" onclick="showModule('contact')">联系我们</a>
+                <div class="global-notice-wrap" id="globalNoticeWrap">
+                    <button type="button" class="global-notice-bell" id="globalNoticeBell" onclick="onGlobalNoticeBellClick(event)" title="全局通知中心：查看全部通知">
+                        🔔
+                        <span class="global-notice-badge" id="globalNoticeBadge">0</span>
+                    </button>
+                    <div class="global-notice-panel" id="globalNoticePanel">
+                        <div class="global-notice-panel-head">
+                            <strong id="globalNoticePanelTitle">全局通知中心</strong>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+                                <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation(); clearGlobalReadNotices();" title="从消息中心移除已读，不删除通知本身">清除已读</button>
+                                <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation(); goToNoticeModule(true);">查看全部</button>
+                            </div>
+                        </div>
+                        <div class="global-notice-panel-list" id="globalNoticePanelList"></div>
+                    </div>
+                </div>
             </div>
         </div>
     
@@ -3029,6 +3166,7 @@
         <div class="main-content">
             <!-- 首页 -->
             <div id="home" class="module active">
+                <div id="homeNoticeBanner" class="home-notice-banner"></div>
                 <!-- 顶部搜索栏 -->
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                     <div style="display: flex; align-items: center; gap: 20px;">
@@ -5405,6 +5543,38 @@
                                 <textarea id="docChatInput" placeholder="基于已解析文档提问，例如：加固适用范围是什么？" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDocChatMessage();}"></textarea>
                                 <button class="doc-chat-send" id="docChatSendBtn" onclick="sendDocChatMessage()" disabled>发送</button>
                             </div>
+                            <div class="doc-ai-ports">
+                                <div class="doc-ai-ports-head">
+                                    <div class="doc-ai-ports-title">外部大模型入口</div>
+                                    <div class="doc-ai-ports-sub">新标签页打开</div>
+                                </div>
+                                <div class="doc-ai-ports-grid">
+                                    <a class="doc-ai-port deepseek" href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer" title="DeepSeek">
+                                        <span class="mark">DS</span>
+                                        <span class="meta"><span class="name">DeepSeek</span><span class="desc">深度求索对话</span></span>
+                                    </a>
+                                    <a class="doc-ai-port doubao" href="https://www.doubao.com/chat/" target="_blank" rel="noopener noreferrer" title="豆包">
+                                        <span class="mark">豆</span>
+                                        <span class="meta"><span class="name">豆包</span><span class="desc">字节跳动助手</span></span>
+                                    </a>
+                                    <a class="doc-ai-port kimi" href="https://www.kimi.com/zh/" target="_blank" rel="noopener noreferrer" title="Kimi">
+                                        <span class="mark">K</span>
+                                        <span class="meta"><span class="name">Kimi</span><span class="desc">月之暗面长文</span></span>
+                                    </a>
+                                    <a class="doc-ai-port qwen" href="https://chat.qwen.ai/" target="_blank" rel="noopener noreferrer" title="通义千问">
+                                        <span class="mark">Q</span>
+                                        <span class="meta"><span class="name">通义千问</span><span class="desc">Qwen Chat</span></span>
+                                    </a>
+                                    <a class="doc-ai-port gemini" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" title="Google Gemini">
+                                        <span class="mark">G</span>
+                                        <span class="meta"><span class="name">Gemini</span><span class="desc">Google 对话</span></span>
+                                    </a>
+                                    <a class="doc-ai-port gemini-app" href="https://gemini.google.com/app/7182162052e679f5?utm_source=app_launcher&utm_medium=owned&utm_campaign=base_all" target="_blank" rel="noopener noreferrer" title="Gemini 工作区">
+                                        <span class="mark">Gw</span>
+                                        <span class="meta"><span class="name">Gemini 工作区</span><span class="desc">指定会话入口</span></span>
+                                    </a>
+                                </div>
+                            </div>
                         </aside>
                     </div>
                 </div>
@@ -5921,9 +6091,9 @@
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
                         <div>
                             <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">内部通知发布</h1>
-                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队内部通知、公告发布管理</p>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">全员云端同步 · 已读回执 · 导师可查看谁看了 / 谁没看</p>
                         </div>
-                        <button class="btn" onclick="showAddNoticeModal()" style="padding: 10px 24px; font-size: 14px;">
+                        <button class="btn" id="noticePublishBtn" onclick="showAddNoticeModal()" style="padding: 10px 24px; font-size: 14px;">
                             <span>📝</span> 发布通知
                         </button>
                     </div>
@@ -5941,12 +6111,19 @@
                             <option value="meeting">会议通知</option>
                             <option value="urgent">紧急通知</option>
                         </select>
+                        <select id="noticeStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="noticeStatFilter=this.value; noticePage=1; renderNoticeList()">
+                            <option value="">全部状态</option>
+                            <option value="active">进行中</option>
+                            <option value="urgent">紧急</option>
+                            <option value="unread">我的未读</option>
+                            <option value="expired">已过期</option>
+                        </select>
                     </div>
                 </div>
 
                 <div style="padding: 24px; background: #f5f7fa;">
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px;" class="notice-stat-grid">
+                        <div class="notice-stat-card" data-filter="" onclick="setNoticeStatFilter('')">
                             <div style="display: flex; align-items: center; justify-content: space-between;">
                                 <div>
                                     <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="noticeStatTotal">0</div>
@@ -5955,7 +6132,7 @@
                                 <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📋</div>
                             </div>
                         </div>
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="notice-stat-card" data-filter="active" onclick="setNoticeStatFilter('active')">
                             <div style="display: flex; align-items: center; justify-content: space-between;">
                                 <div>
                                     <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="noticeStatActive">0</div>
@@ -5964,7 +6141,7 @@
                                 <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏰</div>
                             </div>
                         </div>
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="notice-stat-card" data-filter="urgent" onclick="setNoticeStatFilter('urgent')">
                             <div style="display: flex; align-items: center; justify-content: space-between;">
                                 <div>
                                     <div style="font-size: 28px; font-weight: bold; color: #ff4d4f;" id="noticeStatUrgent">0</div>
@@ -5973,7 +6150,16 @@
                                 <div style="width: 48px; height: 48px; background: #fff1f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🚨</div>
                             </div>
                         </div>
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="notice-stat-card" data-filter="unread" onclick="setNoticeStatFilter('unread')">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #2563eb;" id="noticeStatUnread">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">我的未读</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #eff6ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🔵</div>
+                            </div>
+                        </div>
+                        <div class="notice-stat-card" data-filter="expired" onclick="setNoticeStatFilter('expired')">
                             <div style="display: flex; align-items: center; justify-content: space-between;">
                                 <div>
                                     <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="noticeStatExpired">0</div>
@@ -8498,7 +8684,10 @@
             try { apply('schoolData', function(v){ schoolData = v; }); } catch(e){}
             try { apply('taskData', function(v){ taskData = v; }); } catch(e){}
             try { apply('weeklyReportData', function(v){ weeklyReportData = v; }); } catch(e){}
-            try { apply('noticeData', function(v){ noticeData = v; }); } catch(e){}
+            try { apply('noticeData', function(v){
+                if (typeof window.mergeIncomingNoticeData === 'function') noticeData = window.mergeIncomingNoticeData(v);
+                else noticeData = v;
+            }); } catch(e){}
             try { apply('newsData', function(v){ newsData = v; }); } catch(e){}
             try { apply('meetingData', function(v){ meetingData = v; }); } catch(e){}
             try { apply('literatureData', function(v){ literatureData = v; }); } catch(e){}
@@ -8530,6 +8719,7 @@
             try { if (typeof populateOwnerSelects === 'function') populateOwnerSelects(); } catch (e) {}
             try { if (typeof renderTaskList === 'function') renderTaskList(); } catch (e) {}
             try { if (typeof renderNoticeList === 'function') renderNoticeList(); } catch (e) {}
+            try { if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter(); } catch (e) {}
             try { if (typeof populateWeeklyReportOwnerSelects === 'function') populateWeeklyReportOwnerSelects(); } catch (e) {}
             try { if (typeof renderWeeklyReportList === 'function') renderWeeklyReportList(); } catch (e) {}
             try { if (typeof renderModelTrainingList === 'function') renderModelTrainingList(); } catch (e) {}
@@ -18640,6 +18830,7 @@ ${ocrText}`
         document.getElementById('headerUserName').textContent = currentUser.realName;
         document.getElementById('headerUserRole').textContent = ROLE_LABELS[currentUser.role] || currentUser.role;
         document.getElementById('headerAvatar').textContent = currentUser.realName.charAt(0);
+        try { if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter(); } catch (e) {}
     }
 
     // ===== 3. 权限控制 =====
@@ -20621,10 +20812,11 @@ ${ocrText}`
         if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('驳回结果已同步', false);
     }
 
-    // ===== 通知管理模块 =====
+    // ===== 通知管理模块（全局联动 + 已读回执） =====
     let noticeData = [];
     let editingNoticeId = null;
     let noticePage = 1;
+    let noticeStatFilter = '';
     const NOTICE_PAGE_SIZE = 10;
 
     const NOTICE_TYPE_CONFIG = {
@@ -20634,16 +20826,106 @@ ${ocrText}`
         urgent: { label: '紧急通知', icon: '🚨', color: '#ff4d4f', bgColor: '#fff1f0' }
     };
 
+    function canManageNotices() {
+        return !!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'leader'));
+    }
+
+    function canViewNoticeReadStats() {
+        return !!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'leader'));
+    }
+
+    function normalizeNoticeRecord(n) {
+        n = n || {};
+        const reads = mergeReadLists(Array.isArray(n.reads) ? n.reads : [], []);
+        return Object.assign({}, n, {
+            audience: n.audience || 'all',
+            pinned: !!n.pinned,
+            remindAt: n.remindAt || '',
+            remindCount: Number(n.remindCount || 0) || 0,
+            reads: reads
+        });
+    }
+
+    function mergeReadLists(a, b) {
+        const list = [].concat(a || [], b || []).map(function (r) {
+            return {
+                userId: r.userId != null && r.userId !== '' ? Number(r.userId) : null,
+                studentId: String(r.studentId || ''),
+                userName: String(r.userName || r.realName || ''),
+                readAt: String(r.readAt || '')
+            };
+        }).filter(function (r) { return r.userId || r.studentId || r.userName; });
+
+        const byStrong = {};
+        list.forEach(function (r) {
+            var k = r.userId != null ? ('id:' + r.userId) : (r.studentId ? ('sid:' + r.studentId) : ('name:' + r.userName));
+            if (!byStrong[k] || String(r.readAt || '') > String(byStrong[k].readAt || '')) byStrong[k] = r;
+        });
+        const strongList = Object.keys(byStrong).map(function (k) { return byStrong[k]; });
+        const byName = {};
+        strongList.forEach(function (r) {
+            var nk = String(r.userName || '').trim() || ('__anon__' + (r.userId != null ? r.userId : r.studentId));
+            if (!byName[nk]) {
+                byName[nk] = r;
+                return;
+            }
+            var cur = byName[nk];
+            byName[nk] = {
+                userId: cur.userId != null ? cur.userId : r.userId,
+                studentId: cur.studentId || r.studentId,
+                userName: cur.userName || r.userName,
+                readAt: String(r.readAt || '') > String(cur.readAt || '') ? r.readAt : cur.readAt
+            };
+        });
+        return Object.keys(byName).map(function (k) { return byName[k]; });
+    }
+
+    function mergeIncomingNoticeData(incoming) {
+        const localMap = {};
+        (noticeData || []).forEach(function (n) { localMap[n.id] = normalizeNoticeRecord(n); });
+        const remote = (Array.isArray(incoming) ? incoming : []).map(normalizeNoticeRecord);
+        const remoteIds = {};
+        const merged = remote.map(function (n) {
+            remoteIds[n.id] = true;
+            const prev = localMap[n.id];
+            if (!prev) return n;
+            return Object.assign({}, n, {
+                reads: mergeReadLists(prev.reads, n.reads),
+                remindAt: n.remindAt || prev.remindAt || '',
+                remindCount: Math.max(Number(n.remindCount || 0), Number(prev.remindCount || 0))
+            });
+        });
+        // 保留本地尚未同步到云端的新通知
+        Object.keys(localMap).forEach(function (id) {
+            if (!remoteIds[id]) merged.push(localMap[id]);
+        });
+        return merged;
+    }
+    window.mergeIncomingNoticeData = mergeIncomingNoticeData;
+
     function initNoticePublish() {
         loadNoticeData();
+        updateNoticePublishPermissionUI();
         updateNoticeStats();
         renderNoticeList();
+        refreshGlobalNoticeCenter();
+    }
+
+    function updateNoticePublishPermissionUI() {
+        const btn = document.getElementById('noticePublishBtn');
+        if (btn) btn.style.display = canManageNotices() ? '' : 'none';
+        const emptyBtn = document.querySelector('#noticeEmptyState .btn');
+        if (emptyBtn) emptyBtn.style.display = canManageNotices() ? '' : 'none';
     }
 
     function loadNoticeData() {
         const stored = localStorage.getItem('noticeData');
         if (stored) {
-            noticeData = JSON.parse(stored);
+            try {
+                noticeData = mergeIncomingNoticeData(JSON.parse(stored));
+            } catch (e) {
+                noticeData = buildRealTeamDefaultNotices();
+            }
             migrateNoticeDataToRealTeam();
         } else {
             noticeData = buildRealTeamDefaultNotices();
@@ -20659,9 +20941,9 @@ ${ocrText}`
         const nowStr = now.toISOString().replace('T', ' ').substring(0, 16);
         const endStr = weekEnd.toISOString().replace('T', ' ').substring(0, 16);
         return [
-            { id: 1, title: '团队成员信息统一维护通知', type: 'notice', content: '请各位成员核对自己的姓名、年级、联系方式、研究方向、头像等信息。成员档案将同步到账号权限、任务负责人、周报提交人等功能中。', startTime: nowStr, endTime: endStr, publishTime: now.toLocaleString('zh-CN'), publisher, audience: 'all' },
-            { id: 2, title: '本周组会安排', type: 'meeting', content: '本周组会请围绕城市安全、智能监测、结构风险评估、项目推进情况进行汇报。请提前准备进展、问题和下一步计划。', startTime: nowStr, endTime: '', publishTime: now.toLocaleString('zh-CN'), publisher, audience: 'all' },
-            { id: 3, title: '资源中心与成果台账维护要求', type: 'announcement', content: '论文、专利、项目、数据集、报告等资料请及时上传或登记，保证团队资料统一归档、全员可查。', startTime: nowStr, endTime: '', publishTime: now.toLocaleString('zh-CN'), publisher, audience: 'all' }
+            normalizeNoticeRecord({ id: 1, title: '团队成员信息统一维护通知', type: 'notice', content: '请各位成员核对自己的姓名、年级、联系方式、研究方向、头像等信息。成员档案将同步到账号权限、任务负责人、周报提交人等功能中。', startTime: nowStr, endTime: endStr, publishTime: now.toLocaleString('zh-CN'), publisher, audience: 'all', pinned: true }),
+            normalizeNoticeRecord({ id: 2, title: '本周组会安排', type: 'meeting', content: '本周组会请围绕城市安全、智能监测、结构风险评估、项目推进情况进行汇报。请提前准备进展、问题和下一步计划。', startTime: nowStr, endTime: '', publishTime: now.toLocaleString('zh-CN'), publisher, audience: 'all' }),
+            normalizeNoticeRecord({ id: 3, title: '资源中心与成果台账维护要求', type: 'announcement', content: '论文、专利、项目、数据集、报告等资料请及时上传或登记，保证团队资料统一归档、全员可查。', startTime: nowStr, endTime: '', publishTime: now.toLocaleString('zh-CN'), publisher, audience: 'all' })
         ];
     }
 
@@ -20673,130 +20955,332 @@ ${ocrText}`
             saveNoticeData();
             return;
         }
-        noticeData = (noticeData || []).map(n => ({ ...n, audience: 'all' }));
+        noticeData = (noticeData || []).map(normalizeNoticeRecord);
     }
 
-    function saveNoticeData() {
-        noticeData = (noticeData || []).map(n => ({ ...n, audience: 'all' }));
+    function saveNoticeData(options) {
+        options = options || {};
+        noticeData = (noticeData || []).map(normalizeNoticeRecord);
         localStorage.setItem('noticeData', JSON.stringify(noticeData));
         try { if (typeof cloudUpsert === 'function') cloudUpsert('noticeData', JSON.stringify(noticeData)); } catch (e) {}
+        if (options.silent !== true) {
+            refreshGlobalNoticeCenter();
+            updateHomeNoticeBanner();
+        }
+        try {
+            if (typeof recordOperationLog === 'function' && options.log) {
+                recordOperationLog('通知发布', options.log.action || '更新', options.log.desc || '更新通知', options.log.detail || {}, { success: true }, 1, '', 0);
+            }
+        } catch (e2) {}
+    }
+
+    function getNoticeAudienceMembers(notice) {
+        const accounts = Array.isArray(accountData) ? accountData : [];
+        const raw = accounts.filter(function (a) {
+            if (!a || a.role === 'visitor') return false;
+            return true;
+        }).map(function (a) {
+            return {
+                userId: a.id,
+                studentId: a.studentId || '',
+                userName: a.realName || a.username || a.studentId || ('用户' + a.id),
+                role: a.role || 'student',
+                group: a.group || '',
+                grade: a.grade || ''
+            };
+        });
+        const seen = {};
+        const out = [];
+        raw.forEach(function (m) {
+            var k = m.studentId ? ('sid:' + m.studentId) : ('id:' + m.userId);
+            var nameKey = 'name:' + String(m.userName || '').trim();
+            if (seen[k]) return;
+            if (m.userName && seen[nameKey]) {
+                var prev = seen[nameKey];
+                var prevRank = prev.role === 'admin' ? 3 : (prev.role === 'leader' ? 2 : 1);
+                var curRank = m.role === 'admin' ? 3 : (m.role === 'leader' ? 2 : 1);
+                if (curRank <= prevRank) return;
+                var idx = out.indexOf(prev);
+                if (idx >= 0) out.splice(idx, 1);
+            }
+            seen[k] = m;
+            if (m.userName) seen[nameKey] = m;
+            out.push(m);
+        });
+        return out;
+    }
+
+    function isSameNoticeUser(reader, member) {
+        if (!reader || !member) return false;
+        if (reader.userId != null && member.userId != null && Number(reader.userId) === Number(member.userId)) return true;
+        if (reader.studentId && member.studentId && String(reader.studentId) === String(member.studentId)) return true;
+        if (reader.userName && member.userName && String(reader.userName) === String(member.userName)) return true;
+        return false;
+    }
+
+    function hasUserReadNotice(notice, user) {
+        if (!notice || !user) return false;
+        const me = {
+            userId: user.id,
+            studentId: user.studentId || '',
+            userName: user.realName || user.username || ''
+        };
+        return (notice.reads || []).some(function (r) { return isSameNoticeUser(r, me); });
+    }
+
+    function getNoticeReadStats(notice) {
+        const audience = getNoticeAudienceMembers(notice);
+        const reads = mergeReadLists(notice.reads || [], []);
+        const usedReadIdx = {};
+        const readMembers = [];
+        const unreadMembers = [];
+
+        function findReadForMember(m) {
+            for (var i = 0; i < reads.length; i++) {
+                if (usedReadIdx[i]) continue;
+                var r = reads[i];
+                if (r.userId != null && m.userId != null && Number(r.userId) === Number(m.userId)) return i;
+                if (r.studentId && m.studentId && String(r.studentId) === String(m.studentId)) return i;
+            }
+            for (var j = 0; j < reads.length; j++) {
+                if (usedReadIdx[j]) continue;
+                var r2 = reads[j];
+                if (r2.userName && m.userName && String(r2.userName) === String(m.userName)) return j;
+            }
+            return -1;
+        }
+
+        audience.forEach(function (m) {
+            var idx = findReadForMember(m);
+            if (idx >= 0) {
+                usedReadIdx[idx] = true;
+                readMembers.push(Object.assign({}, m, { readAt: reads[idx].readAt }));
+            } else {
+                unreadMembers.push(m);
+            }
+        });
+
+        return {
+            total: audience.length,
+            readCount: readMembers.length,
+            unreadCount: unreadMembers.length,
+            readMembers: readMembers,
+            unreadMembers: unreadMembers
+        };
+    }
+
+    function markNoticeAsRead(id, options) {
+        options = options || {};
+        if (!currentUser) return false;
+        const notice = noticeData.find(n => n.id === id);
+        if (!notice) return false;
+        if (hasUserReadNotice(notice, currentUser)) {
+            if (options.forceRefresh) refreshGlobalNoticeCenter();
+            return false;
+        }
+        notice.reads = mergeReadLists(notice.reads, [{
+            userId: currentUser.id,
+            studentId: currentUser.studentId || '',
+            userName: currentUser.realName || currentUser.username || '',
+            readAt: new Date().toLocaleString('zh-CN')
+        }]);
+        // 落盘前再清洗一次，消除历史重复回执
+        notice.reads = mergeReadLists(notice.reads, []);
+        saveNoticeData({ silent: false });
+        return true;
+    }
+
+    function isNoticeExpired(notice) {
+        return !!(notice && notice.endTime && new Date(notice.endTime) <= new Date());
+    }
+
+    function isNoticeActive(notice) {
+        return !isNoticeExpired(notice);
+    }
+
+    function getMyUnreadNotices() {
+        if (!currentUser) return [];
+        return (noticeData || []).filter(function (n) {
+            return isNoticeActive(n) && !hasUserReadNotice(n, currentUser);
+        });
     }
 
     function updateNoticeStats() {
         const now = new Date();
         const total = noticeData.length;
         const active = noticeData.filter(n => !n.endTime || new Date(n.endTime) > now).length;
-        const urgent = noticeData.filter(n => n.type === 'urgent').length;
+        const urgent = noticeData.filter(n => n.type === 'urgent' && (!n.endTime || new Date(n.endTime) > now)).length;
         const expired = noticeData.filter(n => n.endTime && new Date(n.endTime) <= now).length;
+        const unread = getMyUnreadNotices().length;
 
         if (document.getElementById('noticeStatTotal')) document.getElementById('noticeStatTotal').textContent = total;
         if (document.getElementById('noticeStatActive')) document.getElementById('noticeStatActive').textContent = active;
         if (document.getElementById('noticeStatUrgent')) document.getElementById('noticeStatUrgent').textContent = urgent;
         if (document.getElementById('noticeStatExpired')) document.getElementById('noticeStatExpired').textContent = expired;
+        if (document.getElementById('noticeStatUnread')) document.getElementById('noticeStatUnread').textContent = unread;
+
+        document.querySelectorAll('.notice-stat-card').forEach(function (el) {
+            el.classList.toggle('active', (el.getAttribute('data-filter') || '') === (noticeStatFilter || ''));
+        });
+    }
+
+    function setNoticeStatFilter(filter) {
+        noticeStatFilter = filter || '';
+        const statusSel = document.getElementById('noticeStatusFilter');
+        if (statusSel) statusSel.value = noticeStatFilter;
+        noticePage = 1;
+        renderNoticeList();
     }
 
     function getFilteredNotices() {
         let filtered = [...noticeData];
-        
         const search = document.getElementById('noticeSearchInput')?.value?.toLowerCase() || '';
         const type = document.getElementById('noticeTypeFilter')?.value || '';
+        const status = document.getElementById('noticeStatusFilter')?.value || noticeStatFilter || '';
 
         if (search) {
-            filtered = filtered.filter(n => n.title.toLowerCase().includes(search) || n.content.toLowerCase().includes(search));
+            filtered = filtered.filter(n => String(n.title || '').toLowerCase().includes(search) || String(n.content || '').toLowerCase().includes(search));
         }
-        if (type) {
-            filtered = filtered.filter(n => n.type === type);
-        }
+        if (type) filtered = filtered.filter(n => n.type === type);
+        if (status === 'active') filtered = filtered.filter(isNoticeActive);
+        if (status === 'urgent') filtered = filtered.filter(n => n.type === 'urgent' && isNoticeActive(n));
+        if (status === 'expired') filtered = filtered.filter(isNoticeExpired);
+        if (status === 'unread') filtered = filtered.filter(n => currentUser && isNoticeActive(n) && !hasUserReadNotice(n, currentUser));
 
-        filtered.sort((a, b) => new Date(b.publishTime) - new Date(a.publishTime));
+        filtered.sort(function (a, b) {
+            const ua = (a.type === 'urgent' && isNoticeActive(a)) ? 1 : 0;
+            const ub = (b.type === 'urgent' && isNoticeActive(b)) ? 1 : 0;
+            if (ua !== ub) return ub - ua;
+            const pa = a.pinned ? 1 : 0;
+            const pb = b.pinned ? 1 : 0;
+            if (pa !== pb) return pb - pa;
+            return new Date(b.publishTime) - new Date(a.publishTime);
+        });
         return filtered;
     }
 
     function renderNoticeList() {
         const container = document.getElementById('noticeList');
         const emptyState = document.getElementById('noticeEmptyState');
-        
         if (!container || !emptyState) return;
 
+        updateNoticePublishPermissionUI();
+        // 下拉与统计卡保持同步
+        const statusSel = document.getElementById('noticeStatusFilter');
+        if (statusSel && statusSel.value !== (noticeStatFilter || '') && statusSel.value) {
+            noticeStatFilter = statusSel.value;
+        } else if (statusSel && !statusSel.value && noticeStatFilter && ['active','urgent','unread','expired'].indexOf(noticeStatFilter) >= 0) {
+            // keep card filter
+        }
+
         const filtered = getFilteredNotices();
-        
+        const status = (statusSel && statusSel.value) || noticeStatFilter || '';
+        const type = document.getElementById('noticeTypeFilter')?.value || '';
+        const search = document.getElementById('noticeSearchInput')?.value?.trim() || '';
+        const hasFilter = !!(status || type || search);
+        const totalAll = (noticeData || []).length;
+
         if (filtered.length === 0) {
             container.innerHTML = '';
             emptyState.style.display = 'block';
+            var titleEl = emptyState.querySelector('h3');
+            var descEl = emptyState.querySelector('p');
+            var btnEl = emptyState.querySelector('.btn');
+            if (hasFilter || totalAll > 0) {
+                var tip = '当前筛选下暂无通知';
+                if (status === 'unread') tip = '暂无未读通知，全部通知都已读完';
+                else if (status === 'urgent') tip = '暂无紧急通知';
+                else if (status === 'expired') tip = '暂无已过期通知';
+                else if (status === 'active') tip = '暂无进行中的通知';
+                else if (search) tip = '未找到匹配「' + search + '」的通知';
+                if (titleEl) titleEl.textContent = status === 'unread' ? '没有未读通知' : '暂无匹配结果';
+                if (descEl) descEl.textContent = tip + (totalAll > 0 ? '（库中共 ' + totalAll + ' 条，可清除筛选查看）' : '');
+                if (btnEl) {
+                    btnEl.style.display = '';
+                    btnEl.textContent = '查看全部通知';
+                    btnEl.onclick = function () {
+                        noticeStatFilter = '';
+                        if (statusSel) statusSel.value = '';
+                        var typeSel = document.getElementById('noticeTypeFilter');
+                        if (typeSel) typeSel.value = '';
+                        var searchInput = document.getElementById('noticeSearchInput');
+                        if (searchInput) searchInput.value = '';
+                        noticePage = 1;
+                        renderNoticeList();
+                    };
+                }
+            } else {
+                if (titleEl) titleEl.textContent = '暂无通知';
+                if (descEl) descEl.textContent = '点击下方按钮发布第一条通知';
+                if (btnEl) {
+                    btnEl.style.display = canManageNotices() ? '' : 'none';
+                    btnEl.textContent = '📝 发布通知';
+                    btnEl.onclick = function () { showAddNoticeModal(); };
+                }
+            }
             renderNoticePagination([]);
+            updateNoticeStats();
             return;
         }
-
         emptyState.style.display = 'none';
-        
-        const start = (noticePage - 1) * NOTICE_PAGE_SIZE;
-        const end = start + NOTICE_PAGE_SIZE;
-        const pageData = filtered.slice(start, end);
 
+        const start = (noticePage - 1) * NOTICE_PAGE_SIZE;
+        const pageData = filtered.slice(start, start + NOTICE_PAGE_SIZE);
         container.innerHTML = '';
-        
-        pageData.forEach(notice => {
-            const typeConfig = NOTICE_TYPE_CONFIG[notice.type];
-            const isExpired = notice.endTime && new Date(notice.endTime) <= new Date();
-            
+
+        pageData.forEach(function (notice) {
+            const typeConfig = NOTICE_TYPE_CONFIG[notice.type] || NOTICE_TYPE_CONFIG.notice;
+            const expired = isNoticeExpired(notice);
+            const unread = currentUser ? !hasUserReadNotice(notice, currentUser) : false;
+            const stats = canViewNoticeReadStats() ? getNoticeReadStats(notice) : null;
             const card = document.createElement('div');
-            card.style.cssText = `background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;${notice.type === 'urgent' ? ' border-left: 4px solid #ff4d4f;' : ''}${isExpired ? ' opacity: 0.7;' : ''}`;
+            card.style.cssText = `background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);cursor:pointer;transition:all 0.2s;${notice.type === 'urgent' ? 'border-left:4px solid #ff4d4f;' : ''}${expired ? 'opacity:0.72;' : ''}${unread ? 'border:1px solid #bfdbfe;' : ''}`;
             card.onmouseenter = () => { card.style.transform = 'translateY(-2px)'; card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
             card.onmouseleave = () => { card.style.transform = ''; card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; };
-            
             card.onclick = () => showNoticeDetail(notice.id);
-
             card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 20px;">${typeConfig.icon}</span>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        ${unread ? '<span class="notice-unread-dot" title="未读"></span>' : ''}
+                        <span style="font-size:20px;">${typeConfig.icon}</span>
                         <span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;color:${typeConfig.color};background:${typeConfig.bgColor};">${typeConfig.label}</span>
+                        ${notice.pinned ? '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;color:#7c3aed;background:#f5f3ff;">置顶</span>' : ''}
+                        ${unread ? '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;color:#1d4ed8;background:#dbeafe;">未读</span>' : '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;color:#64748b;background:#f1f5f9;">已读</span>'}
                     </div>
-                    <span style="font-size: 12px; color: #888;">${notice.publishTime}</span>
+                    <span style="font-size:12px;color:#888;">${notice.publishTime || ''}</span>
                 </div>
-                <h3 style="font-size: 16px; font-weight: bold; color: #333; margin: 0 0 8px;">${notice.title}</h3>
-                <p style="font-size: 14px; color: #666; line-height: 1.6; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${notice.content}</p>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-                    <span style="font-size: 12px; color: #888;">发布人：${notice.publisher}</span>
-                    ${notice.endTime ? `<span style="font-size: 12px; color: ${isExpired ? '#ff4d4f' : '#faad14'};">${isExpired ? '已过期' : `有效期至：${notice.endTime}`}</span>` : ''}
-                </div>
-            `;
+                <h3 style="font-size:16px;font-weight:${unread ? '800' : '700'};color:${expired ? '#94a3b8' : '#333'};margin:0 0 8px;${expired ? 'text-decoration:line-through;' : ''}">${escHtml(notice.title || '')}</h3>
+                <p style="font-size:14px;color:#666;line-height:1.6;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escHtml(notice.content || '')}</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap;">
+                    <span style="font-size:12px;color:#888;">发布人：${escHtml(notice.publisher || '')}</span>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        ${stats ? `<span style="font-size:12px;color:#4338ca;">已读 ${stats.readCount}/${stats.total}</span>` : ''}
+                        ${notice.endTime ? `<span style="font-size:12px;color:${expired ? '#ff4d4f' : '#faad14'};">${expired ? '已过期' : '有效期至：' + escHtml(notice.endTime)}</span>` : ''}
+                    </div>
+                </div>`;
             container.appendChild(card);
         });
 
         renderNoticePagination(filtered);
         updateNoticeStats();
+        refreshGlobalNoticeCenter();
     }
 
     function renderNoticePagination(filtered) {
         const pagination = document.getElementById('noticePagination');
         if (!pagination) return;
-
-        const totalPages = Math.ceil(filtered.length / NOTICE_PAGE_SIZE);
-        
+        const totalPages = Math.ceil(filtered.length / NOTICE_PAGE_SIZE) || 1;
         if (totalPages <= 1) {
             pagination.innerHTML = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
             return;
         }
-
         let html = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
-        
-        if (noticePage > 1) {
-            html += `<button onclick="setNoticePage(${noticePage - 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">上一页</button>`;
-        }
-        
+        if (noticePage > 1) html += `<button onclick="setNoticePage(${noticePage - 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">上一页</button>`;
         for (let i = 1; i <= totalPages; i++) {
-            if (i === noticePage) {
-                html += `<button style="padding:4px 12px;border:none;background:#667eea;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">${i}</button>`;
-            } else {
-                html += `<button onclick="setNoticePage(${i})" style="padding:4px 12px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">${i}</button>`;
-            }
+            if (i === noticePage) html += `<button style="padding:4px 12px;border:none;background:#667eea;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">${i}</button>`;
+            else html += `<button onclick="setNoticePage(${i})" style="padding:4px 12px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">${i}</button>`;
         }
-        
-        if (noticePage < totalPages) {
-            html += `<button onclick="setNoticePage(${noticePage + 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">下一页</button>`;
-        }
-        
+        if (noticePage < totalPages) html += `<button onclick="setNoticePage(${noticePage + 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">下一页</button>`;
         pagination.innerHTML = html;
     }
 
@@ -20806,12 +21290,21 @@ ${ocrText}`
     }
 
     function showAddNoticeModal() {
+        if (!canManageNotices()) {
+            alert('仅导师/组长可发布通知');
+            return;
+        }
         editingNoticeId = null;
         document.getElementById('noticeModalTitle').textContent = '发布通知';
         document.getElementById('noticeTitle').value = '';
         document.getElementById('noticeType').value = 'notice';
-        document.getElementById('noticeStartTime').value = '';
-        document.getElementById('noticeEndTime').value = '';
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const localNow = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const end = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
+        const localEnd = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
+        document.getElementById('noticeStartTime').value = localNow;
+        document.getElementById('noticeEndTime').value = localEnd;
         document.getElementById('noticeContent').value = '';
         document.getElementById('noticeModal').style.display = 'flex';
     }
@@ -20821,97 +21314,152 @@ ${ocrText}`
     }
 
     function saveNotice() {
+        if (!canManageNotices()) {
+            alert('仅导师/组长可发布通知');
+            return;
+        }
         const title = document.getElementById('noticeTitle').value.trim();
         const type = document.getElementById('noticeType').value;
         const startTime = document.getElementById('noticeStartTime').value;
         const endTime = document.getElementById('noticeEndTime').value;
         const content = document.getElementById('noticeContent').value.trim();
-
         if (!title || !content) {
             alert('请填写通知标题和内容');
             return;
         }
-
         const publisher = currentUser ? currentUser.realName || currentUser.username : '未知用户';
-
         if (editingNoticeId) {
             const idx = noticeData.findIndex(n => n.id === editingNoticeId);
             if (idx !== -1) {
-                noticeData[idx] = { ...noticeData[idx], title, type, startTime, endTime, content };
+                noticeData[idx] = normalizeNoticeRecord({ ...noticeData[idx], title, type, startTime, endTime, content });
             }
+            saveNoticeData({ log: { action: '编辑', desc: '编辑通知：' + title } });
         } else {
-            const newId = noticeData.length > 0 ? Math.max(...noticeData.map(n => n.id)) + 1 : 1;
-            noticeData.push({ 
-                id: newId, 
-                title, 
-                type, 
-                content, 
-                startTime, 
-                endTime, 
+            const newId = noticeData.length > 0 ? Math.max(...noticeData.map(n => Number(n.id) || 0)) + 1 : 1;
+            noticeData.push(normalizeNoticeRecord({
+                id: newId,
+                title,
+                type,
+                content,
+                startTime,
+                endTime,
                 publishTime: new Date().toLocaleString('zh-CN'),
                 publisher,
-                audience: 'all'
-            });
+                audience: 'all',
+                pinned: type === 'urgent',
+                reads: []
+            }));
+            saveNoticeData({ log: { action: '发布', desc: '发布通知：' + title } });
+            try {
+                if (type === 'urgent' && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                    new Notification('紧急通知', { body: title });
+                } else if (type === 'urgent' && typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
+                    Notification.requestPermission();
+                }
+            } catch (e) {}
         }
-
-        saveNoticeData();
         closeNoticeModal();
         renderNoticeList();
-        alert('发布成功！该信息已同步到云端，所有成员都可以收到。');
+        if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('通知已发布并同步云端，全员可见', false);
+        else alert('发布成功！该信息已同步到云端，所有成员都可以收到。');
+    }
+
+    function buildNoticeReadPanelHtml(notice) {
+        if (!canViewNoticeReadStats()) return '';
+        const stats = getNoticeReadStats(notice);
+        const readLis = stats.readMembers.map(function (m) {
+            return `<li class="read"><span>${escHtml(m.userName)}${m.group ? ' · ' + escHtml(m.group) : ''}</span><span>${escHtml(m.readAt || '')}</span></li>`;
+        }).join('') || '<li style="border:none;background:transparent;color:#94a3b8;">暂无已读</li>';
+        const unreadLis = stats.unreadMembers.map(function (m) {
+            return `<li class="unread"><span>${escHtml(m.userName)}${m.group ? ' · ' + escHtml(m.group) : ''}</span><span>未读</span></li>`;
+        }).join('') || '<li style="border:none;background:transparent;color:#94a3b8;">全部已读</li>';
+        return `
+            <div class="notice-read-panel">
+                <div class="notice-read-panel-head">
+                    <div>
+                        <strong style="font-size:14px;color:#111827;">阅读统计</strong>
+                        <div style="font-size:12px;color:#64748b;margin-top:2px;">已读 ${stats.readCount} / 应读 ${stats.total} · 未读 ${stats.unreadCount}</div>
+                    </div>
+                    ${stats.unreadCount > 0 ? `<button class="btn" style="padding:6px 12px;font-size:12px;" onclick="remindUnreadNoticeMembers(${notice.id})">催读未读成员</button>` : '<span style="font-size:12px;color:#16a34a;font-weight:700;">全部成员已读</span>'}
+                </div>
+                <div class="notice-read-cols">
+                    <div class="notice-read-col">
+                        <h4>✅ 已读成员</h4>
+                        <ul>${readLis}</ul>
+                    </div>
+                    <div class="notice-read-col">
+                        <h4>⏳ 未读成员</h4>
+                        <ul>${unreadLis}</ul>
+                    </div>
+                </div>
+            </div>`;
     }
 
     function showNoticeDetail(id) {
         const notice = noticeData.find(n => n.id === id);
         if (!notice) return;
-        
-        const typeConfig = NOTICE_TYPE_CONFIG[notice.type];
-        const isExpired = notice.endTime && new Date(notice.endTime) <= new Date();
-        
+        markNoticeAsRead(id);
+        const typeConfig = NOTICE_TYPE_CONFIG[notice.type] || NOTICE_TYPE_CONFIG.notice;
+        const expired = isNoticeExpired(notice);
+        const manageBtns = canManageNotices()
+            ? `<button class="btn btn-secondary" onclick="deleteNotice(${notice.id}); closeNoticeDrawer();">删除</button>`
+            : '';
         document.getElementById('noticeDetailContent').innerHTML = `
             <div style="margin-bottom: 24px;">
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap:wrap;">
                     <span style="font-size: 24px;">${typeConfig.icon}</span>
                     <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:${typeConfig.color};background:${typeConfig.bgColor};">${typeConfig.label}</span>
                     ${notice.type === 'urgent' ? '<span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:#fff;background:#ff4d4f;">紧急</span>' : ''}
+                    <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:#0369a1;background:#e0f2fe;">已标记已读</span>
                 </div>
-                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0;">${notice.title}</h2>
+                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0;">${escHtml(notice.title || '')}</h2>
             </div>
-            
             <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-                <p style="margin: 0; color: #333; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${notice.content}</p>
+                <p style="margin: 0; color: #333; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${escHtml(notice.content || '')}</p>
             </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                 <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
                     <div style="font-size: 12px; color: #888;">发布人</div>
-                    <div style="font-size: 14px; color: #333; margin-top: 4px;">${notice.publisher}</div>
+                    <div style="font-size: 14px; color: #333; margin-top: 4px;">${escHtml(notice.publisher || '')}</div>
                 </div>
                 <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
                     <div style="font-size: 12px; color: #888;">发布时间</div>
-                    <div style="font-size: 14px; color: #333; margin-top: 4px;">${notice.publishTime}</div>
+                    <div style="font-size: 14px; color: #333; margin-top: 4px;">${escHtml(notice.publishTime || '')}</div>
                 </div>
-                ${notice.startTime ? `
-                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
-                    <div style="font-size: 12px; color: #888;">生效时间</div>
-                    <div style="font-size: 14px; color: #333; margin-top: 4px;">${notice.startTime}</div>
-                </div>
-                ` : ''}
-                ${notice.endTime ? `
-                <div style="background: ${isExpired ? '#fff1f0' : '#fff7e6'}; padding: 12px; border-radius: 8px;">
-                    <div style="font-size: 12px; color: #888;">截止时间</div>
-                    <div style="font-size: 14px; color: ${isExpired ? '#ff4d4f' : '#faad14'}; margin-top: 4px;">${notice.endTime} ${isExpired ? '(已过期)' : ''}</div>
-                </div>
-                ` : ''}
+                ${notice.startTime ? `<div style="background:#f8f9fa;padding:12px;border-radius:8px;"><div style="font-size:12px;color:#888;">生效时间</div><div style="font-size:14px;color:#333;margin-top:4px;">${escHtml(notice.startTime)}</div></div>` : ''}
+                ${notice.endTime ? `<div style="background:${expired ? '#fff1f0' : '#fff7e6'};padding:12px;border-radius:8px;"><div style="font-size:12px;color:#888;">截止时间</div><div style="font-size:14px;color:${expired ? '#ff4d4f' : '#faad14'};margin-top:4px;">${escHtml(notice.endTime)} ${expired ? '(已过期)' : ''}</div></div>` : ''}
             </div>
-            
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            ${buildNoticeReadPanelHtml(notice)}
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
                 <button class="btn btn-secondary" onclick="closeNoticeDrawer()">关闭</button>
-                <button class="btn" onclick="deleteNotice(${notice.id}); closeNoticeDrawer();">删除</button>
-            </div>
-        `;
-        
+                ${manageBtns}
+            </div>`;
         document.getElementById('noticeDrawer').style.display = 'block';
         document.getElementById('noticeOverlay').style.display = 'block';
+        renderNoticeList();
+    }
+
+    function remindUnreadNoticeMembers(id) {
+        if (!canViewNoticeReadStats()) {
+            alert('仅导师/组长可查看并催读');
+            return;
+        }
+        const notice = noticeData.find(n => n.id === id);
+        if (!notice) return;
+        const stats = getNoticeReadStats(notice);
+        if (!stats.unreadCount) {
+            alert('当前没有未读成员');
+            return;
+        }
+        notice.remindAt = new Date().toLocaleString('zh-CN');
+        notice.remindCount = Number(notice.remindCount || 0) + 1;
+        saveNoticeData({ log: { action: '催读', desc: '催读通知：' + notice.title, detail: { unread: stats.unreadCount } } });
+        showNoticeDetail(id);
+        if (typeof showCloudSyncBanner === 'function') {
+            showCloudSyncBanner(`已催读 ${stats.unreadCount} 位未读成员（全局铃铛同步）`, false);
+        } else {
+            alert(`已向 ${stats.unreadCount} 位未读成员发送催读提醒`);
+        }
     }
 
     function closeNoticeDrawer() {
@@ -20920,13 +21468,270 @@ ${ocrText}`
     }
 
     function deleteNotice(id) {
-        if (!confirm('确定要删除该通知吗？')) return;
-        
+        if (!canManageNotices()) {
+            alert('仅导师/组长可删除通知');
+            return;
+        }
+        if (!confirm('确定要删除该通知吗？删除后全员同步移除。')) return;
+        const hit = noticeData.find(n => n.id === id);
         noticeData = noticeData.filter(n => n.id !== id);
-        saveNoticeData();
+        saveNoticeData({ log: { action: '删除', desc: '删除通知：' + ((hit && hit.title) || id) } });
         renderNoticeList();
-        alert('已删除！');
+        alert('已删除并同步云端');
     }
+
+    function getNoticeDismissStorageKey() {
+        var uid = (currentUser && (currentUser.id || currentUser.studentId || currentUser.username)) || 'guest';
+        return 'noticeGlobalDismissed_' + String(uid);
+    }
+
+    function loadDismissedNoticeIds() {
+        try {
+            var raw = localStorage.getItem(getNoticeDismissStorageKey());
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr.map(String) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveDismissedNoticeIds(ids) {
+        try {
+            localStorage.setItem(getNoticeDismissStorageKey(), JSON.stringify((ids || []).map(String)));
+        } catch (e) {}
+    }
+
+    /** 一键清除已读：仅从全局铃铛面板隐藏，不删除通知、不影响模块列表与已读统计 */
+    function clearGlobalReadNotices() {
+        var unreadSet = {};
+        getMyUnreadNotices().forEach(function (n) { unreadSet[String(n.id)] = true; });
+        var dismissed = loadDismissedNoticeIds();
+        var map = {};
+        dismissed.forEach(function (id) { map[id] = true; });
+        var added = 0;
+        (noticeData || []).forEach(function (n) {
+            var id = String(n.id);
+            if (unreadSet[id]) return; // 未读保留
+            if (!map[id]) {
+                map[id] = true;
+                added++;
+            }
+        });
+        if (added === 0 && Object.keys(map).length === 0) {
+            if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('没有可清除的已读通知', false);
+            else alert('没有可清除的已读通知');
+            return;
+        }
+        saveDismissedNoticeIds(Object.keys(map));
+        refreshGlobalNoticeCenter();
+        if (typeof showCloudSyncBanner === 'function') {
+            showCloudSyncBanner('已清除已读（通知仍保留在「内部通知发布」）', false);
+        }
+    }
+
+    function getGlobalNoticeList() {
+        var dismissed = {};
+        loadDismissedNoticeIds().forEach(function (id) { dismissed[id] = true; });
+        var list = (noticeData || []).filter(function (n) {
+            var id = String(n.id);
+            var isUnread = currentUser && isNoticeActive(n) && !hasUserReadNotice(n, currentUser);
+            // 未读始终显示；已读若已清除则隐藏
+            if (isUnread) return true;
+            return !dismissed[id];
+        });
+        list.sort(function (a, b) {
+            var ua = (currentUser && isNoticeActive(a) && !hasUserReadNotice(a, currentUser)) ? 1 : 0;
+            var ub = (currentUser && isNoticeActive(b) && !hasUserReadNotice(b, currentUser)) ? 1 : 0;
+            if (ua !== ub) return ub - ua;
+            var ea = a.type === 'urgent' ? 1 : 0;
+            var eb = b.type === 'urgent' ? 1 : 0;
+            if (ea !== eb) return eb - ea;
+            return new Date(b.publishTime || 0) - new Date(a.publishTime || 0);
+        });
+        return list;
+    }
+
+    function refreshGlobalNoticeCenter() {
+        try { if (typeof loadNoticeData === 'function' && (!noticeData || !noticeData.length)) loadNoticeData(); } catch (e) {}
+        const badge = document.getElementById('globalNoticeBadge');
+        const list = document.getElementById('globalNoticePanelList');
+        const titleEl = document.getElementById('globalNoticePanelTitle');
+        const unread = getMyUnreadNotices();
+        const allRaw = noticeData || [];
+        const all = getGlobalNoticeList();
+        if (badge) {
+            badge.textContent = unread.length > 99 ? '99+' : String(unread.length);
+            badge.classList.toggle('show', unread.length > 0);
+        }
+        if (titleEl) {
+            titleEl.textContent = unread.length > 0
+                ? ('全局通知 · ' + unread.length + ' 条未读')
+                : (all.length > 0 ? ('全局通知 · ' + all.length + ' 条') : '全局通知');
+        }
+        if (list) {
+            if (!all.length) {
+                var emptyTip = allRaw.length
+                    ? '已读通知已清除<br><span style="font-size:12px;color:#94a3b8;">未读会继续提醒；完整列表请点「查看全部」</span>'
+                    : '暂无通知';
+                list.innerHTML = '<div class="global-notice-empty">' + emptyTip + '<br><button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;margin-top:10px;" onclick="goToNoticeModule(true)">查看全部通知</button></div>';
+            } else {
+                list.innerHTML = all.slice(0, 30).map(function (n) {
+                    const cfg = NOTICE_TYPE_CONFIG[n.type] || NOTICE_TYPE_CONFIG.notice;
+                    const isUnread = currentUser && isNoticeActive(n) && !hasUserReadNotice(n, currentUser);
+                    const remind = n.remindAt ? `<span style="color:#c2410c;">催读 ${escHtml(n.remindAt)}</span>` : '';
+                    const readTag = isUnread
+                        ? '<span style="color:#2563eb;font-weight:700;">未读</span>'
+                        : '<span style="color:#94a3b8;">已读</span>';
+                    return `<div class="global-notice-item${isUnread ? ' unread' : ''}" onclick="openNoticeFromGlobal(${n.id})" title="点击打开该通知">
+                        <div class="title">${isUnread ? '● ' : ''}${cfg.icon} ${escHtml(n.title || '')}</div>
+                        <div class="meta"><span>${escHtml(cfg.label)}</span>${readTag}<span>${escHtml(n.publisher || '')}</span><span>${escHtml(n.publishTime || '')}</span>${remind}</div>
+                        <div class="loc">📍 公告动态 → 内部通知发布</div>
+                    </div>`;
+                }).join('') + (all.length > 30
+                    ? '<div style="padding:10px 14px;text-align:center;"><button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="goToNoticeModule(true)">查看全部 ' + allRaw.length + ' 条通知</button></div>'
+                    : '');
+            }
+        }
+        updateHomeNoticeBanner();
+        updateNoticeStats();
+        try { updateSidebarNoticeBadge(unread.length); } catch (e2) {}
+    }
+
+    function updateSidebarNoticeBadge(count) {
+        var nav = document.querySelector('.nav-item[onclick*="notice_publish"]');
+        if (!nav) return;
+        var tip = nav.querySelector('.sidebar-notice-badge');
+        if (!tip) {
+            tip = document.createElement('span');
+            tip.className = 'sidebar-notice-badge';
+            tip.style.cssText = 'margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;';
+            nav.style.display = 'flex';
+            nav.style.alignItems = 'center';
+            nav.appendChild(tip);
+        }
+        tip.textContent = count > 99 ? '99+' : String(count);
+        tip.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+
+    function positionGlobalNoticePanel() {
+        var bell = document.getElementById('globalNoticeBell');
+        var panel = document.getElementById('globalNoticePanel');
+        if (!bell || !panel) return;
+        var rect = bell.getBoundingClientRect();
+        var width = Math.min(380, window.innerWidth - 24);
+        var left = Math.min(Math.max(12, rect.right - width), window.innerWidth - width - 12);
+        panel.style.top = Math.round(rect.bottom + 8) + 'px';
+        panel.style.left = Math.round(left) + 'px';
+        panel.style.right = 'auto';
+    }
+
+    function goToNoticeModule(showAll) {
+        closeGlobalNoticePanel();
+        showModule('notice_publish');
+        try {
+            var statusSel = document.getElementById('noticeStatusFilter');
+            // 全局入口默认看全部；仅侧栏未读角标等显式未读入口才筛未读
+            if (showAll === false) {
+                var unread = getMyUnreadNotices();
+                if (unread.length > 0) {
+                    if (statusSel) statusSel.value = 'unread';
+                    noticeStatFilter = 'unread';
+                } else {
+                    if (statusSel) statusSel.value = '';
+                    noticeStatFilter = '';
+                }
+            } else {
+                if (statusSel) statusSel.value = '';
+                noticeStatFilter = '';
+            }
+            noticePage = 1;
+            renderNoticeList();
+        } catch (e) {}
+    }
+
+    function openNoticeFromGlobal(id) {
+        closeGlobalNoticePanel();
+        showModule('notice_publish');
+        setTimeout(function () {
+            try {
+                var statusSel = document.getElementById('noticeStatusFilter');
+                if (statusSel) statusSel.value = '';
+                noticeStatFilter = '';
+            } catch (e) {}
+            showNoticeDetail(id);
+        }, 80);
+    }
+
+    function onGlobalNoticeBellClick(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        // 始终展开全局通知中心：展示全部通知（未读优先），红点仅表示未读数
+        refreshGlobalNoticeCenter();
+        toggleGlobalNoticePanel(event, true);
+    }
+
+    function toggleGlobalNoticePanel(event, forceOpen) {
+        if (event) event.stopPropagation();
+        const panel = document.getElementById('globalNoticePanel');
+        if (!panel) return;
+        const open = forceOpen === true ? true : (forceOpen === false ? false : !panel.classList.contains('open'));
+        panel.classList.toggle('open', open);
+        if (open) {
+            refreshGlobalNoticeCenter();
+            positionGlobalNoticePanel();
+        }
+    }
+
+    function closeGlobalNoticePanel() {
+        const panel = document.getElementById('globalNoticePanel');
+        if (panel) panel.classList.remove('open');
+    }
+
+    function updateHomeNoticeBanner() {
+        const box = document.getElementById('homeNoticeBanner');
+        if (!box) return;
+        const candidates = (noticeData || []).filter(function (n) {
+            return isNoticeActive(n) && (n.type === 'urgent' || n.pinned);
+        }).sort(function (a, b) {
+            const ua = a.type === 'urgent' ? 1 : 0;
+            const ub = b.type === 'urgent' ? 1 : 0;
+            if (ua !== ub) return ub - ua;
+            return new Date(b.publishTime) - new Date(a.publishTime);
+        });
+        if (!candidates.length) {
+            box.classList.remove('show');
+            box.innerHTML = '';
+            return;
+        }
+        const n = candidates[0];
+        const unread = currentUser ? !hasUserReadNotice(n, currentUser) : false;
+        box.classList.add('show');
+        box.innerHTML = `<div class="row">
+            <div>
+                <div class="label">${n.type === 'urgent' ? '紧急通知' : '置顶公告'}${unread ? ' · 未读' : ''}</div>
+                <div class="title">${escHtml(n.title || '')}</div>
+                <div class="desc">${escHtml(String(n.content || '').slice(0, 90))}${String(n.content || '').length > 90 ? '…' : ''}</div>
+            </div>
+            <button class="btn" style="padding:8px 14px;font-size:13px;white-space:nowrap;" onclick="openNoticeFromGlobal(${n.id})">查看详情</button>
+        </div>`;
+    }
+
+    document.addEventListener('click', function (e) {
+        const wrap = document.getElementById('globalNoticeWrap');
+        const panel = document.getElementById('globalNoticePanel');
+        if (!wrap || !panel) return;
+        if (!wrap.contains(e.target) && !panel.contains(e.target)) closeGlobalNoticePanel();
+    });
+    window.addEventListener('resize', function () {
+        var panel = document.getElementById('globalNoticePanel');
+        if (panel && panel.classList.contains('open')) positionGlobalNoticePanel();
+    });
+    window.addEventListener('scroll', function () {
+        var panel = document.getElementById('globalNoticePanel');
+        if (panel && panel.classList.contains('open')) positionGlobalNoticePanel();
+    }, true);
 
     // ===== 会议管理模块 =====
     let meetingData = [];
@@ -23602,6 +24407,9 @@ ${ocrText}`
         if (moduleId === 'task_management') { initTaskManagement(); }
         if (moduleId === 'weekly_report') { initWeeklyReport(); }
         if (moduleId === 'notice_publish') { initNoticePublish(); }
+        if (moduleId === 'home') {
+            try { if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter(); } catch (e) {}
+        }
         if (moduleId === 'meeting_management') { initMeetingManagement(); }
         if (moduleId === 'literature_library' || moduleId === 'dataset_library' || moduleId === 'project_report' || moduleId === 'shared_files') { initResourceModules(); }
         if (moduleId === 'model_training') { initModelTraining(); }
