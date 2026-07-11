@@ -1232,7 +1232,20 @@
         refreshLitCompareViews();
         // 联动写入文献资料库（若不存在）
         try {
-            if (typeof global.literatureData !== 'undefined' && Array.isArray(global.literatureData)) {
+            if (typeof global.upsertLiteratureFromExternal === 'function') {
+                global.upsertLiteratureFromExternal({
+                    title: payload.title,
+                    author: payload.authors,
+                    journal: payload.venue,
+                    year: payload.year || '',
+                    tags: (payload.keywords || []).join(', '),
+                    doi: payload.doi || '',
+                    summary: payload.summary || '',
+                    paperUrl: payload.paperUrl || '',
+                    uploader: _owner(),
+                    source: 'literature_compare'
+                }, { skipIfExists: true, syncCompare: false });
+            } else if (typeof global.literatureData !== 'undefined' && Array.isArray(global.literatureData)) {
                 var exists = global.literatureData.some(function (l) {
                     return String(l.title || '').trim().toLowerCase() === payload.title.toLowerCase();
                 });
@@ -1245,6 +1258,8 @@
                         journal: payload.venue,
                         year: payload.year || '',
                         tags: (payload.keywords || []).join(', '),
+                        doi: payload.doi || '',
+                        summary: payload.summary || '',
                         uploader: _owner(),
                         uploadTime: new Date().toLocaleDateString('zh-CN')
                     });

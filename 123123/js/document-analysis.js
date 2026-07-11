@@ -1557,7 +1557,19 @@
         } catch (e) {}
         // 同步资料库
         try {
-            if (Array.isArray(global.literatureData)) {
+            if (typeof global.upsertLiteratureFromExternal === 'function') {
+                global.upsertLiteratureFromExternal({
+                    title: item.title,
+                    author: item.authors,
+                    journal: item.venue,
+                    year: item.year || '',
+                    tags: (item.keywords || []).join(', '),
+                    doi: item.doi || '',
+                    summary: item.summary || '',
+                    uploader: _owner(),
+                    source: 'document_analysis'
+                }, { skipIfExists: true, syncCompare: false });
+            } else if (Array.isArray(global.literatureData)) {
                 var lid = global.literatureData.length ? Math.max.apply(null, global.literatureData.map(function (l) { return Number(l.id) || 0; })) + 1 : 1;
                 global.literatureData.unshift({
                     id: lid,
@@ -1570,6 +1582,7 @@
                     uploadTime: new Date().toLocaleDateString('zh-CN')
                 });
                 localStorage.setItem('literatureData', JSON.stringify(global.literatureData));
+                if (typeof global.cloudUpsert === 'function') global.cloudUpsert('literatureData', JSON.stringify(global.literatureData));
             }
         } catch (e2) {}
         if (typeof global.recordOperationLog === 'function') {
