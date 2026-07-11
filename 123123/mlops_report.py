@@ -3,15 +3,13 @@
 """训练脚本回调：向本机 MLOps 接口上报进度（也可直写云端）。
 
 用法示例：
-  python mlops_report.py --job-id exp-crack-0612 --name 结构裂缝检测 --status training --progress 42 --metric "mAP 0.81"
-  python mlops_report.py --job-id exp-crack-0612 --status completed --progress 100 --metric "mAP 94.6%" --weight-path D:/exp/best.pt
+  python mlops_report.py --job-id exp-crack-0612 --name 结构裂缝检测 --status training --progress 42 --metric "mAP 0.81" --token "$MLOPS_TOKEN"
+  python mlops_report.py --job-id exp-crack-0612 --status completed --progress 100 --metric "mAP 94.6%" --weight-path D:/exp/best.pt --token "$MLOPS_TOKEN"
 
 在训练循环中：
   from mlops_report import report
   report(job_id='exp-1', name='裂缝检测', status='training', progress=epoch/epochs*100, env='local')
 """
-from __future__ import annotations
-
 import argparse
 import json
 import os
@@ -20,27 +18,27 @@ import urllib.error
 import urllib.request
 
 DEFAULT_ENDPOINT = os.environ.get('MLOPS_ENDPOINT', 'http://127.0.0.1:8000/api/mlops/report')
-DEFAULT_TOKEN = os.environ.get('MLOPS_TOKEN', 'city-safety-mlops')
+DEFAULT_TOKEN = os.environ.get('MLOPS_TOKEN', '')
 
 
 def report(
-    job_id: str,
-    name: str = '',
-    status: str = 'training',
-    progress: float | int = 0,
-    metric: str = '',
-    env: str = 'local',
-    server: str = '',
-    owner: str = '',
-    dataset: str = '',
-    log_url: str = '',
-    weight_path: str = '',
-    model_type: str = 'YOLOv8',
-    scenario: str = '结构损伤诊断',
-    description: str = '',
-    endpoint: str | None = None,
-    token: str | None = None,
-) -> dict:
+    job_id,
+    name='',
+    status='training',
+    progress=0,
+    metric='',
+    env='local',
+    server='',
+    owner='',
+    dataset='',
+    log_url='',
+    weight_path='',
+    model_type='YOLOv8',
+    scenario='结构损伤诊断',
+    description='',
+    endpoint=None,
+    token=None,
+):
     payload = {
         'jobId': job_id,
         'name': name or job_id,
@@ -59,6 +57,8 @@ def report(
     }
     url = endpoint or DEFAULT_ENDPOINT
     tok = token or DEFAULT_TOKEN
+    if not tok:
+        raise RuntimeError('MLOPS_TOKEN is required. Set env MLOPS_TOKEN or pass --token.')
     data = json.dumps(payload, ensure_ascii=False).encode('utf-8')
     req = urllib.request.Request(
         url,
@@ -82,7 +82,7 @@ def report(
         ) from e
 
 
-def main(argv=None) -> int:
+def main(argv=None):
     p = argparse.ArgumentParser(description='向城市安全团队系统上报训练状态')
     p.add_argument('--job-id', required=True, help='任务号 / 实验目录名')
     p.add_argument('--name', default='', help='模型显示名称')

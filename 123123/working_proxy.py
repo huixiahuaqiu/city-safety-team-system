@@ -1,7 +1,9 @@
-"""本地网页服务：静态文件 + 阿里云代理 + MLOps 训练回调。"""
-from http.server import HTTPServer, BaseHTTPRequestHandler
+"""Production-ready local gateway: static files, AI proxy, MLOps and annotation APIs."""
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import json
+import logging
 import os
+import secrets
 import threading
 import time
 import urllib.error
@@ -10,16 +12,59 @@ import urllib.request
 from datetime import datetime, timezone
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ENV_PATH = os.path.join(BASE_DIR, '.env')
 MLOPS_STORE_PATH = os.path.join(BASE_DIR, 'mlops_store.json')
-MLOPS_TOKEN = os.environ.get('MLOPS_TOKEN', 'city-safety-mlops')
+ANNOTATION_UPLOAD_ROOT = os.path.join(BASE_DIR, 'uploads', 'annotations')
+AUDIT_LOG_PATH = os.path.join(BASE_DIR, 'logs', 'server_audit.log')
 
-# 与前端 index.html 中云端同步配置保持一致（publishable key）
-SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://havxlphglhjgcfgwowae.supabase.co')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sb_publishable_jhRxljv8ocdnXBknablKiA_kRBzlEnC')
+
+def load_env_file(path):
+    """Load simple KEY=VALUE pairs without introducing a runtime dependency."""
+    if not os.path.exists(path):
+        return
+    with open(path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, value = line.split('=', 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
+load_env_file(ENV_PATH)
+
+MLOPS_TOKEN = os.environ.get('MLOPS_TOKEN', '')
+ANNOTATION_UPLOAD_TOKEN = os.environ.get('ANNOTATION_UPLOAD_TOKEN', '')
+MAX_UPLOAD_BYTES = int(os.environ.get('MAX_UPLOAD_BYTES', str(200 * 1024 * 1024)))
+ALLOWED_UPLOAD_EXTENSIONS = {
+    ext.strip().lower()
+    for ext in os.environ.get(
+        'ALLOWED_UPLOAD_EXTENSIONS',
+        '.jpg,.jpeg,.png,.bmp,.webp,.gif,.txt,.xml,.csv,.json,.yaml,.yml',
+    ).split(',')
+    if ext.strip()
+}
+
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
 CLOUD_SYNC_MARK = '__APP_SYNC__'
 CLOUD_SYNC_PN = '__SYNC_KV__modelTrainingData'
 
 _store_lock = threading.Lock()
+
+os.makedirs(os.path.dirname(AUDIT_LOG_PATH), exist_ok=True)
+logging.basicConfig(
+    level=os.environ.get('LOG_LEVEL', 'INFO').upper(),
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(AUDIT_LOG_PATH, encoding='utf-8'),
+    ],
+)
+logger = logging.getLogger('city_safety_gateway')
 
 
 def _now_iso():
@@ -125,6 +170,9 @@ def upsert_job(payload):
 
 def push_jobs_to_cloud(jobs):
     """把 MLOps jobs 合并写入 Supabase modelTrainingData 同步键。"""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        logger.warning('skip cloud sync: SUPABASE_URL/SUPABASE_KEY not configured')
+        return
     try:
         headers = {
             'apikey': SUPABASE_KEY,
@@ -191,12 +239,20 @@ def push_jobs_to_cloud(jobs):
             req = urllib.request.Request(url, data=data, headers=headers, method='POST')
         with urllib.request.urlopen(req, timeout=20) as resp:
             resp.read()
-        print('[MLOps] cloud sync ok, jobs=', len(jobs))
+        logger.info('mlops cloud sync ok jobs=%s', len(jobs))
     except Exception as e:
-        print('[MLOps] cloud sync failed:', e)
+        logger.exception('mlops cloud sync failed: %s', e)
+
+
+def audit_event(event, **fields):
+    payload = {'event': event, 'time': _now_iso()}
+    payload.update(fields)
+    logger.info('AUDIT %s', json.dumps(payload, ensure_ascii=False, sort_keys=True))
 
 
 def check_token(handler):
+    if not MLOPS_TOKEN:
+        return False
     auth = handler.headers.get('Authorization') or ''
     token = handler.headers.get('X-MLOps-Token') or ''
     if auth.lower().startswith('bearer '):
@@ -205,17 +261,105 @@ def check_token(handler):
     qs = urllib.parse.parse_qs(q)
     if qs.get('token'):
         token = qs['token'][0]
-    return token == MLOPS_TOKEN
+    return secrets.compare_digest(str(token), str(MLOPS_TOKEN))
+
+
+def check_upload_token(handler):
+    if not ANNOTATION_UPLOAD_TOKEN:
+        return False
+    token = handler.headers.get('X-Upload-Token') or ''
+    auth = handler.headers.get('Authorization') or ''
+    if auth.lower().startswith('bearer '):
+        token = auth[7:].strip() or token
+    return secrets.compare_digest(str(token), str(ANNOTATION_UPLOAD_TOKEN))
+
+
+def safe_annotation_task_dir(task_id):
+    tid = ''.join(c for c in str(task_id) if c.isalnum() or c in ('-', '_'))
+    if not tid:
+        raise ValueError('invalid task id')
+    root = os.path.abspath(ANNOTATION_UPLOAD_ROOT)
+    target = os.path.abspath(os.path.join(root, tid))
+    if not target.startswith(root + os.sep) and target != root:
+        raise ValueError('invalid task path')
+    return target
+
+
+def safe_join_under(root, rel_path):
+    rel = str(rel_path or '').replace('\\', '/').lstrip('/')
+    parts = []
+    for p in rel.split('/'):
+        if not p or p in ('.', '..'):
+            continue
+        parts.append(p)
+    if not parts:
+        raise ValueError('empty relative path')
+    root_abs = os.path.abspath(root)
+    full = os.path.abspath(os.path.join(root_abs, *parts))
+    if not full.startswith(root_abs + os.sep):
+        raise ValueError('path escape')
+    return full
+
+
+def save_annotation_file(task_id, rel_path, content):
+    ext = os.path.splitext(str(rel_path).lower())[1]
+    if ext not in ALLOWED_UPLOAD_EXTENSIONS:
+        raise ValueError('file extension not allowed: %s' % ext)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise ValueError('file too large: %s bytes' % len(content))
+    task_dir = safe_annotation_task_dir(task_id)
+    full = safe_join_under(task_dir, rel_path)
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    with open(full, 'wb') as f:
+        f.write(content)
+    return {
+        'taskId': str(task_id),
+        'path': str(rel_path).replace('\\', '/'),
+        'size': len(content),
+        'savedAs': os.path.relpath(full, ANNOTATION_UPLOAD_ROOT).replace('\\', '/')
+    }
+
+
+def list_annotation_files(task_id):
+    task_dir = safe_annotation_task_dir(task_id)
+    if not os.path.isdir(task_dir):
+        return []
+    files = []
+    for root, _dirs, names in os.walk(task_dir):
+        for name in names:
+            full = os.path.join(root, name)
+            rel = os.path.relpath(full, task_dir).replace('\\', '/')
+            files.append({'path': rel, 'size': os.path.getsize(full)})
+    return files
+
+
+def zip_annotation_task(task_id):
+    import io
+    import zipfile
+    task_dir = safe_annotation_task_dir(task_id)
+    if not os.path.isdir(task_dir):
+        raise FileNotFoundError('task files not found')
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for root, _dirs, names in os.walk(task_dir):
+            for name in names:
+                full = os.path.join(root, name)
+                arc = os.path.relpath(full, task_dir).replace('\\', '/')
+                zf.write(full, arcname=arc)
+    return buf.getvalue()
 
 
 class WorkingProxyHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
-        print(f"{self.client_address[0]} - - [{self.log_date_time_string()}] {format % args}")
+        logger.info("%s - %s", self.client_address[0], format % args)
 
     def _cors(self):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-MLOps-Token')
+        self.send_header(
+            'Access-Control-Allow-Headers',
+            'Content-Type, Authorization, X-MLOps-Token, X-Upload-Token, X-Task-Id, X-Rel-Path'
+        )
 
     def _json(self, code, obj):
         raw = json.dumps(obj, ensure_ascii=False).encode('utf-8')
@@ -234,14 +378,39 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
         content_length = int(self.headers.get('Content-Length') or 0)
-        post_data = self.rfile.read(content_length) if content_length else b'{}'
+        if path.startswith('/api/annotation/upload') and content_length > MAX_UPLOAD_BYTES:
+            audit_event('annotation_upload_denied', ip=self.client_address[0], reason='too_large', bytes=content_length)
+            self._json(413, {'ok': False, 'error': 'file too large'})
+            return
+        post_data = self.rfile.read(content_length) if content_length else b''
+
+        # 真实标注文件上传：二进制 body + X-Task-Id / X-Rel-Path
+        if path.startswith('/api/annotation/upload'):
+            if not check_upload_token(self):
+                audit_event('annotation_upload_denied', ip=self.client_address[0], reason='invalid_token')
+                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                return
+            task_id = self.headers.get('X-Task-Id') or ''
+            rel_path = urllib.parse.unquote(self.headers.get('X-Rel-Path') or '')
+            if not task_id or not rel_path:
+                self._json(400, {'ok': False, 'error': 'X-Task-Id and X-Rel-Path required'})
+                return
+            try:
+                info = save_annotation_file(task_id, rel_path, post_data or b'')
+                audit_event('annotation_upload_ok', ip=self.client_address[0], taskId=task_id, path=rel_path, bytes=len(post_data or b''))
+                self._json(200, {'ok': True, 'file': info})
+            except Exception as e:
+                audit_event('annotation_upload_failed', ip=self.client_address[0], taskId=task_id, path=rel_path, error=str(e))
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
 
         if path.startswith('/api/mlops/report'):
             if not check_token(self):
+                audit_event('mlops_report_denied', ip=self.client_address[0], reason='invalid_token')
                 self._json(401, {'ok': False, 'error': 'invalid token'})
                 return
             try:
-                payload = json.loads(post_data.decode('utf-8') or '{}')
+                payload = json.loads((post_data or b'{}').decode('utf-8') or '{}')
             except json.JSONDecodeError as e:
                 self._json(400, {'ok': False, 'error': f'invalid json: {e}'})
                 return
@@ -249,12 +418,13 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self._json(400, {'ok': False, 'error': 'jobId or name required'})
                 return
             job = upsert_job(payload)
+            audit_event('mlops_report_ok', ip=self.client_address[0], jobId=job.get('jobId'), status=job.get('status'))
             self._json(200, {'ok': True, 'job': job})
             return
 
         if path.startswith('/api/aliyun'):
             try:
-                request_data = json.loads(post_data.decode('utf-8'))
+                request_data = json.loads((post_data or b'{}').decode('utf-8'))
                 api_key = request_data.get('apiKey')
                 model = request_data.get('model', 'qwen3.6-plus')
                 messages = request_data.get('messages', [{'role': 'user', 'content': 'Hello'}])
@@ -309,6 +479,34 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        qs = urllib.parse.parse_qs(parsed.query)
+
+        if path.startswith('/api/annotation/files'):
+            task_id = (qs.get('taskId') or [''])[0]
+            try:
+                files = list_annotation_files(task_id)
+                self._json(200, {'ok': True, 'taskId': task_id, 'files': files, 'count': len(files)})
+            except Exception as e:
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/annotation/export'):
+            task_id = (qs.get('taskId') or [''])[0]
+            try:
+                raw = zip_annotation_task(task_id)
+                filename = 'annotation-task-%s.zip' % task_id
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/zip')
+                self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename)
+                self.send_header('Content-Length', str(len(raw)))
+                self._cors()
+                self.end_headers()
+                self.wfile.write(raw)
+            except FileNotFoundError:
+                self._json(404, {'ok': False, 'error': 'no uploaded files for this task'})
+            except Exception as e:
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
 
         if path.startswith('/api/mlops/jobs'):
             store = load_mlops_store()
@@ -335,7 +533,6 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             path = '/index.html'
         try:
             file_path = os.path.join(BASE_DIR, path.lstrip('/'))
-            # 防目录穿越
             file_path = os.path.abspath(file_path)
             if not file_path.startswith(os.path.abspath(BASE_DIR)):
                 self.send_error(403, 'Forbidden')
@@ -365,17 +562,24 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
 
 def run_server(port=8000):
     try:
+        os.makedirs(ANNOTATION_UPLOAD_ROOT, exist_ok=True)
         server_address = ('', port)
-        httpd = HTTPServer(server_address, WorkingProxyHandler)
-        print(f'Server running at http://localhost:{port}')
-        print(f'API proxy: http://localhost:{port}/api/aliyun')
-        print(f'MLOps report: POST http://localhost:{port}/api/mlops/report')
-        print(f'MLOps jobs:   GET  http://localhost:{port}/api/mlops/jobs')
-        print(f'MLOps token:  {MLOPS_TOKEN}  (可用环境变量 MLOPS_TOKEN 覆盖)')
+        httpd = ThreadingHTTPServer(server_address, WorkingProxyHandler)
+        logger.info('server running at http://localhost:%s', port)
+        logger.info('api proxy: http://localhost:%s/api/aliyun', port)
+        logger.info('mlops report: POST http://localhost:%s/api/mlops/report', port)
+        logger.info('annotation upload: POST http://localhost:%s/api/annotation/upload', port)
+        logger.info('annotation export: GET http://localhost:%s/api/annotation/export?taskId=...', port)
+        if not MLOPS_TOKEN:
+            logger.warning('MLOPS_TOKEN is not configured; /api/mlops/report will reject writes')
+        if not ANNOTATION_UPLOAD_TOKEN:
+            logger.warning('ANNOTATION_UPLOAD_TOKEN is not configured; /api/annotation/upload will reject writes')
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            logger.warning('SUPABASE_URL/SUPABASE_KEY not configured; server-side cloud sync disabled')
         httpd.serve_forever()
     except Exception as e:
-        print(f'Server error: {e}')
         import traceback
+        logger.error('server error: %s', e)
         traceback.print_exc()
 
 

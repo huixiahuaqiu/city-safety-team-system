@@ -4223,7 +4223,7 @@
                                 </div>
                                 <div style="margin-top:8px; font-size:12px; color:#374151;">
                                     上报地址：<code id="mlopsEndpointText" style="background:#fff;padding:2px 6px;border-radius:4px;">http://127.0.0.1:8000/api/mlops/report</code>
-                                    · Token：<code style="background:#fff;padding:2px 6px;border-radius:4px;">city-safety-mlops</code>
+                                    · Token：<code id="mlopsTokenHint" style="background:#fff;padding:2px 6px;border-radius:4px;">读取 config.local.js</code>
                                 </div>
                                 <div style="margin-top:6px; font-size:12px; color:#9ca3af;" id="mlopsSyncHint">尚未自动同步</div>
                             </div>
@@ -4311,45 +4311,72 @@
             </div>
             
             <!-- AI数据标注工具 -->
-            <div id="data_annotation" class="module">
-                <div class="card">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                        <h2>🏷️ AI数据标注工具</h2>
-                        <div style="display:flex;gap:10px;">
-                            <button class="btn btn-secondary" onclick="showAnnotationTypeModal()">⚙️ 管理标注类型</button>
-                            <button class="btn" onclick="showAddAnnotationModal()">+ 新建标注任务</button>
+            <div id="data_annotation" class="module" style="padding:0;">
+                <div style="padding:24px; background:#fff; border-bottom:1px solid #f0f0f0;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                        <div>
+                            <h1 style="font-size:24px; font-weight:700; color:#111827; margin:0;">AI 数据标注</h1>
+                            <p style="font-size:14px; color:#6b7280; margin:6px 0 0;">服务结构损伤诊断与城市安全监测 · 标注完成后可对接模型训练台账</p>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" onclick="showAnnotationTypeModal()" style="padding:10px 16px; font-size:13px;">管理标注类型</button>
+                            <button class="btn" onclick="showAddAnnotationModal()" style="padding:10px 20px; font-size:13px;">＋ 新建标注任务</button>
                         </div>
                     </div>
-                    <div style="display:flex;gap:16px;margin-bottom:20px;">
-                        <div style="flex:1;background:#f5f5f5;padding:16px;border-radius:8px;">
-                            <div style="font-size:24px;font-weight:bold;color:#6a1b9a;">8</div>
-                            <div style="font-size:13px;color:#666;">标注任务</div>
+                    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:18px;">
+                        <div onclick="setAnnotationStatusFilter('')" style="cursor:pointer; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#4f46e5; line-height:1;" id="annoStatTotal">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">标注任务</div>
                         </div>
-                        <div style="flex:1;background:#e8f5e9;padding:16px;border-radius:8px;">
-                            <div style="font-size:24px;font-weight:bold;color:#2e7d32;">452</div>
-                            <div style="font-size:13px;color:#666;">已标注</div>
+                        <div onclick="setAnnotationStatusFilter('annotating')" style="cursor:pointer; background:#fff7ed; border:1px solid #ffedd5; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#ea580c; line-height:1;" id="annoStatAnnotating">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">标注中</div>
                         </div>
-                        <div style="flex:1;background:#fff3e0;padding:16px;border-radius:8px;">
-                            <div style="font-size:24px;font-weight:bold;color:#f57c00;">128</div>
-                            <div style="font-size:13px;color:#666;">待标注</div>
+                        <div onclick="setAnnotationStatusFilter('ready')" style="cursor:pointer; background:#f0fdf4; border:1px solid #dcfce7; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#16a34a; line-height:1;" id="annoStatReady">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">可训练</div>
+                        </div>
+                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#2563eb; line-height:1;" id="annoStatDone">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">已标注样本</div>
                         </div>
                     </div>
-                    <div style="overflow-x:auto;">
-                        <table style="width:100%;border-collapse:collapse;">
-                            <thead>
-                                <tr style="background:#f5f5f5;">
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">任务名称</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">数据集</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">标注类型</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">进度</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">负责人</th>
-                                    <th style="padding:10px;text-align:left;border-bottom:1px solid #ddd;">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="annotationTable"></tbody>
-                        </table>
+                    <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+                        <input type="text" id="annotationSearch" placeholder="搜索任务、数据集、负责人、场景..." oninput="renderAnnotationList()" style="flex:1; min-width:200px; padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px;">
+                        <select id="annotationTypeFilter" onchange="renderAnnotationList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部类型</option>
+                        </select>
+                        <select id="annotationStatusFilter" onchange="renderAnnotationList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部状态</option>
+                            <option value="annotating">标注中</option>
+                            <option value="review">待审核</option>
+                            <option value="ready">可训练</option>
+                        </select>
+                        <select id="annotationOwnerFilter" onchange="renderAnnotationList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部成员</option>
+                        </select>
                     </div>
                 </div>
+                <div style="padding:20px 24px 28px; background:#f8fafc;">
+                    <div id="annotationList" style="display:flex; flex-direction:column; gap:12px;"></div>
+                    <div id="annotationEmpty" style="display:none; text-align:center; padding:48px 16px; color:#9ca3af; background:#fff; border-radius:14px; border:1px dashed #e5e7eb;">
+                        暂无匹配的标注任务，可点击右上角新建
+                    </div>
+                </div>
+            </div>
+
+            <!-- 标注详情抽屉 -->
+            <div id="annotationDetailOverlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.42); z-index:999;" onclick="closeAnnotationDetailDrawer()"></div>
+            <div id="annotationDetailDrawer" style="display:none; position:fixed; top:0; right:0; width:min(440px,100%); height:100%; background:#fff; z-index:1000; box-shadow:-12px 0 40px rgba(15,23,42,.12); overflow:auto;">
+                <div style="padding:18px 20px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#fff; z-index:1;">
+                    <div>
+                        <div id="annotationDetailStatus" style="display:inline-block; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; margin-bottom:6px;"></div>
+                        <h3 id="annotationDetailTitle" style="margin:0; font-size:18px; color:#111827;"></h3>
+                    </div>
+                    <button onclick="closeAnnotationDetailDrawer()" style="width:32px;height:32px;border:none;background:#f3f4f6;border-radius:50%;cursor:pointer;font-size:16px;">×</button>
+                </div>
+                <div id="annotationDetailBody" style="padding:20px;"></div>
+                <div id="annotationDetailActions" style="padding:16px 20px 24px; border-top:1px solid #f0f0f0; display:flex; gap:10px; flex-wrap:wrap; position:sticky; bottom:0; background:#fff;"></div>
             </div>
             
             <!-- 智能对话问答 -->
@@ -7513,14 +7540,26 @@
         });
     </script>
     
+    <script src="config.local.js"></script>
     <script>
         // ========== Supabase 配置 (REST API 模式，无需SDK) ==========
-        const SUPABASE_URL = 'https://havxlphglhjgcfgwowae.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_jhRxljv8ocdnXBknablKiA_kRBzlEnC';
+        window.APP_CONFIG = window.APP_CONFIG || {};
+        function getAppConfig(key, fallback) {
+            if (window.APP_CONFIG && Object.prototype.hasOwnProperty.call(window.APP_CONFIG, key)) {
+                return window.APP_CONFIG[key];
+            }
+            return fallback;
+        }
+        const SUPABASE_URL = String(getAppConfig('SUPABASE_URL', '') || '').trim();
+        const SUPABASE_KEY = String(getAppConfig('SUPABASE_KEY', '') || '').trim();
         
         function supabaseRequest(method, table, data, options) {
             options = options || {};
             return new Promise(function(resolve, reject) {
+                if (!SUPABASE_URL || !SUPABASE_KEY) {
+                    reject(new Error('Supabase 未配置：请创建 123123/config.local.js'));
+                    return;
+                }
                 var xhr = new XMLHttpRequest();
                 var url = SUPABASE_URL + '/rest/v1/' + table;
                 if (method === 'GET' && data) {
@@ -7580,7 +7619,7 @@
         const CLOUD_SYNC_PREFIX = '__SYNC_KV__';
 
         let cloudSyncReady = false;
-        let cloudSyncEnabled = true;
+        let cloudSyncEnabled = Boolean(SUPABASE_URL && SUPABASE_KEY);
         let cloudPulling = false;
         const cloudUpsertTimers = {};
         const cloudRowIdCache = {};
@@ -22928,6 +22967,8 @@ ${ocrText}`
         el.style.display = el.style.display === 'none' ? 'block' : 'none';
         const ep = document.getElementById('mlopsEndpointText');
         if (ep) ep.textContent = (location.origin || 'http://127.0.0.1:8000') + '/api/mlops/report';
+        const tokenHint = document.getElementById('mlopsTokenHint');
+        if (tokenHint) tokenHint.textContent = getAppConfig('MLOPS_TOKEN', '') ? '已配置（不展示）' : '未配置';
     }
 
     function setMlopsAutoPoll(on) {
@@ -23123,6 +23164,8 @@ ${ocrText}`
         if (chk) chk.checked = mlopsAutoPollEnabled;
         const ep = document.getElementById('mlopsEndpointText');
         if (ep) ep.textContent = (location.origin || 'http://127.0.0.1:8000') + '/api/mlops/report';
+        const tokenHint = document.getElementById('mlopsTokenHint');
+        if (tokenHint) tokenHint.textContent = getAppConfig('MLOPS_TOKEN', '') ? '已配置（不展示）' : '未配置';
         renderModelTrainingList();
         startMlopsPolling();
     }
@@ -23559,14 +23602,103 @@ ${ocrText}`
 
     // AI数据标注工具
     let annotationData = [];
-
     let annotationTypes = [];
+    let annotationFilterStatus = '';
+
+    function pickAnnoOwner(idx) {
+        if (typeof getRealTeamOwnerNames === 'function') {
+            const owners = getRealTeamOwnerNames();
+            if (owners.length) return owners[idx % owners.length];
+        }
+        return (currentUser && currentUser.realName) || '团队成员';
+    }
+
+    function saveAnnotationData() {
+        localStorage.setItem('annotationData', JSON.stringify(annotationData));
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('annotationData', JSON.stringify(annotationData)); } catch (e) {}
+    }
+
+    function saveAnnotationTypes() {
+        localStorage.setItem('annotationTypes', JSON.stringify(annotationTypes));
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('annotationTypes', JSON.stringify(annotationTypes)); } catch (e) {}
+    }
+
+    function annotationStatusMeta(status) {
+        if (status === 'ready') return { text: '可训练', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' };
+        if (status === 'review') return { text: '待审核', color: '#ca8a04', bg: '#fefce8', border: '#fde68a' };
+        return { text: '标注中', color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' };
+    }
+
+    function deriveAnnotationStatus(item) {
+        if (item.status && ['annotating', 'review', 'ready'].includes(item.status)) return item.status;
+        const p = Number(item.progress) || 0;
+        if (p >= 100) return 'ready';
+        if (p >= 90) return 'review';
+        return 'annotating';
+    }
+
+    function buildTeamDefaultAnnotations() {
+        return [
+            { id: 1, name: '结构裂缝边界框标注', dataset: 'CrackDataset-CQ', type: '目标检测', scenario: '结构损伤诊断', status: 'ready', progress: 100, owner: pickAnnoOwner(2), total: 800, completed: 800, linkedTrainJob: 'exp-crack-0612', updatedAt: '2026-06-12', notes: '可直接用于裂缝检测训练' },
+            { id: 2, name: '输电塔损伤语义分割', dataset: 'TowerUAV-Iter', type: '语义分割', scenario: '结构损伤诊断', status: 'annotating', progress: 58, owner: pickAnnoOwner(6), total: 420, completed: 244, linkedTrainJob: 'job-tower-0710', updatedAt: '2026-07-10', notes: '无人机航拍损伤区域分割' },
+            { id: 3, name: '振动图像损伤分类', dataset: 'VibImage-Tower', type: '图像分类', scenario: '结构振动测试', status: 'annotating', progress: 72, owner: pickAnnoOwner(2), total: 600, completed: 432, linkedTrainJob: 'job-vib-0711', updatedAt: '2026-07-11', notes: '对接多模态损伤诊断' },
+            { id: 4, name: '装配式节点损伤标注', dataset: 'PCJoint-Damage', type: '目标检测', scenario: '结构抗震', status: 'ready', progress: 100, owner: pickAnnoOwner(1), total: 360, completed: 360, linkedTrainJob: 'exp-pcjoint-0630', updatedAt: '2026-06-30', notes: '' },
+            { id: 5, name: '城市灾害风险场景分类', dataset: 'UrbanRisk-2025', type: '图像分类', scenario: '城市灾害风险', status: 'review', progress: 92, owner: pickAnnoOwner(1), total: 1000, completed: 920, linkedTrainJob: 'job-risk-0620', updatedAt: '2026-06-20', notes: '待导师抽检' },
+            { id: 6, name: '工地安全帽检测标注', dataset: 'HelmetDataset', type: '目标检测', scenario: '城市安全监测', status: 'ready', progress: 100, owner: pickAnnoOwner(4), total: 280, completed: 280, linkedTrainJob: 'exp-helmet-0618', updatedAt: '2026-06-18', notes: '' },
+            { id: 7, name: '烟雾火灾像素分割', dataset: 'SmokeFire-Mix', type: '语义分割', scenario: '城市安全监测', status: 'annotating', progress: 45, owner: pickAnnoOwner(5), total: 500, completed: 225, linkedTrainJob: 'job-smoke-0605', updatedAt: '2026-07-05', notes: '' },
+            { id: 8, name: '三维构件实例分割', dataset: 'Struct3D-Parts', type: '语义分割', scenario: '三维数字模型', status: 'annotating', progress: 18, owner: pickAnnoOwner(7), total: 200, completed: 36, linkedTrainJob: 'exp-bimseg-0708', updatedAt: '2026-07-08', notes: '本机待训练前置数据' }
+        ];
+    }
+
+    function migrateAnnotationDataToTeam() {
+        const demoNames = ['安全目标检测标注', '跌倒检测标注', '人群密度标注', '行人行为标注'];
+        if (!Array.isArray(annotationData) || !annotationData.length) {
+            annotationData = buildTeamDefaultAnnotations();
+            saveAnnotationData();
+            return;
+        }
+        if (annotationData.some(function(a) { return demoNames.includes(a.name); })) {
+            annotationData = buildTeamDefaultAnnotations();
+            saveAnnotationData();
+            return;
+        }
+        // 全员同一负责人（如误同步成同一人）时重建示例
+        const owners = annotationData.map(function(a) { return a.owner; }).filter(Boolean);
+        const uniqueOwners = new Set(owners);
+        if (owners.length >= 4 && uniqueOwners.size === 1 && !annotationData.some(function(a) { return a.scenario; })) {
+            annotationData = buildTeamDefaultAnnotations();
+            saveAnnotationData();
+            return;
+        }
+        let changed = false;
+        const valid = new Set(typeof getRealTeamOwnerNames === 'function' ? getRealTeamOwnerNames() : []);
+        annotationData = annotationData.map(function(a, idx) {
+            const next = Object.assign({}, a);
+            if (!next.scenario) { next.scenario = '城市安全监测'; changed = true; }
+            next.status = deriveAnnotationStatus(next);
+            if (next.completed == null && next.total) {
+                next.completed = Math.round((Number(next.progress) || 0) / 100 * Number(next.total));
+                changed = true;
+            }
+            if (!next.updatedAt) { next.updatedAt = new Date().toISOString().split('T')[0]; changed = true; }
+            if (valid.size && next.owner && !valid.has(next.owner) && typeof replaceUnknownOwnerWithTeamMember === 'function') {
+                next.owner = replaceUnknownOwnerWithTeamMember(next.owner);
+                changed = true;
+            } else if (!next.owner) {
+                next.owner = pickAnnoOwner(idx);
+                changed = true;
+            }
+            return next;
+        });
+        if (changed) saveAnnotationData();
+    }
 
     function initAnnotation() {
         const savedTypes = localStorage.getItem('annotationTypes');
         if (savedTypes) {
-            annotationTypes = JSON.parse(savedTypes);
-        } else {
+            try { annotationTypes = JSON.parse(savedTypes); } catch (e) { annotationTypes = []; }
+        }
+        if (!annotationTypes.length) {
             annotationTypes = [
                 { id: 1, name: '目标检测', description: '检测图像中的目标对象并标注边界框', icon: '🎯' },
                 { id: 2, name: '图像分类', description: '为图像分配预定义的类别标签', icon: '🏷️' },
@@ -23575,51 +23707,148 @@ ${ocrText}`
                 { id: 5, name: '姿态估计', description: '标注人体关键点位置', icon: '🦴' },
                 { id: 6, name: '密度估计', description: '估计图像中目标的数量密度', icon: '👥' }
             ];
-            localStorage.setItem('annotationTypes', JSON.stringify(annotationTypes));
+            saveAnnotationTypes();
         }
 
         const saved = localStorage.getItem('annotationData');
         if (saved) {
-            annotationData = JSON.parse(saved);
+            try { annotationData = JSON.parse(saved); } catch (e) { annotationData = []; }
         } else {
-            annotationData = [
-                { id: 1, name: '安全目标检测标注', dataset: 'CitySafety-V1', type: '目标检测', progress: 85, owner: '陈浩', total: 500, completed: 425 },
-                { id: 2, name: '火灾场景标注', dataset: 'FireDataset', type: '图像分类', progress: 100, owner: '赵芳', total: 1000, completed: 1000 },
-                { id: 3, name: '行人行为标注', dataset: 'PersonAction', type: '行为识别', progress: 62, owner: '孙丽', total: 800, completed: 496 },
-                { id: 4, name: '交通标志标注', dataset: 'TrafficSign', type: '目标检测', progress: 95, owner: '刘洋', total: 600, completed: 570 },
-                { id: 5, name: '烟雾识别标注', dataset: 'SmokeDataset', type: '语义分割', progress: 78, owner: '陈浩', total: 350, completed: 273 },
-                { id: 6, name: '跌倒检测标注', dataset: 'FallDetection', type: '姿态估计', progress: 45, owner: '赵芳', total: 400, completed: 180 },
-                { id: 7, name: '安全帽检测标注', dataset: 'HelmetDataset', type: '目标检测', progress: 100, owner: '周杰', total: 280, completed: 280 },
-                { id: 8, name: '人群密度标注', dataset: 'CrowdCount', type: '密度估计', progress: 30, owner: '王丽萍', total: 550, completed: 165 }
-            ];
-            localStorage.setItem('annotationData', JSON.stringify(annotationData));
+            annotationData = [];
         }
+        migrateAnnotationDataToTeam();
+        populateAnnotationFilters();
         renderAnnotationList();
+    }
+
+    function populateAnnotationFilters() {
+        const typeSel = document.getElementById('annotationTypeFilter');
+        if (typeSel) {
+            const cur = typeSel.value;
+            typeSel.innerHTML = '<option value="">全部类型</option>' + annotationTypes.map(function(t) {
+                return '<option value="' + escHtml(t.name) + '">' + escHtml(t.name) + '</option>';
+            }).join('');
+            if (cur) typeSel.value = cur;
+        }
+        const ownerSel = document.getElementById('annotationOwnerFilter');
+        if (ownerSel) {
+            const cur = ownerSel.value;
+            const owners = typeof getRealTeamOwnerNames === 'function' ? getRealTeamOwnerNames() : [];
+            ownerSel.innerHTML = '<option value="">全部成员</option>' + owners.map(function(o) {
+                return '<option value="' + escHtml(o) + '">' + escHtml(o) + '</option>';
+            }).join('');
+            if (cur && owners.includes(cur)) ownerSel.value = cur;
+        }
+    }
+
+    function updateAnnotationStats() {
+        const set = function(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; };
+        const list = annotationData || [];
+        set('annoStatTotal', list.length);
+        set('annoStatAnnotating', list.filter(function(a) { return deriveAnnotationStatus(a) === 'annotating'; }).length);
+        set('annoStatReady', list.filter(function(a) { return deriveAnnotationStatus(a) === 'ready'; }).length);
+        set('annoStatDone', list.reduce(function(s, a) { return s + (Number(a.completed) || 0); }, 0));
+    }
+
+    function setAnnotationStatusFilter(status) {
+        annotationFilterStatus = status || '';
+        const sel = document.getElementById('annotationStatusFilter');
+        if (sel) sel.value = annotationFilterStatus;
+        renderAnnotationList();
+    }
+
+    function getFilteredAnnotations() {
+        const q = ((document.getElementById('annotationSearch') || {}).value || '').trim().toLowerCase();
+        const type = (document.getElementById('annotationTypeFilter') || {}).value || '';
+        const status = (document.getElementById('annotationStatusFilter') || {}).value || annotationFilterStatus || '';
+        const owner = (document.getElementById('annotationOwnerFilter') || {}).value || '';
+        return (annotationData || []).filter(function(a) {
+            if (type && a.type !== type) return false;
+            if (status && deriveAnnotationStatus(a) !== status) return false;
+            if (owner && a.owner !== owner) return false;
+            if (!q) return true;
+            const blob = [a.name, a.dataset, a.type, a.owner, a.scenario, a.linkedTrainJob, a.notes].join(' ').toLowerCase();
+            return blob.indexOf(q) !== -1;
+        });
+    }
+
+    function renderAnnotationList() {
+        const list = document.getElementById('annotationList');
+        const empty = document.getElementById('annotationEmpty');
+        // 兼容旧表格节点（若仍存在则忽略）
+        if (!list) {
+            const table = document.getElementById('annotationTable');
+            if (!table) return;
+        }
+        updateAnnotationStats();
+        populateAnnotationFilters();
+        if (!list) return;
+        const rows = getFilteredAnnotations();
+        if (!rows.length) {
+            list.innerHTML = '';
+            if (empty) empty.style.display = 'block';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+        list.innerHTML = rows.map(function(item) {
+            const st = annotationStatusMeta(deriveAnnotationStatus(item));
+            const progress = Math.max(0, Math.min(100, Number(item.progress) || 0));
+            const bar = progress >= 100 ? '#22c55e' : (progress >= 50 ? '#f59e0b' : '#ef4444');
+            const pending = Math.max(0, (Number(item.total) || 0) - (Number(item.completed) || 0));
+            return `<div style="background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:16px 18px; display:grid; grid-template-columns:1fr auto; gap:14px; align-items:center;">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                        <strong style="font-size:15px; color:#111827;">${escHtml(item.name)}</strong>
+                        <span style="font-size:11px; color:${st.color}; background:${st.bg}; border:1px solid ${st.border}; padding:2px 8px; border-radius:999px; font-weight:600;">${st.text}</span>
+                        <span style="font-size:11px; color:#6366f1; background:#eef2ff; padding:2px 8px; border-radius:999px;">${escHtml(item.type)}</span>
+                        <span style="font-size:11px; color:#6b7280; background:#f3f4f6; padding:2px 8px; border-radius:999px;">${escHtml(item.scenario || '城市安全')}</span>
+                    </div>
+                    <div style="font-size:12px; color:#9ca3af; margin-bottom:8px;">
+                        数据集 ${escHtml(item.dataset || '-')} · 负责人 ${escHtml(item.owner || '-')} · ${Number(item.completed)||0}/${Number(item.total)||0}
+                        ${item.linkedTrainJob ? ' · 训练任务 ' + escHtml(item.linkedTrainJob) : ''}
+                        ${item.hasRealFiles ? (String(item.storage||'').indexOf('cloud') >= 0 ? ' · 云端共享（全员可看）' : ' · 仅本机文件') : ''}
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="flex:1; height:8px; background:#f3f4f6; border-radius:999px; overflow:hidden; max-width:280px;">
+                            <div style="width:${progress}%; height:100%; background:${bar};"></div>
+                        </div>
+                        <span style="font-size:12px; color:#6b7280;">${progress}% · 待标 ${pending}</span>
+                        <span style="font-size:12px; color:#9ca3af;">${escHtml(item.updatedAt || '')}</span>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+                    <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="viewAnnotationDetail(${item.id})">详情</button>
+                    <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="showUpdateAnnotationProgress(${item.id})">更新进度</button>
+                    <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="exportAnnotation(${item.id})">导出</button>
+                    ${deriveAnnotationStatus(item) === 'ready' ? `<button class="btn" style="padding:6px 12px;font-size:12px;" onclick="pushAnnotationToTraining(${item.id})">登记训练</button>` : ''}
+                </div>
+            </div>`;
+        }).join('');
     }
 
     function showAnnotationTypeModal() {
         const modalId = 'annotationTypeModal_' + Date.now();
         const modal = document.createElement('div');
         modal.id = modalId;
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.45);z-index:2000;display:flex;justify-content:center;align-items:center;padding:16px;';
         
-        let html = `<div style="background:#fff;padding:30px;border-radius:12px;width:600px;max-height:80vh;overflow-y:auto;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                <h3 style="margin:0;color:#333;">⚙️ 标注类型管理</h3>
+        let html = `<div style="background:#fff;padding:24px;border-radius:16px;width:100%;max-width:640px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 50px rgba(15,23,42,.18);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 style="margin:0;color:#111827;">管理标注类型</h3>
                 <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()" style="padding:5px 10px;">×</button>
             </div>`;
         
-        html += `<button class="btn btn-success" style="margin-bottom:15px;" onclick="showAddAnnotationTypeModal('${modalId}')">➕ 添加标注类型</button>`;
+        html += `<button class="btn" style="margin-bottom:15px;" onclick="showAddAnnotationTypeModal('${modalId}')">＋ 添加标注类型</button>`;
         
         html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">`;
         annotationTypes.forEach(item => {
-            html += `<div style="padding:12px;border:1px solid #eee;border-radius:8px;">
+            html += `<div style="padding:12px;border:1px solid #e5e7eb;border-radius:10px;">
                 <div style="font-size:18px;margin-bottom:5px;">${item.icon}</div>
                 <div style="font-weight:bold;">${escHtml(item.name)}</div>
                 <div style="font-size:12px;color:#666;margin:5px 0;">${escHtml(item.description)}</div>
                 <div style="display:flex;gap:5px;">
-                    <button class="btn btn-secondary" style="padding:3px 6px;font-size:11px;" onclick="showEditAnnotationTypeModal(${item.id}, '${modalId}')">✏️</button>
-                    <button class="btn btn-danger" style="padding:3px 6px;font-size:11px;" onclick="deleteAnnotationType(${item.id}, '${modalId}')">🗑️</button>
+                    <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px;" onclick="showEditAnnotationTypeModal(${item.id}, '${modalId}')">编辑</button>
+                    <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px;color:#dc2626;" onclick="deleteAnnotationType(${item.id}, '${modalId}')">删除</button>
                 </div>
             </div>`;
         });
@@ -23633,23 +23862,23 @@ ${ocrText}`
         const modalId = 'addTypeModal_' + Date.now();
         const modal = document.createElement('div');
         modal.id = modalId;
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2001;display:flex;justify-content:center;align-items:center;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.45);z-index:2001;display:flex;justify-content:center;align-items:center;padding:16px;';
         
-        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:450px;">
-            <h3 style="margin-bottom:20px;color:#333;">添加标注类型</h3>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">类型名称 <span style="color:red;">*</span></label>
-                <input type="text" id="typeName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="例如：文本分类">
+        modal.innerHTML = `<div style="background:#fff;padding:24px;border-radius:16px;width:100%;max-width:450px;">
+            <h3 style="margin-bottom:16px;color:#111827;">添加标注类型</h3>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">类型名称 <span style="color:red;">*</span></label>
+                <input type="text" id="typeName" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="例如：裂缝检测">
             </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">类型图标</label>
-                <input type="text" id="typeIcon" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="输入emoji图标，如：📝">
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">类型图标</label>
+                <input type="text" id="typeIcon" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="emoji，如 🎯">
             </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">类型描述</label>
-                <textarea id="typeDesc" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" rows="3" placeholder="描述该标注类型的用途"></textarea>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">类型描述</label>
+                <textarea id="typeDesc" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" rows="3" placeholder="描述该标注类型的用途"></textarea>
             </div>
-            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
                 <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
                 <button class="btn" onclick="addAnnotationType('${modalId}', '${parentModalId}')">添加</button>
             </div></div>`;
@@ -23666,10 +23895,12 @@ ${ocrText}`
         
         const newId = annotationTypes.length > 0 ? Math.max(...annotationTypes.map(t => t.id)) + 1 : 1;
         annotationTypes.push({ id: newId, name, icon, description });
-        localStorage.setItem('annotationTypes', JSON.stringify(annotationTypes));
+        saveAnnotationTypes();
         
         document.getElementById(modalId).remove();
+        document.getElementById(parentModalId)?.remove();
         showAnnotationTypeModal();
+        populateAnnotationFilters();
     }
 
     function showEditAnnotationTypeModal(id, parentModalId) {
@@ -23679,23 +23910,23 @@ ${ocrText}`
         const modalId = 'editTypeModal_' + Date.now();
         const modal = document.createElement('div');
         modal.id = modalId;
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2001;display:flex;justify-content:center;align-items:center;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.45);z-index:2001;display:flex;justify-content:center;align-items:center;padding:16px;';
         
-        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:450px;">
-            <h3 style="margin-bottom:20px;color:#333;">编辑标注类型</h3>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">类型名称 <span style="color:red;">*</span></label>
-                <input type="text" id="editTypeName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" value="${escHtml(item.name)}">
+        modal.innerHTML = `<div style="background:#fff;padding:24px;border-radius:16px;width:100%;max-width:450px;">
+            <h3 style="margin-bottom:16px;color:#111827;">编辑标注类型</h3>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">类型名称 <span style="color:red;">*</span></label>
+                <input type="text" id="editTypeName" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" value="${escHtml(item.name)}">
             </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">类型图标</label>
-                <input type="text" id="editTypeIcon" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" value="${escHtml(item.icon)}">
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">类型图标</label>
+                <input type="text" id="editTypeIcon" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" value="${escHtml(item.icon)}">
             </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">类型描述</label>
-                <textarea id="editTypeDesc" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" rows="3">${escHtml(item.description)}</textarea>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">类型描述</label>
+                <textarea id="editTypeDesc" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" rows="3">${escHtml(item.description)}</textarea>
             </div>
-            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
                 <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
                 <button class="btn" onclick="updateAnnotationType(${id}, '${modalId}', '${parentModalId}')">保存</button>
             </div></div>`;
@@ -23713,153 +23944,848 @@ ${ocrText}`
         const idx = annotationTypes.findIndex(t => t.id === id);
         if (idx > -1) {
             annotationTypes[idx] = { ...annotationTypes[idx], name, icon, description };
-            localStorage.setItem('annotationTypes', JSON.stringify(annotationTypes));
+            saveAnnotationTypes();
         }
         
         document.getElementById(modalId).remove();
+        document.getElementById(parentModalId)?.remove();
         showAnnotationTypeModal();
+        populateAnnotationFilters();
     }
 
     function deleteAnnotationType(id, parentModalId) {
         if (!confirm('确定要删除这个标注类型吗？')) return;
         
         annotationTypes = annotationTypes.filter(t => t.id !== id);
-        localStorage.setItem('annotationTypes', JSON.stringify(annotationTypes));
+        saveAnnotationTypes();
+        document.getElementById(parentModalId)?.remove();
         showAnnotationTypeModal();
-    }
-
-    function renderAnnotationList() {
-        const table = document.getElementById('annotationTable');
-        if (!table) return;
-        
-        let html = '';
-        annotationData.forEach(item => {
-            html += `<tr>
-                <td style="padding:10px;border-bottom:1px solid #eee;"><strong>${escHtml(item.name)}</strong></td>
-                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.dataset)}</td>
-                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.type)}</td>
-                <td style="padding:10px;border-bottom:1px solid #eee;">
-                    <div style="width:120px;height:8px;background:#eee;border-radius:4px;overflow:hidden;">
-                        <div style="height:100%;width:${item.progress}%;background:${item.progress === 100 ? '#2e7d32' : item.progress >= 50 ? '#f57c00' : '#e53935'};border-radius:4px;"></div>
-                    </div>
-                    <span style="font-size:12px;color:#666;margin-left:8px;">${item.progress}%</span>
-                </td>
-                <td style="padding:10px;border-bottom:1px solid #eee;">${escHtml(item.owner)}</td>
-                <td style="padding:10px;border-bottom:1px solid #eee;">
-                    <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="viewAnnotationDetail(${item.id})">查看</button>
-                    <button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-left:4px;" onclick="exportAnnotation(${item.id})">导出</button>
-                </td>
-            </tr>`;
-        });
-        table.innerHTML = html;
+        populateAnnotationFilters();
     }
 
     function showAddAnnotationModal() {
+        const owners = typeof getRealTeamOwnerNames === 'function' ? getRealTeamOwnerNames() : [];
+        const myName = currentUser ? (currentUser.realName || '') : '';
+        const ownerOpts = owners.map(o => `<option value="${escHtml(o)}">${escHtml(o)}</option>`).join('');
+        const typeOptions = annotationTypes.map(t => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join('');
         const modalId = 'addAnnotationModal_' + Date.now();
         const modal = document.createElement('div');
         modal.id = modalId;
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.45);z-index:2000;display:flex;justify-content:center;align-items:center;padding:16px;';
         
-        let typeOptions = annotationTypes.map(t => `<option value="${escHtml(t.name)}">${t.icon} ${escHtml(t.name)}</option>`).join('');
-        
-        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:550px;">
-            <h3 style="margin-bottom:20px;color:#333;">新建标注任务</h3>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">任务名称 <span style="color:red;">*</span></label>
-                <input type="text" id="annoName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入任务名称">
+        modal.innerHTML = `<div style="background:#fff;padding:24px;border-radius:16px;width:100%;max-width:620px;max-height:90vh;overflow:auto;box-shadow:0 20px 50px rgba(15,23,42,.18);">
+            <h3 style="margin:0 0 6px;color:#111827;font-size:18px;">新建标注任务</h3>
+            <p style="margin:0 0 16px;font-size:12px;color:#6b7280;">应用场景可手写；上传数据集后可自动识别样本数，也可手动修改</p>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">任务名称 <span style="color:red;">*</span></label>
+                <input type="text" id="annoName" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="如：起重吊装安全检测标注">
             </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">数据集名称</label>
-                <input type="text" id="annoDataset" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入数据集名称">
-            </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">上传数据集文件</label>
-                <div style="border:2px dashed #ddd;border-radius:8px;padding:20px;text-align:center;" id="datasetUploadArea_${modalId}" onclick="document.getElementById('datasetFileInput_${modalId}').click()">
-                    <div style="font-size:32px;margin-bottom:10px;">📁</div>
-                    <div style="color:#666;">点击选择文件或拖拽到此处</div>
-                    <div style="font-size:12px;color:#999;margin-top:5px;">支持图片(.jpg/.png)、CSV、JSON格式</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;">数据集名称</label>
+                    <input type="text" id="annoDataset" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="可手写，上传文件夹后可自动填充">
                 </div>
-                <input type="file" id="datasetFileInput_${modalId}" accept=".jpg,.jpeg,.png,.csv,.json" style="display:none;" multiple onchange="handleDatasetUpload(event, '${modalId}')">
-                <div id="datasetFileList_${modalId}" style="margin-top:10px;max-height:100px;overflow-y:auto;display:none;"></div>
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;">标注类型</label>
+                    <select id="annoType" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">${typeOptions}</select>
+                </div>
             </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">标注类型</label>
-                <select id="annoType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
-                    ${typeOptions}
-                </select>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;">应用场景 <span style="color:red;">*</span></label>
+                    <input type="text" id="annoScenario" list="annoScenarioSuggestions" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="自行填写，如：起重吊装 / 结构裂缝">
+                    <datalist id="annoScenarioSuggestions">
+                        <option value="结构损伤诊断"></option>
+                        <option value="结构振动测试"></option>
+                        <option value="结构抗震"></option>
+                        <option value="城市灾害风险"></option>
+                        <option value="三维数字模型"></option>
+                        <option value="城市安全监测"></option>
+                        <option value="起重吊装"></option>
+                    </datalist>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;">负责人</label>
+                    <select id="annoOwner" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">${ownerOpts || '<option value="">暂无成员</option>'}</select>
+                </div>
             </div>
-            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;">样本数量</label>
+                    <input type="number" id="annoTotal" min="0" value="" placeholder="上传后自动识别，也可手写" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+                    <div id="annoTotalHint" style="font-size:11px;color:#9ca3af;margin-top:4px;">未上传时请手动填写</div>
+                </div>
+                <div>
+                    <label style="display:block;margin-bottom:5px;font-size:13px;">关联训练任务号</label>
+                    <input type="text" id="annoLinkedJob" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;" placeholder="如：exp-crack-0612">
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">上传数据集文件 / 文件夹</label>
+                <div style="border:2px dashed #e5e7eb;border-radius:10px;padding:16px;text-align:center;" id="datasetUploadArea_${modalId}">
+                    <div style="color:#6b7280;font-size:13px;margin-bottom:10px;">支持图片、标签文件、CSV、JSON，以及整个数据集文件夹</div>
+                    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                        <button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:12px;" onclick="document.getElementById('datasetFileInput_${modalId}').click()">选择文件</button>
+                        <button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:12px;" onclick="document.getElementById('datasetFolderInput_${modalId}').click()">选择文件夹</button>
+                    </div>
+                    <div style="font-size:12px;color:#9ca3af;margin-top:8px;">例如：起重吊装 / labels_xxx 文件夹</div>
+                </div>
+                <input type="file" id="datasetFileInput_${modalId}" accept=".jpg,.jpeg,.png,.bmp,.webp,.gif,.txt,.xml,.csv,.json,.yaml,.yml" style="display:none;" multiple onchange="handleDatasetUpload(event, '${modalId}', 'files')">
+                <input type="file" id="datasetFolderInput_${modalId}" style="display:none;" webkitdirectory directory multiple onchange="handleDatasetUpload(event, '${modalId}', 'folder')">
+                <div id="datasetFileList_${modalId}" style="margin-top:10px;max-height:140px;overflow-y:auto;display:none;"></div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
                 <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
-                <button class="btn" onclick="addAnnotation('${modalId}')">创建任务</button>
+                <button class="btn" onclick="addAnnotation('${modalId}')">创建并同步</button>
             </div></div>`;
         document.body.appendChild(modal);
+        window.__annoUploadMeta = window.__annoUploadMeta || {};
+        window.__annoUploadMeta[modalId] = { files: [], sampleCount: 0, source: '', mode: '' };
+        const ownerSel = document.getElementById('annoOwner');
+        if (ownerSel && myName && owners.includes(myName)) ownerSel.value = myName;
+        const totalInput = document.getElementById('annoTotal');
+        if (totalInput) {
+            totalInput.addEventListener('input', function() {
+                const hint = document.getElementById('annoTotalHint');
+                if (hint) hint.textContent = '已手动填写样本数量';
+            });
+        }
     }
 
-    function handleDatasetUpload(event, modalId) {
+    function isAnnoImageFile(file) {
+        const n = (file.name || '').toLowerCase();
+        return /\.(jpg|jpeg|png|bmp|webp|gif)$/i.test(n) || (file.type && file.type.indexOf('image/') === 0);
+    }
+
+    function isAnnoLabelFile(file) {
+        const n = (file.name || '').toLowerCase();
+        return /\.(txt|xml|json|yaml|yml)$/i.test(n);
+    }
+
+    function readFileAsText(file) {
+        return new Promise(function(resolve, reject) {
+            const reader = new FileReader();
+            reader.onload = function() { resolve(String(reader.result || '')); };
+            reader.onerror = reject;
+            reader.readAsText(file);
+        });
+    }
+
+    async function detectAnnotationSampleCount(files) {
+        const list = Array.from(files || []);
+        if (!list.length) return { count: 0, method: '无文件' };
+
+        const images = list.filter(isAnnoImageFile);
+        if (images.length > 0) {
+            return { count: images.length, method: '按图片文件数识别（' + images.length + ' 张）' };
+        }
+
+        const labels = list.filter(isAnnoLabelFile);
+        // YOLO labels 目录：每个 txt 对应一张图
+        const txtLabels = labels.filter(function(f) { return /\.txt$/i.test(f.name) && !/classes\.txt$/i.test(f.name); });
+        if (txtLabels.length > 0) {
+            return { count: txtLabels.length, method: '按标签文件数识别（' + txtLabels.length + ' 个）' };
+        }
+
+        const csv = list.find(function(f) { return /\.csv$/i.test(f.name); });
+        if (csv) {
+            try {
+                const text = await readFileAsText(csv);
+                const lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+                const count = Math.max(0, lines.length - 1);
+                return { count: count, method: '按 CSV 行数识别（去掉表头）' };
+            } catch (e) {
+                return { count: list.length, method: 'CSV 读取失败，暂按文件数' };
+            }
+        }
+
+        const jsonFile = list.find(function(f) { return /\.json$/i.test(f.name); });
+        if (jsonFile) {
+            try {
+                const text = await readFileAsText(jsonFile);
+                const data = JSON.parse(text);
+                if (Array.isArray(data)) return { count: data.length, method: '按 JSON 数组长度识别' };
+                if (data && Array.isArray(data.images)) return { count: data.images.length, method: '按 JSON.images 识别（COCO）' };
+                if (data && Array.isArray(data.annotations)) return { count: data.annotations.length, method: '按 JSON.annotations 识别' };
+                if (data && typeof data === 'object') return { count: Object.keys(data).length, method: '按 JSON 对象键数识别' };
+            } catch (e) {
+                return { count: list.length, method: 'JSON 解析失败，暂按文件数' };
+            }
+        }
+
+        return { count: list.length, method: '按上传文件总数识别' };
+    }
+
+    async function handleDatasetUpload(event, modalId, mode) {
         const files = event.target.files;
         if (!files || files.length === 0) return;
-        
+
         const uploadArea = document.getElementById('datasetUploadArea_' + modalId);
         const fileList = document.getElementById('datasetFileList_' + modalId);
-        
-        uploadArea.style.borderColor = '#4CAF50';
-        uploadArea.style.backgroundColor = '#f1f8e9';
-        
-        let html = '';
-        for (let i = 0; i < files.length; i++) {
+        const totalInput = document.getElementById('annoTotal');
+        const hint = document.getElementById('annoTotalHint');
+        const datasetInput = document.getElementById('annoDataset');
+        const nameInput = document.getElementById('annoName');
+        const scenarioInput = document.getElementById('annoScenario');
+
+        if (uploadArea) {
+            uploadArea.style.borderColor = '#22c55e';
+            uploadArea.style.backgroundColor = '#f0fdf4';
+        }
+
+        // 文件夹上传时，用顶层文件夹名填充数据集名 / 场景建议
+        let folderName = '';
+        if (mode === 'folder' && files[0] && files[0].webkitRelativePath) {
+            folderName = String(files[0].webkitRelativePath).split(/[\\/]/)[0] || '';
+            if (datasetInput && !datasetInput.value.trim() && folderName) datasetInput.value = folderName;
+            if (scenarioInput && !scenarioInput.value.trim() && folderName && !/^labels/i.test(folderName)) {
+                scenarioInput.value = folderName;
+            }
+            if (nameInput && !nameInput.value.trim() && folderName) {
+                nameInput.value = folderName + '标注';
+            }
+        }
+
+        const detect = await detectAnnotationSampleCount(files);
+        window.__annoUploadMeta = window.__annoUploadMeta || {};
+        window.__annoUploadMeta[modalId] = {
+            files: Array.from(files),
+            sampleCount: detect.count,
+            method: detect.method,
+            mode: mode || 'files',
+            folderName: folderName
+        };
+
+        if (totalInput) totalInput.value = detect.count;
+        if (hint) hint.textContent = '已自动识别：' + detect.method + '（可手动修改）';
+
+        // 列表预览（最多显示 12 条）
+        let html = '<div style="font-size:12px;color:#6b7280;margin-bottom:6px;">已选 ' + files.length + ' 个文件' + (folderName ? '（文件夹：' + escHtml(folderName) + '）' : '') + '</div>';
+        const maxShow = Math.min(files.length, 12);
+        for (let i = 0; i < maxShow; i++) {
             const file = files[i];
-            const fileType = file.type.startsWith('image/') ? '🖼️' : file.name.endsWith('.csv') ? '📊' : '📄';
-            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:#f5f5f5;border-radius:4px;margin-bottom:5px;">
-                <span>${fileType} ${escHtml(file.name)}</span>
-                <span style="font-size:12px;color:#666;">${formatFileSize(file.size)}</span>
+            const rel = file.webkitRelativePath || file.name;
+            const tag = isAnnoImageFile(file) ? '图' : (/\.csv$/i.test(file.name) ? '表' : (isAnnoLabelFile(file) ? '标' : '文'));
+            html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f8fafc;border-radius:8px;margin-bottom:5px;font-size:12px;">
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%;">[${tag}] ${escHtml(rel)}</span>
+                <span style="color:#9ca3af;">${typeof formatFileSize === 'function' ? formatFileSize(file.size) : file.size}</span>
             </div>`;
         }
-        
-        fileList.innerHTML = html;
-        fileList.style.display = 'block';
+        if (files.length > maxShow) {
+            html += '<div style="font-size:12px;color:#9ca3af;">… 其余 ' + (files.length - maxShow) + ' 个文件已计入</div>';
+        }
+        if (fileList) {
+            fileList.innerHTML = html;
+            fileList.style.display = 'block';
+        }
     }
 
     function addAnnotation(modalId) {
+        addAnnotationAsync(modalId);
+    }
+
+    function openAnnoFileDb() {
+        return new Promise(function(resolve, reject) {
+            const req = indexedDB.open('citySafetyAnnotationFiles', 1);
+            req.onupgradeneeded = function() {
+                const db = req.result;
+                if (!db.objectStoreNames.contains('files')) {
+                    const store = db.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
+                    store.createIndex('taskId', 'taskId', { unique: false });
+                }
+            };
+            req.onsuccess = function() { resolve(req.result); };
+            req.onerror = function() { reject(req.error); };
+        });
+    }
+
+    async function saveAnnotationFilesToIdb(taskId, files) {
+        if (!files || !files.length) return 0;
+        const db = await openAnnoFileDb();
+        let saved = 0;
+        for (let i = 0; i < files.length; i++) {
+            const f = files[i];
+            const path = f.webkitRelativePath || f.name;
+            await new Promise(function(resolve, reject) {
+                const tx = db.transaction('files', 'readwrite');
+                tx.oncomplete = resolve;
+                tx.onerror = function() { reject(tx.error); };
+                tx.objectStore('files').add({
+                    taskId: String(taskId),
+                    path: path,
+                    name: f.name,
+                    type: f.type || '',
+                    size: f.size,
+                    blob: f,
+                    savedAt: Date.now()
+                });
+                saved += 1;
+            });
+        }
+        db.close();
+        return saved;
+    }
+
+    async function listAnnotationFilesFromIdb(taskId) {
+        const db = await openAnnoFileDb();
+        return new Promise(function(resolve, reject) {
+            const tx = db.transaction('files', 'readonly');
+            const idx = tx.objectStore('files').index('taskId');
+            const req = idx.getAll(String(taskId));
+            req.onsuccess = function() {
+                db.close();
+                resolve(req.result || []);
+            };
+            req.onerror = function() {
+                db.close();
+                reject(req.error);
+            };
+        });
+    }
+
+    function getAnnotationStorageBucket() {
+        return String(getAppConfig('ANNOTATION_STORAGE_BUCKET', 'annotations') || 'annotations').trim() || 'annotations';
+    }
+
+    function annotationCloudObjectPath(taskId, relPath) {
+        const safeRel = String(relPath || '').replace(/\\/g, '/').replace(/^\/+/, '').split('/').filter(function(p) {
+            return p && p !== '.' && p !== '..';
+        }).join('/');
+        return 'tasks/' + String(taskId) + '/' + safeRel;
+    }
+
+    function annotationCloudPublicUrl(objectPath) {
+        const base = String(SUPABASE_URL || '').replace(/\/$/, '');
+        const bucket = getAnnotationStorageBucket();
+        return base + '/storage/v1/object/public/' + encodeURIComponent(bucket) + '/' + objectPath.split('/').map(encodeURIComponent).join('/');
+    }
+
+    async function ensureAnnotationCloudReady() {
+        if (!SUPABASE_URL || !SUPABASE_KEY) {
+            return { ok: false, error: 'Supabase 未配置（config.local.js）' };
+        }
+        const bucket = getAnnotationStorageBucket();
+        try {
+            const resp = await fetch(SUPABASE_URL + '/storage/v1/bucket/' + encodeURIComponent(bucket), {
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: 'Bearer ' + SUPABASE_KEY
+                },
+                cache: 'no-store'
+            });
+            if (resp.ok) return { ok: true, bucket: bucket };
+            const text = await resp.text();
+            return {
+                ok: false,
+                error: '云端桶「' + bucket + '」不可用（HTTP ' + resp.status + '）。请在 Supabase SQL Editor 执行 supabase_annotations_storage.sql。' + (text ? (' ' + text) : '')
+            };
+        } catch (e) {
+            return { ok: false, error: e && e.message ? e.message : String(e) };
+        }
+    }
+
+    async function uploadAnnotationFilesToCloud(taskId, files) {
+        if (!files || !files.length) return { ok: false, uploaded: 0, total: 0, errors: ['no files'], paths: [] };
+        const ready = await ensureAnnotationCloudReady();
+        if (!ready.ok) {
+            return { ok: false, uploaded: 0, total: files.length, errors: [ready.error], paths: [] };
+        }
+        const bucket = ready.bucket;
+        let uploaded = 0;
+        const errors = [];
+        const paths = [];
+        for (let i = 0; i < files.length; i++) {
+            const f = files[i];
+            const rel = f.webkitRelativePath || f.name;
+            const objectPath = annotationCloudObjectPath(taskId, rel);
+            try {
+                const resp = await fetch(
+                    SUPABASE_URL + '/storage/v1/object/' + encodeURIComponent(bucket) + '/' + objectPath.split('/').map(encodeURIComponent).join('/'),
+                    {
+                        method: 'POST',
+                        headers: {
+                            apikey: SUPABASE_KEY,
+                            Authorization: 'Bearer ' + SUPABASE_KEY,
+                            'Content-Type': f.type || 'application/octet-stream',
+                            'x-upsert': 'true'
+                        },
+                        body: f
+                    }
+                );
+                if (!resp.ok) {
+                    const t = await resp.text();
+                    errors.push(rel + ': HTTP ' + resp.status + ' ' + t);
+                    continue;
+                }
+                uploaded += 1;
+                paths.push({
+                    path: rel.replace(/\\/g, '/'),
+                    objectPath: objectPath,
+                    url: annotationCloudPublicUrl(objectPath),
+                    size: f.size,
+                    name: f.name
+                });
+            } catch (e) {
+                errors.push(rel + ': ' + (e && e.message ? e.message : String(e)));
+            }
+        }
+        return { ok: uploaded > 0, uploaded: uploaded, total: files.length, errors: errors, paths: paths, bucket: bucket };
+    }
+
+    async function listAnnotationFilesFromCloud(taskId) {
+        if (!SUPABASE_URL || !SUPABASE_KEY) return [];
+        const bucket = getAnnotationStorageBucket();
+        const prefix = 'tasks/' + String(taskId);
+        const resp = await fetch(SUPABASE_URL + '/storage/v1/object/list/' + encodeURIComponent(bucket), {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: 'Bearer ' + SUPABASE_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prefix: prefix, limit: 1000, offset: 0 })
+        });
+        if (!resp.ok) return [];
+        const rows = await resp.json();
+        if (!Array.isArray(rows)) return [];
+        // Storage list is one-level; recurse folders for nested datasets
+        const out = [];
+        async function walk(dirPrefix) {
+            const r = await fetch(SUPABASE_URL + '/storage/v1/object/list/' + encodeURIComponent(bucket), {
+                method: 'POST',
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: 'Bearer ' + SUPABASE_KEY,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prefix: dirPrefix, limit: 1000, offset: 0 })
+            });
+            if (!r.ok) return;
+            const items = await r.json();
+            if (!Array.isArray(items)) return;
+            for (let i = 0; i < items.length; i++) {
+                const it = items[i];
+                const name = it && it.name ? String(it.name) : '';
+                if (!name) continue;
+                const full = (dirPrefix ? dirPrefix.replace(/\/$/, '') + '/' : '') + name;
+                // folders usually have id null and metadata null
+                if (it.id == null && (!it.metadata || it.metadata === null) && !/\.[a-z0-9]+$/i.test(name)) {
+                    await walk(full);
+                } else {
+                    out.push({
+                        objectPath: full,
+                        path: full.indexOf(prefix + '/') === 0 ? full.slice(prefix.length + 1) : name,
+                        name: name,
+                        url: annotationCloudPublicUrl(full),
+                        size: (it.metadata && it.metadata.size) || 0
+                    });
+                }
+            }
+        }
+        await walk(prefix);
+        return out;
+    }
+
+    async function uploadAnnotationFilesToServer(taskId, files) {
+        if (!files || !files.length) return { ok: false, uploaded: 0, error: 'no files' };
+        const uploadToken = String(getAppConfig('ANNOTATION_UPLOAD_TOKEN', '') || '').trim();
+        if (!uploadToken) {
+            return { ok: false, uploaded: 0, total: files.length, errors: ['ANNOTATION_UPLOAD_TOKEN 未配置'] };
+        }
+        let uploaded = 0;
+        const errors = [];
+        for (let i = 0; i < files.length; i++) {
+            const f = files[i];
+            const rel = f.webkitRelativePath || f.name;
+            try {
+                const resp = await fetch('/api/annotation/upload', {
+                    method: 'POST',
+                    headers: {
+                        'X-Task-Id': String(taskId),
+                        'X-Rel-Path': encodeURIComponent(rel),
+                        'X-Upload-Token': uploadToken,
+                        'Content-Type': f.type || 'application/octet-stream'
+                    },
+                    body: f
+                });
+                if (!resp.ok) {
+                    const t = await resp.text();
+                    errors.push(rel + ': HTTP ' + resp.status + ' ' + t);
+                    continue;
+                }
+                const data = await resp.json();
+                if (data && data.ok) uploaded += 1;
+                else errors.push(rel + ': ' + ((data && data.error) || 'fail'));
+            } catch (e) {
+                errors.push(rel + ': ' + (e && e.message ? e.message : String(e)));
+            }
+        }
+        return { ok: uploaded > 0, uploaded: uploaded, total: files.length, errors: errors };
+    }
+
+    async function addAnnotationAsync(modalId) {
         const name = document.getElementById('annoName').value.trim();
         const dataset = document.getElementById('annoDataset').value.trim();
         const type = document.getElementById('annoType').value;
+        const scenario = document.getElementById('annoScenario').value.trim();
+        const owner = document.getElementById('annoOwner').value;
+        const linked = document.getElementById('annoLinkedJob').value.trim();
+        let total = parseInt((document.getElementById('annoTotal') || {}).value, 10);
+        if (isNaN(total) || total < 0) total = 0;
+
+        const meta = (window.__annoUploadMeta && window.__annoUploadMeta[modalId]) || {};
         const fileInput = document.getElementById('datasetFileInput_' + modalId);
-        
+        const folderInput = document.getElementById('datasetFolderInput_' + modalId);
+        const uploadedFiles = meta.files && meta.files.length
+            ? meta.files
+            : (folderInput && folderInput.files && folderInput.files.length
+                ? Array.from(folderInput.files)
+                : (fileInput && fileInput.files ? Array.from(fileInput.files) : []));
+
         if (!name) { alert('请输入任务名称'); return; }
-        
-        let total = 0;
-        if (fileInput && fileInput.files && fileInput.files.length > 0) {
-            total = fileInput.files.length;
+        if (!scenario) { alert('请填写应用场景（可自行输入）'); return; }
+        if (!total && uploadedFiles.length) {
+            total = meta.sampleCount || uploadedFiles.filter(isAnnoImageFile).length || uploadedFiles.length;
         }
-        
+        if (!total) {
+            if (!confirm('样本数量为 0，确定仍要创建？')) return;
+        }
+
+        const today = new Date().toISOString().split('T')[0];
         const newId = annotationData.length > 0 ? Math.max(...annotationData.map(a => a.id)) + 1 : 1;
-        annotationData.push({ 
-            id: newId, 
-            name, 
-            dataset: dataset || '自定义数据集', 
-            type, 
-            progress: 0, 
-            owner: currentUser?.realName || currentUser?.username || '未知', 
-            total: total, 
-            completed: 0,
-            fileCount: total > 0 ? total : undefined
+
+        // 先落库任务，再真实上传文件
+        const fileMeta = uploadedFiles.slice(0, 500).map(function(f) {
+            return {
+                name: f.name,
+                path: f.webkitRelativePath || f.name,
+                size: f.size,
+                type: f.type || ''
+            };
         });
-        localStorage.setItem('annotationData', JSON.stringify(annotationData));
+
+        const task = {
+            id: newId,
+            name,
+            dataset: dataset || meta.folderName || '自定义数据集',
+            type,
+            scenario,
+            status: 'annotating',
+            progress: 0,
+            owner: owner || pickAnnoOwner(0),
+            total,
+            completed: 0,
+            linkedTrainJob: linked,
+            updatedAt: today,
+            notes: meta.method ? ('样本量：' + meta.method) : '',
+            fileCount: uploadedFiles.length,
+            uploadMode: meta.mode || '',
+            files: fileMeta,
+            hasRealFiles: false,
+            storage: ''
+        };
+        annotationData.unshift(task);
+        saveAnnotationData();
+
+        let uploadMsg = '';
+        if (uploadedFiles.length) {
+            // 1) 云端共享（全员可见）优先
+            const cloudRes = await uploadAnnotationFilesToCloud(newId, uploadedFiles);
+            // 2) 本机网关落盘（同一门户实例内可导出）
+            const serverRes = await uploadAnnotationFilesToServer(newId, uploadedFiles);
+            // 3) 浏览器 IndexedDB 仅作本机兜底，不作为团队共享
+            let idbCount = 0;
+            try { idbCount = await saveAnnotationFilesToIdb(newId, uploadedFiles); } catch (e) { console.warn(e); }
+
+            const storageParts = [];
+            if (cloudRes.ok) {
+                task.hasRealFiles = true;
+                task.cloudUploaded = cloudRes.uploaded;
+                task.cloudBucket = cloudRes.bucket || getAnnotationStorageBucket();
+                task.cloudFiles = (cloudRes.paths || []).slice(0, 500);
+                storageParts.push('cloud');
+                uploadMsg += '\n已上传到团队云端：' + cloudRes.uploaded + '/' + cloudRes.total + ' 个（全员可查看/导出）';
+            }
+            if (serverRes.ok) {
+                task.hasRealFiles = true;
+                task.serverUploaded = serverRes.uploaded;
+                storageParts.push('server');
+                uploadMsg += '\n本机网关备份：' + serverRes.uploaded + '/' + serverRes.total + ' 个';
+            }
+            if (!cloudRes.ok && !serverRes.ok && idbCount > 0) {
+                task.hasRealFiles = true;
+                storageParts.push('idb');
+                uploadMsg += '\n仅保存到本浏览器（' + idbCount + ' 个），其他人看不到。请执行 supabase_annotations_storage.sql 开通云端桶后重新上传。';
+                if (cloudRes.errors && cloudRes.errors[0]) uploadMsg += '\n云端失败原因：' + cloudRes.errors[0];
+            } else if (!cloudRes.ok && !serverRes.ok) {
+                uploadMsg += '\n文件未能共享保存。';
+                if (cloudRes.errors && cloudRes.errors[0]) uploadMsg += '\n云端：' + cloudRes.errors[0];
+                if (serverRes.errors && serverRes.errors[0]) uploadMsg += '\n本机：' + serverRes.errors[0];
+            } else if (!cloudRes.ok) {
+                uploadMsg += '\n注意：云端共享未成功，其他成员可能无法下载真实文件。';
+                if (cloudRes.errors && cloudRes.errors[0]) uploadMsg += '\n原因：' + cloudRes.errors[0];
+            }
+            if (idbCount > 0 && (cloudRes.ok || serverRes.ok)) storageParts.push('idb');
+            task.storage = storageParts.join('+') || '';
+            task.updatedAt = today;
+            saveAnnotationData();
+        }
+
+        if (window.__annoUploadMeta) delete window.__annoUploadMeta[modalId];
         document.getElementById(modalId).remove();
         renderAnnotationList();
-        alert('标注任务已创建！' + (total > 0 ? `\n已上传 ${total} 个文件` : ''));
+        alert('标注任务已创建\n应用场景：' + scenario + '\n样本数量：' + total + uploadMsg);
     }
 
     function viewAnnotationDetail(id) {
         const task = annotationData.find(a => a.id === id);
         if (!task) return;
-        alert(`标注任务详情：\n名称：${task.name}\n数据集：${task.dataset}\n类型：${task.type}\n进度：${task.progress}% (${task.completed}/${task.total})\n负责人：${task.owner}`);
+        const st = annotationStatusMeta(deriveAnnotationStatus(task));
+        const overlay = document.getElementById('annotationDetailOverlay');
+        const drawer = document.getElementById('annotationDetailDrawer');
+        const statusEl = document.getElementById('annotationDetailStatus');
+        const titleEl = document.getElementById('annotationDetailTitle');
+        const body = document.getElementById('annotationDetailBody');
+        const actions = document.getElementById('annotationDetailActions');
+        if (!drawer || !body) {
+            alert(`标注任务：${task.name}\n进度：${task.progress}% (${task.completed}/${task.total})\n负责人：${task.owner}`);
+            return;
+        }
+        statusEl.textContent = st.text;
+        statusEl.style.cssText = `display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;margin-bottom:6px;color:${st.color};background:${st.bg};border:1px solid ${st.border};`;
+        titleEl.textContent = task.name;
+        body.innerHTML = `
+            <div style="display:grid;gap:12px;font-size:14px;color:#374151;">
+                <div><div style="font-size:12px;color:#9ca3af;">数据集 / 类型</div><div>${escHtml(task.dataset || '-')} · ${escHtml(task.type || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">场景</div><div>${escHtml(task.scenario || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">负责人</div><div>${escHtml(task.owner || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">进度</div><div>${Number(task.progress)||0}%（${Number(task.completed)||0} / ${Number(task.total)||0}）</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">关联训练任务</div><div>${escHtml(task.linkedTrainJob || '未关联')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">真实文件</div><div>${task.hasRealFiles ? ('已保存（' + escHtml(task.storage || 'local') + '）· ' + (Number(task.fileCount)||0) + ' 个' + (String(task.storage||'').indexOf('cloud') >= 0 ? ' · 全员可下载' : ' · 仅本机可见')) : '未上传真实文件'}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">更新时间</div><div>${escHtml(task.updatedAt || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">备注</div><div style="line-height:1.7;">${escHtml(task.notes || '暂无')}</div></div>
+            </div>`;
+        let act = `<button class="btn btn-secondary" onclick="closeAnnotationDetailDrawer()">关闭</button>`;
+        act += `<button class="btn" onclick="showUpdateAnnotationProgress(${task.id})">更新进度</button>`;
+        act += `<button class="btn btn-secondary" onclick="exportAnnotation(${task.id})">导出 JSON</button>`;
+        if (deriveAnnotationStatus(task) === 'ready') act += `<button class="btn" onclick="pushAnnotationToTraining(${task.id})">登记到训练台账</button>`;
+        if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'leader' || task.owner === currentUser.realName)) {
+            act += `<button class="btn btn-secondary" style="color:#dc2626;" onclick="deleteAnnotationTask(${task.id})">删除</button>`;
+        }
+        actions.innerHTML = act;
+        overlay.style.display = 'block';
+        drawer.style.display = 'block';
     }
 
-    function exportAnnotation(id) {
+    function closeAnnotationDetailDrawer() {
+        const overlay = document.getElementById('annotationDetailOverlay');
+        const drawer = document.getElementById('annotationDetailDrawer');
+        if (overlay) overlay.style.display = 'none';
+        if (drawer) drawer.style.display = 'none';
+    }
+
+    function showUpdateAnnotationProgress(id) {
         const task = annotationData.find(a => a.id === id);
         if (!task) return;
-        alert(`正在导出标注结果：${task.name}\n\n格式：JSON/CSV\n包含：${task.completed} 条标注数据\n\n导出链接已生成`);
+        const modalId = 'annoProgress_' + Date.now();
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(15,23,42,0.45);z-index:2100;display:flex;justify-content:center;align-items:center;padding:16px;';
+        modal.innerHTML = `<div style="background:#fff;padding:24px;border-radius:16px;width:100%;max-width:420px;">
+            <h3 style="margin:0 0 6px;font-size:17px;">更新标注进度</h3>
+            <p style="margin:0 0 14px;font-size:12px;color:#6b7280;">${escHtml(task.name)}</p>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">已完成数量</label>
+                <input type="number" id="annoUpCompleted" min="0" value="${Number(task.completed)||0}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">样本总量</label>
+                <input type="number" id="annoUpTotal" min="0" value="${Number(task.total)||0}" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;margin-bottom:5px;font-size:13px;">状态</label>
+                <select id="annoUpStatus" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+                    <option value="annotating">标注中</option>
+                    <option value="review">待审核</option>
+                    <option value="ready">可训练</option>
+                </select>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
+                <button class="btn" onclick="applyAnnotationProgress(${id}, '${modalId}')">保存</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+        document.getElementById('annoUpStatus').value = deriveAnnotationStatus(task);
+    }
+
+    function applyAnnotationProgress(id, modalId) {
+        const task = annotationData.find(a => a.id === id);
+        if (!task) return;
+        let completed = parseInt(document.getElementById('annoUpCompleted').value, 10);
+        let total = parseInt(document.getElementById('annoUpTotal').value, 10);
+        const status = document.getElementById('annoUpStatus').value;
+        if (isNaN(completed) || completed < 0) completed = 0;
+        if (isNaN(total) || total < 0) total = 0;
+        if (completed > total && total > 0) completed = total;
+        task.completed = completed;
+        task.total = total;
+        task.progress = total > 0 ? Math.round(completed / total * 100) : (status === 'ready' ? 100 : Number(task.progress) || 0);
+        if (status === 'ready') task.progress = 100;
+        task.status = status;
+        task.updatedAt = new Date().toISOString().split('T')[0];
+        saveAnnotationData();
+        document.getElementById(modalId).remove();
+        renderAnnotationList();
+        viewAnnotationDetail(id);
+    }
+
+    function deleteAnnotationTask(id) {
+        if (!confirm('确认删除该标注任务？')) return;
+        annotationData = annotationData.filter(a => a.id !== id);
+        saveAnnotationData();
+        closeAnnotationDetailDrawer();
+        renderAnnotationList();
+    }
+
+    function pushAnnotationToTraining(id) {
+        const task = annotationData.find(a => a.id === id);
+        if (!task) return;
+        if (typeof modelTrainingData === 'undefined' || !Array.isArray(modelTrainingData)) {
+            alert('训练台账模块未就绪');
+            return;
+        }
+        const jobId = task.linkedTrainJob || ('anno-' + task.id);
+        const existing = modelTrainingData.find(m => String(m.jobId || '') === String(jobId));
+        if (existing) {
+            alert('训练台账中已存在任务号：' + jobId + '\n请到「模型训练台账」查看');
+            if (typeof showModule === 'function') showModule('model_training');
+            return;
+        }
+        const today = new Date().toISOString().split('T')[0];
+        const newId = modelTrainingData.length > 0 ? Math.max(...modelTrainingData.map(m => Number(m.id) || 0)) + 1 : 1;
+        modelTrainingData.unshift({
+            id: newId,
+            name: task.name.replace(/标注$/, '') + '训练',
+            code: jobId,
+            jobId: jobId,
+            type: task.type === '目标检测' ? 'YOLOv8' : (task.type === '图像分类' ? 'ResNet' : 'Qwen3-VL'),
+            scenario: task.scenario || '城市安全监测',
+            env: 'local',
+            server: '本机-待指定',
+            owner: task.owner || pickAnnoOwner(0),
+            dataset: task.dataset || '',
+            status: 'pending',
+            metric: '—',
+            progress: 0,
+            logUrl: '',
+            weightPath: '',
+            description: '由标注任务「' + task.name + '」登记，样本 ' + (task.completed || 0) + '/' + (task.total || 0),
+            createdAt: today,
+            updatedAt: today,
+            syncSource: 'annotation'
+        });
+        if (typeof saveModelTrainingData === 'function') saveModelTrainingData();
+        else localStorage.setItem('modelTrainingData', JSON.stringify(modelTrainingData));
+        alert('已登记到模型训练台账（待启动）');
+        if (typeof showModule === 'function') showModule('model_training');
+    }
+
+    async function exportAnnotation(id) {
+        const task = annotationData.find(a => a.id === id);
+        if (!task) return;
+
+        // 1) 优先从团队云端导出（全员可用）
+        try {
+            let cloudFiles = Array.isArray(task.cloudFiles) ? task.cloudFiles.slice() : [];
+            if (!cloudFiles.length) {
+                cloudFiles = await listAnnotationFilesFromCloud(id);
+            }
+            if (cloudFiles && cloudFiles.length) {
+                if (cloudFiles.length === 1) {
+                    const one = cloudFiles[0];
+                    const url = one.url || annotationCloudPublicUrl(one.objectPath);
+                    const resp = await fetch(url, { cache: 'no-store' });
+                    if (resp.ok) {
+                        const blob = await resp.blob();
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = one.name || one.path || 'export.bin';
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                        return;
+                    }
+                } else {
+                    if (!confirm('将从团队云端下载 ' + cloudFiles.length + ' 个真实文件。继续？')) return;
+                    for (let i = 0; i < cloudFiles.length; i++) {
+                        const one = cloudFiles[i];
+                        const url = one.url || annotationCloudPublicUrl(one.objectPath);
+                        try {
+                            const resp = await fetch(url, { cache: 'no-store' });
+                            if (!resp.ok) continue;
+                            const blob = await resp.blob();
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = String(one.path || one.name || ('file-' + i)).replace(/[\\/]/g, '_');
+                            a.click();
+                            URL.revokeObjectURL(a.href);
+                            await new Promise(function(r) { setTimeout(r, 120); });
+                        } catch (e) { console.warn(e); }
+                    }
+                    return;
+                }
+            }
+        } catch (e) { console.warn(e); }
+
+        // 2) 本机网关 ZIP
+        try {
+            const resp = await fetch('/api/annotation/export?taskId=' + encodeURIComponent(String(id)), { cache: 'no-store' });
+            if (resp.ok) {
+                const blob = await resp.blob();
+                const ct = resp.headers.get('Content-Type') || '';
+                if (ct.indexOf('application/json') !== -1) {
+                    // continue
+                } else if (ct.indexOf('application/zip') !== -1 || blob.size > 64) {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = (task.dataset || task.name || 'annotation') + '-files.zip';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    return;
+                }
+            }
+        } catch (e) { /* fall through */ }
+
+        // 3) IndexedDB 本机兜底
+        try {
+            const rows = await listAnnotationFilesFromIdb(id);
+            if (rows && rows.length) {
+                if (rows.length === 1) {
+                    const row = rows[0];
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(row.blob);
+                    a.download = row.name || row.path || 'export.bin';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    return;
+                }
+                if (!confirm('将下载本浏览器本地的 ' + rows.length + ' 个文件（非团队云端）。继续？')) return;
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(row.blob);
+                    a.download = (row.path || row.name || ('file-' + i)).replace(/[\\/]/g, '_');
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    await new Promise(function(r) { setTimeout(r, 120); });
+                }
+                return;
+            }
+        } catch (e) {
+            console.warn(e);
+        }
+
+        alert('未找到该任务的团队共享文件。\n请重新上传数据集，并确认已执行 supabase_annotations_storage.sql 开通云端桶。');
     }
 
     // 智能对话问答

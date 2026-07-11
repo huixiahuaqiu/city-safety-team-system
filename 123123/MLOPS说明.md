@@ -16,18 +16,18 @@ cd 123123
 python start_web.py
 ```
 
-默认 Token：`city-safety-mlops`（可用环境变量 `MLOPS_TOKEN` 覆盖）
+启动前必须配置 `MLOPS_TOKEN`，不要把真实 Token 提交到 Git。推荐复制 `.env.example` 为 `.env` 后填写。
 
 ## 训练脚本上报
 
 ```bash
-python mlops_report.py --job-id exp-crack-0612 --name 结构裂缝检测-YOLOv8 --status training --progress 42 --metric "mAP 0.81" --env local --server 本机-RTX4090 --log-url http://127.0.0.1:6006
+python mlops_report.py --job-id exp-crack-0612 --name 结构裂缝检测-YOLOv8 --status training --progress 42 --metric "mAP 0.81" --env local --server 本机-RTX4090 --log-url http://127.0.0.1:6006 --token "$MLOPS_TOKEN"
 ```
 
 训练结束：
 
 ```bash
-python mlops_report.py --job-id exp-crack-0612 --status completed --progress 100 --metric "mAP 94.6%" --weight-path D:/experiments/crack/best.pt
+python mlops_report.py --job-id exp-crack-0612 --status completed --progress 100 --metric "mAP 94.6%" --weight-path D:/experiments/crack/best.pt --token "$MLOPS_TOKEN"
 ```
 
 代码内调用：
@@ -44,7 +44,7 @@ report(job_id='exp-1', name='裂缝检测', status='training', progress=50, env=
 ## 接口
 
 - `POST /api/mlops/report`  
-  Header: `X-MLOps-Token: city-safety-mlops`  
+  Header: `X-MLOps-Token: <MLOPS_TOKEN>`  
   Body JSON: `jobId`, `name`, `status`, `progress`, `metric`, `env`, `server`, `logUrl`, `weightPath`, ...
 - `GET /api/mlops/jobs`
 - `GET /api/mlops/health`

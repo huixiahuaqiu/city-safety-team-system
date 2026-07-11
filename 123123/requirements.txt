@@ -1,0 +1,2 @@
+# Runtime dependencies for the Python local gateway.
+# Current gateway uses only the Python standard library.

@@ -81,6 +81,11 @@ temp/
 *.tmp
 *.swp
 
+# ---- 标注真实上传目录 ----
+123123/uploads/
+123123/logs/
+123123/mlops_store.json
+
 # ---- 数据库文件（本地开发用） ----
 *.sqlite
 *.sqlite3
@@ -90,5 +95,6 @@ temp/
 *.backup
 *.orig
 
-# local secrets
-1
+# ---- 本地敏感配置 ----
+123123/.env
+123123/.env.local
