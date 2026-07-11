@@ -306,6 +306,98 @@
             50% { background-position: 100% 50%; }
         }
         
+        .global-search {
+            position: relative;
+            z-index: 2;
+            flex: 1;
+            max-width: 460px;
+            margin: 0 24px;
+        }
+        .global-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 13px;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        #globalSearchInput {
+            width: 100%;
+            padding: 8px 12px 8px 34px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.28);
+            background: rgba(255,255,255,0.16);
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            transition: background 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
+        }
+        #globalSearchInput::placeholder { color: rgba(255,255,255,0.72); }
+        #globalSearchInput:focus {
+            background: rgba(255,255,255,0.96);
+            color: #1f2937;
+            border-color: #fff;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+        }
+        #globalSearchInput:focus::placeholder { color: #9ca3af; }
+        .global-search-panel {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            max-height: 420px;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+            padding: 6px;
+            z-index: 200;
+            animation: fadeIn 0.18s ease;
+        }
+        .global-search-panel.show { display: block; }
+        .gs-item {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 9px 12px;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .gs-item:hover, .gs-item.active { background: #eef2ff; }
+        .gs-item .gs-module {
+            font-size: 11px;
+            color: #6366f1;
+            font-weight: 700;
+        }
+        .gs-item .gs-title {
+            font-size: 13px;
+            color: #111827;
+            font-weight: 600;
+            margin: 2px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .gs-item .gs-snippet {
+            font-size: 12px;
+            color: #6b7280;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .gs-empty { padding: 16px; text-align: center; color: #9ca3af; font-size: 13px; }
+        @media (max-width: 900px) {
+            .global-search { max-width: none; margin: 8px 0; flex-basis: 100%; order: 3; }
+            .top-nav { flex-wrap: wrap; }
+        }
+
         .top-nav .logo {
             display: flex;
             align-items: center;
@@ -573,6 +665,34 @@
             border-bottom: 1px solid var(--line);
             padding-bottom: 12px;
             letter-spacing: 0.01em;
+        }
+
+        /* 统一表格观感与行悬浮动效 */
+        .data-table { border-collapse: collapse; }
+        .data-table thead th {
+            background: linear-gradient(180deg, #f5f3ff, #eef2ff);
+            color: #4c1d95;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 2px solid #e0e7ff;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .data-table tbody td {
+            padding: 11px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            color: #1f2937;
+        }
+        .data-table tbody tr {
+            transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+        }
+        .data-table tbody tr:hover {
+            background: #f8f7ff;
+            box-shadow: inset 3px 0 0 #7c3aed;
         }
         
         /* 按钮样式 */
@@ -2485,6 +2605,12 @@
             <div class="logo">
                 <div style="font-size: 24px; font-weight: bold;">🔬</div>
                 <div class="logo-text">城市安全数智创新团队管理系统</div>
+            </div>
+            <div class="global-search" id="globalSearchWrap">
+                <span class="global-search-icon">🔍</span>
+                <input type="text" id="globalSearchInput" placeholder="全局搜索：任务 / 周报 / 训练 / 文献 / 项目 / 文件…" autocomplete="off"
+                    oninput="onGlobalSearchInput()" onkeydown="onGlobalSearchKeyDown(event)" onfocus="onGlobalSearchInput()">
+                <div class="global-search-panel" id="globalSearchPanel"></div>
             </div>
             <div class="nav-links">
                 <a href="#" onclick="showModule('about')">团队介绍</a>
@@ -4660,6 +4786,7 @@
                             <button class="btn btn-secondary" onclick="document.getElementById('literatureCsvInput').click()">📥 导入CSV</button>
                             <button class="btn btn-secondary" onclick="exportLiteratureCsv()">📤 导出CSV</button>
                             <button class="btn" onclick="compareSelectedLiterature()">🔄 对比选中文献</button>
+                            <button class="btn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);" onclick="aiCompareSelectedLiterature()">✨ AI 一键对比</button>
                         </div>
                         <input type="file" id="literatureCsvInput" accept=".csv" style="display:none;" onchange="importLiteratureCsv(event)">
                     </div>
@@ -6611,7 +6738,7 @@
                     <p>系统数据备份、恢复管理</p>
                 </div>
                 
-                <div class="action-bar" style="margin-bottom: 16px; display: flex; gap: 12px;">
+                <div class="action-bar" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
                     <button class="btn btn-primary" onclick="handleFullBackup()" id="fullBackupBtn">
                         <span>📥</span> 一键全量备份
                     </button>
@@ -6621,6 +6748,16 @@
                     <button class="btn btn-warning" onclick="openAutoBackupConfig()">
                         <span>⚙️</span> 自动备份设置
                     </button>
+                    <button class="btn" style="background:linear-gradient(135deg,#0891b2,#0e7490);" onclick="exportAllDataToFile()">
+                        <span>⬇️</span> 导出为文件
+                    </button>
+                    <button class="btn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);" onclick="document.getElementById('importDataFileInput').click()">
+                        <span>⬆️</span> 从文件恢复
+                    </button>
+                    <input type="file" id="importDataFileInput" accept="application/json,.json" style="display:none;" onchange="importAllDataFromFile(event)">
+                </div>
+                <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#075985;line-height:1.6;">
+                    「导出为文件」会把本机全部业务数据打包成 JSON 下载（<strong>不含 API 密钥等敏感项</strong>），可用于备份或换机迁移；「从文件恢复」会用备份覆盖当前数据并刷新页面，操作前建议先导出一份当前数据。
                 </div>
 
                 <div class="card" style="overflow-x: auto;">
@@ -25732,6 +25869,111 @@ ${ocrText}`
         }).slice(0, k);
     }
 
+    // ===== 顶部全局搜索 =====
+    const GLOBAL_SEARCH_MODULE_MAP = {
+        '知识库': 'chat',
+        '制度流程': 'chat',
+        '科研任务': 'task_management',
+        '团队周报': 'weekly_report',
+        '模型训练': 'model_training',
+        'AI数据标注': 'data_annotation',
+        '文献资料': 'literature_library',
+        '文献对比': 'literature_analysis',
+        '数据集资源': 'dataset_library',
+        '项目报告': 'project_report',
+        '共享文件': 'shared_files',
+        '纵向项目': 'longitudinal_project',
+        '横向项目': 'horizontal_project',
+        '校级项目': 'school_project',
+        '会议安排': 'meeting_management',
+        '通知公告': 'notice_publish',
+        '团队新闻': 'news_management'
+    };
+    let globalSearchResults = [];
+    let globalSearchActiveIndex = -1;
+
+    function onGlobalSearchInput() {
+        const input = document.getElementById('globalSearchInput');
+        const panel = document.getElementById('globalSearchPanel');
+        if (!input || !panel) return;
+        const q = input.value.trim();
+        if (!q) { closeGlobalSearch(); return; }
+        globalSearchResults = retrieveGlobalTopK(q, 10);
+        globalSearchActiveIndex = -1;
+        if (!globalSearchResults.length) {
+            panel.innerHTML = '<div class="gs-empty">未找到与「' + escHtml(q) + '」相关的内容</div>';
+            panel.classList.add('show');
+            return;
+        }
+        panel.innerHTML = globalSearchResults.map(function(h, i) {
+            const snippet = String(h.item.content || '').replace(/\s+/g, ' ').slice(0, 80);
+            return '<button type="button" class="gs-item" data-idx="' + i + '" onclick="jumpGlobalSearch(' + i + ')">' +
+                '<span class="gs-module">' + escHtml(h.item.module) + (h.item.ref ? ' · ' + escHtml(h.item.ref) : '') + '</span>' +
+                '<div class="gs-title">' + escHtml(h.item.title || '(无标题)') + '</div>' +
+                '<div class="gs-snippet">' + escHtml(snippet) + '</div>' +
+            '</button>';
+        }).join('');
+        panel.classList.add('show');
+    }
+
+    function onGlobalSearchKeyDown(event) {
+        const panel = document.getElementById('globalSearchPanel');
+        if (!panel || !panel.classList.contains('show')) {
+            if (event.key === 'Enter') onGlobalSearchInput();
+            return;
+        }
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            globalSearchActiveIndex = Math.min(globalSearchActiveIndex + 1, globalSearchResults.length - 1);
+            highlightGlobalSearch();
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            globalSearchActiveIndex = Math.max(globalSearchActiveIndex - 1, 0);
+            highlightGlobalSearch();
+        } else if (event.key === 'Enter') {
+            event.preventDefault();
+            jumpGlobalSearch(globalSearchActiveIndex >= 0 ? globalSearchActiveIndex : 0);
+        } else if (event.key === 'Escape') {
+            closeGlobalSearch();
+        }
+    }
+
+    function highlightGlobalSearch() {
+        const panel = document.getElementById('globalSearchPanel');
+        if (!panel) return;
+        Array.prototype.forEach.call(panel.querySelectorAll('.gs-item'), function(el) {
+            el.classList.toggle('active', Number(el.getAttribute('data-idx')) === globalSearchActiveIndex);
+        });
+        const active = panel.querySelector('.gs-item.active');
+        if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
+    }
+
+    function jumpGlobalSearch(idx) {
+        const hit = globalSearchResults[idx];
+        if (!hit) return;
+        const moduleId = GLOBAL_SEARCH_MODULE_MAP[hit.item.module] || 'home';
+        closeGlobalSearch();
+        const input = document.getElementById('globalSearchInput');
+        if (input) input.blur();
+        if (typeof showModule === 'function') showModule(moduleId);
+        if (moduleId === 'chat') {
+            const box = document.getElementById('knowledgeSearch');
+            if (box) { box.value = hit.item.title || ''; if (typeof renderKnowledgeList === 'function') renderKnowledgeList(); }
+        }
+    }
+
+    function closeGlobalSearch() {
+        const panel = document.getElementById('globalSearchPanel');
+        if (panel) { panel.classList.remove('show'); panel.innerHTML = ''; }
+        globalSearchResults = [];
+        globalSearchActiveIndex = -1;
+    }
+
+    document.addEventListener('click', function(e) {
+        const wrap = document.getElementById('globalSearchWrap');
+        if (wrap && !wrap.contains(e.target)) closeGlobalSearch();
+    });
+
     function buildLocalRagAnswer(query, hits) {
         if (!hits || !hits.length) {
             return {
@@ -26365,8 +26607,85 @@ ${ocrText}`
         });
         
         html += `</div>`;
-        
+
+        html += `<div id="literatureAiCompareBlock" style="margin-top:20px;"></div>`;
+
         result.innerHTML = html;
+    }
+
+    async function aiCompareSelectedLiterature() {
+        if (selectedLiteratures.length < 2) {
+            alert('请至少选择2篇文献进行 AI 对比');
+            return;
+        }
+        const apiKey = (typeof getChatApiKey === 'function' ? getChatApiKey() : (localStorage.getItem('openaiApiKey') || ''));
+        if (!apiKey) {
+            alert('未配置百炼 API 密钥，请先到「智能工具 → OpenAI入口」保存密钥后再试。');
+            return;
+        }
+        // 先渲染基础对比表，保证有承载容器
+        compareSelectedLiterature();
+        const block = document.getElementById('literatureAiCompareBlock');
+        if (block) {
+            block.innerHTML = '<div style="border:1px solid #e0e7ff;border-radius:12px;padding:16px;background:linear-gradient(180deg,#faf5ff,#fff);">' +
+                '<div style="font-weight:700;color:#4c1d95;margin-bottom:10px;">✨ AI 对比分析</div>' +
+                '<div class="team-chat-typing" aria-label="正在分析"><span></span><span></span><span></span></div></div>';
+        }
+        const selected = compareLiteratureData.filter(function(l) { return selectedLiteratures.includes(l.id); });
+        const listText = selected.map(function(l, i) {
+            return (i + 1) + '. 《' + (l.title || '') + '》\n作者：' + (l.author || '') + '；期刊：' + (l.journal || '') + '；年份：' + (l.year || '') + '；领域：' + (l.field || '') +
+                '\n关键词：' + ((l.keywords || []).join('、')) + '\n摘要：' + (l.summary || '');
+        }).join('\n\n');
+        const messages = [
+            { role: 'system', content: '你是科研文献分析助手。请基于给定文献信息做结构化对比，输出：1) 研究问题与目标差异；2) 方法/技术路线对比；3) 创新点与贡献；4) 局限与适用场景；5) 一句话总体结论。用简体中文，条理清晰，不要编造未提供的信息。' },
+            { role: 'user', content: '请对比以下 ' + selected.length + ' 篇文献：\n\n' + listText }
+        ];
+        try {
+            const endpoint = (typeof API_PROXY !== 'undefined' && API_PROXY ? String(API_PROXY).replace(/\/$/, '') : '') + '/api/aliyun';
+            const resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    apiKey: apiKey,
+                    model: (document.getElementById('openaiModel') && document.getElementById('openaiModel').value) || 'qwen-plus',
+                    messages: messages,
+                    temperature: 0.3,
+                    max_tokens: 1800
+                })
+            });
+            const text = await resp.text();
+            if (!resp.ok) throw new Error('HTTP ' + resp.status + ' ' + text.slice(0, 160));
+            const data = JSON.parse(text);
+            const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+            if (!content) throw new Error('模型无返回内容');
+            const b2 = document.getElementById('literatureAiCompareBlock');
+            if (b2) {
+                b2.innerHTML = '<div style="border:1px solid #e0e7ff;border-radius:12px;padding:16px;background:linear-gradient(180deg,#faf5ff,#fff);">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+                    '<div style="font-weight:700;color:#4c1d95;">✨ AI 对比分析</div>' +
+                    '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="copyAiCompareResult(this)">复制</button></div>' +
+                    '<div style="font-size:13px;line-height:1.8;color:#1f2937;white-space:pre-wrap;">' + escHtml(String(content).trim()) + '</div></div>';
+            }
+            if (typeof recordOperationLog === 'function') {
+                recordOperationLog('文献对比', 'AI对比', 'AI 对比 ' + selected.length + ' 篇文献', { count: selected.length }, { success: true }, 1, '', 0);
+            }
+        } catch (e) {
+            const b3 = document.getElementById('literatureAiCompareBlock');
+            if (b3) {
+                b3.innerHTML = '<div style="border:1px solid #fecaca;border-radius:12px;padding:16px;background:#fef2f2;color:#b91c1c;font-size:13px;">AI 对比失败：' + escHtml(e && e.message ? e.message : String(e)) + '<br>请确认本地代理已启动（start_web.py）且密钥有效。</div>';
+            }
+        }
+    }
+
+    function copyAiCompareResult(btn) {
+        const box = btn && btn.closest ? btn.closest('div').parentNode.querySelector('div[style*="white-space:pre-wrap"]') : null;
+        const text = box ? box.textContent : '';
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+                const old = btn.textContent; btn.textContent = '已复制'; setTimeout(function() { btn.textContent = old; }, 1500);
+            });
+        }
     }
 
     // ===== 文档智能解析 =====
@@ -26963,6 +27282,104 @@ ${ocrText}`
         });
         
         tableBody.innerHTML = html;
+    }
+
+    // ===== 全量数据导出 / 导入（真实文件） =====
+    const BACKUP_SENSITIVE_KEYS = ['openaiApiKey', 'aliyunApiKey', 'apiKey', 'dashscopeApiKey'];
+
+    function exportAllDataToFile() {
+        try {
+            const payload = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key) continue;
+                if (BACKUP_SENSITIVE_KEYS.indexOf(key) >= 0) continue;
+                payload[key] = localStorage.getItem(key);
+            }
+            const meta = {
+                __backupType: 'city-safety-team-system',
+                __version: 1,
+                __exportedAt: new Date().toISOString(),
+                __exportedBy: (currentUser && (currentUser.realName || currentUser.username)) || 'unknown',
+                __keyCount: Object.keys(payload).length
+            };
+            const blob = new Blob([JSON.stringify({ meta: meta, data: payload }, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const ts = new Date().toISOString().replace(/[:T]/g, '-').split('.')[0];
+            a.href = url;
+            a.download = 'team-backup-' + ts + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+            if (typeof recordOperationLog === 'function') {
+                recordOperationLog('数据备份', '导出', '导出全量数据文件（' + meta.__keyCount + ' 项，已排除密钥）', { keyCount: meta.__keyCount }, { success: true }, 1, '', 0);
+            }
+            alert('已导出 ' + meta.__keyCount + ' 项数据（不含 API 密钥）。请妥善保存备份文件。');
+        } catch (e) {
+            alert('导出失败：' + (e && e.message ? e.message : e));
+        }
+    }
+
+    function importAllDataFromFile(event) {
+        const input = event && event.target;
+        const file = input && input.files && input.files[0];
+        if (!file) return;
+        if (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'leader') {
+            alert('仅管理员或组长可执行数据恢复');
+            if (input) input.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function() {
+            let parsed;
+            try {
+                parsed = JSON.parse(String(reader.result || ''));
+            } catch (e) {
+                alert('导入失败：文件不是有效的 JSON');
+                if (input) input.value = '';
+                return;
+            }
+            const data = parsed && parsed.data ? parsed.data : parsed;
+            if (!data || typeof data !== 'object' || Array.isArray(data)) {
+                alert('导入失败：备份文件格式不正确');
+                if (input) input.value = '';
+                return;
+            }
+            const keys = Object.keys(data);
+            if (!keys.length) {
+                alert('导入失败：备份文件为空');
+                if (input) input.value = '';
+                return;
+            }
+            const exportedAt = parsed && parsed.meta && parsed.meta.__exportedAt ? ('\n备份时间：' + parsed.meta.__exportedAt) : '';
+            if (!confirm('确定用该备份覆盖当前数据吗？\n将写入 ' + keys.length + ' 项数据' + exportedAt + '\n\n此操作不可撤销，建议先“导出为文件”留存当前数据。')) {
+                if (input) input.value = '';
+                return;
+            }
+            try {
+                keys.forEach(function(key) {
+                    if (BACKUP_SENSITIVE_KEYS.indexOf(key) >= 0) return;
+                    const val = data[key];
+                    localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+                });
+                if (typeof recordOperationLog === 'function') {
+                    recordOperationLog('数据备份', '恢复', '从文件恢复全量数据（' + keys.length + ' 项）', { keyCount: keys.length, fileName: file.name }, { success: true }, 1, '', 0);
+                }
+                alert('恢复成功，写入 ' + keys.length + ' 项数据。页面将刷新以加载新数据。');
+                location.reload();
+            } catch (e) {
+                alert('导入失败：' + (e && e.message ? e.message : e));
+            } finally {
+                if (input) input.value = '';
+            }
+        };
+        reader.onerror = function() {
+            alert('导入失败：文件读取错误');
+            if (input) input.value = '';
+        };
+        reader.readAsText(file);
     }
 
     function prevBackupPage() {
