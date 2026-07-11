@@ -5080,7 +5080,15 @@
                     <div style="padding: 22px;">
                         <div class="form-group">
                             <label>周报周期 <span style="color:red;">*</span></label>
-                            <input type="text" id="wrWeekRange" readonly style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; background:#f9fafb; color:#374151;">
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <input type="date" id="wrWeekStart" style="flex:1; min-width:140px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; background:#fff; color:#374151;">
+                                <span style="color:#9ca3af; font-size:13px;">至</span>
+                                <input type="date" id="wrWeekEnd" style="flex:1; min-width:140px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; background:#fff; color:#374151;">
+                            </div>
+                            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                                <button type="button" class="btn btn-secondary" onclick="setWeeklyReportPeriodPreset('this')" style="padding:4px 10px;font-size:12px;">本周</button>
+                                <button type="button" class="btn btn-secondary" onclick="setWeeklyReportPeriodPreset('last')" style="padding:4px 10px;font-size:12px;">上周</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>本周工作内容 <span style="color:red;">*</span></label>
@@ -17508,13 +17516,13 @@ ${ocrText}`
         var start = function() {
             accountData = JSON.parse(localStorage.getItem('accountData') || 'null');
 
-            // 确保 5 个默认账号始终存在（兼容旧缓存）
+            // 确保 5 个默认账号始终存在（兼容旧缓存）；姓名与团队真实成员对齐
             const defaults = [
-                { id: 1, studentId: 'admin', realName: '张教授', role: 'admin', group: '', grade: '', research: '城市安全智能监控', phone: '13800001001', email: 'zhang@university.edu.cn', mustChangePwd: false, firstLogin: false },
-                { id: 2, studentId: 'leader01', realName: '王师兄', role: 'leader', group: '第一小组', grade: '2024级', research: '多源数据融合分析', phone: '13800001002', email: 'wang@university.edu.cn', mustChangePwd: true, firstLogin: true },
-                { id: 3, studentId: 'stu001', realName: '李明', role: 'student', group: '第一小组', grade: '2025级', research: '深度学习目标检测', phone: '13800001003', email: 'liming@university.edu.cn', mustChangePwd: true, firstLogin: true },
-                { id: 4, studentId: 'stu002', realName: '赵芳', role: 'student', group: '第二小组', grade: '2025级', research: '自然语言处理', phone: '13800001004', email: 'zhaofang@university.edu.cn', mustChangePwd: true, firstLogin: true },
-                { id: 5, studentId: 'visitor01', realName: '陈交换生', role: 'visitor', group: '', grade: '', research: '', phone: '', email: 'chen@other.edu.cn', mustChangePwd: true, firstLogin: true }
+                { id: 1, studentId: 'admin', realName: '王丽萍', role: 'admin', group: '', grade: '', research: '城市安全、智能运维、结构抗震', phone: '13996488662', email: 'wangliping98@163.com', mustChangePwd: false, firstLogin: false },
+                { id: 2, studentId: 'leader01', realName: '王明', role: 'leader', group: '第一小组', grade: '2022级', research: '自然语言处理、知识图谱', phone: '13800002001', email: 'wangm@university.edu.cn', mustChangePwd: true, firstLogin: true },
+                { id: 3, studentId: 'stu001', realName: '陈浩', role: 'student', group: '第一小组', grade: '2023级', research: '深度学习、图像分割', phone: '13800003001', email: 'chenh@university.edu.cn', mustChangePwd: true, firstLogin: true },
+                { id: 4, studentId: 'stu002', realName: '赵芳', role: 'student', group: '第二小组', grade: '2022级', research: '机器学习、数据挖掘', phone: '13800002002', email: 'zhaof@university.edu.cn', mustChangePwd: true, firstLogin: true },
+                { id: 5, studentId: 'visitor01', realName: '访客', role: 'visitor', group: '', grade: '', research: '', phone: '', email: 'visitor@example.com', mustChangePwd: true, firstLogin: true }
             ];
 
             if (!accountData) { accountData = []; }
@@ -17531,6 +17539,7 @@ ${ocrText}`
                     changed = true;
                 }
             });
+            if (migrateDemoAccountNames()) changed = true;
             if (changed) saveAccountData();
             loginLogData = JSON.parse(localStorage.getItem('loginLogData') || '[]');
             permissionMatrix = JSON.parse(localStorage.getItem('permissionMatrix') || 'null');
@@ -17579,6 +17588,33 @@ ${ocrText}`
         if (changed) savePermissionData();
     }
 
+    /** 将历史演示姓名（张教授等）替换为团队真实成员，并回写云端 */
+    function migrateDemoAccountNames() {
+        if (!Array.isArray(accountData) || !accountData.length) return false;
+        const demoNameFix = {
+            '张教授': { realName: '王丽萍', research: '城市安全、智能运维、结构抗震', phone: '13996488662', email: 'wangliping98@163.com' },
+            '李副教授': { realName: '罗文文', research: '工程结构抗震与城市灾害风险研究', phone: '18523539873', email: 'luowenwen326@163.com' },
+            '王师兄': { realName: '王明', research: '自然语言处理、知识图谱', phone: '13800002001', email: 'wangm@university.edu.cn' },
+            '李明': { realName: '陈浩', research: '深度学习、图像分割', phone: '13800003001', email: 'chenh@university.edu.cn' },
+            '陈交换生': { realName: '访客', research: '', phone: '', email: 'visitor@example.com' }
+        };
+        let changed = false;
+        accountData.forEach(function(a) {
+            let fix = demoNameFix[a.realName];
+            // admin 旧邮箱也强制纠正
+            if (!fix && a.studentId === 'admin' && (a.realName === '张教授' || a.email === 'zhang@university.edu.cn')) {
+                fix = demoNameFix['张教授'];
+            }
+            if (!fix) return;
+            a.realName = fix.realName;
+            if (fix.research) a.research = fix.research;
+            if (fix.phone) a.phone = fix.phone;
+            if (fix.email) a.email = fix.email;
+            changed = true;
+        });
+        return changed;
+    }
+
     function saveAccountData() {
         localStorage.setItem('accountData', JSON.stringify(accountData));
         try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
@@ -17594,6 +17630,7 @@ ${ocrText}`
             var rawAcc = localStorage.getItem('accountData');
             if (rawAcc) accountData = JSON.parse(rawAcc);
         } catch (e) {}
+        if (migrateDemoAccountNames()) saveAccountData();
         try {
             var rawPerm = localStorage.getItem('permissionMatrix');
             if (rawPerm) {
@@ -19331,14 +19368,53 @@ ${ocrText}`
     }
 
     function getCurrentWeekRangeText() {
+        const range = getWeekRangeByOffset(0);
+        return range.start + ' 至 ' + range.end;
+    }
+
+    function formatDateYMD(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+    }
+
+    /** offsetWeeks: 0=本周, -1=上周 */
+    function getWeekRangeByOffset(offsetWeeks) {
         const now = new Date();
         const day = now.getDay() || 7;
-        const start = new Date(now);
-        start.setDate(now.getDate() - day + 1);
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day + 1 + (offsetWeeks || 0) * 7);
         const end = new Date(start);
         end.setDate(start.getDate() + 6);
-        const fmt = d => d.toISOString().slice(0, 10);
-        return fmt(start) + ' 至 ' + fmt(end);
+        return { start: formatDateYMD(start), end: formatDateYMD(end) };
+    }
+
+    function parseWeekRangeText(text) {
+        const raw = String(text || '').trim();
+        const m = raw.match(/(\d{4}-\d{2}-\d{2})\s*(?:至|-|~)\s*(\d{4}-\d{2}-\d{2})/);
+        if (m) return { start: m[1], end: m[2] };
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { start: raw, end: raw };
+        return getWeekRangeByOffset(0);
+    }
+
+    function setWeeklyReportPeriodInputs(start, end) {
+        const s = document.getElementById('wrWeekStart');
+        const e = document.getElementById('wrWeekEnd');
+        if (s) s.value = start || '';
+        if (e) e.value = end || '';
+    }
+
+    function getWeeklyReportPeriodFromInputs() {
+        const start = (document.getElementById('wrWeekStart') || {}).value || '';
+        const end = (document.getElementById('wrWeekEnd') || {}).value || '';
+        if (!start || !end) return '';
+        if (start > end) return '';
+        return start + ' 至 ' + end;
+    }
+
+    function setWeeklyReportPeriodPreset(which) {
+        const range = getWeekRangeByOffset(which === 'last' ? -1 : 0);
+        setWeeklyReportPeriodInputs(range.start, range.end);
     }
 
     function buildRealTeamDefaultWeeklyReports() {
@@ -19565,8 +19641,9 @@ ${ocrText}`
         editingWeeklyReportId = null;
         document.getElementById('weeklyReportModalTitle').textContent = '提交本周周报';
         const hint = document.getElementById('wrModalHint');
-        if (hint) hint.textContent = '本周周期已自动填充，提交后全员可见并同步云端';
-        document.getElementById('wrWeekRange').value = weekRange;
+        if (hint) hint.textContent = '可自行选择周期，提交后全员可见并同步云端';
+        const range = parseWeekRangeText(weekRange);
+        setWeeklyReportPeriodInputs(range.start, range.end);
         document.getElementById('wrContent').value = '';
         document.getElementById('wrNextWeek').value = '';
         document.getElementById('wrProblems').value = '';
@@ -19588,8 +19665,9 @@ ${ocrText}`
         editingWeeklyReportId = id;
         document.getElementById('weeklyReportModalTitle').textContent = '编辑周报';
         const hint = document.getElementById('wrModalHint');
-        if (hint) hint.textContent = report.status === 'rejected' ? '驳回后可修改并重新提交审核' : '保存后将重新进入待审核';
-        document.getElementById('wrWeekRange').value = report.weekRange || getCurrentWeekRangeText();
+        if (hint) hint.textContent = report.status === 'rejected' ? '驳回后可修改并重新提交审核' : '可调整周期，保存后将重新进入待审核';
+        const range = parseWeekRangeText(report.weekRange || getCurrentWeekRangeText());
+        setWeeklyReportPeriodInputs(range.start, range.end);
         document.getElementById('wrContent').value = report.content || '';
         document.getElementById('wrNextWeek').value = report.nextWeek || '';
         document.getElementById('wrProblems').value = report.problems || '';
@@ -19602,14 +19680,14 @@ ${ocrText}`
     }
 
     function saveWeeklyReport() {
-        const weekRange = document.getElementById('wrWeekRange').value.trim();
+        const weekRange = getWeeklyReportPeriodFromInputs();
         const content = document.getElementById('wrContent').value.trim();
         const nextWeek = document.getElementById('wrNextWeek').value.trim();
         const problems = document.getElementById('wrProblems').value.trim();
         const notes = document.getElementById('wrNotes').value.trim();
 
         if (!weekRange || !content) {
-            alert('请填写周报周期和本周工作内容');
+            alert(!weekRange ? '请选择有效的周报起止日期（开始日期不能晚于结束日期）' : '请填写本周工作内容');
             return;
         }
 
@@ -20079,7 +20157,7 @@ ${ocrText}`
             newsData = JSON.parse(stored);
         } else {
             newsData = [
-                { id: 1, title: '团队在城市安全监测领域取得重要突破', category: '成果发布', author: '李明', content: '近日，我团队在城市安全智能监测系统研发方面取得重大进展。基于深度学习的目标检测算法在真实场景测试中达到了95%以上的准确率...', status: 'published', publishTime: '2026-07-05', views: 328 },
+                { id: 1, title: '团队在城市安全监测领域取得重要突破', category: '成果发布', author: '陈浩', content: '近日，我团队在城市安全智能监测系统研发方面取得重大进展。基于深度学习的目标检测算法在真实场景测试中达到了95%以上的准确率...', status: 'published', publishTime: '2026-07-05', views: 328 },
                 { id: 2, title: '2026年度学术交流会议圆满举行', category: '学术交流', author: '王伟', content: '7月3日至4日，城市安全数智创新团队举办了年度学术交流会议。来自全国各地的专家学者齐聚一堂，共同探讨城市安全领域的前沿技术...', status: 'published', publishTime: '2026-07-04', views: 256 },
                 { id: 3, title: '智能预警系统V3.0版本开发启动', category: '项目进展', author: '刘洋', content: '经过前期充分准备，智能预警系统V3.0版本正式启动开发。新版本将引入更多先进的AI算法，提升系统的智能化水平和预警准确率...', status: 'published', publishTime: '2026-07-01', views: 189 },
                 { id: 4, title: '团队新增两名博士研究生', category: '团队动态', author: '赵芳', content: '热烈欢迎张博士和李博士加入城市安全数智创新团队！两位博士分别来自清华大学和北京大学，将在目标检测和数据挖掘方向开展研究...', status: 'published', publishTime: '2026-06-28', views: 145 },
@@ -22879,14 +22957,14 @@ ${ocrText}`
             annotationData = JSON.parse(saved);
         } else {
             annotationData = [
-                { id: 1, name: '安全目标检测标注', dataset: 'CitySafety-V1', type: '目标检测', progress: 85, owner: '李明', total: 500, completed: 425 },
+                { id: 1, name: '安全目标检测标注', dataset: 'CitySafety-V1', type: '目标检测', progress: 85, owner: '陈浩', total: 500, completed: 425 },
                 { id: 2, name: '火灾场景标注', dataset: 'FireDataset', type: '图像分类', progress: 100, owner: '赵芳', total: 1000, completed: 1000 },
-                { id: 3, name: '行人行为标注', dataset: 'PersonAction', type: '行为识别', progress: 62, owner: '王伟', total: 800, completed: 496 },
+                { id: 3, name: '行人行为标注', dataset: 'PersonAction', type: '行为识别', progress: 62, owner: '孙丽', total: 800, completed: 496 },
                 { id: 4, name: '交通标志标注', dataset: 'TrafficSign', type: '目标检测', progress: 95, owner: '刘洋', total: 600, completed: 570 },
-                { id: 5, name: '烟雾识别标注', dataset: 'SmokeDataset', type: '语义分割', progress: 78, owner: '李明', total: 350, completed: 273 },
+                { id: 5, name: '烟雾识别标注', dataset: 'SmokeDataset', type: '语义分割', progress: 78, owner: '陈浩', total: 350, completed: 273 },
                 { id: 6, name: '跌倒检测标注', dataset: 'FallDetection', type: '姿态估计', progress: 45, owner: '赵芳', total: 400, completed: 180 },
-                { id: 7, name: '安全帽检测标注', dataset: 'HelmetDataset', type: '目标检测', progress: 100, owner: '陈交换生', total: 280, completed: 280 },
-                { id: 8, name: '人群密度标注', dataset: 'CrowdCount', type: '密度估计', progress: 30, owner: '张教授', total: 550, completed: 165 }
+                { id: 7, name: '安全帽检测标注', dataset: 'HelmetDataset', type: '目标检测', progress: 100, owner: '周杰', total: 280, completed: 280 },
+                { id: 8, name: '人群密度标注', dataset: 'CrowdCount', type: '密度估计', progress: 30, owner: '王丽萍', total: 550, completed: 165 }
             ];
             localStorage.setItem('annotationData', JSON.stringify(annotationData));
         }
