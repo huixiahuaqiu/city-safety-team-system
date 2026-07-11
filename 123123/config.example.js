@@ -1,10 +1,10 @@
-// Copy this file to config.local.js and fill deployment-specific values.
-// Never commit config.local.js.
-window.APP_CONFIG = {
-    SUPABASE_URL: '',
-    SUPABASE_KEY: '',
+// Copy this file to config.local.js for machine-specific overrides (tokens, etc).
+// Public defaults live in config.js and are safe to commit.
+window.APP_CONFIG = Object.assign({}, window.APP_CONFIG || {}, {
+    // Optional local overrides:
+    // SUPABASE_URL: '',
+    // SUPABASE_KEY: '',
     MLOPS_TOKEN: '',
     ANNOTATION_UPLOAD_TOKEN: '',
-    // 标注真实文件云端共享桶（需先执行 supabase_annotations_storage.sql）
     ANNOTATION_STORAGE_BUCKET: 'annotations'
-};
+});

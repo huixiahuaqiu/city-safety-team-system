@@ -56,7 +56,9 @@ python mlops_report.py --endpoint http://<portal-host>:8000/api/mlops/report --j
 
 ## 标注文件全员共享
 
-标注数据集会先落到本机网关，再自动打包分片写入现有 Supabase `patents` 同步通道（`classification=__APP_SYNC_BLOB__`），**不依赖 Storage 桶**，团队成员均可导出真实 ZIP。
+标注任务元数据通过 `config.js` 中的公开 Supabase 配置在 **本机与 GitHub Pages** 之间同步。
+
+标注真实文件：先落到本机网关，再自动打包分片写入 Supabase `patents`（`classification=__APP_SYNC_BLOB__`），全员可在 Pages/本机导出 ZIP。
 
 上传优先级：
 
@@ -65,9 +67,9 @@ python mlops_report.py --endpoint http://<portal-host>:8000/api/mlops/report --j
 3. 可选 Supabase Storage 桶（若已执行 `supabase_annotations_storage.sql`）
 4. 浏览器 IndexedDB（仅本机兜底）
 
-若旧任务只有本机备份、尚未上云：打开任务详情 → **发布到团队云端**。
+若旧任务只有本机备份：详情 → **发布到团队云端**。
 
-可选：若仍想使用 Storage 桶，可执行 `123123/supabase_annotations_storage.sql`。
+GitHub Pages 部署后需包含可提交的 `123123/config.js`；本机密钥覆盖仍用 `config.local.js`（不提交）。
 
 ## 安全要求
 

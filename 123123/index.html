@@ -7540,9 +7540,11 @@
         });
     </script>
     
+    <script src="config.js"></script>
     <script src="config.local.js"></script>
     <script>
         // ========== Supabase 配置 (REST API 模式，无需SDK) ==========
+        // 加载顺序：config.js（可提交公开配置）→ config.local.js（本机覆盖，可选）
         window.APP_CONFIG = window.APP_CONFIG || {};
         function getAppConfig(key, fallback) {
             if (window.APP_CONFIG && Object.prototype.hasOwnProperty.call(window.APP_CONFIG, key)) {
@@ -7557,7 +7559,7 @@
             options = options || {};
             return new Promise(function(resolve, reject) {
                 if (!SUPABASE_URL || !SUPABASE_KEY) {
-                    reject(new Error('Supabase 未配置：请创建 123123/config.local.js'));
+                    reject(new Error('Supabase 未配置：请检查 config.js / config.local.js'));
                     return;
                 }
                 var xhr = new XMLHttpRequest();
@@ -7878,6 +7880,8 @@
             try { if (typeof renderWeeklyReportList === 'function') renderWeeklyReportList(); } catch (e) {}
             try { if (typeof renderModelTrainingList === 'function') renderModelTrainingList(); } catch (e) {}
             try { if (typeof renderAnnotationList === 'function') renderAnnotationList(); } catch (e) {}
+            try { if (typeof updateAnnotationStats === 'function') updateAnnotationStats(); } catch (e) {}
+            try { if (typeof populateAnnotationFilters === 'function') populateAnnotationFilters(); } catch (e) {}
             try { if (typeof updateLongitudinalFilterCounts === 'function') updateLongitudinalFilterCounts(); if (typeof applyLongitudinalFilters === 'function') applyLongitudinalFilters(); } catch (e) {}
             try { if (typeof updateHorizontalFilterCounts === 'function') updateHorizontalFilterCounts(); if (typeof applyHorizontalFilters === 'function') applyHorizontalFilters(); } catch (e) {}
             try { if (typeof updateSchoolFilterCounts === 'function') updateSchoolFilterCounts(); if (typeof applySchoolFilters === 'function') applySchoolFilters(); } catch (e) {}
@@ -23652,14 +23656,40 @@ ${ocrText}`
 
     function migrateAnnotationDataToTeam() {
         const demoNames = ['安全目标检测标注', '跌倒检测标注', '人群密度标注', '行人行为标注'];
+        const hasUserTasks = Array.isArray(annotationData) && annotationData.some(function(a) {
+            return a && (a.hasRealFiles || Number(a.fileCount) > 0 || a.cloudShare || a.uploadMode || a.serverUploaded || a.cloudUploaded);
+        });
+        // 有真实上传任务时，绝不回滚成示例数据，避免覆盖云端同步
+        if (hasUserTasks) {
+            let changed = false;
+            annotationData = annotationData.map(function(a, idx) {
+                const next = Object.assign({}, a);
+                if (!next.scenario) { next.scenario = '城市安全监测'; changed = true; }
+                next.status = deriveAnnotationStatus(next);
+                if (next.completed == null && next.total) {
+                    next.completed = Math.round((Number(next.progress) || 0) / 100 * Number(next.total));
+                    changed = true;
+                }
+                if (!next.updatedAt) { next.updatedAt = new Date().toISOString().split('T')[0]; changed = true; }
+                if (!next.owner) { next.owner = pickAnnoOwner(idx); changed = true; }
+                return next;
+            });
+            if (changed) saveAnnotationData();
+            return;
+        }
         if (!Array.isArray(annotationData) || !annotationData.length) {
             annotationData = buildTeamDefaultAnnotations();
-            saveAnnotationData();
+            // 仅本地占位，不抢写云端（等云端拉取覆盖）
+            try { Storage.prototype.setItem.call(localStorage, 'annotationData', JSON.stringify(annotationData)); } catch (e) {
+                localStorage.setItem('annotationData', JSON.stringify(annotationData));
+            }
             return;
         }
         if (annotationData.some(function(a) { return demoNames.includes(a.name); })) {
             annotationData = buildTeamDefaultAnnotations();
-            saveAnnotationData();
+            try { Storage.prototype.setItem.call(localStorage, 'annotationData', JSON.stringify(annotationData)); } catch (e) {
+                localStorage.setItem('annotationData', JSON.stringify(annotationData));
+            }
             return;
         }
         // 全员同一负责人（如误同步成同一人）时重建示例
@@ -23667,7 +23697,9 @@ ${ocrText}`
         const uniqueOwners = new Set(owners);
         if (owners.length >= 4 && uniqueOwners.size === 1 && !annotationData.some(function(a) { return a.scenario; })) {
             annotationData = buildTeamDefaultAnnotations();
-            saveAnnotationData();
+            try { Storage.prototype.setItem.call(localStorage, 'annotationData', JSON.stringify(annotationData)); } catch (e) {
+                localStorage.setItem('annotationData', JSON.stringify(annotationData));
+            }
             return;
         }
         let changed = false;
