@@ -16,6 +16,9 @@
         { key: 'other', label: '其他' }
     ];
     var LIT_TAG_PRESETS = ['城市安全', '目标检测', '语义分割', '深度学习', '灾害预警', '结构监测', '综述', 'AI'];
+    var LIT_CUSTOM_TAGS_KEY = 'literatureCustomTags';
+    var LIT_GROUPS_KEY = 'literatureCustomGroups';
+    var litTagAddOpen = false;
 
     var litState = {
         page: 1,
@@ -27,7 +30,12 @@
         sort: 'year_desc',
         selected: {},
         favorites: {},
-        view: 'list'
+        view: 'list',
+        groupFilter: '',
+        authorFilter: '',
+        hasPdf: '',
+        readFilter: '',
+        showAdv: false
     };
     /** 添加弹窗待入库的 PDF 文件 */
     var pendingLitPdfFile = null;
@@ -104,6 +112,7 @@
             projectIds: Array.isArray(r.projectIds) ? r.projectIds.map(Number).filter(Boolean) : [],
             projectNames: Array.isArray(r.projectNames) ? r.projectNames : [],
             favorites: Array.isArray(r.favorites) ? r.favorites.map(String) : [],
+            groupIds: Array.isArray(r.groupIds) ? r.groupIds.map(String) : [],
             readStatus: r.readStatus || 'unread',
             notes: String(r.notes || '').trim(),
             isCore: !!(r.isCore || /SCI|CCF\s*[AB]|一区|Top/i.test(String(r.journal || '') + ' ' + tags.join(' '))),
@@ -215,13 +224,221 @@
         return hit ? hit.label : '其他';
     }
 
+    function loadCustomLitTags() {
+        try {
+            var arr = JSON.parse(localStorage.getItem(LIT_CUSTOM_TAGS_KEY) || '[]');
+            if (!Array.isArray(arr)) return [];
+            return arr.map(function (t) { return String(t || '').trim(); }).filter(Boolean);
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveCustomLitTags(tags) {
+        var clean = (tags || []).map(function (t) { return String(t || '').trim(); }).filter(Boolean);
+        var seen = {};
+        clean = clean.filter(function (t) {
+            if (seen[t]) return false;
+            seen[t] = true;
+            return true;
+        });
+        localStorage.setItem(LIT_CUSTOM_TAGS_KEY, JSON.stringify(clean));
+    }
+
     function getAllTags() {
         var map = {};
-        LIT_TAG_PRESETS.forEach(function (t) { map[t] = true; });
+        var order = [];
+        function add(t) {
+            t = String(t || '').trim();
+            if (!t || map[t]) return;
+            map[t] = true;
+            order.push(t);
+        }
+        LIT_TAG_PRESETS.forEach(add);
+        loadCustomLitTags().forEach(add);
         getLiteratureData().forEach(function (l) {
-            (l.tagList || parseTags(l.tags)).forEach(function (t) { map[t] = true; });
+            (l.tagList || parseTags(l.tags)).forEach(add);
         });
-        return Object.keys(map);
+        return order;
+    }
+
+    function getFilterBarTags() {
+        var custom = loadCustomLitTags();
+        var seen = {};
+        var out = [];
+        function push(t) {
+            t = String(t || '').trim();
+            if (!t || seen[t]) return;
+            seen[t] = true;
+            out.push(t);
+        }
+        LIT_TAG_PRESETS.forEach(push);
+        custom.forEach(push);
+        getAllTags().forEach(push);
+        return out.slice(0, 24);
+    }
+
+    function notifyTagsChanged() {
+        if (typeof global.renderLiteratureCompareList === 'function') {
+            try { global.renderLiteratureCompareList(); } catch (e) { /* ignore */ }
+        }
+    }
+
+    function addCustomLitTag(name) {
+        name = String(name || '').trim();
+        if (!name) {
+            alert('请输入标签名称');
+            return '';
+        }
+        if (name.length > 30) {
+            alert('标签名不超过 30 字');
+            return '';
+        }
+        if (global.currentUser && global.currentUser.role === 'visitor') {
+            alert('访客不可添加标签');
+            return '';
+        }
+        if (getAllTags().indexOf(name) >= 0) return name;
+        var custom = loadCustomLitTags();
+        custom.push(name);
+        saveCustomLitTags(custom);
+        notifyTagsChanged();
+        return name;
+    }
+
+    function appendLitTagToInput(inputId, tag) {
+        tag = String(tag || '').trim();
+        if (!tag) return;
+        var el = document.getElementById(inputId);
+        if (!el) return;
+        var cur = parseTags(el.value);
+        if (cur.indexOf(tag) >= 0) return;
+        cur.push(tag);
+        el.value = cur.join(', ');
+    }
+
+    function promptAddLitTagToInput(inputId) {
+        if (global.currentUser && global.currentUser.role === 'visitor') {
+            alert('访客不可添加标签');
+            return;
+        }
+        var name = prompt('输入新标签名称（将同步到筛选栏与标签库）：');
+        if (!name) return;
+        var tag = addCustomLitTag(name);
+        if (!tag) return;
+        appendLitTagToInput(inputId, tag);
+        refreshOpenModalTagFields();
+    }
+
+    function refreshOpenModalTagFields() {
+        var tags = getAllTags();
+        document.querySelectorAll('.lit-tags-field[data-tags-input]').forEach(function (wrap) {
+            var inputId = wrap.getAttribute('data-tags-input');
+            var datalistId = inputId + '_datalist';
+            var list = document.getElementById(datalistId);
+            if (list) {
+                list.innerHTML = tags.map(function (t) {
+                    return '<option value="' + esc(t) + '"></option>';
+                }).join('');
+            }
+            var quick = wrap.querySelector('.lit-tag-quick');
+            if (quick) {
+                var chips = tags.slice(0, 20).map(function (t) {
+                    return '<button type="button" class="lit-tag-quick-chip" onclick="appendLitTagToInput(' + JSON.stringify(inputId) + ',' + JSON.stringify(t) + ')">' + esc(t) + '</button>';
+                }).join('');
+                quick.innerHTML = '<span style="font-size:11px;color:#9ca3af;margin-right:4px;line-height:22px;">快捷：</span>' + chips +
+                    '<button type="button" class="lit-tag-quick-chip lit-tag-quick-add" onclick="promptAddLitTagToInput(' + JSON.stringify(inputId) + ')">+ 新建</button>';
+            }
+        });
+    }
+
+    function toggleLitTagAddPanel(force) {
+        var panel = document.getElementById('litTagAddPanel');
+        var input = document.getElementById('litTagAddInput');
+        if (!panel) return;
+        litTagAddOpen = typeof force === 'boolean' ? force : !litTagAddOpen;
+        panel.style.display = litTagAddOpen ? 'inline-flex' : 'none';
+        if (litTagAddOpen && input) input.focus();
+        else if (input) input.value = '';
+    }
+
+    function confirmAddLitTag() {
+        var input = document.getElementById('litTagAddInput');
+        var tag = addCustomLitTag(input ? input.value : '');
+        if (!tag) return;
+        toggleLitTagAddPanel(false);
+        litState.tagFilter = tag;
+        litState.page = 1;
+        renderLiteratureList();
+    }
+
+    function loadLiteratureGroups() {
+        try {
+            var raw = JSON.parse(localStorage.getItem(LIT_GROUPS_KEY) || '[]');
+            return Array.isArray(raw) ? raw.filter(function (g) { return g && g.id && g.name; }) : [];
+        } catch (e) { return []; }
+    }
+
+    function saveLiteratureGroups(list) {
+        try { localStorage.setItem(LIT_GROUPS_KEY, JSON.stringify(list || [])); } catch (e) {}
+    }
+
+    function createLiteratureGroup(name) {
+        name = String(name || '').trim();
+        if (!name) return null;
+        var list = loadLiteratureGroups();
+        if (list.some(function (g) { return g.name === name; })) {
+            alert('分组已存在');
+            return null;
+        }
+        var g = { id: 'g_' + Date.now(), name: name };
+        list.push(g);
+        saveLiteratureGroups(list);
+        return g;
+    }
+
+    function promptCreateLiteratureGroup() {
+        var name = prompt('新建分组名称（如：开题参考文献组）');
+        if (!name) return;
+        var g = createLiteratureGroup(name);
+        if (g) {
+            litState.groupFilter = g.id;
+            renderLiteratureList();
+        }
+    }
+
+    function setLitGroupFilter(gid) {
+        litState.groupFilter = (litState.groupFilter === gid) ? '' : (gid || '');
+        litState.page = 1;
+        renderLiteratureList();
+    }
+
+    function renderLitGroupBar() {
+        var box = document.getElementById('litGroupFilterBar');
+        if (!box) return;
+        var groups = loadLiteratureGroups();
+        var html = '<button type="button" class="lit-tag-chip' + (!litState.groupFilter ? ' active' : '') + '" onclick="setLitGroupFilter(\'\')">全部分组</button>';
+        html += groups.map(function (g) {
+            return '<button type="button" class="lit-tag-chip' + (litState.groupFilter === g.id ? ' active' : '') + '" onclick="setLitGroupFilter(' + JSON.stringify(g.id) + ')">' + esc(g.name) + '</button>';
+        }).join('');
+        html += '<button type="button" class="lit-tag-chip lit-tag-add" onclick="promptCreateLiteratureGroup()">+ 新建分组</button>';
+        box.innerHTML = html;
+    }
+
+    function toggleLitAdvFilter() {
+        litState.showAdv = !litState.showAdv;
+        var panel = document.getElementById('litAdvFilterPanel');
+        if (panel) panel.style.display = litState.showAdv ? 'flex' : 'none';
+        var btn = document.getElementById('litAdvFilterBtn');
+        if (btn) btn.textContent = litState.showAdv ? '收起高级筛选' : '高级筛选';
+    }
+
+    function onLitAdvFilterChange() {
+        litState.authorFilter = String((document.getElementById('litLibAuthorFilter') || {}).value || '').trim();
+        litState.hasPdf = String((document.getElementById('litLibHasPdf') || {}).value || '');
+        litState.readFilter = String((document.getElementById('litLibReadFilter') || {}).value || '');
+        litState.page = 1;
+        renderLiteratureList();
     }
 
     function getFilteredLiterature() {
@@ -243,8 +460,20 @@
                 return (l.tagList || parseTags(l.tags)).indexOf(litState.tagFilter) >= 0;
             });
         }
+        if (litState.groupFilter) {
+            list = list.filter(function (l) {
+                return (l.groupIds || []).indexOf(String(litState.groupFilter)) >= 0;
+            });
+        }
         if (litState.yearFrom) list = list.filter(function (l) { return !l.year || Number(l.year) >= Number(litState.yearFrom); });
         if (litState.yearTo) list = list.filter(function (l) { return !l.year || Number(l.year) <= Number(litState.yearTo); });
+        if (litState.authorFilter) {
+            var af = litState.authorFilter.toLowerCase();
+            list = list.filter(function (l) { return String(l.author || '').toLowerCase().indexOf(af) >= 0 || String(l.journal || '').toLowerCase().indexOf(af) >= 0; });
+        }
+        if (litState.hasPdf === '1') list = list.filter(function (l) { return !!(l.pdfUrl || l.sharedFileId); });
+        if (litState.hasPdf === '0') list = list.filter(function (l) { return !(l.pdfUrl || l.sharedFileId); });
+        if (litState.readFilter) list = list.filter(function (l) { return (l.readStatus || 'unread') === litState.readFilter; });
 
         if (q) {
             list = list.filter(function (l) {
@@ -257,7 +486,6 @@
             if (litState.sort === 'cite_desc') return (b.citations || 0) - (a.citations || 0);
             if (litState.sort === 'upload_desc') return String(b.uploadTime).localeCompare(String(a.uploadTime));
             if (litState.sort === 'dl_desc') return (b.downloadCount || 0) - (a.downloadCount || 0);
-            // year_desc default
             return (Number(b.year) || 0) - (Number(a.year) || 0) || String(b.uploadTime).localeCompare(String(a.uploadTime));
         });
         return list;
@@ -289,7 +517,12 @@
     }
 
     function setLitTagFilter(tag) {
-        litState.tagFilter = (litState.tagFilter === tag) ? '' : (tag || '');
+        // 「全部」或空字符串：清空标签筛选
+        if (!tag || tag === '__all__') {
+            litState.tagFilter = '';
+        } else {
+            litState.tagFilter = (litState.tagFilter === tag) ? '' : tag;
+        }
         litState.page = 1;
         renderLiteratureList();
     }
@@ -339,11 +572,23 @@
     function renderLitTagBar() {
         var box = document.getElementById('litTagFilterBar');
         if (!box) return;
-        var tags = getAllTags().slice(0, 16);
-        box.innerHTML = tags.map(function (t) {
+        var tags = getFilterBarTags();
+        var allActive = !litState.tagFilter;
+        var html = '<button type="button" class="lit-tag-chip' + (allActive ? ' active' : '') + '" onclick="setLitTagFilter(\'__all__\')">全部</button>';
+        html += tags.map(function (t) {
             var active = litState.tagFilter === t;
-            return '<button type="button" class="lit-tag-chip' + (active ? ' active' : '') + '" onclick="setLitTagFilter(\'' + esc(t).replace(/'/g, '') + '\')">' + esc(t) + '</button>';
+            return '<button type="button" class="lit-tag-chip' + (active ? ' active' : '') + '" onclick="setLitTagFilter(' + JSON.stringify(t) + ')">' + esc(t) + '</button>';
         }).join('');
+        html += '<button type="button" class="lit-tag-chip lit-tag-add" onclick="toggleLitTagAddPanel()">+ 添加</button>';
+        html += '<span id="litTagAddPanel" class="lit-tag-add-panel" style="display:' + (litTagAddOpen ? 'inline-flex' : 'none') + ';">' +
+            '<input id="litTagAddInput" type="text" placeholder="新标签名" onkeydown="if(event.key===\'Enter\'){event.preventDefault();confirmAddLitTag();}">' +
+            '<button type="button" class="lit-tag-add-ok" onclick="confirmAddLitTag()">确定</button>' +
+            '<button type="button" class="lit-tag-add-cancel" onclick="toggleLitTagAddPanel(false)">×</button></span>';
+        box.innerHTML = html;
+        if (litTagAddOpen) {
+            var inp = document.getElementById('litTagAddInput');
+            if (inp) inp.focus();
+        }
     }
 
     function renderLiteratureList() {
@@ -353,6 +598,7 @@
 
         updateLiteratureStats();
         renderLitTagBar();
+        renderLitGroupBar();
 
         var filtered = getFilteredLiterature();
         var totalPages = Math.max(1, Math.ceil(filtered.length / LITERATURE_PAGE_SIZE));
@@ -376,6 +622,8 @@
             }).join('');
             var pdfBadge = (l.pdfUrl || l.sharedFileId) ? '<span class="lit-pdf-badge">📄 有PDF</span>' : '';
             var coreBadge = l.isCore ? '<span class="lit-core-badge">核心</span>' : '';
+            var readMap = { unread: '未读', reading: '在读', read: '已读' };
+            var readBadge = '<span class="lit-read-badge lit-read-' + esc(l.readStatus || 'unread') + '">' + (readMap[l.readStatus] || '未读') + '</span>';
             return (
                 '<div class="lit-card' + (checked ? ' selected' : '') + '">' +
                 '<div class="lit-card-main">' +
@@ -384,7 +632,7 @@
                 '<div class="lit-card-body">' +
                 '<div class="lit-title-row">' +
                 '<a href="javascript:void(0)" class="lit-title" onclick="showLibraryLiteratureDetail(' + l.id + ')" title="' + esc(l.title) + '">' + esc(l.title) + '</a>' +
-                coreBadge + pdfBadge +
+                coreBadge + pdfBadge + readBadge +
                 '</div>' +
                 '<div class="lit-meta">' + esc(l.author || '未知作者') + ' · ' + esc(l.journal || '未填期刊') + ' · ' + esc(l.year || '—') +
                 (l.citations ? (' · 引用 ' + l.citations) : '') +
@@ -440,6 +688,15 @@
             '.lit-tag-bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}',
             '.lit-tag-chip{padding:4px 10px;border:1px solid #e5e7eb;background:#fff;border-radius:999px;font-size:12px;color:#4b5563;cursor:pointer;}',
             '.lit-tag-chip.active{background:#ede9fe;border-color:#7c3aed;color:#5b21b6;}',
+            '.lit-tag-chip.lit-tag-add{border-style:dashed;color:#7c3aed;border-color:#c4b5fd;background:#faf8ff;}',
+            '.lit-tag-add-panel{display:inline-flex;align-items:center;gap:4px;padding:2px 4px;background:#faf8ff;border:1px dashed #c4b5fd;border-radius:999px;}',
+            '.lit-tag-add-panel input{width:100px;padding:4px 8px;border:1px solid #ddd;border-radius:999px;font-size:12px;outline:none;}',
+            '.lit-tag-add-panel input:focus{border-color:#7c3aed;}',
+            '.lit-tag-add-ok,.lit-tag-add-cancel{border:none;background:#7c3aed;color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer;}',
+            '.lit-tag-add-cancel{background:#f3f4f6;color:#6b7280;padding:4px 8px;}',
+            '.lit-tag-quick-chip{padding:2px 8px;border:1px solid #e5e7eb;background:#f9fafb;border-radius:999px;font-size:11px;color:#4b5563;cursor:pointer;}',
+            '.lit-tag-quick-chip:hover{border-color:#7c3aed;color:#5b21b6;background:#faf8ff;}',
+            '.lit-tag-quick-chip.lit-tag-quick-add{border-style:dashed;color:#7c3aed;}',
             '.lit-batch-bar{display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;margin-bottom:12px;}',
             '.lit-card{background:#fff;border-radius:10px;padding:16px 18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid #f0f0f0;}',
             '.lit-card.selected{border-color:#a78bfa;background:#faf8ff;}',
@@ -456,6 +713,12 @@
             '.lit-mini-tag{padding:2px 8px;background:#f0f5ff;color:#1890ff;border-radius:4px;font-size:12px;}',
             '.lit-pdf-badge{font-size:11px;color:#0d9488;background:#ccfbf1;padding:2px 6px;border-radius:4px;}',
             '.lit-core-badge{font-size:11px;color:#b45309;background:#fef3c7;padding:2px 6px;border-radius:4px;}',
+            '.lit-read-badge{font-size:11px;padding:2px 6px;border-radius:4px;margin-left:4px;}',
+            '.lit-read-unread{color:#64748b;background:#f1f5f9;}',
+            '.lit-read-reading{color:#4338ca;background:#e0e7ff;}',
+            '.lit-read-read{color:#15803d;background:#dcfce7;}',
+            '.lit-adv-panel{display:none;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;padding:10px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0;}',
+            '.lit-pdf-frame{width:100%;height:420px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;}',
             '.lit-foot{font-size:12px;color:#9ca3af;margin-top:8px;}',
             '.lit-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;justify-content:flex-end;}',
             '.lit-act{padding:4px 10px !important;font-size:12px !important;}',
@@ -470,6 +733,7 @@
             '.lit-pdf-drop{border:2px dashed #c4b5fd;border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;background:linear-gradient(180deg,#faf8ff,#fff);transition:.15s;}',
             '.lit-pdf-drop:hover,.lit-pdf-drop.drag{border-color:#7c3aed;background:#f5f3ff;}',
             '.lit-pdf-edit input,.lit-pdf-edit textarea,.lit-pdf-edit select{background:#fff;}',
+            '.lit-bib-mode.active{border-color:#7c3aed !important;color:#5b21b6 !important;background:#f5f3ff !important;}',
             '.lit-detail-wrap{display:grid;grid-template-columns:1fr;gap:16px;}',
             '@media(min-width:900px){.lit-detail-wrap{grid-template-columns:1.1fr .9fr;}}',
             '@media(max-width:768px){.lit-stat-grid{grid-template-columns:repeat(2,1fr);}}'
@@ -510,7 +774,7 @@
             '<div style="background:#fff;border-radius:12px;width:100%;max-width:680px;max-height:92vh;overflow:auto;">' +
             '<div style="padding:16px 20px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;">' +
             '<h3 style="margin:0;font-size:18px;">添加文献</h3>' +
-            '<button type="button" onclick="document.getElementById(\'' + modalId + '\').remove()" style="width:32px;height:32px;border:none;background:#f5f5f5;border-radius:50%;cursor:pointer;">×</button>' +
+            '<button type="button" onclick="closeLibraryLiteratureModal(\'' + modalId + '\')" style="width:32px;height:32px;border:none;background:#f5f5f5;border-radius:50%;cursor:pointer;">×</button>' +
             '</div>' +
             '<div style="padding:16px 20px;">' +
             '<div class="lit-modal-tabs">' +
@@ -534,7 +798,7 @@
             fieldHtml('DOI', 'libLitDoi', 'text', '10.xxxx/...') +
             '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:5px;font-size:13px;">摘要</label>' +
             '<textarea id="libLitSummary" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;resize:vertical;"></textarea></div>' +
-            fieldHtml('关键词/标签', 'libLitTags', 'text', '城市安全, 深度学习') +
+            tagsFieldHtml('关键词/标签', 'libLitTags', '城市安全, 深度学习') +
             fieldHtml('原文链接', 'libLitUrl', 'text', 'https://...') +
             '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:5px;font-size:13px;">关联项目（可选）</label>' +
             '<select id="libLitProject" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;"><option value="">不关联</option>' + projectOpts + '</select></div>' +
@@ -571,7 +835,7 @@
             '</div>' +
             '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:5px;font-size:13px;">摘要（可手改）</label>' +
             '<textarea id="libLitPdfSummary" rows="4" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;resize:vertical;" placeholder="自动提取的摘要片段，可整段改写"></textarea></div>' +
-            fieldHtml('关键词/标签', 'libLitPdfTags', 'text', '城市安全, PDF') +
+            tagsFieldHtml('关键词/标签', 'libLitPdfTags', '城市安全, PDF') +
             '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0 10px;">' +
             '<input type="checkbox" id="libLitPdfSync" checked> 同时同步到文献对比分析</label>' +
             '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:4px;">' +
@@ -609,7 +873,7 @@
             '<input type="file" id="libLitBibFile_' + modalId + '" accept=".bib,text/plain" style="display:none;" onchange="handleBibFileSelect(this,\'' + modalId + '\')">' +
             '</div>' +
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0;">' +
-            fieldHtml('统一标签（可选）', 'libLitBibTags', 'text', '如：目标检测, 综述') +
+            tagsFieldHtml('统一标签（可选）', 'libLitBibTags', '如：目标检测, 综述') +
             '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:5px;font-size:13px;">关联项目</label>' +
             '<select id="libLitBibProject" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;"><option value="">不关联</option>' + projectOpts + '</select></div>' +
             '</div>' +
@@ -640,6 +904,24 @@
     function fieldHtml(label, id, type, ph) {
         return '<div style="margin-bottom:12px;"><label style="display:block;margin-bottom:5px;font-size:13px;">' + label + '</label>' +
             '<input type="' + type + '" id="' + id + '" placeholder="' + (ph || '') + '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;"></div>';
+    }
+
+    function tagsFieldHtml(label, id, ph) {
+        var tags = getAllTags();
+        var datalistId = id + '_datalist';
+        var chips = tags.slice(0, 20).map(function (t) {
+            return '<button type="button" class="lit-tag-quick-chip" onclick="appendLitTagToInput(' + JSON.stringify(id) + ',' + JSON.stringify(t) + ')">' + esc(t) + '</button>';
+        }).join('');
+        return '<div style="margin-bottom:12px;" class="lit-tags-field" data-tags-input="' + id + '">' +
+            '<label style="display:block;margin-bottom:5px;font-size:13px;">' + label + '</label>' +
+            '<input type="text" list="' + datalistId + '" id="' + id + '" placeholder="' + (ph || '') + '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">' +
+            '<datalist id="' + datalistId + '">' + tags.map(function (t) {
+                return '<option value="' + esc(t) + '"></option>';
+            }).join('') + '</datalist>' +
+            '<div class="lit-tag-quick" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">' +
+            '<span style="font-size:11px;color:#9ca3af;margin-right:2px;">快捷：</span>' + chips +
+            '<button type="button" class="lit-tag-quick-chip lit-tag-quick-add" onclick="promptAddLitTagToInput(' + JSON.stringify(id) + ')">+ 新建</button>' +
+            '</div></div>';
     }
 
     function getProjectOptionsHtml() {
@@ -859,11 +1141,41 @@
 
     async function fillPdfRecognizeFields(file, modalId, baseTitle) {
         try {
+            setPdfStatus(modalId, '识别中：提取 PDF 文字…', '#7c3aed');
             var extracted = await extractPdfLiteratureMeta(file);
             if (!extracted) {
                 setPdfStatus(modalId, '✓ 已选择：' + file.name + '（未能提取文字，可能是扫描件，请手改下方字段）', '#ca8a04');
                 return;
             }
+
+            // 优先 DOI → CrossRef 官方元数据，再用 PDF 内容补缺
+            if (extracted.doi && isValidDoi(extracted.doi)) {
+                setPdfStatus(modalId, '识别中：发现 DOI，正在拉取官方元数据…', '#7c3aed');
+                try {
+                    var cache = loadDoiCache();
+                    var cached = cache[extracted.doi.toLowerCase()];
+                    var meta = (cached && cached.meta) ? cached.meta : await fetchCrossrefByDoi(extracted.doi);
+                    if (!cached) {
+                        cache[extracted.doi.toLowerCase()] = { at: Date.now(), meta: meta };
+                        saveDoiCache(cache);
+                    }
+                    extracted = {
+                        title: meta.title || extracted.title,
+                        author: meta.author || extracted.author,
+                        journal: meta.journal || extracted.journal,
+                        year: meta.year || extracted.year,
+                        doi: meta.doi || extracted.doi,
+                        summary: meta.summary || extracted.summary,
+                        tags: meta.tags || extracted.tags,
+                        litType: meta.litType || extracted.litType,
+                        citations: meta.citations,
+                        paperUrl: meta.paperUrl
+                    };
+                } catch (eDoi) {
+                    // 保留 PDF 本地识别结果
+                }
+            }
+
             if (extracted.title) setVal('libLitPdfTitle', extracted.title);
             else if (baseTitle) setVal('libLitPdfTitle', baseTitle);
             if (extracted.author) setVal('libLitPdfAuthor', extracted.author);
@@ -883,6 +1195,7 @@
             if (extracted.doi) hints.push('DOI');
             if (extracted.summary) hints.push('摘要');
             setPdfStatus(modalId, '✓ 自动识别完成' + (hints.length ? ('：' + hints.join('、')) : '') + '，请核对后手改，再点「上传并入库」', '#16a34a');
+            updateLitModalFooter(modalId, 'pdf');
         } catch (err) {
             setPdfStatus(modalId, '✓ 已选择：' + file.name + '（识别异常，请手改字段）' + (err && err.message ? ' · ' + err.message : ''), '#ca8a04');
         }
@@ -1256,67 +1569,264 @@
 
     function parseBibtexEntries(text) {
         var entries = [];
-        var re = /@(\w+)\s*\{\s*([^,]+)\s*,([\s\S]*?)\n\s*\}/g;
+        // 更宽容：允许 } 前无换行
+        var re = /@(\w+)\s*\{\s*([^,]+)\s*,([\s\S]*?)\}/g;
         var m;
-        while ((m = re.exec(String(text || ''))) !== null) {
+        var src = String(text || '').replace(/\r\n/g, '\n');
+        while ((m = re.exec(src)) !== null) {
             var fields = {};
             var body = m[3];
-            var fr = /(\w+)\s*=\s*(\{([^{}]*)\}|"([^"]*)"|(\d+))/g;
+            var fr = /(\w+)\s*=\s*(\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}|"([^"]*)"|(\d+))/g;
             var fm;
             while ((fm = fr.exec(body)) !== null) {
-                fields[fm[1].toLowerCase()] = (fm[3] != null ? fm[3] : (fm[4] != null ? fm[4] : fm[5] || '')).trim();
+                var val = fm[3] != null ? fm[3] : (fm[4] != null ? fm[4] : fm[5] || '');
+                fields[fm[1].toLowerCase()] = String(val).replace(/\{\\/g, '').replace(/\\([{}&%$#_])/g, '$1').trim();
             }
+            var type = String(m[1] || '').toLowerCase();
+            var litType = /inproceedings|conference|proceedings/.test(type) ? 'conference'
+                : /phdthesis|mastersthesis|thesis/.test(type) ? 'thesis'
+                : /techreport|report/.test(type) ? 'report'
+                : /book/.test(type) ? 'other'
+                : 'journal';
+            var title = fields.title || '';
+            var author = (fields.author || '').replace(/\s+and\s+/gi, ', ');
+            var incomplete = !title;
             entries.push({
-                title: fields.title || '',
-                author: (fields.author || '').replace(/\s+and\s+/gi, ', '),
+                title: title,
+                author: author,
                 journal: fields.journal || fields.booktitle || fields.venue || '',
                 year: fields.year || '',
-                doi: fields.doi || '',
+                doi: String(fields.doi || '').replace(/^https?:\/\/doi\.org\//i, ''),
                 summary: fields.abstract || '',
                 tags: fields.keywords || '',
                 paperUrl: fields.url || (fields.doi ? ('https://doi.org/' + fields.doi) : ''),
-                litType: /inproceedings|conference/i.test(m[1]) ? 'conference' : (/phdthesis|mastersthesis/i.test(m[1]) ? 'thesis' : 'journal')
+                litType: litType,
+                incomplete: incomplete,
+                bibType: type
             });
         }
-        return entries.filter(function (e) { return e.title; });
+        return entries;
     }
 
     function findLibraryDuplicate(item) {
         var doi = String(item.doi || '').trim().toLowerCase();
         var title = String(item.title || '').trim().toLowerCase();
+        var author = String(item.author || '').trim().toLowerCase().split(',')[0];
         return getLiteratureData().find(function (l) {
             if (doi && String(l.doi || '').toLowerCase() === doi) return true;
-            return title && String(l.title || '').toLowerCase() === title;
+            if (title && String(l.title || '').toLowerCase() === title) {
+                if (!author) return true;
+                return String(l.author || '').toLowerCase().indexOf(author) >= 0;
+            }
+            return false;
         });
+    }
+
+    function setBibImportMode(modalId, mode) {
+        var paste = document.getElementById(modalId + '_bibPaste');
+        var file = document.getElementById(modalId + '_bibFile');
+        var btnP = document.getElementById(modalId + '_bibModePaste');
+        var btnF = document.getElementById(modalId + '_bibModeFile');
+        if (paste) paste.style.display = mode === 'paste' ? 'block' : 'none';
+        if (file) file.style.display = mode === 'file' ? 'block' : 'none';
+        if (btnP) btnP.classList.toggle('active', mode === 'paste');
+        if (btnF) btnF.classList.toggle('active', mode === 'file');
+    }
+
+    function handleBibTextDrop(event, modalId) {
+        event.preventDefault();
+        var files = event.dataTransfer && event.dataTransfer.files;
+        if (!files || !files.length) return;
+        readBibFileIntoTextarea(files[0], modalId);
+    }
+
+    function handleBibFileDrop(event, modalId) {
+        var files = event.dataTransfer && event.dataTransfer.files;
+        if (!files || !files.length) return;
+        readBibFileIntoTextarea(files[0], modalId);
+        setBibImportMode(modalId, 'paste');
+    }
+
+    function handleBibFileSelect(input, modalId) {
+        var file = input && input.files && input.files[0];
+        if (!file) return;
+        readBibFileIntoTextarea(file, modalId);
+        setBibImportMode(modalId, 'paste');
+        try { input.value = ''; } catch (e) {}
+    }
+
+    function readBibFileIntoTextarea(file, modalId) {
+        var name = String(file.name || '').toLowerCase();
+        if (!(/\.(bib|txt)$/.test(name) || (file.type || '').indexOf('text') >= 0)) {
+            setBibStatus(modalId, '请选择 .bib 文本文件', '#dc2626');
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            setVal('libLitBibtex', e.target.result || '');
+            setBibStatus(modalId, '✓ 已读取：' + file.name + '，请点「解析预览」', '#16a34a');
+            pendingBibPreview = [];
+            var prev = document.getElementById(modalId + '_bibPreview');
+            if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+            updateLitModalFooter(modalId, 'bib');
+        };
+        reader.onerror = function () { setBibStatus(modalId, '读取文件失败', '#dc2626'); };
+        reader.readAsText(file, 'utf-8');
+    }
+
+    function setBibStatus(modalId, msg, color) {
+        var el = document.getElementById(modalId + '_bibStatus');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.style.color = color || '#888';
+    }
+
+    function parseBibtexPreview(modalId) {
+        var bibText = (document.getElementById('libLitBibtex') || {}).value || '';
+        var entries = parseBibtexEntries(bibText);
+        if (!entries.length) {
+            setBibStatus(modalId, '未解析到有效 BibTeX 条目，请检查格式', '#dc2626');
+            return;
+        }
+        var uniTags = String((document.getElementById('libLitBibTags') || {}).value || '').trim();
+        pendingBibPreview = entries.map(function (e, idx) {
+            var dup = findLibraryDuplicate(e);
+            var status = e.incomplete ? 'bad' : (dup ? 'dup' : 'ok');
+            return Object.assign({}, e, {
+                _idx: idx,
+                _status: status,
+                _dupId: dup ? dup.id : null,
+                _checked: status === 'ok',
+                tags: [e.tags, uniTags].filter(Boolean).join(', ')
+            });
+        });
+        renderBibPreview(modalId);
+        updateLitModalFooter(modalId, 'bib');
+    }
+
+    function renderBibPreview(modalId) {
+        var box = document.getElementById(modalId + '_bibPreview');
+        if (!box) return;
+        var total = pendingBibPreview.length;
+        var ok = pendingBibPreview.filter(function (e) { return e._status === 'ok'; }).length;
+        var dup = pendingBibPreview.filter(function (e) { return e._status === 'dup'; }).length;
+        var bad = pendingBibPreview.filter(function (e) { return e._status === 'bad'; }).length;
+        var checked = pendingBibPreview.filter(function (e) { return e._checked; }).length;
+        box.style.display = 'block';
+        var rows = pendingBibPreview.map(function (e) {
+            var badge = e._status === 'ok' ? '<span style="color:#16a34a;">正常</span>'
+                : e._status === 'dup' ? '<span style="color:#b45309;">已存在</span>'
+                : '<span style="color:#dc2626;">信息不全</span>';
+            return '<label style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px;">' +
+                '<input type="checkbox" ' + (e._checked ? 'checked' : '') + ' onchange="toggleBibPreviewItem(' + e._idx + ', this.checked,\'' + modalId + '\')">' +
+                '<span style="flex:1;min-width:0;"><b>' + esc(e.title || '（无标题）') + '</b><br>' +
+                esc(e.author || '—') + ' · ' + esc(e.year || '—') + ' · ' + esc(litTypeLabel(e.litType)) +
+                ' · ' + badge + '</span></label>';
+        }).join('');
+        box.innerHTML =
+            '<div style="padding:10px 12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;">' +
+            '<div style="font-size:13px;font-weight:600;margin-bottom:8px;">共解析 ' + total + ' 篇 · 正常 ' + ok + ' · 重复 ' + dup + ' · 异常 ' + bad +
+            ' · 已选 ' + checked + '</div>' +
+            '<div style="max-height:240px;overflow:auto;">' + rows + '</div>' +
+            '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">' +
+            '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="setAllBibPreviewChecked(true,\'' + modalId + '\')">全选正常</button>' +
+            '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="setAllBibPreviewChecked(false,\'' + modalId + '\')">全不选</button>' +
+            '</div></div>';
+        setBibStatus(modalId, '请勾选要导入的条目，再点「确认导入选中项」', '#7c3aed');
+    }
+
+    function toggleBibPreviewItem(idx, checked, modalId) {
+        var item = pendingBibPreview.find(function (e) { return e._idx === idx; });
+        if (item) item._checked = !!checked;
+        renderBibPreview(modalId);
+        updateLitModalFooter(modalId, 'bib');
+    }
+
+    function setAllBibPreviewChecked(onlyOk, modalId) {
+        // onlyOk true = 只选正常；false = 全不选
+        pendingBibPreview.forEach(function (e) {
+            if (onlyOk === false) e._checked = false;
+            else e._checked = e._status === 'ok';
+        });
+        renderBibPreview(modalId);
+        updateLitModalFooter(modalId, 'bib');
+    }
+
+    function confirmBibPreviewImport(modalId) {
+        var selected = pendingBibPreview.filter(function (e) { return e._checked && e.title; });
+        if (!selected.length) {
+            setBibStatus(modalId, '请至少勾选一篇文献', '#dc2626');
+            return;
+        }
+        var sync = !!(document.getElementById('libLitBibSync') || {}).checked;
+        var proj = String((document.getElementById('libLitBibProject') || {}).value || '');
+        var projectIds = [];
+        var projectNames = [];
+        if (proj) {
+            var parts = proj.split(':');
+            projectIds = [Number(parts[1]) || 0].filter(Boolean);
+            var sel = document.getElementById('libLitBibProject');
+            projectNames = sel && sel.selectedOptions[0] ? [sel.selectedOptions[0].text.replace(/^\[[^\]]+\]\s*/, '')] : [];
+        }
+        if (sync && selected.length > 10) {
+            if (!confirm('对比最多建议 10 篇，将导入全部但仅提示前 10 篇可勾选对比。是否继续？')) return;
+        }
+        var added = 0, skipped = 0;
+        selected.forEach(function (e) {
+            if (e._status === 'dup' && findLibraryDuplicate(e)) {
+                skipped++;
+                return;
+            }
+            persistLibraryItem(Object.assign({}, e, {
+                projectIds: projectIds,
+                projectNames: projectNames,
+                source: 'bibtex'
+            }), { syncCompare: sync && added < 10, silent: true });
+            added++;
+        });
+        finishLibraryImport(modalId, '成功导入 ' + added + ' 篇' + (skipped ? ('，跳过重复 ' + skipped + ' 篇') : ''), added > 0);
+    }
+
+    function finishLibraryImport(modalId, msg, offerCompare) {
+        pendingLitPdfFile = null;
+        pendingBibPreview = [];
+        closeLibraryLiteratureModal(modalId);
+        renderLiteratureList();
+        litToast(msg);
+        if (offerCompare && confirm(msg + '\n\n是否打开文献对比分析？')) {
+            if (typeof global.showModule === 'function') global.showModule('literature_analysis');
+        }
     }
 
     async function commitLibraryLiterature(modalId) {
         var modal = document.getElementById(modalId);
         if (!modal) return;
 
-        var bibPane = document.getElementById(modalId + '_bib');
-        if (bibPane && bibPane.style.display !== 'none') {
-            var bibText = (document.getElementById('libLitBibtex') || {}).value || '';
-            var entries = parseBibtexEntries(bibText);
-            if (!entries.length) { alert('未解析到有效 BibTeX 条目'); return; }
-            var sync = !!(document.getElementById('libLitBibSync') || {}).checked;
-            var added = 0, skipped = 0;
-            entries.forEach(function (e) {
-                if (findLibraryDuplicate(e)) { skipped++; return; }
-                persistLibraryItem(e, { syncCompare: sync, silent: true });
-                added++;
-            });
-            pendingLitPdfFile = null;
-            modal.remove();
-            renderLiteratureList();
-            alert('BibTeX 导入完成：新增 ' + added + ' 篇' + (skipped ? ('，跳过重复 ' + skipped + ' 篇') : ''));
+        // 根据当前可见 Tab 分流（避免误判）
+        var activeTab = 'manual';
+        modal.querySelectorAll('.lit-modal-tab').forEach(function (btn) {
+            if (btn.classList.contains('active')) activeTab = btn.getAttribute('data-tab') || 'manual';
+        });
+
+        if (activeTab === 'bib') {
+            if (pendingBibPreview && pendingBibPreview.length) confirmBibPreviewImport(modalId);
+            else parseBibtexPreview(modalId);
             return;
         }
 
-        var pdfPane = document.getElementById(modalId + '_pdf');
-        if (pdfPane && pdfPane.style.display !== 'none') {
+        if (activeTab === 'pdf') {
             await commitLibraryPdfUpload(modalId);
             return;
+        }
+
+        if (activeTab === 'doi') {
+            var preview = document.getElementById(modalId + '_doiPreview');
+            var hasPreview = preview && preview.style.display !== 'none' && preview.dataset.meta;
+            if (!hasPreview) {
+                await fetchLiteratureByDoi(modalId);
+                return;
+            }
+            // 用手动表单（已填充）或 preview meta 保存
         }
 
         var title = String((document.getElementById('libLitTitle') || {}).value || '').trim();
@@ -1332,7 +1842,8 @@
             citations: Number((document.getElementById('libLitCite') || {}).value || 0) || 0,
             litType: (document.getElementById('libLitType') || {}).value || 'journal',
             paperUrl: String((document.getElementById('libLitUrl') || {}).value || '').trim(),
-            isCore: !!(document.getElementById('libLitCore') || {}).checked
+            isCore: !!(document.getElementById('libLitCore') || {}).checked,
+            source: activeTab === 'doi' ? 'doi' : 'manual'
         };
         var proj = String((document.getElementById('libLitProject') || {}).value || '');
         if (proj) {
@@ -1342,14 +1853,13 @@
             payload.projectNames = sel && sel.selectedOptions[0] ? [sel.selectedOptions[0].text.replace(/^\[[^\]]+\]\s*/, '')] : [];
         }
         var dup = findLibraryDuplicate(payload);
-        if (dup && !confirm('库中已有相似文献《' + dup.title + '》，仍要添加吗？')) return;
+        if (dup) {
+            var choice = confirm('该文献已在库中：《' + dup.title + '》\n\n确定 = 仍要新增一份\n取消 = 取消保存\n\n（可先点预览区「查看已有文献」）');
+            if (!choice) return;
+        }
         var syncCompare = !!(document.getElementById('libLitSyncCompare') || {}).checked;
         persistLibraryItem(payload, { syncCompare: syncCompare });
-        pendingLitPdfFile = null;
-        modal.remove();
-        renderLiteratureList();
-        if (typeof global.showCloudSyncBanner === 'function') global.showCloudSyncBanner('文献已入库并同步', false);
-        else alert('添加成功！');
+        finishLibraryImport(modalId, '成功添加 1 篇文献', true);
     }
 
     async function commitLibraryPdfUpload(modalId) {
@@ -1395,13 +1905,7 @@
             }
             persistLibraryItem(payload, { syncCompare: syncCompare });
             pendingLitPdfFile = null;
-            if (modal) modal.remove();
-            renderLiteratureList();
-            if (typeof global.showCloudSyncBanner === 'function') {
-                global.showCloudSyncBanner('PDF 已上传并入库' + (toShared ? '，已同步共享文件库' : ''), false);
-            } else {
-                alert('PDF 已上传并入库！');
-            }
+            finishLibraryImport(modalId, 'PDF 已上传并入库' + (toShared ? '，已同步共享文件库' : ''), true);
         } catch (err) {
             setPdfStatus(modalId, '上传失败：' + (err && err.message ? err.message : err), '#dc2626');
             if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '上传并入库'; }
@@ -1460,10 +1964,18 @@
             '<div><b>标签：</b>' + esc(item.tags || '—') + '</div>' +
             (item.projectNames && item.projectNames.length ? ('<div><b>关联项目：</b>' + esc(item.projectNames.join('、')) + '</div>') : '') +
             '<div><b>上传：</b>' + esc(item.uploader) + ' · ' + esc(item.uploadTime) + '</div>' +
+            '<div style="margin-top:8px;"><b>阅读状态：</b> ' +
+            '<select id="litReadStatus_' + id + '" onchange="setLibraryLitReadStatus(' + id + ', this.value)" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;">' +
+            '<option value="unread"' + ((item.readStatus || 'unread') === 'unread' ? ' selected' : '') + '>未读</option>' +
+            '<option value="reading"' + (item.readStatus === 'reading' ? ' selected' : '') + '>在读</option>' +
+            '<option value="read"' + (item.readStatus === 'read' ? ' selected' : '') + '>已读</option>' +
+            '</select></div>' +
             '</div>' +
             '<div style="margin-top:14px;"><b style="font-size:14px;">摘要</b>' +
             '<div style="margin-top:6px;font-size:13px;color:#444;line-height:1.7;background:#f9fafb;padding:12px;border-radius:8px;">' +
             esc(item.summary || '暂无摘要') + '</div></div>' +
+            '<div style="margin-top:14px;"><b style="font-size:14px;">PDF 预览</b>' +
+            '<div id="litPdfPreview_' + id + '" style="margin-top:8px;"><div style="font-size:12px;color:#888;">加载中…</div></div></div>' +
             '<div style="margin-top:14px;"><b style="font-size:14px;">阅读笔记</b>' +
             '<textarea id="litNote_' + id + '" rows="4" style="width:100%;margin-top:6px;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="记录阅读笔记…">' + esc(item.notes || '') + '</textarea>' +
             '<button type="button" class="btn btn-secondary" style="margin-top:8px;padding:6px 12px;font-size:12px;" onclick="saveLibraryLitNotes(' + id + ')">保存笔记</button></div>' +
@@ -1487,6 +1999,43 @@
             '</div></div></div>';
         document.body.appendChild(modal);
         modal.onclick = function (e) { if (e.target === modal) modal.remove(); };
+        mountLibraryLitPdfPreview(id, item);
+    }
+
+    function mountLibraryLitPdfPreview(id, item) {
+        var box = document.getElementById('litPdfPreview_' + id);
+        if (!box) return;
+        function showUrl(url) {
+            box.innerHTML = '<iframe class="lit-pdf-frame" src="' + esc(url) + '#toolbar=1" title="PDF 预览"></iframe>';
+        }
+        if (item.pdfUrl) {
+            showUrl(item.pdfUrl);
+            return;
+        }
+        if (item.sharedFileId && typeof global.getSharedFileBlob === 'function') {
+            global.getSharedFileBlob(item.sharedFileId).then(function (blob) {
+                if (!blob) {
+                    box.innerHTML = '<div style="font-size:12px;color:#888;">暂无本地 PDF，可点击下载或打开原文链接</div>';
+                    return;
+                }
+                var url = URL.createObjectURL(blob);
+                showUrl(url);
+            }).catch(function () {
+                box.innerHTML = '<div style="font-size:12px;color:#888;">PDF 预览不可用</div>';
+            });
+            return;
+        }
+        box.innerHTML = '<div style="font-size:12px;color:#888;">暂无 PDF 附件。可上传 PDF 后在此预览。</div>';
+    }
+
+    function setLibraryLitReadStatus(id, status) {
+        var list = getLiteratureData();
+        var idx = list.findIndex(function (l) { return l.id === id; });
+        if (idx < 0) return;
+        list[idx].readStatus = status || 'unread';
+        global.literatureData = list;
+        saveLiteratureLibraryData({ log: { action: '阅读状态', desc: list[idx].title + ' → ' + status } });
+        renderLiteratureList();
     }
 
     function citeBlock(label, text) {
@@ -1792,6 +2341,76 @@
         renderLiteratureList();
     }
 
+    function batchTagLibraryLiterature() {
+        var ids = getSelectedLitIds();
+        if (!ids.length) { alert('请先勾选文献'); return; }
+        var tag = prompt('为选中文献追加标签（多个用逗号分隔）');
+        if (!tag) return;
+        var tags = parseTags(tag);
+        if (!tags.length) return;
+        tags.forEach(function (t) { addCustomLitTag(t); });
+        var list = getLiteratureData();
+        ids.forEach(function (id) {
+            var idx = list.findIndex(function (l) { return l.id === id; });
+            if (idx < 0) return;
+            var cur = list[idx].tagList || parseTags(list[idx].tags);
+            tags.forEach(function (t) { if (cur.indexOf(t) < 0) cur.push(t); });
+            list[idx].tagList = cur;
+            list[idx].tags = cur.join(', ');
+        });
+        global.literatureData = list;
+        saveLiteratureLibraryData({ log: { action: '批量打标签', desc: tags.join(',') + ' × ' + ids.length } });
+        renderLiteratureList();
+        if (typeof global.showCloudSyncBanner === 'function') global.showCloudSyncBanner('已为 ' + ids.length + ' 篇文献添加标签', false);
+    }
+
+    function batchMoveLibraryLitToGroup() {
+        var ids = getSelectedLitIds();
+        if (!ids.length) { alert('请先勾选文献'); return; }
+        var groups = loadLiteratureGroups();
+        if (!groups.length) {
+            var name = prompt('尚无分组，请输入新分组名称');
+            if (!name) return;
+            var g = createLiteratureGroup(name);
+            if (!g) return;
+            groups = [g];
+        }
+        var options = groups.map(function (g, i) { return (i + 1) + '. ' + g.name; }).join('\n');
+        var pick = prompt('选择分组序号：\n' + options);
+        var gidx = Number(pick) - 1;
+        if (!(gidx >= 0 && gidx < groups.length)) { alert('无效选择'); return; }
+        var gid = groups[gidx].id;
+        var list = getLiteratureData();
+        ids.forEach(function (id) {
+            var i = list.findIndex(function (l) { return l.id === id; });
+            if (i < 0) return;
+            var gids = list[i].groupIds || [];
+            if (gids.indexOf(gid) < 0) gids.push(gid);
+            list[i].groupIds = gids;
+        });
+        global.literatureData = list;
+        saveLiteratureLibraryData({ log: { action: '批量分组', desc: groups[gidx].name + ' × ' + ids.length } });
+        litState.groupFilter = gid;
+        renderLiteratureList();
+    }
+
+    function batchDownloadLibraryLiterature() {
+        var ids = getSelectedLitIds();
+        if (!ids.length) { alert('请先勾选文献'); return; }
+        if (!canDownloadPdf()) { alert('访客不可下载'); return; }
+        var n = 0;
+        ids.forEach(function (id) {
+            var item = getLiteratureData().find(function (l) { return l.id === id; });
+            if (!item) return;
+            if (item.sharedFileId || item.pdfUrl || item.paperUrl) {
+                n++;
+                setTimeout(function () { downloadLibraryLiterature(id); }, n * 400);
+            }
+        });
+        if (!n) alert('所选文献均无附件或原文链接');
+        else if (typeof global.showCloudSyncBanner === 'function') global.showCloudSyncBanner('开始下载 ' + n + ' 个附件', false);
+    }
+
     function importFromSharedPdfHint() {
         if (typeof global.showModule === 'function') global.showModule('shared_files');
         if (typeof global.showCloudSyncBanner === 'function') {
@@ -1837,6 +2456,12 @@
         setLitStatFilter: setLitStatFilter,
         setLitTypeFilter: setLitTypeFilter,
         setLitTagFilter: setLitTagFilter,
+        getLiteratureAllTags: getAllTags,
+        addLiteratureCustomTag: addCustomLitTag,
+        appendLitTagToInput: appendLitTagToInput,
+        promptAddLitTagToInput: promptAddLitTagToInput,
+        toggleLitTagAddPanel: toggleLitTagAddPanel,
+        confirmAddLitTag: confirmAddLitTag,
         onLitLibraryFilterChange: onLitLibraryFilterChange,
         toggleLitSelect: toggleLitSelect,
         toggleSelectAllLit: toggleSelectAllLit,
@@ -1844,16 +2469,36 @@
         setLiteraturePage: setLiteraturePage,
         switchLitLibModalTab: switchLitLibModalTab,
         fetchLiteratureByDoi: fetchLiteratureByDoi,
+        onLitDoiInputChange: onLitDoiInputChange,
+        fillDoiFromHistory: fillDoiFromHistory,
+        copyDoiAsBibtex: copyDoiAsBibtex,
         commitLibraryLiterature: commitLibraryLiterature,
         handleLibraryPdfDrop: handleLibraryPdfDrop,
         handleLibraryPdfFileSelect: handleLibraryPdfFileSelect,
         clearPendingLitPdf: clearPendingLitPdf,
+        closeLibraryLiteratureModal: closeLibraryLiteratureModal,
         reRecognizeLibraryPdf: reRecognizeLibraryPdf,
         commitLibraryPdfUpload: commitLibraryPdfUpload,
+        setBibImportMode: setBibImportMode,
+        handleBibTextDrop: handleBibTextDrop,
+        handleBibFileDrop: handleBibFileDrop,
+        handleBibFileSelect: handleBibFileSelect,
+        parseBibtexPreview: parseBibtexPreview,
+        toggleBibPreviewItem: toggleBibPreviewItem,
+        setAllBibPreviewChecked: setAllBibPreviewChecked,
+        confirmBibPreviewImport: confirmBibPreviewImport,
         saveLibraryLitNotes: saveLibraryLitNotes,
         downloadLibraryLiterature: downloadLibraryLiterature,
         copyLitCite: copyLitCite,
         batchDeleteLibraryLiterature: batchDeleteLibraryLiterature,
+        batchTagLibraryLiterature: batchTagLibraryLiterature,
+        batchMoveLibraryLitToGroup: batchMoveLibraryLitToGroup,
+        batchDownloadLibraryLiterature: batchDownloadLibraryLiterature,
+        setLibraryLitReadStatus: setLibraryLitReadStatus,
+        toggleLitAdvFilter: toggleLitAdvFilter,
+        onLitAdvFilterChange: onLitAdvFilterChange,
+        setLitGroupFilter: setLitGroupFilter,
+        promptCreateLiteratureGroup: promptCreateLiteratureGroup,
         importFromSharedPdfHint: importFromSharedPdfHint
     };
 

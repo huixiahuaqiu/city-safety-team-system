@@ -17,9 +17,24 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(BASE_DIR, '.env')
 MLOPS_STORE_PATH = os.path.join(BASE_DIR, 'mlops_store.json')
 ANNOTATION_UPLOAD_ROOT = os.path.join(BASE_DIR, 'uploads', 'annotations')
+DATASET_UPLOAD_ROOT = os.path.join(BASE_DIR, 'uploads', 'datasets')
+SHARED_FILE_UPLOAD_ROOT = os.path.join(BASE_DIR, 'uploads', 'shared')
+DATASET_META_PATH = os.path.join(DATASET_UPLOAD_ROOT, '_registry.json')
+SHARED_FILE_META_PATH = os.path.join(SHARED_FILE_UPLOAD_ROOT, '_registry.json')
 AUDIT_LOG_PATH = os.path.join(BASE_DIR, 'logs', 'server_audit.log')
 ANNOTATION_BLOB_MARK = '__APP_SYNC_BLOB__'
 ANNOTATION_BLOB_PREFIX = '__SYNC_BLOB__anno_'
+
+# 共享文件可选对象存储（S3 / MinIO 兼容）
+SHARED_STORAGE_BACKEND = (os.environ.get('SHARED_STORAGE_BACKEND') or 'local').strip().lower()
+MINIO_ENDPOINT = (os.environ.get('MINIO_ENDPOINT') or '').strip().rstrip('/')
+MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', '')
+MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', '')
+MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'team-shared')
+MINIO_SECURE = (os.environ.get('MINIO_SECURE') or 'false').strip().lower() in ('1', 'true', 'yes')
+MINIO_REGION = os.environ.get('MINIO_REGION', 'us-east-1')
+_minio_client = None
+_minio_init_tried = False
 
 
 def load_env_file(path):
@@ -43,11 +58,22 @@ load_env_file(ENV_PATH)
 MLOPS_TOKEN = os.environ.get('MLOPS_TOKEN', '')
 ANNOTATION_UPLOAD_TOKEN = os.environ.get('ANNOTATION_UPLOAD_TOKEN', '')
 MAX_UPLOAD_BYTES = int(os.environ.get('MAX_UPLOAD_BYTES', str(200 * 1024 * 1024)))
+MAX_DATASET_BYTES = int(os.environ.get('MAX_DATASET_BYTES', str(10 * 1024 * 1024 * 1024)))
+DATASET_CHUNK_SIZE = int(os.environ.get('DATASET_CHUNK_SIZE', str(2 * 1024 * 1024)))
+DATASET_UPLOAD_TOKEN = os.environ.get('DATASET_UPLOAD_TOKEN', '') or os.environ.get('ANNOTATION_UPLOAD_TOKEN', '')
 ALLOWED_UPLOAD_EXTENSIONS = {
     ext.strip().lower()
     for ext in os.environ.get(
         'ALLOWED_UPLOAD_EXTENSIONS',
         '.jpg,.jpeg,.png,.bmp,.webp,.gif,.txt,.xml,.csv,.json,.yaml,.yml',
+    ).split(',')
+    if ext.strip()
+}
+DATASET_ALLOWED_EXTENSIONS = {
+    ext.strip().lower()
+    for ext in os.environ.get(
+        'DATASET_ALLOWED_EXTENSIONS',
+        '.csv,.tsv,.json,.xml,.zip,.jpg,.jpeg,.png,.bmp,.webp,.xlsx,.xls,.txt,.yaml,.yml',
     ).split(',')
     if ext.strip()
 }
@@ -336,6 +362,657 @@ def check_upload_token(handler):
     return secrets.compare_digest(str(token), str(ANNOTATION_UPLOAD_TOKEN))
 
 
+def check_dataset_token(handler):
+    """本地网关：未配置 token 时允许数据集上传；配置后必须校验。"""
+    if not DATASET_UPLOAD_TOKEN:
+        return True
+    token = handler.headers.get('X-Upload-Token') or handler.headers.get('X-Dataset-Token') or ''
+    auth = handler.headers.get('Authorization') or ''
+    if auth.lower().startswith('bearer '):
+        token = auth[7:].strip() or token
+    return secrets.compare_digest(str(token), str(DATASET_UPLOAD_TOKEN))
+
+
+def _safe_dataset_id(value):
+    tid = ''.join(c for c in str(value or '') if c.isalnum() or c in ('-', '_'))
+    if not tid:
+        raise ValueError('invalid dataset/upload id')
+    return tid
+
+
+def _dataset_registry_load():
+    os.makedirs(DATASET_UPLOAD_ROOT, exist_ok=True)
+    if not os.path.exists(DATASET_META_PATH):
+        return {'files': {}, 'uploads': {}}
+    try:
+        with open(DATASET_META_PATH, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return {'files': {}, 'uploads': {}}
+        data.setdefault('files', {})
+        data.setdefault('uploads', {})
+        return data
+    except Exception:
+        return {'files': {}, 'uploads': {}}
+
+
+def _dataset_registry_save(data):
+    os.makedirs(DATASET_UPLOAD_ROOT, exist_ok=True)
+    tmp = DATASET_META_PATH + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, DATASET_META_PATH)
+
+
+def _dataset_upload_dir(upload_id):
+    uid = _safe_dataset_id(upload_id)
+    root = os.path.abspath(DATASET_UPLOAD_ROOT)
+    target = os.path.abspath(os.path.join(root, '_tmp', uid))
+    if not target.startswith(root + os.sep):
+        raise ValueError('invalid upload path')
+    return target
+
+
+def _dataset_final_path(file_id, file_name=''):
+    fid = _safe_dataset_id(file_id)
+    ext = os.path.splitext(str(file_name or ''))[1].lower()
+    if ext not in DATASET_ALLOWED_EXTENSIONS:
+        ext = '.bin'
+    root = os.path.abspath(DATASET_UPLOAD_ROOT)
+    target = os.path.abspath(os.path.join(root, 'files', fid + ext))
+    if not target.startswith(root + os.sep):
+        raise ValueError('invalid file path')
+    return target
+
+
+def find_dataset_file_by_md5(md5):
+    md5 = str(md5 or '').strip().lower()
+    if not md5:
+        return None
+    reg = _dataset_registry_load()
+    for fid, meta in (reg.get('files') or {}).items():
+        if str(meta.get('md5') or '').lower() == md5 and os.path.isfile(meta.get('path') or ''):
+            return dict(meta, fileId=fid)
+    return None
+
+
+def init_dataset_upload(payload):
+    file_name = str(payload.get('fileName') or payload.get('name') or 'dataset.bin')
+    size = int(payload.get('size') or 0)
+    md5 = str(payload.get('md5') or '').strip().lower()
+    chunk_size = int(payload.get('chunkSize') or DATASET_CHUNK_SIZE)
+    if size <= 0:
+        raise ValueError('size required')
+    if size > MAX_DATASET_BYTES:
+        raise ValueError('file too large: max %s bytes' % MAX_DATASET_BYTES)
+    ext = os.path.splitext(file_name.lower())[1]
+    if ext and ext not in DATASET_ALLOWED_EXTENSIONS:
+        raise ValueError('file extension not allowed: %s' % ext)
+
+    existing = find_dataset_file_by_md5(md5) if md5 else None
+    if existing:
+        return {
+            'uploadId': existing.get('fileId'),
+            'fileId': existing.get('fileId'),
+            'exists': True,
+            'instant': True,
+            'size': existing.get('size'),
+            'md5': existing.get('md5'),
+            'path': existing.get('savedAs'),
+            'uploadedChunks': [],
+            'chunkSize': chunk_size,
+        }
+
+    upload_id = _safe_dataset_id(payload.get('uploadId') or ('up_' + secrets.token_hex(8)))
+    up_dir = _dataset_upload_dir(upload_id)
+    os.makedirs(up_dir, exist_ok=True)
+    received = []
+    for name in os.listdir(up_dir):
+        if name.startswith('chunk_') and name.endswith('.part'):
+            try:
+                received.append(int(name[6:-5]))
+            except ValueError:
+                pass
+    received.sort()
+    reg = _dataset_registry_load()
+    reg['uploads'][upload_id] = {
+        'uploadId': upload_id,
+        'fileName': file_name,
+        'size': size,
+        'md5': md5,
+        'chunkSize': chunk_size,
+        'createdAt': _now_iso(),
+        'received': received,
+    }
+    _dataset_registry_save(reg)
+    return {
+        'uploadId': upload_id,
+        'exists': False,
+        'instant': False,
+        'uploadedChunks': received,
+        'chunkSize': chunk_size,
+        'size': size,
+        'md5': md5,
+    }
+
+
+def save_dataset_chunk(upload_id, index, content, total_chunks=None):
+    index = int(index)
+    if index < 0:
+        raise ValueError('invalid chunk index')
+    if len(content) > DATASET_CHUNK_SIZE * 2:
+        raise ValueError('chunk too large')
+    up_dir = _dataset_upload_dir(upload_id)
+    os.makedirs(up_dir, exist_ok=True)
+    part_path = os.path.join(up_dir, 'chunk_%d.part' % index)
+    with open(part_path, 'wb') as f:
+        f.write(content)
+    reg = _dataset_registry_load()
+    meta = reg['uploads'].get(upload_id) or {
+        'uploadId': upload_id,
+        'received': [],
+        'createdAt': _now_iso(),
+    }
+    received = set(meta.get('received') or [])
+    received.add(index)
+    meta['received'] = sorted(received)
+    if total_chunks is not None:
+        meta['totalChunks'] = int(total_chunks)
+    reg['uploads'][upload_id] = meta
+    _dataset_registry_save(reg)
+    return {'ok': True, 'index': index, 'received': len(meta['received']), 'bytes': len(content)}
+
+
+def complete_dataset_upload(payload):
+    upload_id = _safe_dataset_id(payload.get('uploadId'))
+    reg = _dataset_registry_load()
+    meta = reg['uploads'].get(upload_id)
+    if not meta:
+        raise FileNotFoundError('upload session not found')
+    file_name = str(payload.get('fileName') or meta.get('fileName') or 'dataset.bin')
+    expect_size = int(payload.get('size') or meta.get('size') or 0)
+    expect_md5 = str(payload.get('md5') or meta.get('md5') or '').strip().lower()
+    chunk_size = int(meta.get('chunkSize') or DATASET_CHUNK_SIZE)
+    up_dir = _dataset_upload_dir(upload_id)
+    if not os.path.isdir(up_dir):
+        raise FileNotFoundError('upload chunks missing')
+
+    received = sorted(meta.get('received') or [])
+    if not received:
+        raise ValueError('no chunks uploaded')
+    total_chunks = int(meta.get('totalChunks') or (max(received) + 1))
+    missing = [i for i in range(total_chunks) if i not in set(received)]
+    if missing:
+        raise ValueError('missing chunks: %s' % missing[:20])
+
+    file_id = _safe_dataset_id(payload.get('fileId') or ('dsf_' + secrets.token_hex(8)))
+    final_path = _dataset_final_path(file_id, file_name)
+    os.makedirs(os.path.dirname(final_path), exist_ok=True)
+
+    hasher = hashlib.md5()
+    written = 0
+    with open(final_path, 'wb') as out:
+        for i in range(total_chunks):
+            part_path = os.path.join(up_dir, 'chunk_%d.part' % i)
+            with open(part_path, 'rb') as inp:
+                while True:
+                    buf = inp.read(1024 * 1024)
+                    if not buf:
+                        break
+                    out.write(buf)
+                    hasher.update(buf)
+                    written += len(buf)
+
+    actual_md5 = hasher.hexdigest()
+    if expect_size and written != expect_size:
+        try:
+            os.remove(final_path)
+        except OSError:
+            pass
+        raise ValueError('size mismatch: got %s expect %s' % (written, expect_size))
+    if expect_md5 and actual_md5 != expect_md5:
+        # 前端可能只给了轻量指纹；仅在双方都是 32 位 hex 时强制校验
+        if len(expect_md5) == 32 and all(c in '0123456789abcdef' for c in expect_md5):
+            try:
+                os.remove(final_path)
+            except OSError:
+                pass
+            raise ValueError('md5 mismatch')
+
+    inspect = inspect_dataset_file(final_path, file_name)
+    file_meta = {
+        'fileId': file_id,
+        'fileName': file_name,
+        'size': written,
+        'md5': actual_md5,
+        'path': final_path,
+        'savedAs': os.path.relpath(final_path, DATASET_UPLOAD_ROOT).replace('\\', '/'),
+        'createdAt': _now_iso(),
+        'chunkSize': chunk_size,
+        'inspect': inspect,
+    }
+    reg = _dataset_registry_load()
+    reg['files'][file_id] = file_meta
+    reg['uploads'].pop(upload_id, None)
+    _dataset_registry_save(reg)
+
+    # 清理临时分片
+    try:
+        for name in os.listdir(up_dir):
+            os.remove(os.path.join(up_dir, name))
+        os.rmdir(up_dir)
+    except OSError:
+        pass
+
+    return {
+        'ok': True,
+        'fileId': file_id,
+        'size': written,
+        'md5': actual_md5,
+        'savedAs': file_meta['savedAs'],
+        'inspect': inspect,
+    }
+
+
+def get_dataset_upload_status(upload_id):
+    upload_id = _safe_dataset_id(upload_id)
+    reg = _dataset_registry_load()
+    meta = reg['uploads'].get(upload_id)
+    if not meta:
+        raise FileNotFoundError('upload session not found')
+    return {
+        'ok': True,
+        'uploadId': upload_id,
+        'uploadedChunks': meta.get('received') or [],
+        'size': meta.get('size'),
+        'md5': meta.get('md5'),
+        'fileName': meta.get('fileName'),
+        'chunkSize': meta.get('chunkSize') or DATASET_CHUNK_SIZE,
+    }
+
+
+def get_dataset_file_meta(file_id):
+    file_id = _safe_dataset_id(file_id)
+    reg = _dataset_registry_load()
+    meta = reg['files'].get(file_id)
+    if not meta or not os.path.isfile(meta.get('path') or ''):
+        raise FileNotFoundError('dataset file not found')
+    return meta
+
+
+def inspect_dataset_file(path, file_name=''):
+    """解析数据集文件元数据：表格行数 / ZIP 内图像与标注统计。"""
+    import zipfile
+    name = file_name or os.path.basename(path)
+    ext = os.path.splitext(name.lower())[1]
+    result = {
+        'format': (ext[1:] if ext else 'bin').upper(),
+        'fileName': name,
+        'size': os.path.getsize(path) if os.path.isfile(path) else 0,
+        'sampleCount': 0,
+        'fieldCount': 0,
+        'imageCount': 0,
+        'labelCount': 0,
+        'classCount': 0,
+        'classes': [],
+        'sampleImages': [],
+        'labelFiles': [],
+        'dataType': 'table',
+        'annoTypeHint': 'none',
+        'note': '',
+    }
+    try:
+        if ext in ('.csv', '.tsv', '.txt'):
+            sep = '\t' if ext == '.tsv' else ','
+            preview_lines = []
+            count = 0
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                for i, line in enumerate(f):
+                    count = i + 1
+                    if i < 101:
+                        preview_lines.append(line.rstrip('\n'))
+            result['sampleCount'] = max(0, count - 1)
+            if preview_lines:
+                cols = [c.strip().strip('"') for c in preview_lines[0].split(sep)]
+                result['fieldCount'] = len(cols)
+                result['preview'] = {
+                    'columns': cols,
+                    'rows': [
+                        [c.strip().strip('"') for c in row.split(sep)]
+                        for row in preview_lines[1:21]
+                    ],
+                }
+            result['dataType'] = 'table'
+            result['note'] = 'CSV/TSV 已统计记录数与字段'
+        elif ext == '.json':
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                result['sampleCount'] = len(data)
+                if data and isinstance(data[0], dict):
+                    cols = list(data[0].keys())
+                    result['fieldCount'] = len(cols)
+                    result['preview'] = {
+                        'columns': cols,
+                        'rows': [[row.get(c) for c in cols] for row in data[:20]],
+                    }
+            elif isinstance(data, dict) and isinstance(data.get('images'), list):
+                result['sampleCount'] = len(data['images'])
+                result['imageCount'] = len(data['images'])
+                result['dataType'] = 'image'
+            result['note'] = 'JSON 已解析'
+        elif ext == '.zip':
+            result['dataType'] = 'image'
+            img_exts = {'.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif'}
+            label_exts = {'.xml', '.json', '.txt', '.yaml', '.yml'}
+            classes = set()
+            with zipfile.ZipFile(path, 'r') as zf:
+                names = [n for n in zf.namelist() if not n.endswith('/')]
+                images = [n for n in names if os.path.splitext(n.lower())[1] in img_exts]
+                labels = [n for n in names if os.path.splitext(n.lower())[1] in label_exts]
+                result['imageCount'] = len(images)
+                result['labelCount'] = len(labels)
+                result['sampleCount'] = len(images) or len(names)
+                result['sampleImages'] = images[:20]
+                result['labelFiles'] = labels[:20]
+                # 粗略从路径推断类别
+                for n in images:
+                    parts = n.replace('\\', '/').split('/')
+                    if len(parts) >= 2:
+                        classes.add(parts[-2])
+                # YOLO labels: class id in txt
+                for lf in labels[:50]:
+                    if not lf.lower().endswith('.txt'):
+                        continue
+                    try:
+                        raw = zf.read(lf).decode('utf-8', errors='ignore')
+                        for line in raw.splitlines()[:20]:
+                            tid = line.strip().split(' ')[0]
+                            if tid.isdigit():
+                                classes.add('class_' + tid)
+                    except Exception:
+                        pass
+                if labels:
+                    result['annoTypeHint'] = 'detection'
+            result['classes'] = sorted(classes)[:50]
+            result['classCount'] = len(result['classes'])
+            result['note'] = 'ZIP 已统计图像/标注/类别'
+        elif ext in ('.jpg', '.jpeg', '.png', '.bmp', '.webp'):
+            result['dataType'] = 'image'
+            result['imageCount'] = 1
+            result['sampleCount'] = 1
+            result['sampleImages'] = [name]
+        elif ext == '.xml':
+            result['dataType'] = 'image'
+            result['annoTypeHint'] = 'detection'
+            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                text = f.read(800000)
+            result['sampleCount'] = text.lower().count('<object')
+            result['labelCount'] = 1
+            result['note'] = 'XML 标注文件'
+    except Exception as e:
+        result['note'] = 'inspect failed: %s' % e
+    return result
+
+
+def read_dataset_zip_sample(file_id, member_path, max_bytes=3 * 1024 * 1024):
+    import zipfile
+    meta = get_dataset_file_meta(file_id)
+    path = meta.get('path')
+    member_path = str(member_path or '').replace('\\', '/')
+    if not member_path or '..' in member_path.split('/'):
+        raise ValueError('invalid member path')
+    with zipfile.ZipFile(path, 'r') as zf:
+        info = zf.getinfo(member_path)
+        if info.file_size > max_bytes:
+            raise ValueError('sample too large')
+        data = zf.read(member_path)
+    ext = os.path.splitext(member_path.lower())[1]
+    mime = {
+        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+        '.bmp': 'image/bmp', '.webp': 'image/webp', '.gif': 'image/gif',
+        '.xml': 'application/xml', '.json': 'application/json', '.txt': 'text/plain',
+    }.get(ext, 'application/octet-stream')
+    return data, mime, os.path.basename(member_path)
+
+
+# ---------- 团队共享文件库：磁盘落盘 ----------
+def _shared_registry_load():
+    os.makedirs(SHARED_FILE_UPLOAD_ROOT, exist_ok=True)
+    if not os.path.exists(SHARED_FILE_META_PATH):
+        return {'files': {}}
+    try:
+        with open(SHARED_FILE_META_PATH, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            return {'files': {}}
+        data.setdefault('files', {})
+        return data
+    except Exception:
+        return {'files': {}}
+
+
+def _shared_registry_save(data):
+    os.makedirs(SHARED_FILE_UPLOAD_ROOT, exist_ok=True)
+    tmp = SHARED_FILE_META_PATH + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, SHARED_FILE_META_PATH)
+
+
+def save_shared_upload(file_name, file_type, remark, content, original_name=''):
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise ValueError('file too large: max %s bytes' % MAX_UPLOAD_BYTES)
+    ext = os.path.splitext(str(original_name or file_name).lower())[1]
+    allow = DATASET_ALLOWED_EXTENSIONS | ALLOWED_UPLOAD_EXTENSIONS | {'.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.zip', '.pdf'}
+    if ext and ext not in allow:
+        raise ValueError('file extension not allowed: %s' % ext)
+    file_id = 'sf_' + secrets.token_hex(8)
+    date_path = datetime.now().strftime('%Y%m')
+    safe_name = ''.join(c for c in (file_name or 'file') if c not in '\\/:*?"<>|')[:120] or 'file'
+    stored = file_id + (ext or '.bin')
+    md5 = hashlib.md5(content).hexdigest()
+    meta = {
+        'fileId': file_id,
+        'fileName': safe_name,
+        'originalName': original_name or safe_name,
+        'fileType': file_type or 'other',
+        'remark': remark or '',
+        'size': len(content),
+        'md5': md5,
+        'createdAt': _now_iso(),
+        'deleted': False,
+        'storage': 'local',
+    }
+    client = _get_minio_client()
+    if client:
+        object_key = 'shared/%s/%s' % (date_path, stored)
+        try:
+            import io
+            client.put_object(
+                MINIO_BUCKET,
+                object_key,
+                io.BytesIO(content),
+                length=len(content),
+                content_type='application/octet-stream',
+            )
+            meta['storage'] = 'minio'
+            meta['objectKey'] = object_key
+            meta['bucket'] = MINIO_BUCKET
+            meta['path'] = ''
+            meta['savedAs'] = object_key
+        except Exception as e:
+            logging.warning('MinIO put failed, fallback local: %s', e)
+            client = None
+    if meta['storage'] != 'minio':
+        rel_dir = os.path.join('files', date_path)
+        abs_dir = os.path.join(SHARED_FILE_UPLOAD_ROOT, rel_dir)
+        os.makedirs(abs_dir, exist_ok=True)
+        full = os.path.join(abs_dir, stored)
+        with open(full, 'wb') as f:
+            f.write(content)
+        meta['path'] = full
+        meta['savedAs'] = os.path.relpath(full, SHARED_FILE_UPLOAD_ROOT).replace('\\', '/')
+    reg = _shared_registry_load()
+    reg['files'][file_id] = meta
+    _shared_registry_save(reg)
+    return meta
+
+
+def get_shared_file_meta(file_id, allow_deleted=False):
+    file_id = _safe_dataset_id(file_id)
+    reg = _shared_registry_load()
+    meta = reg['files'].get(file_id)
+    if not meta:
+        raise FileNotFoundError('shared file not found')
+    if meta.get('deletedAt') and not allow_deleted:
+        raise FileNotFoundError('shared file deleted')
+    path = meta.get('path') or ''
+    if meta.get('storage') == 'minio':
+        return meta
+    if not path or not os.path.isfile(path):
+        raise FileNotFoundError('shared file not found')
+    return meta
+
+
+def soft_delete_shared_file(file_id):
+    file_id = _safe_dataset_id(file_id)
+    reg = _shared_registry_load()
+    meta = reg['files'].get(file_id)
+    if not meta:
+        raise FileNotFoundError('shared file not found')
+    meta['deletedAt'] = _now_iso()
+    meta['deleted'] = True
+    reg['files'][file_id] = meta
+    _shared_registry_save(reg)
+    return meta
+
+
+def restore_shared_file(file_id):
+    file_id = _safe_dataset_id(file_id)
+    reg = _shared_registry_load()
+    meta = reg['files'].get(file_id)
+    if not meta:
+        raise FileNotFoundError('shared file not found')
+    meta.pop('deletedAt', None)
+    meta['deleted'] = False
+    reg['files'][file_id] = meta
+    _shared_registry_save(reg)
+    return meta
+
+
+def purge_shared_file(file_id):
+    """物理删除：磁盘/MinIO + 注册表。"""
+    file_id = _safe_dataset_id(file_id)
+    reg = _shared_registry_load()
+    meta = reg['files'].pop(file_id, None)
+    if not meta:
+        raise FileNotFoundError('shared file not found')
+    path = meta.get('path') or ''
+    if path and os.path.isfile(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    if meta.get('storage') == 'minio' and meta.get('objectKey'):
+        try:
+            client = _get_minio_client()
+            if client:
+                client.remove_object(MINIO_BUCKET, meta['objectKey'])
+        except Exception as e:
+            logging.warning('minio purge failed: %s', e)
+    _shared_registry_save(reg)
+    return {'fileId': file_id, 'purged': True}
+
+
+def _get_minio_client():
+    global _minio_client, _minio_init_tried
+    if SHARED_STORAGE_BACKEND != 'minio':
+        return None
+    if _minio_client is not None:
+        return _minio_client
+    if _minio_init_tried:
+        return None
+    _minio_init_tried = True
+    if not (MINIO_ENDPOINT and MINIO_ACCESS_KEY and MINIO_SECRET_KEY):
+        logging.warning('SHARED_STORAGE_BACKEND=minio but credentials incomplete; fallback local')
+        return None
+    try:
+        from minio import Minio  # type: ignore
+        endpoint = MINIO_ENDPOINT.replace('https://', '').replace('http://', '')
+        client = Minio(
+            endpoint,
+            access_key=MINIO_ACCESS_KEY,
+            secret_key=MINIO_SECRET_KEY,
+            secure=MINIO_SECURE,
+            region=MINIO_REGION or None,
+        )
+        if not client.bucket_exists(MINIO_BUCKET):
+            client.make_bucket(MINIO_BUCKET)
+        _minio_client = client
+        logging.info('MinIO client ready: bucket=%s', MINIO_BUCKET)
+        return _minio_client
+    except Exception as e:
+        logging.warning('MinIO init failed (%s); fallback local disk', e)
+        return None
+
+
+def parse_multipart(handler, post_data):
+    """极简 multipart 解析：返回 {fields, file_name, file_content, content_type}。"""
+    ctype = handler.headers.get('Content-Type') or ''
+    if 'multipart/form-data' not in ctype:
+        raise ValueError('expected multipart/form-data')
+    boundary = ''
+    for part in ctype.split(';'):
+        part = part.strip()
+        if part.startswith('boundary='):
+            boundary = part.split('=', 1)[1].strip().strip('"')
+    if not boundary:
+        raise ValueError('missing boundary')
+    delim = ('--' + boundary).encode('utf-8')
+    parts = post_data.split(delim)
+    fields = {}
+    file_name = ''
+    file_content = b''
+    content_type = 'application/octet-stream'
+    for raw in parts:
+        if not raw or raw in (b'--\r\n', b'--', b'\r\n'):
+            continue
+        if raw.startswith(b'--'):
+            continue
+        if raw.startswith(b'\r\n'):
+            raw = raw[2:]
+        if raw.endswith(b'\r\n'):
+            raw = raw[:-2]
+        header_blob, _, body = raw.partition(b'\r\n\r\n')
+        headers = header_blob.decode('utf-8', errors='ignore')
+        disp = ''
+        for line in headers.split('\r\n'):
+            if line.lower().startswith('content-disposition:'):
+                disp = line
+            if line.lower().startswith('content-type:'):
+                content_type = line.split(':', 1)[1].strip()
+        name = ''
+        fname = ''
+        for token in disp.split(';'):
+            token = token.strip()
+            if token.startswith('name='):
+                name = token.split('=', 1)[1].strip().strip('"')
+            if token.startswith('filename='):
+                fname = token.split('=', 1)[1].strip().strip('"')
+        if fname:
+            file_name = fname
+            file_content = body
+        elif name:
+            fields[name] = body.decode('utf-8', errors='ignore')
+    return {
+        'fields': fields,
+        'file_name': file_name,
+        'file_content': file_content,
+        'content_type': content_type,
+    }
+
+
 def safe_annotation_task_dir(task_id):
     tid = ''.join(c for c in str(task_id) if c.isalnum() or c in ('-', '_'))
     if not tid:
@@ -574,6 +1251,118 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             return
         post_data = self.rfile.read(content_length) if content_length else b''
 
+        # 团队共享文件：multipart 上传到磁盘
+        if path.startswith('/api/shared-file/upload'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                return
+            if content_length > MAX_UPLOAD_BYTES:
+                self._json(413, {'ok': False, 'error': 'file too large'})
+                return
+            try:
+                parsed = parse_multipart(self, post_data or b'')
+                fields = parsed.get('fields') or {}
+                content = parsed.get('file_content') or b''
+                if not content:
+                    self._json(400, {'ok': False, 'error': 'file required'})
+                    return
+                meta = save_shared_upload(
+                    fields.get('fileName') or parsed.get('file_name') or 'file',
+                    fields.get('fileType') or 'other',
+                    fields.get('remark') or '',
+                    content,
+                    original_name=parsed.get('file_name') or '',
+                )
+                audit_event('shared_upload_ok', ip=self.client_address[0], fileId=meta.get('fileId'), bytes=meta.get('size'), storage=meta.get('storage'))
+                self._json(200, {'ok': True, 'fileId': meta['fileId'], 'savedAs': meta['savedAs'], 'size': meta['size'], 'md5': meta['md5'], 'storage': meta.get('storage')})
+            except Exception as e:
+                audit_event('shared_upload_failed', ip=self.client_address[0], error=str(e))
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/shared-file/delete'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                return
+            try:
+                payload = json.loads((post_data or b'{}').decode('utf-8') or '{}')
+                file_id = payload.get('fileId') or ''
+                mode = (payload.get('mode') or 'soft').strip().lower()
+                if mode == 'purge':
+                    info = purge_shared_file(file_id)
+                else:
+                    info = soft_delete_shared_file(file_id)
+                audit_event('shared_delete_ok', ip=self.client_address[0], fileId=file_id, mode=mode)
+                self._json(200, {'ok': True, **info})
+            except Exception as e:
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/shared-file/restore'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                return
+            try:
+                payload = json.loads((post_data or b'{}').decode('utf-8') or '{}')
+                info = restore_shared_file(payload.get('fileId') or '')
+                audit_event('shared_restore_ok', ip=self.client_address[0], fileId=info.get('fileId'))
+                self._json(200, {'ok': True, **info})
+            except Exception as e:
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        # 数据集分片上传：初始化 / 分片 / 合并
+        if path.startswith('/api/dataset/init'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid dataset token'})
+                return
+            try:
+                payload = json.loads((post_data or b'{}').decode('utf-8') or '{}')
+                info = init_dataset_upload(payload)
+                audit_event('dataset_init_ok', ip=self.client_address[0], uploadId=info.get('uploadId'), instant=info.get('instant'))
+                self._json(200, {'ok': True, **info})
+            except Exception as e:
+                audit_event('dataset_init_failed', ip=self.client_address[0], error=str(e))
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/dataset/chunk'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid dataset token'})
+                return
+            upload_id = self.headers.get('X-Upload-Id') or ''
+            try:
+                index = int(self.headers.get('X-Chunk-Index') or -1)
+            except ValueError:
+                self._json(400, {'ok': False, 'error': 'invalid chunk index'})
+                return
+            total_raw = self.headers.get('X-Chunk-Total')
+            total_chunks = int(total_raw) if total_raw not in (None, '') else None
+            if content_length > DATASET_CHUNK_SIZE * 2:
+                self._json(413, {'ok': False, 'error': 'chunk too large'})
+                return
+            try:
+                info = save_dataset_chunk(upload_id, index, post_data or b'', total_chunks=total_chunks)
+                self._json(200, info)
+            except Exception as e:
+                audit_event('dataset_chunk_failed', ip=self.client_address[0], uploadId=upload_id, error=str(e))
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/dataset/complete'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid dataset token'})
+                return
+            try:
+                payload = json.loads((post_data or b'{}').decode('utf-8') or '{}')
+                info = complete_dataset_upload(payload)
+                audit_event('dataset_complete_ok', ip=self.client_address[0], fileId=info.get('fileId'), bytes=info.get('size'))
+                self._json(200, info)
+            except Exception as e:
+                audit_event('dataset_complete_failed', ip=self.client_address[0], error=str(e))
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
         # 真实标注文件上传：二进制 body + X-Task-Id / X-Rel-Path
         if path.startswith('/api/annotation/upload'):
             if not check_upload_token(self):
@@ -721,6 +1510,144 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
         path = parsed.path
         qs = urllib.parse.parse_qs(parsed.query)
 
+        if path.startswith('/api/dataset/health'):
+            self._json(200, {
+                'ok': True,
+                'service': 'dataset',
+                'tokenRequired': bool(DATASET_UPLOAD_TOKEN),
+                'maxBytes': MAX_DATASET_BYTES,
+                'chunkSize': DATASET_CHUNK_SIZE,
+                'time': _now_iso(),
+            })
+            return
+
+        if path.startswith('/api/shared-file/health'):
+            self._json(200, {
+                'ok': True,
+                'service': 'shared-file',
+                'tokenRequired': bool(DATASET_UPLOAD_TOKEN),
+                'maxBytes': MAX_UPLOAD_BYTES,
+                'storageBackend': SHARED_STORAGE_BACKEND,
+                'minioReady': bool(_get_minio_client()) if SHARED_STORAGE_BACKEND == 'minio' else False,
+                'time': _now_iso(),
+            })
+            return
+
+        if path.startswith('/api/shared-file/download'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                return
+            file_id = (qs.get('fileId') or [''])[0]
+            try:
+                meta = get_shared_file_meta(file_id)
+                filename = meta.get('fileName') or file_id
+                if meta.get('storage') == 'minio' and meta.get('objectKey'):
+                    client = _get_minio_client()
+                    if not client:
+                        raise FileNotFoundError('minio unavailable')
+                    resp = client.get_object(MINIO_BUCKET, meta['objectKey'])
+                    try:
+                        data = resp.read()
+                    finally:
+                        resp.close()
+                        resp.release_conn()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/octet-stream')
+                    self.send_header('Content-Length', str(len(data)))
+                    self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename.replace('"', ''))
+                    self._cors()
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+                path_file = meta.get('path')
+                size = os.path.getsize(path_file)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/octet-stream')
+                self.send_header('Content-Length', str(size))
+                self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename.replace('"', ''))
+                self._cors()
+                self.end_headers()
+                with open(path_file, 'rb') as f:
+                    while True:
+                        buf = f.read(1024 * 1024)
+                        if not buf:
+                            break
+                        self.wfile.write(buf)
+            except Exception as e:
+                self._json(404, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/dataset/status'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid dataset token'})
+                return
+            upload_id = (qs.get('uploadId') or [''])[0]
+            try:
+                self._json(200, get_dataset_upload_status(upload_id))
+            except Exception as e:
+                self._json(404, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/dataset/inspect'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid dataset token'})
+                return
+            file_id = (qs.get('fileId') or [''])[0]
+            try:
+                meta = get_dataset_file_meta(file_id)
+                inspect = inspect_dataset_file(meta.get('path'), meta.get('fileName'))
+                self._json(200, {'ok': True, 'fileId': file_id, 'inspect': inspect, 'meta': {
+                    'fileName': meta.get('fileName'), 'size': meta.get('size'), 'md5': meta.get('md5')
+                }})
+            except Exception as e:
+                self._json(404, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/dataset/sample'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid dataset token'})
+                return
+            file_id = (qs.get('fileId') or [''])[0]
+            member = (qs.get('path') or [''])[0]
+            try:
+                data, mime, filename = read_dataset_zip_sample(file_id, member)
+                self.send_response(200)
+                self.send_header('Content-Type', mime)
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Content-Disposition', 'inline; filename="%s"' % filename.replace('"', ''))
+                self._cors()
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception as e:
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/dataset/download'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid dataset token'})
+                return
+            file_id = (qs.get('fileId') or [''])[0]
+            try:
+                meta = get_dataset_file_meta(file_id)
+                path_file = meta.get('path')
+                size = os.path.getsize(path_file)
+                filename = meta.get('fileName') or os.path.basename(path_file)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/octet-stream')
+                self.send_header('Content-Length', str(size))
+                self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename.replace('"', ''))
+                self._cors()
+                self.end_headers()
+                with open(path_file, 'rb') as f:
+                    while True:
+                        buf = f.read(1024 * 1024)
+                        if not buf:
+                            break
+                        self.wfile.write(buf)
+            except Exception as e:
+                self._json(404, {'ok': False, 'error': str(e)})
+            return
+
         if path.startswith('/api/annotation/files'):
             task_id = (qs.get('taskId') or [''])[0]
             try:
@@ -822,12 +1749,17 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
 def run_server(port=8000):
     try:
         os.makedirs(ANNOTATION_UPLOAD_ROOT, exist_ok=True)
+        os.makedirs(DATASET_UPLOAD_ROOT, exist_ok=True)
+        os.makedirs(os.path.join(DATASET_UPLOAD_ROOT, 'files'), exist_ok=True)
+        os.makedirs(SHARED_FILE_UPLOAD_ROOT, exist_ok=True)
+        os.makedirs(os.path.join(SHARED_FILE_UPLOAD_ROOT, 'files'), exist_ok=True)
         server_address = ('', port)
         httpd = ThreadingHTTPServer(server_address, WorkingProxyHandler)
         logger.info('server running at http://localhost:%s', port)
         logger.info('api proxy: http://localhost:%s/api/aliyun', port)
         logger.info('baidu ocr: POST http://localhost:%s/api/baidu-ocr', port)
         logger.info('mlops report: POST http://localhost:%s/api/mlops/report', port)
+        logger.info('dataset upload: POST http://localhost:%s/api/dataset/init|chunk|complete', port)
         if not BAIDU_OCR_API_KEY or not BAIDU_OCR_SECRET_KEY:
             logger.warning('BAIDU_OCR_* is not configured; scanned PDF OCR will fall back to cloud worker if available')
         logger.info('annotation upload: POST http://localhost:%s/api/annotation/upload', port)
@@ -836,6 +1768,8 @@ def run_server(port=8000):
             logger.warning('MLOPS_TOKEN is not configured; /api/mlops/report will reject writes')
         if not ANNOTATION_UPLOAD_TOKEN:
             logger.warning('ANNOTATION_UPLOAD_TOKEN is not configured; /api/annotation/upload will reject writes')
+        if not DATASET_UPLOAD_TOKEN:
+            logger.info('DATASET_UPLOAD_TOKEN not set; dataset upload allowed on local gateway')
         if not SUPABASE_URL or not SUPABASE_KEY:
             logger.warning('SUPABASE_URL/SUPABASE_KEY not configured; server-side cloud sync disabled')
         httpd.serve_forever()

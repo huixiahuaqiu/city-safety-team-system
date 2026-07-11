@@ -1,0 +1,9 @@
+## 竞赛成果管理（已落地 2026-07-12）
+
+实现：`123123/js/competition-management.js` + `index.html` 模块壳 / 导航 / 权限。
+
+- 登记赛事、奖项、级别、成员、日期、状态
+- 统计卡片筛选、搜索、批量审核/删除
+- 保存后可一键生成新闻喜报（`offerNewsDraftFromCompetition`）
+- 云同步键：`competitionData`
+- 权限：复用「成果管理（查看）」

@@ -1,3 +1,14 @@
+## 已落地说明（2026-07-11）
+
+已落地增强层 `123123/js/shared-file-library.js` + 网关 `/api/shared-file/upload|download|delete|restore|health`：
+- 访客禁止上传/下载；删除按角色+上传者硬校验
+- 重命名、下载记录、下载量排序、备注、重名自动加后缀
+- 上传进度 UI、批量下载、优先服务端落盘（`uploads/shared/`）回退 IndexedDB
+- **软删除回收站**：删除进回收站，可恢复；回收站内可彻底删除
+- **可选 MinIO**：`.env` 设 `SHARED_STORAGE_BACKEND=minio` 并配置 `MINIO_*`，需 `pip install minio`；未就绪时自动回退本地磁盘
+
+---
+
 团队共享文件库模块 全量精细化开发方案
 （深度联动账号权限、系统配置、操作日志，适配课题组科研文件共享场景，含完整前后端代码、权限管控、上传下载全流程）
 一、模块整体设计

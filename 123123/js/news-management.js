@@ -1732,6 +1732,72 @@
             if (typeof global.showModule === 'function') global.showModule('news_management');
             setTimeout(function () { showEditNewsModal(draft.id); }, 200);
         }
+        return draft;
+    }
+
+    function offerNewsDraftFromPaper(paper) {
+        if (!paper) return;
+        if (!confirm('是否根据该论文自动生成新闻草稿？')) return;
+        var draft = createNewsDraftFromSource({
+            title: '论文成果：' + (paper.title || ''),
+            category: '科研成果',
+            summary: (paper.author || '') + ' 等在 ' + (paper.journal || '') + ' 发表论文《' + (paper.title || '') + '》',
+            content: '<h2>论文成果</h2><p><strong>题目：</strong>' + esc(paper.title || '') + '</p>' +
+                '<p><strong>作者：</strong>' + esc(paper.author || '') + '</p>' +
+                '<p><strong>期刊：</strong>' + esc(paper.journal || '') + '</p>' +
+                '<p><strong>发表日期：</strong>' + esc(paper.publish_date || '') + '</p>' +
+                '<p>' + esc(paper.remark || '') + '</p>',
+            tags: ['论文', paper.index || ''].filter(Boolean)
+        });
+        if (confirm('草稿已生成，是否立即打开编辑？')) {
+            if (typeof global.showModule === 'function') global.showModule('news_management');
+            setTimeout(function () { showEditNewsModal(draft.id); }, 200);
+        }
+        return draft;
+    }
+
+    function offerNewsDraftFromCompetition(item) {
+        if (!item) return;
+        if (!confirm('是否根据该竞赛成果自动生成新闻草稿？')) return;
+        var name = item.name || item.title || '竞赛成果';
+        var draft = createNewsDraftFromSource({
+            title: '竞赛喜报：' + name,
+            category: '团队动态',
+            summary: name + ' 获得 ' + (item.award || item.level || '优异成绩'),
+            content: '<h2>竞赛喜报</h2><p><strong>项目：</strong>' + esc(name) + '</p>' +
+                '<p><strong>赛事：</strong>' + esc(item.event || '') + '</p>' +
+                '<p><strong>奖项：</strong>' + esc(item.award || item.level || '') + '</p>' +
+                '<p><strong>级别：</strong>' + esc(item.level || '') + '</p>' +
+                '<p><strong>成员：</strong>' + esc(item.members || item.author || '') + '</p>',
+            tags: ['竞赛', item.level || ''].filter(Boolean)
+        });
+        if (confirm('草稿已生成，是否立即打开编辑？')) {
+            if (typeof global.showModule === 'function') global.showModule('news_management');
+            setTimeout(function () { showEditNewsModal(draft.id); }, 200);
+        }
+        return draft;
+    }
+
+    function offerNewsDraftFromProject(item) {
+        if (!item) return;
+        if (!confirm('是否根据该项目进展自动生成新闻草稿？')) return;
+        var name = item.name || item.title || item.projectName || '科研项目';
+        var draft = createNewsDraftFromSource({
+            title: '项目动态：' + name,
+            category: '项目进展',
+            summary: name + '（' + (item.status || '推进中') + '）',
+            content: '<h2>项目动态</h2><p><strong>项目：</strong>' + esc(name) + '</p>' +
+                '<p><strong>编号：</strong>' + esc(item.projectNumber || '') + '</p>' +
+                '<p><strong>负责人：</strong>' + esc(item.leader || item.owner || '') + '</p>' +
+                '<p><strong>状态：</strong>' + esc(item.status || '') + '</p>' +
+                '<p>' + esc(item.remark || '') + '</p>',
+            tags: ['项目', item.projectType || ''].filter(Boolean)
+        });
+        if (confirm('草稿已生成，是否立即打开编辑？')) {
+            if (typeof global.showModule === 'function') global.showModule('news_management');
+            setTimeout(function () { showEditNewsModal(draft.id); }, 200);
+        }
+        return draft;
     }
 
     /* ---------- 样式 ---------- */
@@ -1810,6 +1876,9 @@
         createNewsDraftFromSource: createNewsDraftFromSource,
         offerNewsDraftFromMeeting: offerNewsDraftFromMeeting,
         offerNewsDraftFromAchievement: offerNewsDraftFromAchievement,
+        offerNewsDraftFromPaper: offerNewsDraftFromPaper,
+        offerNewsDraftFromCompetition: offerNewsDraftFromCompetition,
+        offerNewsDraftFromProject: offerNewsDraftFromProject,
         canManageNews: canManageNews,
         canPublishNews: canPublishNews,
         canReviewNews: canReviewNews

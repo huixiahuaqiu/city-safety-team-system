@@ -28,6 +28,10 @@
     <!-- Cropper.js 图片裁剪 -->
     <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+    <!-- Outfit + Noto Serif SC：登录页品牌字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -695,6 +699,7 @@
         .lit-chip span { color: #9ca3af; margin-left: 2px; }
         .lit-chip:hover, .lit-chip.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
         .lit-chip.active span, .lit-chip:hover span { color: rgba(255,255,255,0.8); }
+        .lit-chip.lit-chip-add { border-style: dashed; background: #faf8ff; }
         .lit-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
         .lit-list { flex: 1; overflow-y: auto; padding: 0 12px 12px; max-height: 420px; }
         .lit-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; background: #fff; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; animation: chatBubbleIn 0.28s ease both; }
@@ -2932,42 +2937,77 @@
     </style>
 </head>
 <body>
-    <!-- 登录遮罩层 -->
+    <!-- 登录页 -->
     <div class="login-overlay" id="loginOverlay">
-        <div class="login-grid"></div>
-        <div class="login-bg-orb orb-a"></div>
-        <div class="login-bg-orb orb-b"></div>
-        <div class="login-ring r1"></div>
-        <div class="login-ring r2"></div>
-        <div class="login-ring r3"></div>
-        <div class="login-particles" id="loginParticles"></div>
-        <div class="login-box" id="loginBox">
-            <div class="login-brand">
-                <div class="login-brand-mark">🔬</div>
-                <h2>城市安全数智创新团队管理系统</h2>
-                <div class="login-subtitle">SECURE ACCESS · 请登录您的账号</div>
-            </div>
-            <div class="form-group">
-                <label>学号 / 账号</label>
-                <div class="login-input-wrap">
-                    <input type="text" id="loginUsername" placeholder="请输入学号" autocomplete="username">
+        <div class="login-atmosphere" aria-hidden="true">
+            <div class="login-mesh"></div>
+            <div class="login-horizon"></div>
+            <div class="login-skyline"></div>
+            <div class="login-grid"></div>
+            <div class="login-bg-orb orb-a"></div>
+            <div class="login-bg-orb orb-b"></div>
+            <div class="login-ring r1"></div>
+            <div class="login-ring r2"></div>
+            <div class="login-particles" id="loginParticles"></div>
+        </div>
+        <div class="login-stage">
+            <section class="login-hero">
+                <div class="login-hero-kicker">CITY SAFETY · DIGITAL INTELLIGENCE</div>
+                <h1 class="login-hero-title">城市安全<br>数智创新</h1>
+                <p class="login-hero-desc">面向课题组的科研协作中枢——文献、数据、项目与成果在同一空间流转。</p>
+                <ul class="login-hero-meta">
+                    <li><span>01</span>安全 · 可审计访问</li>
+                    <li><span>02</span>云端协同 · 角色权限</li>
+                    <li><span>03</span>科研资产一体化</li>
+                </ul>
+            </section>
+            <div class="login-box" id="loginBox">
+                <div class="login-brand">
+                    <div class="login-brand-mark" aria-hidden="true">
+                        <svg viewBox="0 0 48 48" width="28" height="28" fill="none">
+                            <path d="M24 6L38 14V30L24 38L10 30V14L24 6Z" stroke="currentColor" stroke-width="2.2" opacity="0.95"/>
+                            <path d="M24 16L32 20.5V29.5L24 34L16 29.5V20.5L24 16Z" fill="currentColor" opacity="0.35"/>
+                            <circle cx="24" cy="25" r="3.2" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="login-brand-text">
+                        <div class="login-brand-name">团队管理系统</div>
+                        <div class="login-subtitle">安全登录 · Secure Access</div>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>密码</label>
-                <div class="login-input-wrap">
-                    <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
-                    <button type="button" class="login-eye-btn" onclick="toggleLoginPasswordVisibility()" title="显示/隐藏密码">👁</button>
+                <div class="form-group">
+                    <label for="loginUsername">学号 / 账号</label>
+                    <div class="login-input-wrap">
+                        <input type="text" id="loginUsername" placeholder="请输入学号或账号" autocomplete="username">
+                    </div>
                 </div>
-            </div>
-            <div id="loginError" class="login-error"></div>
-            <div id="loginAttemptWarning" class="login-attempt-warning" style="display:none;"></div>
-            <button class="login-btn" onclick="handleLogin()">登 录</button>
-            <div class="login-footer">
-                <div class="login-demo">
-                    <div><strong>测试账号</strong>（密码均为 123456）</div>
-                    <div>导师：admin　|　组长：leader01</div>
-                    <div>学生：stu001 / stu002　|　访客：visitor01</div>
+                <div class="form-group">
+                    <label for="loginPassword">密码</label>
+                    <div class="login-input-wrap">
+                        <input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password">
+                        <button type="button" class="login-eye-btn" onclick="toggleLoginPasswordVisibility()" title="显示/隐藏密码" aria-label="显示或隐藏密码">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="login-row">
+                    <label class="login-remember"><input type="checkbox" id="loginRemember"> 记住账号</label>
+                    <span class="login-hint">支持 Enter 快捷登录</span>
+                </div>
+                <div id="loginError" class="login-error"></div>
+                <div id="loginAttemptWarning" class="login-attempt-warning" style="display:none;"></div>
+                <button class="login-btn" type="button" onclick="handleLogin()"><span>进入系统</span></button>
+                <div class="login-footer">
+                    <button type="button" class="login-demo-toggle" onclick="toggleLoginDemoPanel()">演示账号 ▾</button>
+                    <div class="login-demo" id="loginDemoPanel" hidden>
+                        <div class="login-demo-note">密码均为 <code>123456</code> · 点击即可填入</div>
+                        <div class="login-demo-chips">
+                            <button type="button" onclick="fillLoginDemo('admin')">导师 admin</button>
+                            <button type="button" onclick="fillLoginDemo('leader01')">组长 leader01</button>
+                            <button type="button" onclick="fillLoginDemo('stu001')">学生 stu001</button>
+                            <button type="button" onclick="fillLoginDemo('visitor01')">访客 visitor01</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3069,6 +3109,9 @@
                 </div>
                 <div class="nav-item" onclick="showModule('standard_management')">
                     <span>📑</span> 标准专著管理
+                </div>
+                <div class="nav-item" onclick="showModule('competition_management')">
+                    <span>🏅</span> 竞赛成果管理
                 </div>
                 <div class="nav-item" onclick="showModule('software_copyright')">
                     <span>©️</span> 软著管理
@@ -4191,6 +4234,58 @@
                 </div>
             </div>
             
+            <!-- 竞赛成果管理 -->
+            <div id="competition_management" class="module" style="padding:0;">
+                <div style="padding:24px;background:#fff;border-bottom:1px solid #f0f0f0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+                        <div>
+                            <h1 style="font-size:24px;font-weight:bold;color:#333;margin:0;">🏅 竞赛成果管理</h1>
+                            <p style="font-size:14px;color:#888;margin-top:4px;">赛事获奖台账 · 审核归档 · 一键生成新闻喜报</p>
+                        </div>
+                        <button class="btn" id="competitionAddBtn" onclick="showAddCompetitionModal()" style="padding:10px 24px;font-size:14px;">➕ 登记成果</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px;">
+                        <div class="lit-stat-card" style="cursor:pointer;" onclick="setCompetitionStatFilter('')"><div class="n" id="cmpStatTotal">0</div><div class="l">全部成果</div></div>
+                        <div class="lit-stat-card" style="cursor:pointer;" onclick="setCompetitionStatFilter('year')"><div class="n" id="cmpStatYear">0</div><div class="l">当年获奖</div></div>
+                        <div class="lit-stat-card" style="cursor:pointer;" onclick="setCompetitionStatFilter('national')"><div class="n" id="cmpStatNational">0</div><div class="l">国家级</div></div>
+                        <div class="lit-stat-card" style="cursor:pointer;" onclick="setCompetitionStatFilter('approved')"><div class="n" id="cmpStatApproved">0</div><div class="l">已通过</div></div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <input type="text" id="competitionSearchInput" placeholder="搜索赛事 / 项目 / 成员 / 奖项..."
+                            style="flex:1;min-width:200px;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;"
+                            oninput="renderCompetitionList()">
+                        <select id="competitionLevelFilter" onchange="renderCompetitionList()" style="padding:10px 12px;border:1px solid #ddd;border-radius:8px;">
+                            <option value="">全部级别</option>
+                            <option value="国际级">国际级</option>
+                            <option value="国家级">国家级</option>
+                            <option value="省部级">省部级</option>
+                            <option value="市级">市级</option>
+                            <option value="校级">校级</option>
+                        </select>
+                        <select id="competitionStatusFilter" onchange="renderCompetitionList()" style="padding:10px 12px;border:1px solid #ddd;border-radius:8px;">
+                            <option value="">全部状态</option>
+                            <option value="审核中">审核中</option>
+                            <option value="已通过">已通过</option>
+                            <option value="已驳回">已驳回</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="padding:24px;background:#f5f7fa;">
+                    <div id="competitionBatchBar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+                        <span>已选 <strong id="competitionBatchCount">0</strong> 条</span>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchAuditCompetitions('已通过')">批量通过</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchDeleteCompetitions()">批量删除</button>
+                    </div>
+                    <div id="competitionEmptyState" style="display:none;text-align:center;padding:60px 20px;">
+                        <div style="font-size:64px;margin-bottom:16px;">🏅</div>
+                        <h3 style="font-size:18px;color:#333;margin-bottom:8px;">暂无竞赛成果</h3>
+                        <p style="font-size:14px;color:#888;margin-bottom:20px;">登记获奖信息后可一键生成新闻喜报</p>
+                        <button class="btn" onclick="showAddCompetitionModal()">➕ 登记成果</button>
+                    </div>
+                    <div id="competitionList"></div>
+                </div>
+            </div>
+
             <!-- 软著管理 -->
             <div id="software_copyright" class="module">
                 <div style="padding: 20px;">
@@ -6109,6 +6204,8 @@
                             <option value="urgent">紧急</option>
                             <option value="unread">我的未读</option>
                             <option value="expired">已过期</option>
+                            <option value="draft">草稿</option>
+                            <option value="scheduled">定时待发</option>
                         </select>
                     </div>
                 </div>
@@ -6168,6 +6265,14 @@
                         <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击下方按钮发布第一条通知</p>
                         <button class="btn" onclick="showAddNoticeModal()">📝 发布通知</button>
                     </div>
+                    <div id="noticeBatchBar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+                        <span style="font-size:13px;color:#555;">已选 <strong id="noticeBatchCount">0</strong> 条</span>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchPinNotices(true)">批量置顶</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchPinNotices(false)">取消置顶</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchWithdrawNotices()">批量过期</button>
+                        <button type="button" class="btn" style="padding:6px 12px;font-size:12px;background:#ef4444;" onclick="batchDeleteNotices()">批量删除</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="clearNoticeSelection()">清空选择</button>
+                    </div>
                     <div id="noticeList"></div>
                     <div id="noticePagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;"></div>
                 </div>
@@ -6213,12 +6318,73 @@
                             <input type="datetime-local" id="noticeEndTime" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
                         </div>
                         <div class="form-group">
+                            <label>接收范围</label>
+                            <select id="noticeAudience" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" onchange="toggleNoticeAudienceCustom()">
+                                <option value="all">全体成员</option>
+                                <option value="grade">按年级</option>
+                                <option value="group">按课题小组</option>
+                                <option value="custom">指定成员</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="noticeAudienceGradeWrap" style="display:none;">
+                            <label>选择年级</label>
+                            <select id="noticeAudienceGrade" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"></select>
+                        </div>
+                        <div class="form-group" id="noticeAudienceGroupWrap" style="display:none;">
+                            <label>选择小组</label>
+                            <select id="noticeAudienceGroup" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"></select>
+                        </div>
+                        <div class="form-group" id="noticeAudienceCustomWrap" style="display:none;">
+                            <label>指定接收人（可多选）</label>
+                            <select id="noticeAudienceNames" multiple size="6" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px;"></select>
+                            <div style="font-size:12px;color:#888;margin-top:4px;">按住 Ctrl/Command 多选；不选则默认全体</div>
+                        </div>
+                        <div class="form-group">
+                            <label>快捷模板</label>
+                            <select id="noticeTemplatePick" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" onchange="applyNoticeTemplate(this.value)">
+                                <option value="">不使用模板</option>
+                                <option value="meeting">组会通知</option>
+                                <option value="weekly">周报提醒</option>
+                                <option value="contest">比赛申报</option>
+                                <option value="lab">实验室通知</option>
+                            </select>
+                        </div>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px;">
+                            <input type="checkbox" id="noticePinned"> 置顶显示
+                        </label>
+                        <div class="form-group">
+                            <label>发布方式</label>
+                            <select id="noticePublishMode" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;" onchange="toggleNoticeScheduleRow()">
+                                <option value="now">立即发布</option>
+                                <option value="schedule">定时发布</option>
+                                <option value="draft">保存草稿</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="noticeScheduleWrap" style="display:none;">
+                            <label>定时发布时间</label>
+                            <input type="datetime-local" id="noticeScheduledAt" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div class="form-group">
                             <label>通知内容 <span style="color:red;">*</span></label>
-                            <textarea id="noticeContent" rows="6" placeholder="请输入通知内容..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                            <div id="noticeEditorToolbar" style="border:1px solid #ddd;border-radius:8px 8px 0 0;background:#fafafa;"></div>
+                            <div id="noticeEditorBody" style="border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;min-height:180px;"></div>
+                            <textarea id="noticeContent" rows="2" style="display:none;"></textarea>
+                            <div style="font-size:12px;color:#888;margin-top:4px;">支持加粗、列表、链接；亦可粘贴 Markdown 纯文本</div>
+                        </div>
+                        <div class="form-group">
+                            <label>附件（最多 5 个，单文件 ≤2MB；可从共享文件库选择）</label>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                                <label class="btn btn-secondary" style="padding:6px 12px;font-size:12px;cursor:pointer;margin:0;">
+                                    本地上传<input type="file" id="noticeAttachInput" multiple style="display:none;" onchange="handleNoticeAttachUpload(event)">
+                                </label>
+                                <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="pickNoticeAttachFromShared()">从共享文件库选择</button>
+                            </div>
+                            <div id="noticeAttachList" style="font-size:13px;color:#555;"></div>
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
                             <button class="btn btn-secondary" onclick="closeNoticeModal()">取消</button>
-                            <button class="btn" onclick="saveNotice()">发布</button>
+                            <button class="btn btn-secondary" onclick="saveNoticeAsDraft()">存草稿</button>
+                            <button class="btn" id="noticeSaveBtn" onclick="saveNotice()">发布</button>
                         </div>
                     </div>
                 </div>
@@ -6568,8 +6734,24 @@
                         <label style="font-size:12px;color:#666;display:flex;align-items:center;gap:4px;">
                             <input type="checkbox" onchange="toggleSelectAllLit(this.checked)"> 全选当前筛选
                         </label>
+                        <button type="button" id="litAdvFilterBtn" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="toggleLitAdvFilter()">高级筛选</button>
+                    </div>
+                    <div class="lit-adv-panel" id="litAdvFilterPanel">
+                        <input type="text" id="litLibAuthorFilter" placeholder="作者 / 期刊关键词" style="min-width:160px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;" oninput="onLitAdvFilterChange()">
+                        <select id="litLibHasPdf" onchange="onLitAdvFilterChange()" style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;">
+                            <option value="">PDF 不限</option>
+                            <option value="1">有 PDF</option>
+                            <option value="0">无 PDF</option>
+                        </select>
+                        <select id="litLibReadFilter" onchange="onLitAdvFilterChange()" style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;">
+                            <option value="">阅读状态不限</option>
+                            <option value="unread">未读</option>
+                            <option value="reading">在读</option>
+                            <option value="read">已读</option>
+                        </select>
                     </div>
                     <div class="lit-tag-bar" id="litTagFilterBar"></div>
+                    <div class="lit-tag-bar" id="litGroupFilterBar" style="margin-top:6px;"></div>
                     <div class="lit-link-bar">
                         <button type="button" class="btn btn-secondary" onclick="showLibraryLiteratureModal('pdf')">上传 PDF</button>
                         <button type="button" class="btn btn-secondary" onclick="importFromSharedPdfHint()">从共享文件库导入 PDF</button>
@@ -6581,6 +6763,9 @@
                     <div class="lit-batch-bar" id="litBatchBar">
                         <span>已选 <strong id="litBatchCount">0</strong> 篇</span>
                         <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="batchAddLibraryLitToCompare()">批量加入对比</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchTagLibraryLiterature()">批量打标签</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchMoveLibraryLitToGroup()">批量移入分组</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchDownloadLibraryLiterature()">批量下载</button>
                         <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchDeleteLibraryLiterature()">批量删除</button>
                     </div>
                     <div id="literatureEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
@@ -6596,48 +6781,142 @@
             <!-- 数据集资源库 -->
             <div id="dataset_library" class="module" style="padding: 0;">
                 <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
                         <div>
                             <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📊 数据集资源库</h1>
-                            <p style="font-size: 14px; color: #888; margin-top: 4px;">AI训练数据集管理与共享</p>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">AI 数据资产管理中心 · 标注 / 训练 / 项目全链路</p>
                         </div>
-                        <button class="btn" onclick="showAddDatasetModal()" style="padding: 10px 24px; font-size: 14px;">
-                            <span>📥</span> 上传数据集
-                        </button>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                            <div class="ds-view-toggle" id="dsViewToggle">
+                                <button type="button" class="ds-view-btn active" data-view="list" onclick="setDatasetView('list')">列表</button>
+                                <button type="button" class="ds-view-btn" data-view="card" onclick="setDatasetView('card')">卡片</button>
+                            </div>
+                            <button class="btn" id="dsLibraryUploadBtn" onclick="showAddDatasetModal()" style="padding: 10px 24px; font-size: 14px;">
+                                <span>📥</span> 上传数据集
+                            </button>
+                        </div>
                     </div>
-                    <div style="flex: 1; min-width: 200px;">
-                        <input type="text" id="datasetSearchInput" placeholder="搜索数据集名称..." 
-                            style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
-                            oninput="renderDatasetList()">
+                    <div class="ds-stat-grid">
+                        <div class="ds-stat-card" data-filter="" onclick="setDsStatFilter('')"><div class="n" id="dsStatTotal">0</div><div class="l">总数据集数</div></div>
+                        <div class="ds-stat-card" data-filter="storage" onclick="setDsStatFilter('storage')"><div class="n" id="dsStatStorage">0</div><div class="l">总存储容量</div></div>
+                        <div class="ds-stat-card" data-filter="month" onclick="setDsStatFilter('month')"><div class="n" id="dsStatMonth">0</div><div class="l">本月新增</div></div>
+                        <div class="ds-stat-card" data-filter="labeled" onclick="setDsStatFilter('labeled')"><div class="n" id="dsStatLabeled">0</div><div class="l">标注数据集</div></div>
+                    </div>
+                    <input type="text" id="datasetSearchInput" placeholder="搜索名称 / 标签 / 简介 / 上传者..."
+                        style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                        oninput="onDatasetSearchInput()" list="datasetSearchSuggest">
+                    <datalist id="datasetSearchSuggest"></datalist>
+                    <div class="ds-filter-row">
+                        <select id="dsDataTypeFilter" onchange="onDatasetFilterChange()">
+                            <option value="">全部类型</option>
+                            <option value="image">图像数据</option>
+                            <option value="table">表格数据</option>
+                            <option value="text">文本数据</option>
+                            <option value="multimodal">多模态数据</option>
+                        </select>
+                        <select id="dsAnnoTypeFilter" onchange="onDatasetFilterChange()">
+                            <option value="">全部标注类型</option>
+                            <option value="detection">目标检测</option>
+                            <option value="segmentation">语义分割</option>
+                            <option value="classification">分类识别</option>
+                            <option value="none">无标注</option>
+                        </select>
+                        <select id="dsSort" onchange="onDatasetFilterChange()">
+                            <option value="time_desc">上传时间 ↓</option>
+                            <option value="time_asc">上传时间 ↑</option>
+                            <option value="size_desc">文件大小 ↓</option>
+                            <option value="size_asc">文件大小 ↑</option>
+                            <option value="dl_desc">下载量 ↓</option>
+                            <option value="samples_desc">记录数 ↓</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="toggleDsAdvancedFilter()">高级筛选 ▾</button>
+                    </div>
+                    <div id="dsAdvancedFilter" class="ds-advanced-filter" style="display:none;">
+                        <input type="date" id="dsDateFrom" onchange="onDatasetFilterChange()" title="上传起始">
+                        <input type="date" id="dsDateTo" onchange="onDatasetFilterChange()" title="上传截止">
+                        <input type="text" id="dsUploaderFilter" placeholder="上传者" oninput="onDatasetFilterChange()" style="width:120px;">
+                        <input type="text" id="dsFormatFilter" placeholder="格式如 CSV" oninput="onDatasetFilterChange()" style="width:100px;">
+                        <select id="dsPublicFilter" onchange="onDatasetFilterChange()">
+                            <option value="">公开/私有</option>
+                            <option value="1">全组共享</option>
+                            <option value="0">仅导师可见</option>
+                        </select>
+                    </div>
+                    <div class="ds-tag-bar" id="dsTagFilterBar"></div>
+                    <div class="ds-batch-bar" id="dsBatchBar">
+                        <span>已选 <b id="dsBatchCount">0</b> 项</span>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchDownloadDatasets()">批量下载</button>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchTagDatasets()">批量打标签</button>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchLinkDatasetProject()">批量关联项目</button>
+                        <button type="button" class="btn" style="padding:4px 10px;font-size:12px;background:#ef4444;" onclick="batchDeleteDatasets()">批量删除</button>
                     </div>
                 </div>
-                <div style="padding: 24px; background: #f5f7fa;">
-                    <div id="datasetEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
-                        <div style="font-size: 64px; margin-bottom: 16px;">📊</div>
-                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无数据集</h3>
-                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击上方按钮上传数据集</p>
-                        <button class="btn" onclick="showAddDatasetModal()">📥 上传数据集</button>
+                <div style="padding: 24px; background: #f5f7fa; display:flex; gap:16px; align-items:flex-start;">
+                    <aside class="ds-group-side" id="dsGroupSide">
+                        <div class="ds-group-title">我的分组</div>
+                        <button type="button" class="ds-group-item active" data-group="" onclick="setDatasetGroup('')">全部数据集</button>
+                        <div id="dsGroupList"></div>
+                        <button type="button" class="ds-group-add" onclick="createDatasetGroup()">＋ 新建分组</button>
+                    </aside>
+                    <div style="flex:1; min-width:0;">
+                        <div id="datasetEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                            <div style="font-size: 64px; margin-bottom: 16px;">📊</div>
+                            <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无数据集</h3>
+                            <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击上方按钮上传数据集</p>
+                            <button class="btn" onclick="showAddDatasetModal()">📥 上传数据集</button>
+                        </div>
+                        <div id="datasetList"></div>
+                        <div id="datasetPagination" class="ds-pagination"></div>
                     </div>
-                    <div id="datasetList"></div>
                 </div>
             </div>
 
             <!-- 项目报告归档 -->
             <div id="project_report" class="module" style="padding: 0;">
                 <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
                         <div>
                             <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📄 项目报告归档</h1>
-                            <p style="font-size: 14px; color: #888; margin-top: 4px;">项目报告归档与管理</p>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">结题材料 · 进展报告 · 项目档案联动</p>
                         </div>
-                        <button class="btn" onclick="showAddReportModal()" style="padding: 10px 24px; font-size: 14px;">
+                        <button class="btn" id="rpLibraryUploadBtn" onclick="showAddReportModal()" style="padding: 10px 24px; font-size: 14px;">
                             <span>📥</span> 上传报告
                         </button>
                     </div>
-                    <div style="flex: 1; min-width: 200px;">
-                        <input type="text" id="reportSearchInput" placeholder="搜索报告名称..." 
-                            style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
-                            oninput="renderReportList()">
+                    <div class="rp-stat-grid">
+                        <div class="rp-stat-card" data-filter="" onclick="setRpStatFilter('')"><div class="n" id="rpStatTotal">0</div><div class="l">报告总数</div></div>
+                        <div class="rp-stat-card" data-filter="year" onclick="setRpStatFilter('year')"><div class="n" id="rpStatYear">0</div><div class="l">本年新增</div></div>
+                        <div class="rp-stat-card" data-filter="project" onclick="setRpStatFilter('project')"><div class="n" id="rpStatProject">0</div><div class="l">已关联项目</div></div>
+                        <div class="rp-stat-card" data-filter="fav" onclick="setRpStatFilter('fav')"><div class="n" id="rpStatFav">0</div><div class="l">我的收藏</div></div>
+                    </div>
+                    <input type="text" id="reportSearchInput" placeholder="搜索报告名称 / 描述 / 上传者 / 标签..."
+                        style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                        oninput="onReportSearchInput()">
+                    <div class="rp-filter-row">
+                        <select id="rpTypeFilter" onchange="onReportFilterChange()">
+                            <option value="">全部类型</option>
+                            <option value="项目报告">项目报告</option>
+                            <option value="可行性报告">可行性报告</option>
+                            <option value="安全报告">安全报告</option>
+                            <option value="年度报告">年度报告</option>
+                            <option value="结题报告">结题报告</option>
+                            <option value="其他">其他</option>
+                        </select>
+                        <select id="rpSort" onchange="onReportFilterChange()">
+                            <option value="date_desc">日期 ↓</option>
+                            <option value="date_asc">日期 ↑</option>
+                            <option value="name_asc">名称 A-Z</option>
+                            <option value="dl_desc">下载量 ↓</option>
+                        </select>
+                        <input type="date" id="rpDateFrom" onchange="onReportFilterChange()" title="起始日期">
+                        <input type="date" id="rpDateTo" onchange="onReportFilterChange()" title="截止日期">
+                    </div>
+                    <div class="rp-tag-bar" id="rpTagFilterBar"></div>
+                    <div class="rp-batch-bar" id="rpBatchBar">
+                        <span>已选 <b id="rpBatchCount">0</b> 项</span>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchLinkReportProject()">批量关联项目</button>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchTagReports()">批量打标签</button>
+                        <button type="button" class="btn" style="padding:4px 10px;font-size:12px;background:#ef4444;" onclick="batchDeleteReports()">批量删除</button>
                     </div>
                 </div>
                 <div style="padding: 24px; background: #f5f7fa;">
@@ -6648,6 +6927,7 @@
                         <button class="btn" onclick="showAddReportModal()">📥 上传报告</button>
                     </div>
                     <div id="reportList"></div>
+                    <div id="reportPagination" class="rp-pagination"></div>
                 </div>
             </div>
 
@@ -6671,6 +6951,7 @@
                             <button class="file-type-btn" onclick="filterFilesByType('code', this)">💻 代码 <span class="type-count" id="countCode">0</span></button>
                             <button class="file-type-btn" onclick="filterFilesByType('report', this)">📋 报告 <span class="type-count" id="countReport">0</span></button>
                             <button class="file-type-btn" onclick="filterFilesByType('other', this)">📁 其他 <span class="type-count" id="countOther">0</span></button>
+                            <button class="file-type-btn" id="sharedRecycleBtn" onclick="toggleSharedRecycleBin(this)" style="color:#b45309;">🗑️ 回收站 <span class="type-count" id="countRecycle">0</span></button>
                         </div>
                         <div style="flex: 1; min-width: 200px;">
                             <input type="text" id="fileSearchInput" placeholder="🔍 搜索文件名..." 
@@ -8554,7 +8835,7 @@
             'longitudinalData', 'horizontalData', 'schoolData',
             'taskData', 'weeklyReportData', 'noticeData', 'newsData', 'meetingData',
             'literatureData', 'datasetData', 'reportData', 'sharedFileData',
-            'standardData', 'copyrightData',
+            'standardData', 'copyrightData', 'competitionData',
             'modelTrainingData', 'annotationTypes', 'annotationData',
             'knowledgeData', 'compareLiteratureData',
             'systemConfigData', 'operationLogData',
@@ -8812,6 +9093,10 @@
             try { apply('reportData', function(v){ reportData = v; }); } catch(e){}
             try { apply('standardData', function(v){ standardData = v; }); } catch(e){}
             try { apply('copyrightData', function(v){ copyrightData = v; }); } catch(e){}
+            try { apply('competitionData', function(v){
+                if (typeof window.mergeIncomingCompetitionData === 'function') window.mergeIncomingCompetitionData(v);
+                else window.competitionData = v;
+            }); } catch(e){}
             try { apply('systemConfigData', function(v){ systemConfigData = v; }); } catch(e){}
             try { apply('operationLogData', function(v){ operationLogData = v; }); } catch(e){}
             try { apply('modelTrainingData', function(v){ modelTrainingData = v; }); } catch(e){}
@@ -8916,6 +9201,8 @@
                 initNewsManagement();
             } else if (moduleId === 'literature_library') {
                 try { if (typeof initLiteratureLibrary === 'function') initLiteratureLibrary(); } catch (eLit) {}
+            } else if (moduleId === 'competition_management') {
+                try { if (typeof initCompetitionManagement === 'function') initCompetitionManagement(); } catch (eCmp) {}
             } else if (moduleId === 'data_backup') {
                 initBackupModule();
             } else if (moduleId === 'operation_log') {
@@ -14549,6 +14836,13 @@ ${JSON.stringify(excelDataArray, null, 2)}
             }
             saveLongitudinalData(); updateLongitudinalFilterCounts(); applyLongitudinalFilters(); closeLongitudinalModal();
             alert('保存成功！');
+            try {
+                if (typeof offerNewsDraftFromProject === 'function') {
+                    setTimeout(function () {
+                        offerNewsDraftFromProject({ name: name, projectNumber: projectNumber, leader: leader, status: status, remark: remark, projectType: '纵向' });
+                    }, 200);
+                }
+            } catch (eNews) {}
         }
         
         function editLongitudinal(id) {
@@ -14859,6 +15153,13 @@ ${JSON.stringify(excelDataArray, null, 2)}
             }
             saveHorizontalData(); updateHorizontalFilterCounts(); applyHorizontalFilters(); closeHorizontalModal();
             alert('保存成功！');
+            try {
+                if (typeof offerNewsDraftFromProject === 'function') {
+                    setTimeout(function () {
+                        offerNewsDraftFromProject({ name: name, projectNumber: projectNumber, leader: leader, status: status, remark: remark, projectType: '横向' });
+                    }, 200);
+                }
+            } catch (eNews) {}
         }
         
         function editHorizontal(id) {
@@ -15169,6 +15470,13 @@ ${JSON.stringify(excelDataArray, null, 2)}
             }
             saveSchoolData(); updateSchoolFilterCounts(); applySchoolFilters(); closeSchoolModal();
             alert('保存成功！');
+            try {
+                if (typeof offerNewsDraftFromProject === 'function') {
+                    setTimeout(function () {
+                        offerNewsDraftFromProject({ name: name, projectNumber: projectNumber, leader: leader, status: status, remark: remark, projectType: '校级' });
+                    }, 200);
+                }
+            } catch (eNews) {}
         }
         
         function editSchool(id) {
@@ -17146,6 +17454,13 @@ ${ocrText}`
                 await initPaperData();
                 closePaperModal();
                 alert('保存成功！');
+                try {
+                    if (typeof offerNewsDraftFromPaper === 'function') {
+                        setTimeout(function () {
+                            offerNewsDraftFromPaper({ title: title, author: author, journal: journal, publish_date: publishDate, status: status, remark: remark, index: index });
+                        }, 200);
+                    }
+                } catch (eNews) { console.warn(eNews); }
             } catch (e) {
                 console.error('保存论文失败:', e);
                 alert('保存失败：' + e.message);
@@ -17485,6 +17800,18 @@ ${ocrText}`
             applyStandardFilters();
             closeStandardModal();
             alert('保存成功！');
+            try {
+                if (typeof offerNewsDraftFromAchievement === 'function') {
+                    setTimeout(function () {
+                        offerNewsDraftFromAchievement({
+                            title: '标准/专著：' + name,
+                            summary: author + ' 《' + name + '》（' + standardNumber + '）',
+                            content: '<h2>标准/专著</h2><p><strong>名称：</strong>' + name + '</p><p><strong>编号：</strong>' + standardNumber + '</p><p><strong>作者：</strong>' + author + '</p>',
+                            tags: ['标准', '专著']
+                        });
+                    }, 200);
+                }
+            } catch (eNews) {}
         }
         
         function editStandard(id) {
@@ -18575,6 +18902,7 @@ ${ocrText}`
             initPatentMgmtData();
             initPaperData();
             initStandardData();
+            try { if (typeof initCompetitionManagement === 'function') initCompetitionManagement(); } catch (eCmp0) {}
             // initAccountSystem 在第二个 script 标签中定义，延迟调用
             setTimeout(() => {
                 if (typeof initAccountSystem === 'function') {
@@ -18945,6 +19273,24 @@ ${ocrText}`
             }
         } catch (e4) {}
         try {
+            if (typeof datasetData !== 'undefined') {
+                if (Array.isArray(window.datasetData) && window.datasetData !== datasetData) {
+                    datasetData = window.datasetData;
+                } else {
+                    window.datasetData = datasetData;
+                }
+            }
+        } catch (e4b) {}
+        try {
+            if (typeof reportData !== 'undefined') {
+                if (Array.isArray(window.reportData) && window.reportData !== reportData) {
+                    reportData = window.reportData;
+                } else {
+                    window.reportData = reportData;
+                }
+            }
+        } catch (e4c) {}
+        try {
             if (typeof sharedFileData !== 'undefined') window.sharedFileData = sharedFileData;
         } catch (e5) {}
         try {
@@ -19026,6 +19372,7 @@ ${ocrText}`
             'patent_management': hasPermission('成果管理（查看）'),
             'paper_management': hasPermission('成果管理（查看）'),
             'standard_management': hasPermission('成果管理（查看）'),
+            'competition_management': hasPermission('成果管理（查看）'),
             'software_copyright': hasPermission('成果管理（查看）'),
             'model_training': hasPermission('智能工具（全部）'),
             'data_annotation': hasPermission('智能工具（全部）'),
@@ -20980,6 +21327,7 @@ ${ocrText}`
     let editingNoticeId = null;
     let noticePage = 1;
     let noticeStatFilter = '';
+    let selectedNoticeIds = {};
     const NOTICE_PAGE_SIZE = 10;
 
     const NOTICE_TYPE_CONFIG = {
@@ -21006,10 +21354,16 @@ ${ocrText}`
         return Object.assign({}, n, {
             audience: n.audience || (audienceNames.length ? 'custom' : 'all'),
             audienceNames: audienceNames,
+            audienceGrade: n.audienceGrade || '',
+            audienceGroup: n.audienceGroup || '',
             pinned: !!n.pinned,
             remindAt: n.remindAt || '',
             remindCount: Number(n.remindCount || 0) || 0,
-            reads: reads
+            reads: reads,
+            attachments: Array.isArray(n.attachments) ? n.attachments : [],
+            status: n.status || 'published',
+            scheduledAt: n.scheduledAt || '',
+            contentIsHtml: n.contentIsHtml !== false
         });
     }
 
@@ -21157,27 +21511,32 @@ ${ocrText}`
             };
         });
 
-        // 定向通知：仅发给 audienceNames 中的人（按姓名匹配账号）
-        const names = (notice && Array.isArray(notice.audienceNames))
-            ? notice.audienceNames.map(function (x) { return String(x || '').trim(); }).filter(Boolean)
-            : [];
-        const isCustom = notice && (notice.audience === 'custom' || (notice.audience !== 'all' && names.length > 0));
-        if (isCustom && names.length) {
-            const nameSet = {};
-            names.forEach(function (n) { nameSet[n] = true; });
-            raw = raw.filter(function (m) { return !!nameSet[m.userName]; });
-            // 账号库里没有的姓名也计入受众（便于阅读统计展示）
-            names.forEach(function (n) {
-                if (raw.some(function (m) { return m.userName === n; })) return;
-                raw.push({
-                    userId: null,
-                    studentId: '',
-                    userName: n,
-                    role: 'student',
-                    group: '',
-                    grade: ''
+        // 定向通知：年级 / 小组 / 指定成员
+        if (notice && notice.audience === 'grade' && notice.audienceGrade) {
+            raw = raw.filter(function (m) { return String(m.grade || '') === String(notice.audienceGrade); });
+        } else if (notice && notice.audience === 'group' && notice.audienceGroup) {
+            raw = raw.filter(function (m) { return String(m.group || '') === String(notice.audienceGroup); });
+        } else {
+            const names = (notice && Array.isArray(notice.audienceNames))
+                ? notice.audienceNames.map(function (x) { return String(x || '').trim(); }).filter(Boolean)
+                : [];
+            const isCustom = notice && (notice.audience === 'custom' || (notice.audience !== 'all' && notice.audience !== 'grade' && notice.audience !== 'group' && names.length > 0));
+            if (isCustom && names.length) {
+                const nameSet = {};
+                names.forEach(function (n) { nameSet[n] = true; });
+                raw = raw.filter(function (m) { return !!nameSet[m.userName]; });
+                names.forEach(function (n) {
+                    if (raw.some(function (m) { return m.userName === n; })) return;
+                    raw.push({
+                        userId: null,
+                        studentId: '',
+                        userName: n,
+                        role: 'student',
+                        group: '',
+                        grade: ''
+                    });
                 });
-            });
+            }
         }
 
         const seen = {};
@@ -21346,21 +21705,27 @@ ${ocrText}`
     function getFilteredNotices() {
         let filtered = [...noticeData];
         // 普通成员只看发给自己的；导师/组长在管理页看全部
+        // 草稿/未到点的定时通知：仅管理员可见
         if (currentUser && !canManageNotices()) {
-            filtered = filtered.filter(function (n) { return isNoticeVisibleToUser(n, currentUser); });
+            filtered = filtered.filter(function (n) {
+                if (n.status === 'draft' || n.status === 'scheduled') return false;
+                return isNoticeVisibleToUser(n, currentUser);
+            });
         }
         const search = document.getElementById('noticeSearchInput')?.value?.toLowerCase() || '';
         const type = document.getElementById('noticeTypeFilter')?.value || '';
         const status = document.getElementById('noticeStatusFilter')?.value || noticeStatFilter || '';
 
         if (search) {
-            filtered = filtered.filter(n => String(n.title || '').toLowerCase().includes(search) || String(n.content || '').toLowerCase().includes(search));
+            filtered = filtered.filter(n => String(n.title || '').toLowerCase().includes(search) || String(n.content || '').replace(/<[^>]+>/g, ' ').toLowerCase().includes(search));
         }
         if (type) filtered = filtered.filter(n => n.type === type);
-        if (status === 'active') filtered = filtered.filter(isNoticeActive);
-        if (status === 'urgent') filtered = filtered.filter(n => n.type === 'urgent' && isNoticeActive(n));
+        if (status === 'active') filtered = filtered.filter(n => n.status !== 'draft' && n.status !== 'scheduled' && isNoticeActive(n));
+        if (status === 'urgent') filtered = filtered.filter(n => n.type === 'urgent' && n.status !== 'draft' && isNoticeActive(n));
         if (status === 'expired') filtered = filtered.filter(isNoticeExpired);
-        if (status === 'unread') filtered = filtered.filter(n => currentUser && isNoticeVisibleToUser(n, currentUser) && isNoticeActive(n) && !hasUserReadNotice(n, currentUser));
+        if (status === 'unread') filtered = filtered.filter(n => currentUser && isNoticeVisibleToUser(n, currentUser) && n.status !== 'draft' && n.status !== 'scheduled' && isNoticeActive(n) && !hasUserReadNotice(n, currentUser));
+        if (status === 'draft') filtered = filtered.filter(n => n.status === 'draft');
+        if (status === 'scheduled') filtered = filtered.filter(n => n.status === 'scheduled');
 
         filtered.sort(function (a, b) {
             const ua = (a.type === 'urgent' && isNoticeActive(a)) ? 1 : 0;
@@ -21448,18 +21813,34 @@ ${ocrText}`
             const expired = isNoticeExpired(notice);
             const unread = currentUser ? !hasUserReadNotice(notice, currentUser) : false;
             const stats = canViewNoticeReadStats() ? getNoticeReadStats(notice) : null;
+            let expiringSoon = false;
+            if (!expired && notice.endTime) {
+                const endTs = Date.parse(String(notice.endTime).replace(/-/g, '/'));
+                if (endTs && endTs - Date.now() < 24 * 3600 * 1000 && endTs > Date.now()) expiringSoon = true;
+            }
             const card = document.createElement('div');
-            card.style.cssText = `background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);cursor:pointer;transition:all 0.2s;${notice.type === 'urgent' ? 'border-left:4px solid #ff4d4f;' : ''}${expired ? 'opacity:0.72;' : ''}${unread ? 'border:1px solid #bfdbfe;' : ''}`;
+            card.style.cssText = `background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);cursor:pointer;transition:all 0.2s;${notice.type === 'urgent' ? 'border-left:4px solid #ff4d4f;' : ''}${expired ? 'opacity:0.72;' : ''}${unread ? 'border:1px solid #bfdbfe;' : ''}${expiringSoon ? 'border:1px solid #fdba74;background:#fff7ed;' : ''}`;
             card.onmouseenter = () => { card.style.transform = 'translateY(-2px)'; card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
             card.onmouseleave = () => { card.style.transform = ''; card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; };
             card.onclick = () => showNoticeDetail(notice.id);
+            const checked = !!selectedNoticeIds[String(notice.id)];
+            const manageRow = canManageNotices()
+                ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;" onclick="event.stopPropagation()">
+                    <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="editNotice(${notice.id})">编辑</button>
+                    <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="toggleNoticePin(${notice.id})">${notice.pinned ? '取消置顶' : '置顶'}</button>
+                    <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="withdrawNotice(${notice.id})">撤回</button>
+                    <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#ef4444;" onclick="deleteNotice(${notice.id})">删除</button>
+                   </div>`
+                : '';
             card.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        ${canManageNotices() ? `<label onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;"><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleNoticeSelect(${notice.id}, this.checked)"></label>` : ''}
                         ${unread ? '<span class="notice-unread-dot" title="未读"></span>' : ''}
                         <span style="font-size:20px;">${typeConfig.icon}</span>
                         <span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;color:${typeConfig.color};background:${typeConfig.bgColor};">${typeConfig.label}</span>
                         ${notice.pinned ? '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;color:#7c3aed;background:#f5f3ff;">置顶</span>' : ''}
+                        ${expiringSoon ? '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;color:#c2410c;background:#ffedd5;">即将过期</span>' : ''}
                         ${unread ? '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;color:#1d4ed8;background:#dbeafe;">未读</span>' : '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;color:#64748b;background:#f1f5f9;">已读</span>'}
                     </div>
                     <span style="font-size:12px;color:#888;">${notice.publishTime || ''}</span>
@@ -21470,14 +21851,16 @@ ${ocrText}`
                     <span style="font-size:12px;color:#888;">发布人：${escHtml(notice.publisher || '')}</span>
                     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                         ${stats ? `<span style="font-size:12px;color:#4338ca;">已读 ${stats.readCount}/${stats.total}</span>` : ''}
-                        ${notice.endTime ? `<span style="font-size:12px;color:${expired ? '#ff4d4f' : '#faad14'};">${expired ? '已过期' : '有效期至：' + escHtml(notice.endTime)}</span>` : ''}
+                        ${notice.endTime ? `<span style="font-size:12px;color:${expired ? '#ff4d4f' : (expiringSoon ? '#c2410c' : '#faad14')};">${expired ? '已过期' : '有效期至：' + escHtml(notice.endTime)}</span>` : ''}
                     </div>
-                </div>`;
+                </div>
+                ${manageRow}`;
             container.appendChild(card);
         });
 
         renderNoticePagination(filtered);
         updateNoticeStats();
+        updateNoticeBatchBar();
         refreshGlobalNoticeCenter();
     }
 
@@ -21504,6 +21887,71 @@ ${ocrText}`
         renderNoticeList();
     }
 
+    function toggleNoticeAudienceCustom() {
+        const mode = (document.getElementById('noticeAudience') || {}).value || 'all';
+        const customWrap = document.getElementById('noticeAudienceCustomWrap');
+        const gradeWrap = document.getElementById('noticeAudienceGradeWrap');
+        const groupWrap = document.getElementById('noticeAudienceGroupWrap');
+        if (customWrap) customWrap.style.display = mode === 'custom' ? 'block' : 'none';
+        if (gradeWrap) gradeWrap.style.display = mode === 'grade' ? 'block' : 'none';
+        if (groupWrap) groupWrap.style.display = mode === 'group' ? 'block' : 'none';
+    }
+
+    function fillNoticeAudienceMeta(notice) {
+        notice = notice || {};
+        const gradeSel = document.getElementById('noticeAudienceGrade');
+        const groupSel = document.getElementById('noticeAudienceGroup');
+        const accounts = Array.isArray(accountData) ? accountData : [];
+        const grades = [];
+        accounts.forEach(function (a) {
+            const g = String(a.grade || '').trim();
+            if (g && grades.indexOf(g) < 0) grades.push(g);
+        });
+        if (!grades.length) ['2022', '2023', '2024', '2025', '2026'].forEach(function (g) { grades.push(g); });
+        if (gradeSel) {
+            gradeSel.innerHTML = grades.map(function (g) {
+                return `<option value="${escHtml(g)}" ${String(notice.audienceGrade || '') === g ? 'selected' : ''}>${escHtml(g)}级</option>`;
+            }).join('');
+        }
+        const groups = (typeof GROUPS !== 'undefined' && Array.isArray(GROUPS)) ? GROUPS.slice() : ['第一小组', '第二小组', '第三小组', '第四小组'];
+        if (groupSel) {
+            groupSel.innerHTML = groups.map(function (g) {
+                return `<option value="${escHtml(g)}" ${String(notice.audienceGroup || '') === g ? 'selected' : ''}>${escHtml(g)}</option>`;
+            }).join('');
+        }
+    }
+
+    function fillNoticeAudienceOptions(selectedNames) {
+        const sel = document.getElementById('noticeAudienceNames');
+        if (!sel) return;
+        const names = typeof getRealTeamOwnerNames === 'function' ? getRealTeamOwnerNames() : [];
+        const selected = new Set((selectedNames || []).map(String));
+        sel.innerHTML = names.map(n => `<option value="${escHtml(n)}" ${selected.has(n) ? 'selected' : ''}>${escHtml(n)}</option>`).join('');
+    }
+
+    function applyNoticeTemplate(key) {
+        const pick = document.getElementById('noticeTemplatePick');
+        if (!key) { if (pick) pick.value = ''; return; }
+        const map = {
+            meeting: { title: '组会通知', type: 'meeting', content: '本周组会安排如下：\n时间：\n地点：\n议程：\n请准时参加。' },
+            weekly: { title: '周报提交提醒', type: 'notice', content: '请于本周日 23:59 前提交本周工作周报，逾期将影响考核。' },
+            contest: { title: '比赛申报通知', type: 'announcement', content: '现启动比赛报名/申报，请有意向的同学于截止日前完成材料提交。\n截止时间：\n材料要求：' },
+            lab: { title: '实验室安全通知', type: 'urgent', content: '请全体成员注意实验室安全规范：\n1. 离开实验室关闭电源与门窗\n2. 实验废弃物按规定处置\n3. 发现异常及时报告导师' }
+        };
+        const t = map[key];
+        if (!t) return;
+        const titleEl = document.getElementById('noticeTitle');
+        const typeEl = document.getElementById('noticeType');
+        const contentEl = document.getElementById('noticeContent');
+        if (titleEl && !titleEl.value.trim()) titleEl.value = t.title;
+        if (typeEl) typeEl.value = t.type;
+        if (contentEl && !contentEl.value.trim()) contentEl.value = t.content;
+        if (t.type === 'urgent') {
+            const pinned = document.getElementById('noticePinned');
+            if (pinned) pinned.checked = true;
+        }
+    }
+
     function showAddNoticeModal() {
         if (!canManageNotices()) {
             alert('仅导师/组长可发布通知');
@@ -21521,7 +21969,69 @@ ${ocrText}`
         document.getElementById('noticeStartTime').value = localNow;
         document.getElementById('noticeEndTime').value = localEnd;
         document.getElementById('noticeContent').value = '';
+        const aud = document.getElementById('noticeAudience');
+        if (aud) aud.value = 'all';
+        const pinned = document.getElementById('noticePinned');
+        if (pinned) pinned.checked = false;
+        const tpl = document.getElementById('noticeTemplatePick');
+        if (tpl) tpl.value = '';
+        fillNoticeAudienceOptions([]);
+        fillNoticeAudienceMeta({});
+        toggleNoticeAudienceCustom();
         document.getElementById('noticeModal').style.display = 'flex';
+    }
+
+    function editNotice(id) {
+        if (!canManageNotices()) {
+            alert('仅导师/组长可编辑通知');
+            return;
+        }
+        const notice = noticeData.find(n => Number(n.id) === Number(id));
+        if (!notice) return;
+        editingNoticeId = notice.id;
+        document.getElementById('noticeModalTitle').textContent = '编辑通知';
+        document.getElementById('noticeTitle').value = notice.title || '';
+        document.getElementById('noticeType').value = notice.type || 'notice';
+        document.getElementById('noticeStartTime').value = (notice.startTime || '').replace(' ', 'T').slice(0, 16);
+        document.getElementById('noticeEndTime').value = (notice.endTime || '').replace(' ', 'T').slice(0, 16);
+        document.getElementById('noticeContent').value = notice.content || '';
+        const aud = document.getElementById('noticeAudience');
+        let mode = notice.audience || 'all';
+        if (mode !== 'grade' && mode !== 'group' && mode !== 'custom' && mode !== 'all') {
+            mode = (Array.isArray(notice.audienceNames) && notice.audienceNames.length) ? 'custom' : 'all';
+        }
+        if (aud) aud.value = mode;
+        fillNoticeAudienceOptions(notice.audienceNames || []);
+        fillNoticeAudienceMeta(notice);
+        toggleNoticeAudienceCustom();
+        const pinned = document.getElementById('noticePinned');
+        if (pinned) pinned.checked = !!notice.pinned;
+        const tpl = document.getElementById('noticeTemplatePick');
+        if (tpl) tpl.value = '';
+        document.getElementById('noticeModal').style.display = 'flex';
+    }
+
+    function toggleNoticePin(id) {
+        if (!canManageNotices()) return;
+        const idx = noticeData.findIndex(n => Number(n.id) === Number(id));
+        if (idx < 0) return;
+        noticeData[idx].pinned = !noticeData[idx].pinned;
+        saveNoticeData({ log: { action: '置顶', desc: (noticeData[idx].pinned ? '置顶' : '取消置顶') + '：' + noticeData[idx].title } });
+        renderNoticeList();
+    }
+
+    function withdrawNotice(id) {
+        if (!canManageNotices()) return;
+        if (!confirm('撤回后将立即过期，确认？')) return;
+        const idx = noticeData.findIndex(n => Number(n.id) === Number(id));
+        if (idx < 0) return;
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        noticeData[idx].endTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        noticeData[idx].pinned = false;
+        saveNoticeData({ log: { action: '撤回', desc: '撤回通知：' + noticeData[idx].title } });
+        renderNoticeList();
+        try { closeNoticeDrawer(); } catch (e) {}
     }
 
     function closeNoticeModal() {
@@ -21542,11 +22052,41 @@ ${ocrText}`
             alert('请填写通知标题和内容');
             return;
         }
+        const audienceMode = (document.getElementById('noticeAudience') || {}).value || 'all';
+        const nameSel = document.getElementById('noticeAudienceNames');
+        let audienceNames = audienceMode === 'custom' && nameSel
+            ? Array.from(nameSel.selectedOptions).map(o => o.value).filter(Boolean)
+            : [];
+        const audienceGrade = audienceMode === 'grade' ? ((document.getElementById('noticeAudienceGrade') || {}).value || '') : '';
+        const audienceGroup = audienceMode === 'group' ? ((document.getElementById('noticeAudienceGroup') || {}).value || '') : '';
+        if (audienceMode === 'grade' && audienceGrade) {
+            audienceNames = (Array.isArray(accountData) ? accountData : [])
+                .filter(a => a && a.role !== 'visitor' && String(a.grade || '') === String(audienceGrade))
+                .map(a => a.realName || a.username || '')
+                .filter(Boolean);
+        } else if (audienceMode === 'group' && audienceGroup) {
+            audienceNames = (Array.isArray(accountData) ? accountData : [])
+                .filter(a => a && a.role !== 'visitor' && String(a.group || '') === String(audienceGroup))
+                .map(a => a.realName || a.username || '')
+                .filter(Boolean);
+        }
+        const pinned = !!(document.getElementById('noticePinned') || {}).checked || type === 'urgent';
         const publisher = currentUser ? currentUser.realName || currentUser.username : '未知用户';
+        const audiencePayload = {
+            audience: (audienceMode === 'custom' && !audienceNames.length) ? 'all' : audienceMode,
+            audienceNames: (audienceMode === 'all') ? [] : audienceNames,
+            audienceGrade: audienceGrade,
+            audienceGroup: audienceGroup
+        };
         if (editingNoticeId) {
             const idx = noticeData.findIndex(n => n.id === editingNoticeId);
             if (idx !== -1) {
-                noticeData[idx] = normalizeNoticeRecord({ ...noticeData[idx], title, type, startTime, endTime, content });
+                noticeData[idx] = normalizeNoticeRecord({
+                    ...noticeData[idx],
+                    title, type, startTime, endTime, content,
+                    ...audiencePayload,
+                    pinned
+                });
             }
             saveNoticeData({ log: { action: '编辑', desc: '编辑通知：' + title } });
         } else {
@@ -21560,8 +22100,8 @@ ${ocrText}`
                 endTime,
                 publishTime: new Date().toLocaleString('zh-CN'),
                 publisher,
-                audience: 'all',
-                pinned: type === 'urgent',
+                ...audiencePayload,
+                pinned,
                 reads: []
             }));
             saveNoticeData({ log: { action: '发布', desc: '发布通知：' + title } });
@@ -21575,8 +22115,8 @@ ${ocrText}`
         }
         closeNoticeModal();
         renderNoticeList();
-        if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('通知已发布并同步云端，全员可见', false);
-        else alert('发布成功！该信息已同步到云端，所有成员都可以收到。');
+        if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('通知已发布并同步云端', false);
+        else alert('发布成功！');
     }
 
     function buildNoticeReadPanelHtml(notice) {
@@ -21617,7 +22157,10 @@ ${ocrText}`
         const typeConfig = NOTICE_TYPE_CONFIG[notice.type] || NOTICE_TYPE_CONFIG.notice;
         const expired = isNoticeExpired(notice);
         const manageBtns = canManageNotices()
-            ? `<button class="btn btn-secondary" onclick="deleteNotice(${notice.id}); closeNoticeDrawer();">删除</button>`
+            ? `<button class="btn btn-secondary" onclick="editNotice(${notice.id}); closeNoticeDrawer();">编辑</button>` +
+              `<button class="btn btn-secondary" onclick="toggleNoticePin(${notice.id}); closeNoticeDrawer(); showNoticeDetail(${notice.id});">${notice.pinned ? '取消置顶' : '置顶'}</button>` +
+              `<button class="btn btn-secondary" onclick="withdrawNotice(${notice.id})">撤回</button>` +
+              `<button class="btn btn-secondary" onclick="deleteNotice(${notice.id}); closeNoticeDrawer();">删除</button>`
             : '';
         document.getElementById('noticeDetailContent').innerHTML = `
             <div style="margin-bottom: 24px;">
@@ -21690,9 +22233,77 @@ ${ocrText}`
         if (!confirm('确定要删除该通知吗？删除后全员同步移除。')) return;
         const hit = noticeData.find(n => n.id === id);
         noticeData = noticeData.filter(n => n.id !== id);
+        delete selectedNoticeIds[String(id)];
         saveNoticeData({ log: { action: '删除', desc: '删除通知：' + ((hit && hit.title) || id) } });
         renderNoticeList();
         alert('已删除并同步云端');
+    }
+
+    function toggleNoticeSelect(id, checked) {
+        if (checked) selectedNoticeIds[String(id)] = true;
+        else delete selectedNoticeIds[String(id)];
+        updateNoticeBatchBar();
+    }
+
+    function clearNoticeSelection() {
+        selectedNoticeIds = {};
+        updateNoticeBatchBar();
+        renderNoticeList();
+    }
+
+    function getSelectedNoticeIds() {
+        return Object.keys(selectedNoticeIds).map(Number).filter(Boolean);
+    }
+
+    function updateNoticeBatchBar() {
+        const bar = document.getElementById('noticeBatchBar');
+        const countEl = document.getElementById('noticeBatchCount');
+        const n = getSelectedNoticeIds().length;
+        if (bar) bar.style.display = (canManageNotices() && n) ? 'flex' : 'none';
+        if (countEl) countEl.textContent = String(n);
+    }
+
+    function batchDeleteNotices() {
+        if (!canManageNotices()) return;
+        const ids = getSelectedNoticeIds();
+        if (!ids.length) return;
+        if (!confirm('确定批量删除选中的 ' + ids.length + ' 条通知？')) return;
+        const idSet = {};
+        ids.forEach(function (id) { idSet[id] = true; });
+        noticeData = noticeData.filter(function (n) { return !idSet[n.id]; });
+        selectedNoticeIds = {};
+        saveNoticeData({ log: { action: '批量删除', desc: '删除 ' + ids.length + ' 条通知' } });
+        renderNoticeList();
+    }
+
+    function batchPinNotices(pin) {
+        if (!canManageNotices()) return;
+        const ids = getSelectedNoticeIds();
+        if (!ids.length) return;
+        const idSet = {};
+        ids.forEach(function (id) { idSet[id] = true; });
+        noticeData.forEach(function (n) {
+            if (idSet[n.id]) n.pinned = !!pin;
+        });
+        saveNoticeData({ log: { action: pin ? '批量置顶' : '批量取消置顶', desc: ids.length + ' 条' } });
+        renderNoticeList();
+    }
+
+    function batchWithdrawNotices() {
+        if (!canManageNotices()) return;
+        const ids = getSelectedNoticeIds();
+        if (!ids.length) return;
+        if (!confirm('将选中通知设为立即过期，确认？')) return;
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const end = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        const idSet = {};
+        ids.forEach(function (id) { idSet[id] = true; });
+        noticeData.forEach(function (n) {
+            if (idSet[n.id]) { n.endTime = end; n.pinned = false; }
+        });
+        saveNoticeData({ log: { action: '批量过期', desc: ids.length + ' 条' } });
+        renderNoticeList();
     }
 
     function getNoticeDismissStorageKey() {
@@ -22750,8 +23361,14 @@ ${ocrText}`
             if (typeof initLiteratureLibrary === 'function') initLiteratureLibrary();
             else renderLiteratureList();
         } catch (e1) { try { renderLiteratureList(); } catch (e2) {} }
-        renderDatasetList();
-        renderReportList();
+        try {
+            if (typeof initDatasetLibrary === 'function') initDatasetLibrary();
+            else { loadDatasetData(); renderDatasetList(); }
+        } catch (eDs) { try { loadDatasetData(); renderDatasetList(); } catch (eDs2) {} }
+        try {
+            if (typeof initProjectReport === 'function') initProjectReport();
+            else { loadReportData(); renderReportList(); }
+        } catch (eRp) { try { loadReportData(); renderReportList(); } catch (eRp2) {} }
         renderFileList();
         
         const isVisitor = currentUser && currentUser.role === 'visitor';
@@ -22972,6 +23589,9 @@ ${ocrText}`
     }
 
     function loadDatasetData() {
+        if (typeof window.loadDatasetLibraryData === 'function') {
+            try { window.loadDatasetLibraryData(); return; } catch (e) {}
+        }
         const stored = localStorage.getItem('datasetData');
         if (stored) {
             datasetData = JSON.parse(stored);
@@ -22983,9 +23603,13 @@ ${ocrText}`
             ];
             localStorage.setItem('datasetData', JSON.stringify(datasetData));
         }
+        try { window.datasetData = datasetData; } catch (e2) {}
     }
 
     function loadReportData() {
+        if (typeof window.loadProjectReportData === 'function') {
+            try { window.loadProjectReportData(); return; } catch (e) {}
+        }
         const stored = localStorage.getItem('reportData');
         if (stored) {
             reportData = JSON.parse(stored);
@@ -22997,6 +23621,7 @@ ${ocrText}`
             ];
             localStorage.setItem('reportData', JSON.stringify(reportData));
         }
+        try { window.reportData = reportData; } catch (e2) {}
     }
 
     function loadFileData() {
@@ -23089,12 +23714,16 @@ ${ocrText}`
     }
 
     function renderDatasetList() {
+        if (window.DatasetLibrary && typeof window.DatasetLibrary.renderDatasetList === 'function') {
+            try { if (typeof syncGlobalsForExternalModules === 'function') syncGlobalsForExternalModules(); } catch (e) {}
+            return window.DatasetLibrary.renderDatasetList();
+        }
         const container = document.getElementById('datasetList');
         const emptyState = document.getElementById('datasetEmptyState');
         if (!container || !emptyState) return;
 
         const search = document.getElementById('datasetSearchInput')?.value?.toLowerCase() || '';
-        const filtered = datasetData.filter(d => d.name.toLowerCase().includes(search));
+        const filtered = datasetData.filter(d => String(d.name || '').toLowerCase().includes(search));
 
         if (filtered.length === 0) {
             container.innerHTML = '';
@@ -23107,18 +23736,18 @@ ${ocrText}`
             <div style="background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                 <h3 style="font-size:16px;font-weight:bold;color:#333;margin:0 0 8px;">${d.name}</h3>
                 <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:#666;">
-                    <span>📦 ${d.size}</span>
-                    <span>📋 ${d.format}</span>
-                    <span>🔢 ${d.samples} 条记录</span>
+                    <span>📦 ${d.size || ''}</span>
+                    <span>📋 ${d.format || ''}</span>
+                    <span>🔢 ${d.samples || ''} 条记录</span>
                 </div>
                 <div style="margin-top:8px;">
-                    ${d.tags.split(',').map(t => `<span style="display:inline-block;padding:2px 8px;background:#f0f5ff;color:#1890ff;border-radius:4px;font-size:12px;margin-right:6px;">${t}</span>`).join('')}
+                    ${String(d.tags || '').split(',').filter(Boolean).map(t => `<span style="display:inline-block;padding:2px 8px;background:#f0f5ff;color:#1890ff;border-radius:4px;font-size:12px;margin-right:6px;">${t}</span>`).join('')}
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
-                    <span style="font-size:12px;color:#888;">上传者：${d.uploader} | ${d.uploadTime}</span>
+                    <span style="font-size:12px;color:#888;">上传者：${d.uploader || ''} | ${d.uploadTime || ''}</span>
                     <div style="display:flex;gap:8px;">
-                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">详情</button>
-                        <button class="btn" style="padding:4px 12px;font-size:12px;">下载</button>
+                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="showDatasetDetail(${d.id})">详情</button>
+                        <button class="btn" style="padding:4px 12px;font-size:12px;" onclick="downloadDataset(${d.id})">下载</button>
                         <button onclick="deleteDataset(${d.id})" style="padding:4px 12px;border:none;background:#fff1f0;color:#ff4d4f;border-radius:4px;cursor:pointer;font-size:12px;">删除</button>
                     </div>
                 </div>
@@ -23127,12 +23756,16 @@ ${ocrText}`
     }
 
     function renderReportList() {
+        if (window.ProjectReport && typeof window.ProjectReport.renderReportList === 'function') {
+            try { if (typeof syncGlobalsForExternalModules === 'function') syncGlobalsForExternalModules(); } catch (e) {}
+            return window.ProjectReport.renderReportList();
+        }
         const container = document.getElementById('reportList');
         const emptyState = document.getElementById('reportEmptyState');
         if (!container || !emptyState) return;
 
         const search = document.getElementById('reportSearchInput')?.value?.toLowerCase() || '';
-        const filtered = reportData.filter(r => r.name.toLowerCase().includes(search));
+        const filtered = reportData.filter(r => String(r.name || '').toLowerCase().includes(search));
 
         if (filtered.length === 0) {
             container.innerHTML = '';
@@ -23145,14 +23778,14 @@ ${ocrText}`
             <div style="background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                     <h3 style="font-size:16px;font-weight:bold;color:#333;margin:0;">${r.name}</h3>
-                    <span style="display:inline-block;padding:2px 8px;background:#f6ffed;color:#52c41a;border-radius:4px;font-size:12px;">${r.type}</span>
+                    <span style="display:inline-block;padding:2px 8px;background:#f6ffed;color:#52c41a;border-radius:4px;font-size:12px;">${r.type || ''}</span>
                 </div>
-                <p style="font-size:14px;color:#666;margin:0 0 12px;">${r.description}</p>
+                <p style="font-size:14px;color:#666;margin:0 0 12px;">${r.description || ''}</p>
                 <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-size:12px;color:#888;">上传者：${r.uploader} | 日期：${r.date}</span>
+                    <span style="font-size:12px;color:#888;">上传者：${r.uploader || ''} | 日期：${r.date || ''}</span>
                     <div style="display:flex;gap:8px;">
-                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;">预览</button>
-                        <button class="btn" style="padding:4px 12px;font-size:12px;">下载</button>
+                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="showReportDetail(${r.id})">详情</button>
+                        <button class="btn" style="padding:4px 12px;font-size:12px;" onclick="downloadReport(${r.id})">下载</button>
                         <button onclick="deleteReport(${r.id})" style="padding:4px 12px;border:none;background:#fff1f0;color:#ff4d4f;border-radius:4px;cursor:pointer;font-size:12px;">删除</button>
                     </div>
                 </div>
@@ -23170,6 +23803,12 @@ ${ocrText}`
         selectedFileIds = [];
         currentFilePage = 1;
         currentFileType = type;
+        try {
+            window.__sharedRecycleMode = false;
+            if (typeof window.exitSharedRecycleMode === 'function') window.exitSharedRecycleMode();
+            var recycleBtn = document.getElementById('sharedRecycleBtn');
+            if (recycleBtn) recycleBtn.classList.remove('active');
+        } catch (e) {}
         document.querySelectorAll('.file-type-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         renderFileList();
@@ -23267,7 +23906,11 @@ ${ocrText}`
         updateTypeCounts();
 
         const search = document.getElementById('fileSearchInput')?.value?.toLowerCase() || '';
-        let filtered = sharedFileData.filter(f => !f.hiddenInLibrary && String(f.name || '').toLowerCase().includes(search));
+        let filtered = sharedFileData.filter(f => {
+            const inRecycle = !!(typeof window !== 'undefined' && window.__sharedRecycleMode);
+            if (inRecycle) return !!f.deletedAt && String(f.name || '').toLowerCase().includes(search);
+            return !f.hiddenInLibrary && !f.deletedAt && String(f.name || '').toLowerCase().includes(search);
+        });
 
         if (currentFileType !== 'all') {
             filtered = filtered.filter(f => f.type === currentFileType);
@@ -23710,190 +24353,53 @@ ${ocrText}`
     // 注意：deleteLiterature 由 literature-compare.js 占用（删对比库条目）
     // 资料库删除请使用 deleteLibraryLiterature
 
-    // 数据集添加弹窗
+    // 数据集添加弹窗（委托 dataset-library.js；以下为兜底实现）
     function showAddDatasetModal() {
-        const modalId = 'datasetModal_' + Date.now();
-        const modal = document.createElement('div');
-        modal.id = modalId;
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
-        modal.innerHTML = `<div style="background:#fff;border-radius:12px;width:560px;overflow:hidden;">
-            <div style="padding:16px 24px;border-bottom:1px solid #eee;">
-                <h3 style="margin:0;color:#333;font-size:18px;font-weight:600;">上传数据集</h3>
-            </div>
-            <div style="padding:24px;">
-                <div style="margin-bottom:20px;">
-                    <label style="display:block;margin-bottom:8px;font-size:14px;font-weight:500;color:#333;">数据集文件 <span style="color:red;">*</span></label>
-                    <div style="border:2px dashed #ddd;border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:all 0.2s;" 
-                         id="datasetUploadArea_${modalId}" 
-                         onclick="document.getElementById('datasetFileInput_${modalId}').click()"
-                         ondragover="event.preventDefault()"
-                         ondrop="handleDatasetDrop(event, '${modalId}')">
-                        <div style="font-size:36px;margin-bottom:8px;color:#999;">☁️</div>
-                        <div style="font-size:14px;color:#666;margin-bottom:4px;">拖拽文件到此处，或 <span style="color:#6a1b9a;font-weight:500;">点击选择文件</span></div>
-                        <div style="font-size:12px;color:#999;">支持 CSV、JSON、XML、JPG、ZIP 等格式，单文件最大 10GB</div>
-                    </div>
-                    <input type="file" id="datasetFileInput_${modalId}" accept=".csv,.json,.xml,.jpg,.png,.zip" style="display:none;" 
-                           onchange="handleDatasetFileSelect(event, '${modalId}')">
-                    <div id="datasetFilePreview_${modalId}" style="margin-top:8px;display:none;"></div>
-                </div>
-                <div style="margin-bottom:16px;">
-                    <label style="display:block;margin-bottom:5px;font-size:14px;font-weight:500;color:#333;">名称 <span style="color:red;">*</span></label>
-                    <input type="text" id="dsName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" placeholder="请输入数据集名称">
-                </div>
-                <div style="display:flex;gap:12px;margin-bottom:16px;">
-                    <div style="flex:1;">
-                        <label style="display:block;margin-bottom:5px;font-size:14px;font-weight:500;color:#333;">格式</label>
-                        <input type="text" id="dsFormat" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#f5f5f5;color:#999;" placeholder="自动识别" readonly>
-                    </div>
-                    <div style="flex:1;">
-                        <label style="display:block;margin-bottom:5px;font-size:14px;font-weight:500;color:#333;">记录数</label>
-                        <input type="text" id="dsSamples" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;background:#f5f5f5;color:#999;" placeholder="自动识别" readonly>
-                    </div>
-                </div>
-                <div style="margin-bottom:8px;">
-                    <label style="display:block;margin-bottom:5px;font-size:14px;font-weight:500;color:#333;">标签（逗号分隔）</label>
-                    <input type="text" id="dsTags" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;" placeholder="例如：监测数据, 灾害识别, 城市安全">
-                </div>
-                <div style="font-size:12px;color:#999;margin-bottom:20px;">添加标签便于后续检索分类</div>
-            </div>
-            <div style="padding:16px 24px;background:#f5f5f5;border-top:1px solid #eee;display:flex;justify-content:flex-end;gap:10px;">
-                <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
-                <button class="btn" onclick="addDataset('${modalId}')">开始上传</button>
-            </div></div>`;
-        document.body.appendChild(modal);
+        if (window.DatasetLibrary && typeof window.DatasetLibrary.showAddDatasetModal === 'function') {
+            return window.DatasetLibrary.showAddDatasetModal();
+        }
+        alert('数据集模块未加载，请刷新页面后重试');
     }
 
-    function handleDatasetFileSelect(event, modalId) {
-        const file = event.target.files[0];
-        if (!file) return;
-        showDatasetFilePreview(file, modalId);
+    function handleDatasetFileSelect(eventOrInput, modalId) {
+        if (window.DatasetLibrary && typeof window.DatasetLibrary.handleDatasetFileSelect === 'function') {
+            const input = eventOrInput && eventOrInput.target ? eventOrInput.target : eventOrInput;
+            return window.DatasetLibrary.handleDatasetFileSelect(input, modalId);
+        }
     }
 
     function handleDatasetDrop(event, modalId) {
-        event.preventDefault();
-        const file = event.dataTransfer.files[0];
-        if (!file) return;
-        document.getElementById('datasetFileInput_' + modalId).files = event.dataTransfer.files;
-        showDatasetFilePreview(file, modalId);
-    }
-
-    function showDatasetFilePreview(file, modalId) {
-        const uploadArea = document.getElementById('datasetUploadArea_' + modalId);
-        const preview = document.getElementById('datasetFilePreview_' + modalId);
-        
-        uploadArea.style.borderColor = '#6a1b9a';
-        uploadArea.style.backgroundColor = '#f5f0ff';
-        
-        const fileType = file.name.match(/\.(csv|json|xml)$/i) ? '📊' : 
-                         file.name.match(/\.(jpg|jpeg|png)$/i) ? '🖼️' : 
-                         file.name.match(/\.zip$/i) ? '📦' : '📄';
-        
-        preview.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;background:#f5f5f5;padding:10px 12px;border-radius:6px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:16px;">${fileType}</span>
-                <span style="font-size:13px;color:#333;">${file.name}</span>
-                <span style="font-size:12px;color:#999;">${formatFileSize(file.size)}</span>
-            </div>
-            <button style="border:none;background:none;color:#999;cursor:pointer;font-size:14px;" onclick="clearDatasetFile('${modalId}')">✕</button>
-        </div>`;
-        preview.style.display = 'block';
-        
-        document.getElementById('dsFormat').value = file.name.split('.').pop().toUpperCase();
-        document.getElementById('dsSamples').value = '自动识别中...';
-        
-        if (file.name.match(/\.(csv|json)$/i)) {
-            setTimeout(() => {
-                document.getElementById('dsSamples').value = Math.floor(Math.random() * 1000000) + 50000 + ' 条记录';
-            }, 800);
+        if (window.DatasetLibrary && typeof window.DatasetLibrary.handleDatasetDrop === 'function') {
+            return window.DatasetLibrary.handleDatasetDrop(event, modalId);
         }
     }
 
-    function clearDatasetFile(modalId) {
-        const uploadArea = document.getElementById('datasetUploadArea_' + modalId);
-        const preview = document.getElementById('datasetFilePreview_' + modalId);
-        const fileInput = document.getElementById('datasetFileInput_' + modalId);
-        
-        uploadArea.style.borderColor = '#ddd';
-        uploadArea.style.backgroundColor = '';
-        preview.innerHTML = '';
-        preview.style.display = 'none';
-        fileInput.value = '';
-        
-        document.getElementById('dsFormat').value = '';
-        document.getElementById('dsSamples').value = '';
-    }
-
-    function addDataset(modalId) {
-        const name = document.getElementById('dsName').value.trim();
-        const format = document.getElementById('dsFormat').value.trim();
-        const samples = document.getElementById('dsSamples').value.trim();
-        const tags = document.getElementById('dsTags').value.trim();
-        
-        if (!name) { alert('请输入名称'); return; }
-        
-        const fileInput = document.getElementById('datasetFileInput_' + modalId);
-        let size = '';
-        if (fileInput && fileInput.files && fileInput.files[0]) {
-            size = formatFileSize(fileInput.files[0].size);
+    function deleteDataset(id) {
+        if (window.DatasetLibrary && typeof window.DatasetLibrary.deleteDataset === 'function') {
+            return window.DatasetLibrary.deleteDataset(id);
         }
-        
-        const newId = datasetData.length > 0 ? Math.max(...datasetData.map(d => d.id)) + 1 : 1;
-        datasetData.push({ id: newId, name, size, format, samples, tags, uploader: currentUser?.realName || currentUser?.username || '未知', uploadTime: new Date().toLocaleDateString('zh-CN') });
+        if (!confirm('确定要删除该数据集吗？')) return;
+        datasetData = datasetData.filter(d => d.id !== id);
         localStorage.setItem('datasetData', JSON.stringify(datasetData));
-        document.getElementById(modalId).remove();
         renderDatasetList();
-        alert('添加成功！');
     }
 
-    // 报告添加弹窗
+    // 报告添加弹窗（委托 project-report.js）
     function showAddReportModal() {
-        const modal = document.createElement('div');
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
-        modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:500px;">
-            <h3 style="margin-bottom:20px;color:#333;">上传报告</h3>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">名称 <span style="color:red;">*</span></label>
-                <input type="text" id="rpName" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入报告名称">
-            </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">类型</label>
-                <select id="rpType" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
-                    <option value="项目报告">项目报告</option>
-                    <option value="可行性报告">可行性报告</option>
-                    <option value="安全报告">安全报告</option>
-                    <option value="年度报告">年度报告</option>
-                    <option value="其他">其他</option>
-                </select>
-            </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">日期</label>
-                <input type="date" id="rpDate" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;">
-            </div>
-            <div style="margin-bottom:15px;">
-                <label style="display:block;margin-bottom:5px;font-size:14px;color:#333;">描述</label>
-                <textarea id="rpDesc" rows="3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" placeholder="请输入报告描述"></textarea>
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
-                <button class="btn btn-secondary" onclick="this.closest('div[style*=fixed]').remove()">取消</button>
-                <button class="btn" onclick="addReport(this)">保存</button>
-            </div></div>`;
-        document.body.appendChild(modal);
+        if (window.ProjectReport && typeof window.ProjectReport.showAddReportModal === 'function') {
+            return window.ProjectReport.showAddReportModal();
+        }
+        alert('报告模块未加载，请刷新页面后重试');
     }
 
-    function addReport(btn) {
-        const name = document.getElementById('rpName').value.trim();
-        const type = document.getElementById('rpType').value;
-        const date = document.getElementById('rpDate').value;
-        const description = document.getElementById('rpDesc').value.trim();
-        
-        if (!name) { alert('请输入名称'); return; }
-        
-        const newId = reportData.length > 0 ? Math.max(...reportData.map(r => r.id)) + 1 : 1;
-        reportData.push({ id: newId, name, type, date: date || new Date().toISOString().split('T')[0], description, uploader: currentUser?.realName || currentUser?.username || '未知' });
+    function deleteReport(id) {
+        if (window.ProjectReport && typeof window.ProjectReport.deleteReport === 'function') {
+            return window.ProjectReport.deleteReport(id);
+        }
+        if (!confirm('确定要删除该报告吗？')) return;
+        reportData = reportData.filter(r => r.id !== id);
         localStorage.setItem('reportData', JSON.stringify(reportData));
-        btn.closest('div[style*=fixed]').remove();
         renderReportList();
-        alert('添加成功！');
     }
 
     // 文件添加弹窗
@@ -24189,20 +24695,6 @@ ${ocrText}`
 
     function deleteLiterature_libraryLegacy(id) {
         deleteLibraryLiterature(id);
-    }
-
-    function deleteDataset(id) {
-        if (!confirm('确定要删除该数据集吗？')) return;
-        datasetData = datasetData.filter(d => d.id !== id);
-        localStorage.setItem('datasetData', JSON.stringify(datasetData));
-        renderDatasetList();
-    }
-
-    function deleteReport(id) {
-        if (!confirm('确定要删除该报告吗？')) return;
-        reportData = reportData.filter(r => r.id !== id);
-        localStorage.setItem('reportData', JSON.stringify(reportData));
-        renderReportList();
     }
 
     async function deleteSharedFile(id) {
@@ -24734,6 +25226,7 @@ ${ocrText}`
             owner,
             jobId: jobId || name.replace(/\s+/g, '-'),
             dataset: dataset || '未命名数据集',
+            datasetId: (window.__pendingDatasetLink && window.__pendingDatasetLink.id) || null,
             status,
             metric: status === 'training' ? '训练中' : (status === 'pending' ? '—' : (status === 'failed' ? '失败' : '已完成')),
             progress,
@@ -24752,6 +25245,7 @@ ${ocrText}`
             modelTrainingData.unshift(Object.assign({ id: newId, createdAt: today }, payload));
         }
         saveModelTrainingData();
+        try { window.__pendingDatasetLink = null; } catch (eLink) {}
         document.getElementById(modalId).remove();
         renderModelTrainingList();
         alert(editId ? '任务已更新并同步' : '训练任务已登记并同步');
@@ -24783,7 +25277,7 @@ ${ocrText}`
                 <div><div style="font-size:12px;color:#9ca3af;">任务号</div><div>${escHtml(model.jobId || '-')}</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">架构 / 场景</div><div>${escHtml(model.type)} · ${escHtml(model.scenario || '-')}</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">负责人</div><div>${escHtml(model.owner || '-')}</div></div>
-                <div><div style="font-size:12px;color:#9ca3af;">数据集</div><div>${escHtml(model.dataset || '-')}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">数据集</div><div>${escHtml(model.dataset || '-')}${model.datasetId ? ` · <a href="javascript:void(0)" onclick="closeModelDetailDrawer();showModule('dataset_library');setTimeout(function(){showDatasetDetail(${Number(model.datasetId)});},200)">查看数据集</a>` : ''}</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">指标 / 进度</div><div>${escHtml(model.metric || model.accuracy || '—')} · ${Number(model.progress) || 0}%</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">日志链接</div><div style="word-break:break-all;">${model.logUrl ? `<a href="${escHtml(model.logUrl)}" target="_blank" rel="noopener">${escHtml(model.logUrl)}</a>` : '未填写'}</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">权重路径</div><div style="word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:12px;">${escHtml(model.weightPath || '未填写')}</div></div>
@@ -25882,6 +26376,7 @@ ${ocrText}`
             id: newId,
             name,
             dataset: dataset || meta.folderName || '自定义数据集',
+            datasetId: (window.__pendingDatasetLink && window.__pendingDatasetLink.id) || null,
             type,
             scenario,
             status: 'annotating',
@@ -25900,6 +26395,7 @@ ${ocrText}`
         };
         annotationData.unshift(task);
         saveAnnotationData();
+        try { window.__pendingDatasetLink = null; } catch (eLink) {}
 
         let uploadMsg = '';
         if (uploadedFiles.length) {
@@ -28336,9 +28832,14 @@ ${ocrText}`
     }
 
     </script>
-    <script src="js/literature-compare.js"></script>
+    <script src="js/literature-compare.js?v=20260712-3000"></script>
     <script src="js/document-analysis.js?v=20260711-2006"></script>
-    <script src="js/news-management.js?v=20260711-2320"></script>
-    <script src="js/literature-library.js?v=20260711-2405"></script>
+    <script src="js/news-management.js?v=20260712-3000"></script>
+    <script src="js/literature-library.js?v=20260711-2900"></script>
+    <script src="js/dataset-library.js?v=20260711-2700"></script>
+    <script src="js/project-report.js?v=20260711-2800"></script>
+    <script src="js/shared-file-library.js?v=20260712-3000"></script>
+    <script src="js/notice-enhance.js?v=20260712-3000"></script>
+    <script src="js/competition-management.js?v=20260712-3000"></script>
 </body>
 </html>

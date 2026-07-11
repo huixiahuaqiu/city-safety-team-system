@@ -13,6 +13,7 @@
     var STATE_KEY = 'compareLiteratureUIState';
     var CACHE_KEY = 'literatureCompareAiCache';
     var TEMPLATE_KEY = 'literatureCompareDimTemplate';
+    var NAMED_TEMPLATES_KEY = 'literatureCompareNamedDimTemplates';
 
     var litCompareCharts = { scatter: null, radar: null, bar: null };
     var litAiBusy = false;
@@ -173,6 +174,62 @@
         try { localStorage.setItem(TEMPLATE_KEY, JSON.stringify(litDimTemplate)); } catch (e) {}
     }
 
+    function loadNamedDimTemplates() {
+        try {
+            var o = JSON.parse(localStorage.getItem(NAMED_TEMPLATES_KEY) || '{}');
+            return o && typeof o === 'object' ? o : {};
+        } catch (e) { return {}; }
+    }
+
+    function saveNamedDimTemplates(map) {
+        try { localStorage.setItem(NAMED_TEMPLATES_KEY, JSON.stringify(map || {})); } catch (e) {}
+    }
+
+    function saveNamedLitDimTemplate() {
+        loadDimTemplate();
+        var name = prompt('为当前对比维度组合命名（如：精度速度选型）');
+        if (!name) return;
+        name = String(name).trim();
+        if (!name) return;
+        var map = loadNamedDimTemplates();
+        map[name] = litDimTemplate.slice();
+        saveNamedDimTemplates(map);
+        if (typeof global.showCloudSyncBanner === 'function') global.showCloudSyncBanner('已保存维度模板「' + name + '」', false);
+        else alert('已保存模板「' + name + '」');
+        renderLitTableView();
+    }
+    global.saveNamedLitDimTemplate = saveNamedLitDimTemplate;
+
+    function applyNamedLitDimTemplate(name) {
+        if (!name) return;
+        var map = loadNamedDimTemplates();
+        if (!map[name] || !Array.isArray(map[name])) return;
+        litDimTemplate = map[name].slice();
+        saveDimTemplate();
+        renderLitTableView();
+    }
+    global.applyNamedLitDimTemplate = applyNamedLitDimTemplate;
+
+    function deleteNamedLitDimTemplate(name) {
+        if (!name) return;
+        if (!confirm('删除命名模板「' + name + '」？')) return;
+        var map = loadNamedDimTemplates();
+        delete map[name];
+        saveNamedDimTemplates(map);
+        renderLitTableView();
+    }
+    global.deleteNamedLitDimTemplate = deleteNamedLitDimTemplate;
+
+    function namedDimTemplateSelectHtml() {
+        var map = loadNamedDimTemplates();
+        var names = Object.keys(map);
+        var opts = '<option value="">加载命名模板…</option>' + names.map(function (n) {
+            return '<option value="' + _esc(n) + '">' + _esc(n) + '</option>';
+        }).join('');
+        return '<select class="form-control" style="width:150px;display:inline-block;padding:4px 8px;font-size:12px;" onchange="applyNamedLitDimTemplate(this.value); this.value=\'\';">' + opts + '</select>' +
+            (names.length ? '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="(function(){var n=prompt(\'输入要删除的模板名：\\n' + names.map(function (x) { return _esc(x); }).join(' / ') + '\'); if(n) deleteNamedLitDimTemplate(n);})()">删模板</button>' : '');
+    }
+
     function getAiCacheMap() {
         try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') || {}; } catch (e) { return {}; }
     }
@@ -275,7 +332,14 @@
                 map[k] = (map[k] || 0) + 1;
             });
         });
-        return Object.keys(map).sort(function (a, b) { return map[b] - map[a]; }).slice(0, 16).map(function (k) {
+        var extra = typeof global.getLiteratureAllTags === 'function' ? global.getLiteratureAllTags() : [];
+        extra.forEach(function (k) {
+            if (!map[k]) map[k] = 0;
+        });
+        return Object.keys(map).sort(function (a, b) {
+            if (map[b] !== map[a]) return map[b] - map[a];
+            return a.localeCompare(b, 'zh-CN');
+        }).slice(0, 20).map(function (k) {
             return { tag: k, count: map[k] };
         });
     }
@@ -294,9 +358,23 @@
         var tags = collectTagStats();
         box.innerHTML = '<button type="button" class="lit-chip' + (!litFilterTag ? ' active' : '') + '" onclick="setLitFilterTag(\'\')">全部</button>' +
             tags.map(function (t) {
-                return '<button type="button" class="lit-chip' + (litFilterTag === t.tag ? ' active' : '') + '" onclick="setLitFilterTag(' + JSON.stringify(t.tag) + ')">#' + _esc(t.tag) + ' <span>' + t.count + '</span></button>';
-            }).join('');
+                var countHtml = t.count ? (' <span>' + t.count + '</span>') : '';
+                return '<button type="button" class="lit-chip' + (litFilterTag === t.tag ? ' active' : '') + '" onclick="setLitFilterTag(' + JSON.stringify(t.tag) + ')">#' + _esc(t.tag) + countHtml + '</button>';
+            }).join('') +
+            '<button type="button" class="lit-chip lit-chip-add" onclick="compareAddLitTag()">+ 添加</button>';
     }
+
+    function compareAddLitTag() {
+        var name = prompt('输入新标签名称（将同步到资料库标签库）：');
+        if (!name) return;
+        var addFn = global.addLiteratureCustomTag;
+        var tag = typeof addFn === 'function' ? addFn(name) : String(name).trim();
+        if (!tag) return;
+        litFilterTag = tag;
+        saveLitUIState();
+        renderLiteratureCompareList();
+    }
+    global.compareAddLitTag = compareAddLitTag;
 
     function renderLitFieldFilter() {
         var sel = document.getElementById('litFieldFilter');
@@ -480,6 +558,8 @@
 
         box.innerHTML =
             '<div class="lit-dim-bar"><span>对比维度</span>' + dimChecks +
+            '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;margin-left:8px;" onclick="saveNamedLitDimTemplate()">保存为模板</button>' +
+            namedDimTemplateSelectHtml() +
             '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;margin-left:auto;" onclick="exportLitCompareCsv()">导出对比 CSV</button></div>' +
             '<div class="lit-table-wrap"><table class="lit-compare-table"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>' +
             '<div class="lit-legend"><span class="lit-cell-best">最优指标</span><span class="lit-cell-gap">与均值差 ≥30%</span></div>';
