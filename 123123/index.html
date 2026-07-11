@@ -4979,127 +4979,128 @@
             
             <!-- 团队工作周报 -->
             <div id="weekly_report" class="module" style="padding: 0;">
-                <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                <div style="padding: 22px 24px 18px; background: linear-gradient(180deg, #ffffff 0%, #f8f9ff 100%); border-bottom: 1px solid #eef0f5;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
                         <div>
-                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">团队工作周报</h1>
-                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队成员周报提交与审核管理</p>
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <h1 style="font-size: 24px; font-weight: 700; color: #1f2937; margin: 0;">团队工作周报</h1>
+                                <span id="wrCurrentWeekBadge" style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:12px;font-weight:600;"></span>
+                            </div>
+                            <p style="font-size: 13px; color: #6b7280; margin: 6px 0 0;">全员可见 · 提交后自动同步云端 · 导师/组长可审核</p>
                         </div>
-                        <button class="btn" onclick="showAddWeeklyReportModal()" style="padding: 10px 24px; font-size: 14px;">
-                            <span>✏️</span> 提交周报
-                        </button>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" onclick="filterWeeklyReportByMine()" style="padding: 10px 16px; font-size: 13px;">我的周报</button>
+                            <button class="btn" id="wrSubmitBtn" onclick="showAddWeeklyReportModal()" style="padding: 10px 20px; font-size: 13px;">提交本周周报</button>
+                        </div>
                     </div>
+
+                    <div id="wrMissingTip" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:10px; background:#fff7ed; border:1px solid #ffd8a8; color:#9a3412; font-size:13px;"></div>
                     
-                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 200px;">
-                            <input type="text" id="weeklyReportSearchInput" placeholder="搜索周报内容..." 
-                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
-                                oninput="renderWeeklyReportList()">
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 220px;">
+                            <input type="text" id="weeklyReportSearchInput" placeholder="搜索提交人 / 工作内容 / 计划..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; background:#fff;"
+                                oninput="weeklyReportPage=1;renderWeeklyReportList()">
                         </div>
-                        <select id="weeklyReportStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderWeeklyReportList()">
+                        <select id="weeklyReportStatusFilter" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; min-width: 120px; background:#fff;" onchange="weeklyReportPage=1;renderWeeklyReportList()">
                             <option value="">全部状态</option>
                             <option value="pending">待审核</option>
                             <option value="approved">已通过</option>
                             <option value="rejected">已驳回</option>
                         </select>
-                        <select id="weeklyReportOwnerFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderWeeklyReportList()">
+                        <select id="weeklyReportOwnerFilter" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; min-width: 120px; background:#fff;" onchange="weeklyReportPage=1;renderWeeklyReportList()">
                             <option value="">全部成员</option>
                         </select>
                     </div>
                 </div>
 
-                <div style="padding: 24px; background: #f5f7fa;">
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <div>
-                                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="wrStatPending">0</div>
-                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">待审核</div>
-                                </div>
-                                <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏳</div>
+                <div style="padding: 20px 24px 28px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px;">
+                        <div onclick="setWeeklyReportStatusFilter('pending')" style="background:#fff; padding:16px 18px; border-radius:14px; border:1px solid #eef0f5; cursor:pointer; transition:transform .15s, box-shadow .15s;" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(79,70,229,.08)'" onmouseleave="this.style.transform='';this.style.boxShadow='none'">
+                            <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">待审核</div>
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+                                <div style="font-size:28px;font-weight:700;color:#4f46e5;line-height:1;" id="wrStatPending">0</div>
+                                <div style="font-size:12px;color:#9ca3af;">点击筛选</div>
                             </div>
                         </div>
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <div>
-                                    <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="wrStatApproved">0</div>
-                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已通过</div>
-                                </div>
-                                <div style="width: 48px; height: 48px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                        <div onclick="setWeeklyReportStatusFilter('approved')" style="background:#fff; padding:16px 18px; border-radius:14px; border:1px solid #eef0f5; cursor:pointer; transition:transform .15s, box-shadow .15s;" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(34,197,94,.08)'" onmouseleave="this.style.transform='';this.style.boxShadow='none'">
+                            <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">已通过</div>
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+                                <div style="font-size:28px;font-weight:700;color:#16a34a;line-height:1;" id="wrStatApproved">0</div>
+                                <div style="font-size:12px;color:#9ca3af;">点击筛选</div>
                             </div>
                         </div>
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <div>
-                                    <div style="font-size: 28px; font-weight: bold; color: #ff4d4f;" id="wrStatRejected">0</div>
-                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已驳回</div>
-                                </div>
-                                <div style="width: 48px; height: 48px; background: #fff1f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">❌</div>
+                        <div onclick="setWeeklyReportStatusFilter('rejected')" style="background:#fff; padding:16px 18px; border-radius:14px; border:1px solid #eef0f5; cursor:pointer; transition:transform .15s, box-shadow .15s;" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(239,68,68,.08)'" onmouseleave="this.style.transform='';this.style.boxShadow='none'">
+                            <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">已驳回</div>
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+                                <div style="font-size:28px;font-weight:700;color:#dc2626;line-height:1;" id="wrStatRejected">0</div>
+                                <div style="font-size:12px;color:#9ca3af;">点击筛选</div>
                             </div>
                         </div>
-                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <div>
-                                    <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="wrStatSubmitted">0</div>
-                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">本周已提交</div>
-                                </div>
-                                <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📊</div>
+                        <div onclick="setWeeklyReportStatusFilter('')" style="background:#fff; padding:16px 18px; border-radius:14px; border:1px solid #eef0f5; cursor:pointer; transition:transform .15s, box-shadow .15s;" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(245,158,11,.08)'" onmouseleave="this.style.transform='';this.style.boxShadow='none'">
+                            <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">本周已提交</div>
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+                                <div style="font-size:28px;font-weight:700;color:#d97706;line-height:1;" id="wrStatSubmitted">0</div>
+                                <div style="font-size:12px;color:#9ca3af;" id="wrStatSubmittedHint">/ 0</div>
                             </div>
                         </div>
                     </div>
 
-                    <div id="weeklyReportEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
-                        <div style="font-size: 64px; margin-bottom: 16px;">📝</div>
-                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无周报数据</h3>
-                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击下方按钮提交本周周报</p>
-                        <button class="btn" onclick="showAddWeeklyReportModal()">✏️ 提交周报</button>
+                    <div id="weeklyReportEmptyState" style="display: none; text-align: center; padding: 64px 20px; background:#fff; border-radius:16px; border:1px dashed #d1d5db;">
+                        <div style="font-size: 42px; margin-bottom: 12px; opacity:.85;">📝</div>
+                        <h3 style="font-size: 18px; color: #111827; margin-bottom: 8px;">暂无周报</h3>
+                        <p style="font-size: 14px; color: #6b7280; margin-bottom: 18px;">提交后全员可见，导师/组长可审核</p>
+                        <button class="btn" onclick="showAddWeeklyReportModal()">提交本周周报</button>
                     </div>
                     <div id="weeklyReportList"></div>
-                    <div id="weeklyReportPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;"></div>
+                    <div id="weeklyReportPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 20px;"></div>
                 </div>
             </div>
 
             <!-- 周报详情抽屉 -->
-            <div id="weeklyReportDrawer" style="display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 550px; background: #fff; box-shadow: -4px 0 20px rgba(0,0,0,0.15); z-index: 1000; overflow-y: auto;">
-                <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">周报详情</h3>
-                    <button onclick="closeWeeklyReportDrawer()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+            <div id="weeklyReportDrawer" style="display: none; position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: #fff; box-shadow: -8px 0 28px rgba(15,23,42,0.12); z-index: 1000; overflow-y: auto;">
+                <div style="position:sticky; top:0; z-index:2; padding: 18px 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; background:#fff;">
+                    <h3 style="font-size: 17px; font-weight: 700; color: #111827; margin: 0;">周报详情</h3>
+                    <button onclick="closeWeeklyReportDrawer()" style="width: 32px; height: 32px; border: none; background: #f3f4f6; border-radius: 50%; cursor: pointer; font-size: 16px; color:#6b7280;">×</button>
                 </div>
-                <div id="weeklyReportDetailContent" style="padding: 24px;"></div>
+                <div id="weeklyReportDetailContent" style="padding: 22px 20px 28px;"></div>
             </div>
-            <div id="weeklyReportOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999;" onclick="closeWeeklyReportDrawer()"></div>
+            <div id="weeklyReportOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.42); z-index: 999;" onclick="closeWeeklyReportDrawer()"></div>
 
             <!-- 提交/编辑周报弹窗 -->
-            <div id="weeklyReportModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-                <div style="background: #fff; border-radius: 12px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto;">
-                    <div style="padding: 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
-                        <h3 id="weeklyReportModalTitle" style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">提交周报</h3>
-                        <button onclick="closeWeeklyReportModal()" style="width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+            <div id="weeklyReportModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.45); z-index: 1000; justify-content: center; align-items: center; padding: 16px;">
+                <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(15,23,42,.18);">
+                    <div style="padding: 18px 22px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; position:sticky; top:0; background:#fff; z-index:1;">
+                        <div>
+                            <h3 id="weeklyReportModalTitle" style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">提交周报</h3>
+                            <div id="wrModalHint" style="font-size:12px;color:#6b7280;margin-top:4px;">提交后全员可见，并同步到云端</div>
+                        </div>
+                        <button onclick="closeWeeklyReportModal()" style="width: 32px; height: 32px; border: none; background: #f3f4f6; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
                     </div>
-                    <div style="padding: 24px;">
+                    <div style="padding: 22px;">
                         <div class="form-group">
                             <label>周报周期 <span style="color:red;">*</span></label>
-                            <input type="text" id="wrWeekRange" placeholder="例如：2026-07-06 至 2026-07-12" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                            <input type="text" id="wrWeekRange" readonly style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; background:#f9fafb; color:#374151;">
                         </div>
                         <div class="form-group">
                             <label>本周工作内容 <span style="color:red;">*</span></label>
-                            <textarea id="wrContent" rows="6" placeholder="请详细描述本周完成的工作内容..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                            <textarea id="wrContent" rows="6" placeholder="1. ...&#10;2. ...&#10;3. ..." style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; resize: vertical; line-height:1.7;"></textarea>
                         </div>
                         <div class="form-group">
                             <label>下周工作计划</label>
-                            <textarea id="wrNextWeek" rows="4" placeholder="请描述下周的工作计划..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                            <textarea id="wrNextWeek" rows="4" placeholder="请描述下周计划..." style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; resize: vertical; line-height:1.7;"></textarea>
                         </div>
                         <div class="form-group">
                             <label>遇到的问题与困难</label>
-                            <textarea id="wrProblems" rows="3" placeholder="请描述工作中遇到的问题..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                            <textarea id="wrProblems" rows="3" placeholder="如无困难可填写，便于导师协助" style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; resize: vertical; line-height:1.7;"></textarea>
                         </div>
                         <div class="form-group">
                             <label>备注</label>
-                            <textarea id="wrNotes" rows="2" placeholder="其他需要说明的事项..." style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+                            <textarea id="wrNotes" rows="2" placeholder="其他说明（可选）" style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; resize: vertical;"></textarea>
                         </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                             <button class="btn btn-secondary" onclick="closeWeeklyReportModal()">取消</button>
-                            <button class="btn" onclick="saveWeeklyReport()">提交</button>
+                            <button class="btn" onclick="saveWeeklyReport()">保存并同步</button>
                         </div>
                     </div>
                 </div>
@@ -7757,6 +7758,11 @@
             try { if (typeof renderNoticeList === 'function') renderNoticeList(); } catch (e) {}
             try { if (typeof populateWeeklyReportOwnerSelects === 'function') populateWeeklyReportOwnerSelects(); } catch (e) {}
             try { if (typeof renderWeeklyReportList === 'function') renderWeeklyReportList(); } catch (e) {}
+            try { if (typeof updateLongitudinalFilterCounts === 'function') updateLongitudinalFilterCounts(); if (typeof applyLongitudinalFilters === 'function') applyLongitudinalFilters(); } catch (e) {}
+            try { if (typeof updateHorizontalFilterCounts === 'function') updateHorizontalFilterCounts(); if (typeof applyHorizontalFilters === 'function') applyHorizontalFilters(); } catch (e) {}
+            try { if (typeof updateSchoolFilterCounts === 'function') updateSchoolFilterCounts(); if (typeof applySchoolFilters === 'function') applySchoolFilters(); } catch (e) {}
+            try { if (typeof renderNewsList === 'function') renderNewsList(); if (typeof updateNewsStats === 'function') updateNewsStats(); } catch (e) {}
+            try { if (typeof renderMeetingList === 'function') renderMeetingList(); if (typeof updateMeetingStats === 'function') updateMeetingStats(); } catch (e) {}
             try { if (typeof renderLiteratureList === 'function') renderLiteratureList(); } catch (e) {}
             try { if (typeof renderDatasetList === 'function') renderDatasetList(); } catch (e) {}
             try { if (typeof renderReportList === 'function') renderReportList(); } catch (e) {}
@@ -14408,12 +14414,20 @@ ${JSON.stringify(excelDataArray, null, 2)}
             return raw || '2024';
         }
 
+        function normalizeTeamMemberName(name) {
+            return String(name || '')
+                .trim()
+                .replace(/\s+/g, '')
+                .replace(/(个人简历|个人信息|个人资料|简历|档案|资料)$/g, '')
+                .replace(/个人$/g, '');
+        }
+
         function normalizeTeamMembers(list) {
             const seen = new Set();
             let nextId = Array.isArray(list) && list.length > 0 ? Math.max(...list.map(m => Number(m.id) || 0)) + 1 : 1;
             return (Array.isArray(list) ? list : []).map(function(m) {
                 const copy = Object.assign({}, m);
-                copy.name = String(copy.name || '').trim();
+                copy.name = normalizeTeamMemberName(copy.name);
                 copy.category = normalizeMemberCategory(copy.category, copy.title);
                 copy.title = String(copy.title || '').trim() || (copy.category === 'advisor' ? '导师' : copy.category + '级硕士研究生');
                 if (!copy.id) copy.id = nextId++;
@@ -14441,6 +14455,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
 
         function syncTeamMembersAcrossSystem() {
             const members = normalizeTeamMembers(teamMemberData);
+            teamMemberData = members;
 
             // 同步旧版“团队成员/个人信息库”模块，避免两套成员数据不一致。
             const legacyMembers = members.map(function(m) {
@@ -14504,6 +14519,120 @@ ${JSON.stringify(excelDataArray, null, 2)}
                     try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
                 }
             }
+
+            reconcileCollaborativeDataWithTeamMembers();
+        }
+
+        function replaceUnknownOwnerWithTeamMember(ownerName) {
+            const names = getRealTeamOwnerNames();
+            if (!names.length) return ownerName || '';
+            const clean = normalizeTeamMemberName(ownerName);
+            const renameMap = window.__teamMemberRenameMap || {};
+            if (renameMap[clean] && names.includes(renameMap[clean])) return renameMap[clean];
+            if (names.includes(clean)) return clean;
+            const samePrefix = names.find(function(n) { return clean && (n.indexOf(clean) === 0 || clean.indexOf(n) === 0); });
+            return samePrefix || names[0];
+        }
+
+        function reconcilePeopleFieldList(list, fields, key) {
+            if (!Array.isArray(list)) return false;
+            let changed = false;
+            list.forEach(function(item) {
+                fields.forEach(function(field) {
+                    if (!item || !item[field]) return;
+                    const next = replaceUnknownOwnerWithTeamMember(item[field]);
+                    if (next && next !== item[field]) {
+                        item[field] = next;
+                        changed = true;
+                    }
+                });
+            });
+            if (changed && key) {
+                localStorage.setItem(key, JSON.stringify(list));
+                try { if (typeof cloudUpsert === 'function') cloudUpsert(key, JSON.stringify(list)); } catch (e) {}
+            }
+            return changed;
+        }
+
+        function reconcileParticipantsText(text) {
+            const names = getRealTeamOwnerNames();
+            if (!names.length || !text) return text || '';
+            if (/全体|全部|所有/.test(text)) return '全体成员';
+            return String(text).split(/[、,，;；\s]+/)
+                .map(function(part) { return part.trim(); })
+                .filter(Boolean)
+                .map(function(part) { return replaceUnknownOwnerWithTeamMember(part); })
+                .filter(function(name, idx, arr) { return name && arr.indexOf(name) === idx; })
+                .join('、');
+        }
+
+        function reconcileCollaborativeDataWithTeamMembers() {
+            const validNames = new Set(getRealTeamOwnerNames());
+            if (validNames.size === 0) return;
+            let taskChanged = false;
+            if (typeof taskData !== 'undefined' && Array.isArray(taskData)) {
+                taskData.forEach(function(t) {
+                    const nextOwner = replaceUnknownOwnerWithTeamMember(t.owner);
+                    if (nextOwner && t.owner !== nextOwner) {
+                        t.owner = nextOwner;
+                        taskChanged = true;
+                    }
+                    if (t.visibility !== 'all') {
+                        t.visibility = 'all';
+                        taskChanged = true;
+                    }
+                });
+                if (taskChanged) {
+                    localStorage.setItem('taskData', JSON.stringify(taskData));
+                    try { if (typeof cloudUpsert === 'function') cloudUpsert('taskData', JSON.stringify(taskData)); } catch (e) {}
+                }
+            }
+
+            let reportChanged = false;
+            if (typeof weeklyReportData !== 'undefined' && Array.isArray(weeklyReportData)) {
+                weeklyReportData.forEach(function(r) {
+                    const nextOwner = replaceUnknownOwnerWithTeamMember(r.owner);
+                    if (nextOwner && r.owner !== nextOwner) {
+                        r.owner = nextOwner;
+                        reportChanged = true;
+                    }
+                });
+                if (reportChanged) {
+                    localStorage.setItem('weeklyReportData', JSON.stringify(weeklyReportData));
+                    try { if (typeof cloudUpsert === 'function') cloudUpsert('weeklyReportData', JSON.stringify(weeklyReportData)); } catch (e) {}
+                }
+            }
+
+            reconcilePeopleFieldList(typeof longitudinalData !== 'undefined' ? longitudinalData : null, ['leader'], 'longitudinalData');
+            reconcilePeopleFieldList(typeof horizontalData !== 'undefined' ? horizontalData : null, ['leader'], 'horizontalData');
+            reconcilePeopleFieldList(typeof schoolData !== 'undefined' ? schoolData : null, ['leader'], 'schoolData');
+            reconcilePeopleFieldList(typeof noticeData !== 'undefined' ? noticeData : null, ['publisher'], 'noticeData');
+            reconcilePeopleFieldList(typeof newsData !== 'undefined' ? newsData : null, ['author'], 'newsData');
+            reconcilePeopleFieldList(typeof literatureData !== 'undefined' ? literatureData : null, ['uploader'], 'literatureData');
+            reconcilePeopleFieldList(typeof datasetData !== 'undefined' ? datasetData : null, ['uploader'], 'datasetData');
+            reconcilePeopleFieldList(typeof reportData !== 'undefined' ? reportData : null, ['uploader'], 'reportData');
+            reconcilePeopleFieldList(typeof sharedFileData !== 'undefined' ? sharedFileData : null, ['uploader'], 'sharedFileData');
+
+            if (typeof meetingData !== 'undefined' && Array.isArray(meetingData)) {
+                let meetingChanged = false;
+                meetingData.forEach(function(m) {
+                    const nextParticipants = reconcileParticipantsText(m.participants || '');
+                    if (nextParticipants !== (m.participants || '')) {
+                        m.participants = nextParticipants;
+                        meetingChanged = true;
+                    }
+                });
+                if (meetingChanged) {
+                    localStorage.setItem('meetingData', JSON.stringify(meetingData));
+                    try { if (typeof cloudUpsert === 'function') cloudUpsert('meetingData', JSON.stringify(meetingData)); } catch (e) {}
+                }
+            }
+
+            // 清理已删除成员的筛选值，避免下拉刷新后仍卡在旧名字上。
+            ['taskOwnerFilter', 'taskOwner', 'weeklyReportOwnerFilter'].forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el && el.value && !validNames.has(el.value)) el.value = '';
+            });
         }
         
         function createMemberCard(m) {
@@ -14637,7 +14766,15 @@ ${JSON.stringify(excelDataArray, null, 2)}
             };
             if (editingMemberId) {
                 const idx = teamMemberData.findIndex(d => d.id === editingMemberId);
-                if (idx !== -1) teamMemberData[idx] = { ...teamMemberData[idx], ...data };
+                if (idx !== -1) {
+                    const oldName = normalizeTeamMemberName(teamMemberData[idx].name);
+                    const newName = normalizeTeamMemberName(data.name);
+                    if (oldName && newName && oldName !== newName) {
+                        window.__teamMemberRenameMap = window.__teamMemberRenameMap || {};
+                        window.__teamMemberRenameMap[oldName] = newName;
+                    }
+                    teamMemberData[idx] = { ...teamMemberData[idx], ...data, name: newName || data.name };
+                }
             } else {
                 const newId = teamMemberData.length > 0 ? Math.max(...teamMemberData.map(d => d.id)) + 1 : 1;
                 teamMemberData.push({ id: newId, ...data, avatar: '', fileName: '' });
@@ -18657,10 +18794,17 @@ ${ocrText}`
     }
 
     function migrateTaskDataToRealTeam() {
+        const validNames = new Set(getRealTeamOwnerNames());
         const demoOwners = ['张三', '李四', '王五', '赵六'];
         const hasDemo = Array.isArray(taskData) && taskData.some(t => demoOwners.includes(t.owner));
         if (!hasDemo) {
-            taskData = (taskData || []).map(t => ({ ...t, visibility: 'all', publisher: t.publisher || '系统' }));
+            taskData = (taskData || []).map(t => ({
+                ...t,
+                owner: validNames.has(t.owner) ? t.owner : replaceUnknownOwnerWithTeamMember(t.owner),
+                visibility: 'all',
+                publisher: t.publisher || '系统'
+            }));
+            saveTaskData();
             return;
         }
         taskData = buildRealTeamDefaultTasks();
@@ -18674,10 +18818,7 @@ ${ocrText}`
     }
 
     function populateOwnerSelects() {
-        const teamMembers = teamMemberData || [];
-        const memberNames = teamMembers.map(m => m.name).filter(n => n);
-        const taskOwners = [...new Set(taskData.map(t => t.owner))];
-        const allOwners = [...new Set([...memberNames, ...taskOwners])];
+        const allOwners = getRealTeamOwnerNames();
         
         const filterSelect = document.getElementById('taskOwnerFilter');
         const modalSelect = document.getElementById('taskOwner');
@@ -19146,19 +19287,36 @@ ${ocrText}`
     let weeklyReportData = [];
     let editingWeeklyReportId = null;
     let weeklyReportPage = 1;
-    const WR_PAGE_SIZE = 10;
+    const WR_PAGE_SIZE = 8;
 
     const WR_STATUS_CONFIG = {
-        pending: { label: '待审核', color: '#faad14', bgColor: '#fffbe6', borderColor: '#ffe58f' },
-        approved: { label: '已通过', color: '#52c41a', bgColor: '#f6ffed', borderColor: '#b7eb8f' },
-        rejected: { label: '已驳回', color: '#ff4d4f', bgColor: '#fff1f0', borderColor: '#ffccc7' }
+        pending: { label: '待审核', color: '#d97706', bgColor: '#fffbeb', borderColor: '#fde68a' },
+        approved: { label: '已通过', color: '#16a34a', bgColor: '#f0fdf4', borderColor: '#bbf7d0' },
+        rejected: { label: '已驳回', color: '#dc2626', bgColor: '#fef2f2', borderColor: '#fecaca' }
     };
+
+    function canReviewWeeklyReport() {
+        return !!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'leader' || (typeof hasPermission === 'function' && hasPermission('团队工作周报（审核）'))));
+    }
+
+    function canSubmitWeeklyReport() {
+        return !!(currentUser && (typeof hasPermission !== 'function' || hasPermission('团队工作周报（提交自己的）') || hasPermission('团队工作周报（查看全部）') || currentUser.role === 'admin' || currentUser.role === 'leader' || currentUser.role === 'student'));
+    }
+
+    function isMyWeeklyReport(report) {
+        if (!currentUser || !report) return false;
+        const myName = currentUser.realName || currentUser.username || '';
+        return report.owner === myName;
+    }
 
     function initWeeklyReport() {
         loadWeeklyReportData();
         populateWeeklyReportOwnerSelects();
+        updateWeeklyReportHeader();
         updateWeeklyReportStats();
         renderWeeklyReportList();
+        const submitBtn = document.getElementById('wrSubmitBtn');
+        if (submitBtn) submitBtn.style.display = canSubmitWeeklyReport() ? '' : 'none';
     }
 
     function loadWeeklyReportData() {
@@ -19188,72 +19346,123 @@ ${ocrText}`
         const pick = idx => owners[idx % Math.max(owners.length, 1)] || (currentUser && currentUser.realName) || '团队成员';
         const weekRange = getCurrentWeekRangeText();
         return [
-            { id: 1, weekRange, owner: pick(0), content: '1. 核对个人档案和账号信息\n2. 整理本周研究进展\n3. 上传相关资料到资源中心', nextWeek: '1. 继续推进课题任务\n2. 根据组会意见完善材料', problems: '暂无', notes: '', status: 'pending', submitTime: new Date().toLocaleString('zh-CN'), reviewComment: '' },
-            { id: 2, weekRange, owner: pick(1), content: '1. 整理城市安全相关文献\n2. 更新项目/成果台账\n3. 准备组会汇报材料', nextWeek: '1. 完成文献摘要\n2. 补充实验或数据说明', problems: '部分资料需要进一步核对', notes: '', status: 'approved', submitTime: new Date().toLocaleString('zh-CN'), reviewComment: '已同步归档' }
+            { id: 1, weekRange, owner: pick(0), content: '1. 核对个人档案和账号信息\n2. 整理本周研究进展\n3. 上传相关资料到资源中心', nextWeek: '1. 继续推进课题任务\n2. 根据组会意见完善材料', problems: '暂无', notes: '', status: 'pending', submitTime: new Date().toLocaleString('zh-CN'), reviewComment: '', visibility: 'all' },
+            { id: 2, weekRange, owner: pick(1), content: '1. 整理城市安全相关文献\n2. 更新项目/成果台账\n3. 准备组会汇报材料', nextWeek: '1. 完成文献摘要\n2. 补充实验或数据说明', problems: '部分资料需要进一步核对', notes: '', status: 'approved', submitTime: new Date().toLocaleString('zh-CN'), reviewComment: '已同步归档', visibility: 'all' }
         ];
     }
 
     function migrateWeeklyReportDataToRealTeam() {
+        const validNames = new Set(getRealTeamOwnerNames());
         const demoOwners = ['张三', '李四', '王五', '赵六'];
         if (Array.isArray(weeklyReportData) && weeklyReportData.some(r => demoOwners.includes(r.owner))) {
             weeklyReportData = buildRealTeamDefaultWeeklyReports();
             saveWeeklyReportData();
+            return;
         }
+        let changed = false;
+        weeklyReportData = (weeklyReportData || []).map(function(r) {
+            const owner = validNames.has(r.owner) ? r.owner : replaceUnknownOwnerWithTeamMember(r.owner);
+            const next = { ...r, owner, visibility: 'all' };
+            if (owner !== r.owner || r.visibility !== 'all') changed = true;
+            return next;
+        });
+        if (changed) saveWeeklyReportData();
     }
 
     function saveWeeklyReportData() {
+        weeklyReportData = (weeklyReportData || []).map(r => ({ ...r, visibility: 'all' }));
         localStorage.setItem('weeklyReportData', JSON.stringify(weeklyReportData));
         try { if (typeof cloudUpsert === 'function') cloudUpsert('weeklyReportData', JSON.stringify(weeklyReportData)); } catch (e) {}
     }
 
     function populateWeeklyReportOwnerSelects() {
-        const teamMembers = teamMemberData || [];
-        const memberNames = teamMembers.map(m => m.name).filter(n => n);
-        const reportOwners = [...new Set(weeklyReportData.map(r => r.owner))];
-        const allOwners = [...new Set([...memberNames, ...reportOwners])];
-        
+        const allOwners = getRealTeamOwnerNames();
         const filterSelect = document.getElementById('weeklyReportOwnerFilter');
         if (filterSelect) {
+            const current = filterSelect.value;
             filterSelect.innerHTML = '<option value="">全部成员</option>' + allOwners.map(o => `<option value="${o}">${o}</option>`).join('');
+            if (current && allOwners.includes(current)) filterSelect.value = current;
         }
     }
 
+    function updateWeeklyReportHeader() {
+        const badge = document.getElementById('wrCurrentWeekBadge');
+        const weekRange = getCurrentWeekRangeText();
+        if (badge) badge.textContent = '本周：' + weekRange;
+
+        const tip = document.getElementById('wrMissingTip');
+        if (!tip) return;
+        if (!canReviewWeeklyReport()) {
+            tip.style.display = 'none';
+            return;
+        }
+        const members = getRealTeamOwnerNames().filter(n => {
+            const m = (teamMemberData || []).find(x => x.name === n);
+            return !m || m.category !== 'advisor';
+        });
+        const submitted = new Set(weeklyReportData.filter(r => r.weekRange === weekRange).map(r => r.owner));
+        const missing = members.filter(n => !submitted.has(n));
+        if (missing.length === 0) {
+            tip.style.display = 'none';
+            tip.textContent = '';
+            return;
+        }
+        tip.style.display = 'block';
+        tip.textContent = '本周尚未提交：' + missing.slice(0, 8).join('、') + (missing.length > 8 ? ` 等 ${missing.length} 人` : '');
+    }
+
     function updateWeeklyReportStats() {
-        const today = new Date();
-        const weekStart = new Date(today);
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-        
+        const weekRange = getCurrentWeekRangeText();
         const pending = weeklyReportData.filter(r => r.status === 'pending').length;
         const approved = weeklyReportData.filter(r => r.status === 'approved').length;
         const rejected = weeklyReportData.filter(r => r.status === 'rejected').length;
-        const submittedThisWeek = weeklyReportData.filter(r => {
-            const submitTime = new Date(r.submitTime);
-            return submitTime >= weekStart;
-        }).length;
+        const submittedThisWeek = weeklyReportData.filter(r => r.weekRange === weekRange).length;
+        const studentCount = getRealTeamOwnerNames().filter(n => {
+            const m = (teamMemberData || []).find(x => x.name === n);
+            return !m || m.category !== 'advisor';
+        }).length || getRealTeamOwnerNames().length;
 
         if (document.getElementById('wrStatPending')) document.getElementById('wrStatPending').textContent = pending;
         if (document.getElementById('wrStatApproved')) document.getElementById('wrStatApproved').textContent = approved;
         if (document.getElementById('wrStatRejected')) document.getElementById('wrStatRejected').textContent = rejected;
         if (document.getElementById('wrStatSubmitted')) document.getElementById('wrStatSubmitted').textContent = submittedThisWeek;
+        if (document.getElementById('wrStatSubmittedHint')) document.getElementById('wrStatSubmittedHint').textContent = '/ ' + studentCount;
+        updateWeeklyReportHeader();
+    }
+
+    function setWeeklyReportStatusFilter(status) {
+        const select = document.getElementById('weeklyReportStatusFilter');
+        if (select) select.value = status || '';
+        weeklyReportPage = 1;
+        renderWeeklyReportList();
+    }
+
+    function filterWeeklyReportByMine() {
+        if (!currentUser) return;
+        const ownerSelect = document.getElementById('weeklyReportOwnerFilter');
+        const myName = currentUser.realName || currentUser.username || '';
+        if (ownerSelect) ownerSelect.value = myName;
+        weeklyReportPage = 1;
+        renderWeeklyReportList();
     }
 
     function getFilteredWeeklyReports() {
         let filtered = [...weeklyReportData];
-        
         const search = document.getElementById('weeklyReportSearchInput')?.value?.toLowerCase() || '';
         const status = document.getElementById('weeklyReportStatusFilter')?.value || '';
         const owner = document.getElementById('weeklyReportOwnerFilter')?.value || '';
 
         if (search) {
-            filtered = filtered.filter(r => r.content.toLowerCase().includes(search) || r.owner.toLowerCase().includes(search));
+            filtered = filtered.filter(r =>
+                (r.content || '').toLowerCase().includes(search) ||
+                (r.nextWeek || '').toLowerCase().includes(search) ||
+                (r.problems || '').toLowerCase().includes(search) ||
+                (r.owner || '').toLowerCase().includes(search) ||
+                (r.weekRange || '').toLowerCase().includes(search)
+            );
         }
-        if (status) {
-            filtered = filtered.filter(r => r.status === status);
-        }
-        if (owner) {
-            filtered = filtered.filter(r => r.owner === owner);
-        }
-
+        if (status) filtered = filtered.filter(r => r.status === status);
+        if (owner) filtered = filtered.filter(r => r.owner === owner);
         filtered.sort((a, b) => new Date(b.submitTime) - new Date(a.submitTime));
         return filtered;
     }
@@ -19261,67 +19470,57 @@ ${ocrText}`
     function renderWeeklyReportList() {
         const container = document.getElementById('weeklyReportList');
         const emptyState = document.getElementById('weeklyReportEmptyState');
-        
         if (!container || !emptyState) return;
 
         const filtered = getFilteredWeeklyReports();
-        
         if (filtered.length === 0) {
             container.innerHTML = '';
             emptyState.style.display = 'block';
             renderWeeklyReportPagination([]);
+            updateWeeklyReportStats();
             return;
         }
 
         emptyState.style.display = 'none';
-        
         const start = (weeklyReportPage - 1) * WR_PAGE_SIZE;
-        const end = start + WR_PAGE_SIZE;
-        const pageData = filtered.slice(start, end);
-
+        const pageData = filtered.slice(start, start + WR_PAGE_SIZE);
+        const canReview = canReviewWeeklyReport();
         container.innerHTML = '';
-        
-        const headerRow = document.createElement('div');
-        headerRow.style.cssText = 'display: grid; grid-template-columns: 150px 1fr 100px 100px 120px 140px; gap: 16px; padding: 12px 16px; background: #f8f9fa; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 13px; color: #666;';
-        headerRow.innerHTML = `
-            <div>周报周期</div>
-            <div>工作内容摘要</div>
-            <div>提交人</div>
-            <div>状态</div>
-            <div>提交时间</div>
-            <div style="text-align:right;">操作</div>
-        `;
-        container.appendChild(headerRow);
 
         pageData.forEach(report => {
-            const status = WR_STATUS_CONFIG[report.status];
-            
-            const row = document.createElement('div');
-            row.style.cssText = 'display: grid; grid-template-columns: 150px 1fr 100px 100px 120px 140px; gap: 16px; padding: 16px; background: #fff; border-bottom: 1px solid #f0f0f0; align-items: center; transition: background 0.2s;';
-            
-            row.onmouseenter = () => { row.style.background = '#f9fafc'; };
-            row.onmouseleave = () => { row.style.background = '#fff'; };
+            const status = WR_STATUS_CONFIG[report.status] || WR_STATUS_CONFIG.pending;
+            const preview = (report.content || '').replace(/\n/g, ' ');
+            const shortPreview = preview.length > 90 ? preview.slice(0, 90) + '…' : preview;
+            const mine = isMyWeeklyReport(report);
+            const canEdit = mine && report.status !== 'approved';
 
-            const contentPreview = report.content.length > 60 ? report.content.substring(0, 60) + '...' : report.content;
-            
-            row.innerHTML = `
-                <div style="font-size:13px;color:#666;">${report.weekRange}</div>
-                <div style="min-width:0;">
-                    <div style="font-weight:bold;color:#333;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" onclick="showWeeklyReportDetail(${report.id})">${contentPreview}</div>
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#fff;border:1px solid #eef0f5;border-radius:14px;padding:16px 18px;margin-bottom:12px;transition:box-shadow .15s, transform .15s;';
+            card.onmouseenter = function() { this.style.boxShadow = '0 10px 24px rgba(15,23,42,.06)'; this.style.transform = 'translateY(-1px)'; };
+            card.onmouseleave = function() { this.style.boxShadow = 'none'; this.style.transform = ''; };
+            card.innerHTML = `
+                <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                        ${getOwnerAvatarHtml(report.owner, 36)}
+                        <div style="min-width:0;">
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                <strong style="color:#111827;font-size:15px;">${escHtml(report.owner || '')}</strong>
+                                ${mine ? '<span style="font-size:11px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;">我的</span>' : ''}
+                                <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;color:${status.color};background:${status.bgColor};border:1px solid ${status.borderColor};">${status.label}</span>
+                            </div>
+                            <div style="font-size:12px;color:#6b7280;margin-top:4px;">${escHtml(report.weekRange || '')} · ${escHtml(report.submitTime || '')}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button onclick="showWeeklyReportDetail(${report.id})" style="padding:6px 12px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;cursor:pointer;font-size:12px;color:#374151;">查看</button>
+                        ${canEdit ? `<button onclick="editWeeklyReport(${report.id})" style="padding:6px 12px;border:none;background:#eef2ff;border-radius:8px;cursor:pointer;font-size:12px;color:#4f46e5;">编辑</button>` : ''}
+                        ${canReview && report.status === 'pending' ? `<button onclick="approveWeeklyReport(${report.id})" style="padding:6px 12px;border:none;background:#f0fdf4;border-radius:8px;cursor:pointer;font-size:12px;color:#16a34a;">通过</button>` : ''}
+                        ${canReview && report.status === 'pending' ? `<button onclick="rejectWeeklyReport(${report.id})" style="padding:6px 12px;border:none;background:#fef2f2;border-radius:8px;cursor:pointer;font-size:12px;color:#dc2626;">驳回</button>` : ''}
+                    </div>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;">
-                    ${getOwnerAvatarHtml(report.owner, 24)}
-                    <span style="font-size:13px;color:#666;">${report.owner}</span>
-                </div>
-                <div><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};border:1px solid ${status.borderColor};">${status.label}</span></div>
-                <div style="font-size:13px;color:#666;">${report.submitTime}</div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
-                    <button onclick="showWeeklyReportDetail(${report.id})" style="padding:4px 8px;border:none;background:#f5f5f5;border-radius:4px;cursor:pointer;font-size:12px;color:#666;">查看</button>
-                    ${report.status === 'pending' ? `<button onclick="approveWeeklyReport(${report.id})" style="padding:4px 8px;border:none;background:#f6ffed;border-radius:4px;cursor:pointer;font-size:12px;color:#52c41a;">通过</button>` : ''}
-                    ${report.status === 'pending' ? `<button onclick="rejectWeeklyReport(${report.id})" style="padding:4px 8px;border:none;background:#fff1f0;border-radius:4px;cursor:pointer;font-size:12px;color:#ff4d4f;">驳回</button>` : ''}
-                </div>
+                <div onclick="showWeeklyReportDetail(${report.id})" style="margin-top:12px;font-size:14px;color:#374151;line-height:1.7;cursor:pointer;">${escHtml(shortPreview)}</div>
             `;
-            container.appendChild(row);
+            container.appendChild(card);
         });
 
         renderWeeklyReportPagination(filtered);
@@ -19331,32 +19530,18 @@ ${ocrText}`
     function renderWeeklyReportPagination(filtered) {
         const pagination = document.getElementById('weeklyReportPagination');
         if (!pagination) return;
-
-        const totalPages = Math.ceil(filtered.length / WR_PAGE_SIZE);
-        
+        const totalPages = Math.ceil(filtered.length / WR_PAGE_SIZE) || 1;
         if (totalPages <= 1) {
-            pagination.innerHTML = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
+            pagination.innerHTML = `<span style="font-size:13px;color:#6b7280;">共 ${filtered.length} 条</span>`;
             return;
         }
-
-        let html = `<span style="font-size:13px;color:#666;">共 ${filtered.length} 条</span>`;
-        
-        if (weeklyReportPage > 1) {
-            html += `<button onclick="setWeeklyReportPage(${weeklyReportPage - 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">上一页</button>`;
-        }
-        
+        let html = `<span style="font-size:13px;color:#6b7280;">共 ${filtered.length} 条</span>`;
+        if (weeklyReportPage > 1) html += `<button onclick="setWeeklyReportPage(${weeklyReportPage - 1})" style="padding:4px 10px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:13px;background:#fff;">上一页</button>`;
         for (let i = 1; i <= totalPages; i++) {
-            if (i === weeklyReportPage) {
-                html += `<button style="padding:4px 12px;border:none;background:#667eea;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;">${i}</button>`;
-            } else {
-                html += `<button onclick="setWeeklyReportPage(${i})" style="padding:4px 12px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">${i}</button>`;
-            }
+            if (i === weeklyReportPage) html += `<button style="padding:4px 12px;border:none;background:#4f46e5;color:#fff;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">${i}</button>`;
+            else html += `<button onclick="setWeeklyReportPage(${i})" style="padding:4px 12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:13px;background:#fff;">${i}</button>`;
         }
-        
-        if (weeklyReportPage < totalPages) {
-            html += `<button onclick="setWeeklyReportPage(${weeklyReportPage + 1})" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;">下一页</button>`;
-        }
-        
+        if (weeklyReportPage < totalPages) html += `<button onclick="setWeeklyReportPage(${weeklyReportPage + 1})" style="padding:4px 10px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;font-size:13px;background:#fff;">下一页</button>`;
         pagination.innerHTML = html;
     }
 
@@ -19366,22 +19551,49 @@ ${ocrText}`
     }
 
     function showAddWeeklyReportModal() {
+        if (!canSubmitWeeklyReport()) {
+            alert('当前账号无周报提交权限');
+            return;
+        }
+        const weekRange = getCurrentWeekRangeText();
+        const myName = currentUser ? (currentUser.realName || currentUser.username) : '';
+        const existing = weeklyReportData.find(r => r.owner === myName && r.weekRange === weekRange);
+        if (existing) {
+            editWeeklyReport(existing.id);
+            return;
+        }
         editingWeeklyReportId = null;
-        document.getElementById('weeklyReportModalTitle').textContent = '提交周报';
-        
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        const monday = new Date(today);
-        monday.setDate(monday.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-        const sunday = new Date(monday);
-        sunday.setDate(sunday.getDate() + 6);
-        
-        const formatDate = (d) => d.toISOString().split('T')[0];
-        document.getElementById('wrWeekRange').value = `${formatDate(monday)} 至 ${formatDate(sunday)}`;
+        document.getElementById('weeklyReportModalTitle').textContent = '提交本周周报';
+        const hint = document.getElementById('wrModalHint');
+        if (hint) hint.textContent = '本周周期已自动填充，提交后全员可见并同步云端';
+        document.getElementById('wrWeekRange').value = weekRange;
         document.getElementById('wrContent').value = '';
         document.getElementById('wrNextWeek').value = '';
         document.getElementById('wrProblems').value = '';
         document.getElementById('wrNotes').value = '';
+        document.getElementById('weeklyReportModal').style.display = 'flex';
+    }
+
+    function editWeeklyReport(id) {
+        const report = weeklyReportData.find(r => r.id === id);
+        if (!report) return;
+        if (!isMyWeeklyReport(report) && !(currentUser && currentUser.role === 'admin')) {
+            alert('只能编辑自己的周报');
+            return;
+        }
+        if (report.status === 'approved' && !(currentUser && currentUser.role === 'admin')) {
+            alert('已通过的周报不可再编辑');
+            return;
+        }
+        editingWeeklyReportId = id;
+        document.getElementById('weeklyReportModalTitle').textContent = '编辑周报';
+        const hint = document.getElementById('wrModalHint');
+        if (hint) hint.textContent = report.status === 'rejected' ? '驳回后可修改并重新提交审核' : '保存后将重新进入待审核';
+        document.getElementById('wrWeekRange').value = report.weekRange || getCurrentWeekRangeText();
+        document.getElementById('wrContent').value = report.content || '';
+        document.getElementById('wrNextWeek').value = report.nextWeek || '';
+        document.getElementById('wrProblems').value = report.problems || '';
+        document.getElementById('wrNotes').value = report.notes || '';
         document.getElementById('weeklyReportModal').style.display = 'flex';
     }
 
@@ -19406,21 +19618,35 @@ ${ocrText}`
         if (editingWeeklyReportId) {
             const idx = weeklyReportData.findIndex(r => r.id === editingWeeklyReportId);
             if (idx !== -1) {
-                weeklyReportData[idx] = { ...weeklyReportData[idx], weekRange, content, nextWeek, problems, notes };
+                weeklyReportData[idx] = {
+                    ...weeklyReportData[idx],
+                    weekRange, content, nextWeek, problems, notes,
+                    status: 'pending',
+                    reviewComment: '',
+                    submitTime: new Date().toLocaleString('zh-CN'),
+                    visibility: 'all'
+                };
             }
         } else {
+            const dup = weeklyReportData.find(r => r.owner === submitter && r.weekRange === weekRange);
+            if (dup) {
+                alert('本周已提交过周报，已为你打开编辑');
+                editWeeklyReport(dup.id);
+                return;
+            }
             const newId = weeklyReportData.length > 0 ? Math.max(...weeklyReportData.map(r => r.id)) + 1 : 1;
-            weeklyReportData.push({ 
-                id: newId, 
-                weekRange, 
-                owner: submitter, 
-                content, 
-                nextWeek, 
-                problems, 
-                notes, 
-                status: 'pending', 
+            weeklyReportData.push({
+                id: newId,
+                weekRange,
+                owner: submitter,
+                content,
+                nextWeek,
+                problems,
+                notes,
+                status: 'pending',
                 submitTime: new Date().toLocaleString('zh-CN'),
-                reviewComment: '' 
+                reviewComment: '',
+                visibility: 'all'
             });
         }
 
@@ -19428,61 +19654,56 @@ ${ocrText}`
         closeWeeklyReportModal();
         populateWeeklyReportOwnerSelects();
         renderWeeklyReportList();
-        alert('提交成功！');
+        if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('周报已保存并同步，全员可见', false);
+        else alert('提交成功！周报已同步，全员可见。');
     }
 
     function showWeeklyReportDetail(id) {
         const report = weeklyReportData.find(r => r.id === id);
         if (!report) return;
-        
-        const status = WR_STATUS_CONFIG[report.status];
-        
+        const status = WR_STATUS_CONFIG[report.status] || WR_STATUS_CONFIG.pending;
+        const canReview = canReviewWeeklyReport() && report.status === 'pending';
+        const canEdit = isMyWeeklyReport(report) && report.status !== 'approved';
+
         document.getElementById('weeklyReportDetailContent').innerHTML = `
-            <div style="margin-bottom: 24px;">
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                    <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};border:1px solid ${status.borderColor};">${status.label}</span>
-                    <span style="font-size:13px;color:#666;">${report.submitTime}</span>
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap:wrap;">
+                    <span style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;color:${status.color};background:${status.bgColor};border:1px solid ${status.borderColor};">${status.label}</span>
+                    <span style="font-size:12px;color:#6b7280;">${escHtml(report.submitTime || '')}</span>
                 </div>
-                <h2 style="font-size: 18px; font-weight: bold; color: #333; margin: 0;">${report.weekRange}</h2>
+                <h2 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">${escHtml(report.weekRange || '')}</h2>
             </div>
-            
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
-                ${getOwnerAvatarHtml(report.owner, 40)}
+
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px; padding:12px; background:#f8fafc; border-radius:12px;">
+                ${getOwnerAvatarHtml(report.owner, 42)}
                 <div>
-                    <div style="font-weight: bold; color: #333;">${report.owner}</div>
-                    <div style="font-size: 13px; color: #888;">提交人</div>
+                    <div style="font-weight: 700; color: #111827;">${escHtml(report.owner || '')}</div>
+                    <div style="font-size: 12px; color: #6b7280;">提交人 · 全员可见</div>
                 </div>
             </div>
-            
-            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-                <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">本周工作内容</h4>
-                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${report.content}</p>
+
+            <div style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 12px; border:1px solid #eef2f7;">
+                <h4 style="margin: 0 0 10px; color: #111827; font-size: 14px;">本周工作内容</h4>
+                <p style="margin: 0; color: #374151; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${escHtml(report.content || '')}</p>
             </div>
-            
-            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-                <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">下周工作计划</h4>
-                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${report.nextWeek || '暂无'}</p>
+            <div style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 12px; border:1px solid #eef2f7;">
+                <h4 style="margin: 0 0 10px; color: #111827; font-size: 14px;">下周工作计划</h4>
+                <p style="margin: 0; color: #374151; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${escHtml(report.nextWeek || '暂无')}</p>
             </div>
-            
-            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-                <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">遇到的问题与困难</h4>
-                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${report.problems || '暂无'}</p>
+            <div style="background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 12px; border:1px solid #eef2f7;">
+                <h4 style="margin: 0 0 10px; color: #111827; font-size: 14px;">遇到的问题与困难</h4>
+                <p style="margin: 0; color: #374151; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${escHtml(report.problems || '暂无')}</p>
             </div>
-            
-            ${report.reviewComment ? `
-            <div style="background: #fffbe6; padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #ffe58f;">
-                <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">审核意见</h4>
-                <p style="margin: 0; color: #faad14; line-height: 1.8; font-size: 14px;">${report.reviewComment}</p>
-            </div>
-            ` : ''}
-            
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+            ${report.notes ? `<div style="background:#f8fafc;padding:16px;border-radius:12px;margin-bottom:12px;border:1px solid #eef2f7;"><h4 style="margin:0 0 10px;color:#111827;font-size:14px;">备注</h4><p style="margin:0;color:#374151;line-height:1.8;font-size:14px;white-space:pre-wrap;">${escHtml(report.notes)}</p></div>` : ''}
+            ${report.reviewComment ? `<div style="background:#fffbeb;padding:16px;border-radius:12px;margin-bottom:12px;border:1px solid #fde68a;"><h4 style="margin:0 0 10px;color:#92400e;font-size:14px;">审核意见</h4><p style="margin:0;color:#b45309;line-height:1.8;font-size:14px;">${escHtml(report.reviewComment)}</p></div>` : ''}
+
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; flex-wrap:wrap; position:sticky; bottom:0; background:#fff; padding-top:12px; border-top:1px solid #f3f4f6;">
                 <button class="btn btn-secondary" onclick="closeWeeklyReportDrawer()">关闭</button>
-                ${report.status === 'pending' ? `<button class="btn" style="background:#52c41a;" onclick="approveWeeklyReport(${report.id}); closeWeeklyReportDrawer();">通过</button>` : ''}
-                ${report.status === 'pending' ? `<button class="btn" style="background:#ff4d4f;" onclick="rejectWeeklyReport(${report.id}); closeWeeklyReportDrawer();">驳回</button>` : ''}
+                ${canEdit ? `<button class="btn btn-secondary" onclick="closeWeeklyReportDrawer(); editWeeklyReport(${report.id});">编辑</button>` : ''}
+                ${canReview ? `<button class="btn" style="background:#16a34a;" onclick="approveWeeklyReport(${report.id});">通过</button>` : ''}
+                ${canReview ? `<button class="btn" style="background:#dc2626;" onclick="rejectWeeklyReport(${report.id});">驳回</button>` : ''}
             </div>
         `;
-        
         document.getElementById('weeklyReportDrawer').style.display = 'block';
         document.getElementById('weeklyReportOverlay').style.display = 'block';
     }
@@ -19493,35 +19714,36 @@ ${ocrText}`
     }
 
     function approveWeeklyReport(id) {
+        if (!canReviewWeeklyReport()) { alert('仅导师/组长可审核周报'); return; }
         const report = weeklyReportData.find(r => r.id === id);
         if (!report) return;
-        
-        const comment = prompt('请输入审核意见（可选）：');
-        
+        const comment = prompt('请输入审核意见（可选）：') || '审核通过';
         report.status = 'approved';
-        report.reviewComment = comment || '审核通过';
+        report.reviewComment = comment;
+        report.reviewer = currentUser ? (currentUser.realName || currentUser.username) : '';
+        report.reviewTime = new Date().toLocaleString('zh-CN');
         saveWeeklyReportData();
         renderWeeklyReportList();
-        recordOperationLog('工作周报', '审核', `审核通过周报：${report.weekRange}，提交人${report.ownerName}`, { reportId: id, weekRange: report.weekRange, ownerName: report.ownerName }, { success: true }, 1, '', 0);
-        alert('已通过审核！');
+        showWeeklyReportDetail(id);
+        recordOperationLog('工作周报', '审核', `审核通过周报：${report.weekRange}，提交人${report.owner}`, { reportId: id, weekRange: report.weekRange, ownerName: report.owner }, { success: true }, 1, '', 0);
+        if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('审核结果已同步', false);
     }
 
     function rejectWeeklyReport(id) {
+        if (!canReviewWeeklyReport()) { alert('仅导师/组长可审核周报'); return; }
         const report = weeklyReportData.find(r => r.id === id);
         if (!report) return;
-        
         const comment = prompt('请输入驳回原因：');
-        if (!comment) {
-            alert('请填写驳回原因');
-            return;
-        }
-        
+        if (!comment) { alert('请填写驳回原因'); return; }
         report.status = 'rejected';
         report.reviewComment = comment;
+        report.reviewer = currentUser ? (currentUser.realName || currentUser.username) : '';
+        report.reviewTime = new Date().toLocaleString('zh-CN');
         saveWeeklyReportData();
         renderWeeklyReportList();
-        recordOperationLog('工作周报', '审核', `驳回周报：${report.weekRange}，提交人${report.ownerName}，原因：${comment}`, { reportId: id, weekRange: report.weekRange, ownerName: report.ownerName }, { success: true }, 1, '', 0);
-        alert('已驳回！');
+        showWeeklyReportDetail(id);
+        recordOperationLog('工作周报', '审核', `驳回周报：${report.weekRange}，提交人${report.owner}，原因：${comment}`, { reportId: id, weekRange: report.weekRange, ownerName: report.owner }, { success: true }, 1, '', 0);
+        if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('驳回结果已同步', false);
     }
 
     // ===== 通知管理模块 =====
@@ -19846,6 +20068,7 @@ ${ocrText}`
 
     function initNewsManagement() {
         loadNewsData();
+        try { if (typeof reconcileCollaborativeDataWithTeamMembers === 'function') reconcileCollaborativeDataWithTeamMembers(); } catch (e) {}
         updateNewsStats();
         renderNewsList();
     }
@@ -19863,6 +20086,7 @@ ${ocrText}`
                 { id: 5, title: '智慧城市安全建设指导意见发布', category: '政策资讯', author: '陈教授', content: '国家发改委近日发布了《关于推进智慧城市安全建设的指导意见》，明确了未来五年城市安全智能化发展的目标和方向...', status: 'draft', publishTime: '', views: 0 }
             ];
             localStorage.setItem('newsData', JSON.stringify(newsData));
+            try { if (typeof cloudUpsert === 'function') cloudUpsert('newsData', JSON.stringify(newsData)); } catch (e) {}
         }
     }
 
@@ -20651,6 +20875,7 @@ ${ocrText}`
         const stored = localStorage.getItem('meetingData');
         if (stored) {
             meetingData = JSON.parse(stored);
+            try { if (typeof reconcileCollaborativeDataWithTeamMembers === 'function') reconcileCollaborativeDataWithTeamMembers(); } catch (e) {}
         } else {
             const now = new Date();
             const tomorrow = new Date(now);
@@ -20671,6 +20896,7 @@ ${ocrText}`
 
     function saveMeetingData() {
         localStorage.setItem('meetingData', JSON.stringify(meetingData));
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('meetingData', JSON.stringify(meetingData)); } catch (e) {}
     }
 
     function getMeetingStatus(meeting) {
@@ -21014,6 +21240,7 @@ ${ocrText}`
         loadDatasetData();
         loadReportData();
         loadFileData();
+        try { if (typeof reconcileCollaborativeDataWithTeamMembers === 'function') reconcileCollaborativeDataWithTeamMembers(); } catch (e) {}
         renderLiteratureList();
         renderDatasetList();
         renderReportList();
