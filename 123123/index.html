@@ -24386,6 +24386,69 @@ ${ocrText}`
         return out;
     }
 
+    async function shareAnnotationTaskToCloud(taskId) {
+        const uploadToken = String(getAppConfig('ANNOTATION_UPLOAD_TOKEN', '') || '').trim();
+        if (!uploadToken) {
+            return { ok: false, error: 'ANNOTATION_UPLOAD_TOKEN 未配置' };
+        }
+        try {
+            const resp = await fetch('/api/annotation/share-cloud', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Upload-Token': uploadToken
+                },
+                body: JSON.stringify({ taskId: String(taskId) })
+            });
+            const data = await resp.json().catch(function() { return null; });
+            if (!resp.ok || !data || !data.ok) {
+                return { ok: false, error: (data && data.error) || ('HTTP ' + resp.status) };
+            }
+            return { ok: true, share: data.share };
+        } catch (e) {
+            return { ok: false, error: e && e.message ? e.message : String(e) };
+        }
+    }
+
+    async function downloadAnnotationShareFromCloudKv(taskId, downloadName) {
+        if (!SUPABASE_URL || !SUPABASE_KEY) return false;
+        const mark = '__APP_SYNC_BLOB__';
+        const metaPn = '__SYNC_BLOB__anno_' + String(taskId) + '_meta';
+        const metaRows = await supabaseRequest(
+            'GET',
+            'patents?classification=eq.' + encodeURIComponent(mark) + '&patent_number=eq.' + encodeURIComponent(metaPn),
+            { select: 'abstract', limit: 1 }
+        );
+        if (!metaRows || !metaRows.length || !metaRows[0].abstract) return false;
+        let meta;
+        try { meta = JSON.parse(metaRows[0].abstract); } catch (e) { return false; }
+        const chunks = Number(meta.chunks || 0);
+        if (!chunks) return false;
+        const parts = [];
+        for (let i = 0; i < chunks; i++) {
+            const pn = '__SYNC_BLOB__anno_' + String(taskId) + '_c' + i;
+            const rows = await supabaseRequest(
+                'GET',
+                'patents?classification=eq.' + encodeURIComponent(mark) + '&patent_number=eq.' + encodeURIComponent(pn),
+                { select: 'abstract', limit: 1 }
+            );
+            if (!rows || !rows.length || !rows[0].abstract) {
+                throw new Error('缺少云端分片 ' + i);
+            }
+            const bin = atob(String(rows[0].abstract));
+            const arr = new Uint8Array(bin.length);
+            for (let j = 0; j < bin.length; j++) arr[j] = bin.charCodeAt(j);
+            parts.push(arr);
+        }
+        const blob = new Blob(parts, { type: 'application/zip' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = downloadName || ('annotation-task-' + taskId + '.zip');
+        a.click();
+        URL.revokeObjectURL(a.href);
+        return true;
+    }
+
     async function uploadAnnotationFilesToServer(taskId, files) {
         if (!files || !files.length) return { ok: false, uploaded: 0, error: 'no files' };
         const uploadToken = String(getAppConfig('ANNOTATION_UPLOAD_TOKEN', '') || '').trim();
@@ -24489,22 +24552,35 @@ ${ocrText}`
 
         let uploadMsg = '';
         if (uploadedFiles.length) {
-            // 1) 云端共享（全员可见）优先
-            const cloudRes = await uploadAnnotationFilesToCloud(newId, uploadedFiles);
-            // 2) 本机网关落盘（同一门户实例内可导出）
+            // 1) 本机网关落盘（后续可一键发布到团队云端）
             const serverRes = await uploadAnnotationFilesToServer(newId, uploadedFiles);
-            // 3) 浏览器 IndexedDB 仅作本机兜底，不作为团队共享
+            // 2) 网关打包分片写入云端 patents（全员可下，无需 Storage 桶）
+            let shareRes = { ok: false };
+            if (serverRes.ok) {
+                shareRes = await shareAnnotationTaskToCloud(newId);
+            }
+            // 3) 可选：Supabase Storage 桶（若已开通）
+            let cloudRes = { ok: false, uploaded: 0, total: 0, errors: [], paths: [] };
+            if (!shareRes.ok) {
+                cloudRes = await uploadAnnotationFilesToCloud(newId, uploadedFiles);
+            }
+            // 4) 浏览器 IndexedDB 仅作本机兜底
             let idbCount = 0;
             try { idbCount = await saveAnnotationFilesToIdb(newId, uploadedFiles); } catch (e) { console.warn(e); }
 
             const storageParts = [];
-            if (cloudRes.ok) {
+            if (shareRes.ok) {
+                task.hasRealFiles = true;
+                task.cloudShare = shareRes.share;
+                storageParts.push('cloud');
+                uploadMsg += '\n已发布到团队云端：' + (shareRes.share && shareRes.share.chunks ? shareRes.share.chunks : '?') + ' 个分片（全员可导出 ZIP）';
+            } else if (cloudRes.ok) {
                 task.hasRealFiles = true;
                 task.cloudUploaded = cloudRes.uploaded;
                 task.cloudBucket = cloudRes.bucket || getAnnotationStorageBucket();
                 task.cloudFiles = (cloudRes.paths || []).slice(0, 500);
                 storageParts.push('cloud');
-                uploadMsg += '\n已上传到团队云端：' + cloudRes.uploaded + '/' + cloudRes.total + ' 个（全员可查看/导出）';
+                uploadMsg += '\n已上传到团队云端桶：' + cloudRes.uploaded + '/' + cloudRes.total + ' 个（全员可查看/导出）';
             }
             if (serverRes.ok) {
                 task.hasRealFiles = true;
@@ -24512,20 +24588,18 @@ ${ocrText}`
                 storageParts.push('server');
                 uploadMsg += '\n本机网关备份：' + serverRes.uploaded + '/' + serverRes.total + ' 个';
             }
-            if (!cloudRes.ok && !serverRes.ok && idbCount > 0) {
+            if (!shareRes.ok && !cloudRes.ok && !serverRes.ok && idbCount > 0) {
                 task.hasRealFiles = true;
                 storageParts.push('idb');
-                uploadMsg += '\n仅保存到本浏览器（' + idbCount + ' 个），其他人看不到。请执行 supabase_annotations_storage.sql 开通云端桶后重新上传。';
-                if (cloudRes.errors && cloudRes.errors[0]) uploadMsg += '\n云端失败原因：' + cloudRes.errors[0];
-            } else if (!cloudRes.ok && !serverRes.ok) {
+                uploadMsg += '\n仅保存到本浏览器（' + idbCount + ' 个），其他人看不到。';
+            } else if (!shareRes.ok && !cloudRes.ok && !serverRes.ok) {
                 uploadMsg += '\n文件未能共享保存。';
-                if (cloudRes.errors && cloudRes.errors[0]) uploadMsg += '\n云端：' + cloudRes.errors[0];
                 if (serverRes.errors && serverRes.errors[0]) uploadMsg += '\n本机：' + serverRes.errors[0];
-            } else if (!cloudRes.ok) {
-                uploadMsg += '\n注意：云端共享未成功，其他成员可能无法下载真实文件。';
-                if (cloudRes.errors && cloudRes.errors[0]) uploadMsg += '\n原因：' + cloudRes.errors[0];
+            } else if (!shareRes.ok && !cloudRes.ok) {
+                uploadMsg += '\n注意：团队云端发布未成功，其他成员可能无法下载真实文件。';
+                if (shareRes.error) uploadMsg += '\n原因：' + shareRes.error;
             }
-            if (idbCount > 0 && (cloudRes.ok || serverRes.ok)) storageParts.push('idb');
+            if (idbCount > 0 && (shareRes.ok || cloudRes.ok || serverRes.ok)) storageParts.push('idb');
             task.storage = storageParts.join('+') || '';
             task.updatedAt = today;
             saveAnnotationData();
@@ -24567,7 +24641,10 @@ ${ocrText}`
             </div>`;
         let act = `<button class="btn btn-secondary" onclick="closeAnnotationDetailDrawer()">关闭</button>`;
         act += `<button class="btn" onclick="showUpdateAnnotationProgress(${task.id})">更新进度</button>`;
-        act += `<button class="btn btn-secondary" onclick="exportAnnotation(${task.id})">导出 JSON</button>`;
+        act += `<button class="btn btn-secondary" onclick="exportAnnotation(${task.id})">导出</button>`;
+        if (String(task.storage || '').indexOf('cloud') < 0) {
+            act += `<button class="btn" onclick="publishAnnotationToTeamCloud(${task.id})">发布到团队云端</button>`;
+        }
         if (deriveAnnotationStatus(task) === 'ready') act += `<button class="btn" onclick="pushAnnotationToTraining(${task.id})">登记到训练台账</button>`;
         if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'leader' || task.owner === currentUser.realName)) {
             act += `<button class="btn btn-secondary" style="color:#dc2626;" onclick="deleteAnnotationTask(${task.id})">删除</button>`;
@@ -24695,7 +24772,30 @@ ${ocrText}`
         const task = annotationData.find(a => a.id === id);
         if (!task) return;
 
-        // 1) 优先从团队云端导出（全员可用）
+        // 1) 团队云端分片包（全员可用，不依赖 Storage 桶）
+        try {
+            const ok = await downloadAnnotationShareFromCloudKv(id, (task.dataset || task.name || 'annotation') + '-files.zip');
+            if (ok) return;
+        } catch (e) { console.warn(e); }
+
+        // 1b) 经本机网关拉取云端分片包
+        try {
+            const resp = await fetch('/api/annotation/fetch-cloud?taskId=' + encodeURIComponent(String(id)), { cache: 'no-store' });
+            if (resp.ok) {
+                const ct = resp.headers.get('Content-Type') || '';
+                if (ct.indexOf('application/zip') !== -1) {
+                    const blob = await resp.blob();
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = (task.dataset || task.name || 'annotation') + '-files.zip';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    return;
+                }
+            }
+        } catch (e) { /* fall through */ }
+
+        // 2) Supabase Storage 桶（若已开通）
         try {
             let cloudFiles = Array.isArray(task.cloudFiles) ? task.cloudFiles.slice() : [];
             if (!cloudFiles.length) {
@@ -24737,7 +24837,7 @@ ${ocrText}`
             }
         } catch (e) { console.warn(e); }
 
-        // 2) 本机网关 ZIP
+        // 3) 本机网关 ZIP
         try {
             const resp = await fetch('/api/annotation/export?taskId=' + encodeURIComponent(String(id)), { cache: 'no-store' });
             if (resp.ok) {
@@ -24756,7 +24856,7 @@ ${ocrText}`
             }
         } catch (e) { /* fall through */ }
 
-        // 3) IndexedDB 本机兜底
+        // 4) IndexedDB 本机兜底
         try {
             const rows = await listAnnotationFilesFromIdb(id);
             if (rows && rows.length) {
@@ -24785,7 +24885,28 @@ ${ocrText}`
             console.warn(e);
         }
 
-        alert('未找到该任务的团队共享文件。\n请重新上传数据集，并确认已执行 supabase_annotations_storage.sql 开通云端桶。');
+        alert('未找到该任务的团队共享文件。\n若本机已有备份，请在详情中点击「发布到团队云端」后再让其他人导出。');
+    }
+
+    async function publishAnnotationToTeamCloud(id) {
+        const task = annotationData.find(a => a.id === id);
+        if (!task) return;
+        const res = await shareAnnotationTaskToCloud(id);
+        if (!res.ok) {
+            alert('发布失败：' + (res.error || 'unknown'));
+            return;
+        }
+        task.cloudShare = res.share;
+        task.hasRealFiles = true;
+        const parts = String(task.storage || '').split('+').filter(Boolean);
+        if (parts.indexOf('cloud') < 0) parts.unshift('cloud');
+        if (parts.indexOf('server') < 0) parts.push('server');
+        task.storage = parts.join('+');
+        task.updatedAt = new Date().toISOString().split('T')[0];
+        saveAnnotationData();
+        renderAnnotationList();
+        viewAnnotationDetail(id);
+        alert('已发布到团队云端，其他成员可导出真实 ZIP。');
     }
 
     // 智能对话问答

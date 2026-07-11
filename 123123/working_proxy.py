@@ -1,5 +1,7 @@
 """Production-ready local gateway: static files, AI proxy, MLOps and annotation APIs."""
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+import base64
+import hashlib
 import json
 import logging
 import os
@@ -16,6 +18,8 @@ ENV_PATH = os.path.join(BASE_DIR, '.env')
 MLOPS_STORE_PATH = os.path.join(BASE_DIR, 'mlops_store.json')
 ANNOTATION_UPLOAD_ROOT = os.path.join(BASE_DIR, 'uploads', 'annotations')
 AUDIT_LOG_PATH = os.path.join(BASE_DIR, 'logs', 'server_audit.log')
+ANNOTATION_BLOB_MARK = '__APP_SYNC_BLOB__'
+ANNOTATION_BLOB_PREFIX = '__SYNC_BLOB__anno_'
 
 
 def load_env_file(path):
@@ -50,6 +54,10 @@ ALLOWED_UPLOAD_EXTENSIONS = {
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+ANNOTATION_STORAGE_BUCKET = os.environ.get('ANNOTATION_STORAGE_BUCKET', 'annotations')
+ANNOTATION_BLOB_CHUNK_SIZE = int(os.environ.get('ANNOTATION_BLOB_CHUNK_SIZE', str(160 * 1024)))
+ANNOTATION_BLOB_MAX_BYTES = int(os.environ.get('ANNOTATION_BLOB_MAX_BYTES', str(40 * 1024 * 1024)))
 CLOUD_SYNC_MARK = '__APP_SYNC__'
 CLOUD_SYNC_PN = '__SYNC_KV__modelTrainingData'
 
@@ -349,6 +357,134 @@ def zip_annotation_task(task_id):
     return buf.getvalue()
 
 
+def _supabase_headers(prefer=None, admin=False):
+    key = SUPABASE_SERVICE_ROLE_KEY if (admin and SUPABASE_SERVICE_ROLE_KEY) else SUPABASE_KEY
+    if not SUPABASE_URL or not key:
+        raise RuntimeError('SUPABASE_URL/SUPABASE_KEY not configured')
+    headers = {
+        'apikey': key,
+        'Authorization': 'Bearer ' + key,
+        'Content-Type': 'application/json',
+        'Prefer': prefer or 'return=representation',
+    }
+    return headers
+
+
+def _blob_meta_pn(task_id):
+    return ANNOTATION_BLOB_PREFIX + str(task_id) + '_meta'
+
+
+def _blob_chunk_pn(task_id, index):
+    return ANNOTATION_BLOB_PREFIX + str(task_id) + '_c' + str(index)
+
+
+def _upsert_patent_row(patent_number, title, abstract, headers):
+    q = (
+        SUPABASE_URL + '/rest/v1/patents'
+        + '?classification=eq.' + urllib.parse.quote(ANNOTATION_BLOB_MARK)
+        + '&patent_number=eq.' + urllib.parse.quote(patent_number)
+        + '&select=id'
+    )
+    req = urllib.request.Request(q, headers=headers, method='GET')
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        rows = json.loads(resp.read().decode('utf-8'))
+    body = {
+        'classification': ANNOTATION_BLOB_MARK,
+        'patent_number': patent_number,
+        'title': title[:200],
+        'abstract': abstract,
+        'inventors': 'system',
+        'applicant': 'system',
+        'application_date': _today(),
+        'status': 'synced',
+    }
+    data = json.dumps(body, ensure_ascii=False).encode('utf-8')
+    if rows:
+        url = SUPABASE_URL + '/rest/v1/patents?id=eq.' + urllib.parse.quote(str(rows[0]['id']))
+        req = urllib.request.Request(url, data=data, headers=headers, method='PATCH')
+    else:
+        url = SUPABASE_URL + '/rest/v1/patents'
+        req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        resp.read()
+
+
+def _get_patent_abstract(patent_number, headers):
+    q = (
+        SUPABASE_URL + '/rest/v1/patents'
+        + '?classification=eq.' + urllib.parse.quote(ANNOTATION_BLOB_MARK)
+        + '&patent_number=eq.' + urllib.parse.quote(patent_number)
+        + '&select=abstract'
+    )
+    req = urllib.request.Request(q, headers=headers, method='GET')
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        rows = json.loads(resp.read().decode('utf-8'))
+    if not rows:
+        return None
+    return rows[0].get('abstract')
+
+
+def share_annotation_task_to_cloud(task_id):
+    """Zip local task files and publish as chunked rows in patents (team-wide readable)."""
+    raw = zip_annotation_task(task_id)
+    if len(raw) > ANNOTATION_BLOB_MAX_BYTES:
+        raise ValueError('dataset zip too large for cloud share: %s bytes (max %s)' % (len(raw), ANNOTATION_BLOB_MAX_BYTES))
+    headers = _supabase_headers(prefer='return=minimal')
+    digest = hashlib.sha256(raw).hexdigest()
+    chunks = []
+    size = ANNOTATION_BLOB_CHUNK_SIZE
+    for i in range(0, len(raw), size):
+        chunks.append(raw[i:i + size])
+    for idx, chunk in enumerate(chunks):
+        b64 = base64.b64encode(chunk).decode('ascii')
+        _upsert_patent_row(
+            _blob_chunk_pn(task_id, idx),
+            'ANNO_BLOB:%s:%s' % (task_id, idx),
+            b64,
+            headers,
+        )
+    meta = {
+        'taskId': str(task_id),
+        'chunks': len(chunks),
+        'bytes': len(raw),
+        'sha256': digest,
+        'updatedAt': _now_iso(),
+        'contentType': 'application/zip',
+        'shareMode': 'cloud-kv',
+    }
+    _upsert_patent_row(
+        _blob_meta_pn(task_id),
+        'ANNO_BLOB_META:%s' % task_id,
+        json.dumps(meta, ensure_ascii=False),
+        headers,
+    )
+    return meta
+
+
+def fetch_annotation_task_from_cloud(task_id):
+    headers = _supabase_headers()
+    meta_raw = _get_patent_abstract(_blob_meta_pn(task_id), headers)
+    if not meta_raw:
+        raise FileNotFoundError('cloud share meta not found')
+    meta = json.loads(meta_raw)
+    chunks = int(meta.get('chunks') or 0)
+    if chunks <= 0:
+        raise FileNotFoundError('cloud share empty')
+    parts = []
+    for idx in range(chunks):
+        b64 = _get_patent_abstract(_blob_chunk_pn(task_id, idx), headers)
+        if not b64:
+            raise FileNotFoundError('missing cloud chunk %s' % idx)
+        parts.append(base64.b64decode(b64))
+    raw = b''.join(parts)
+    expect = str(meta.get('sha256') or '')
+    if expect:
+        got = hashlib.sha256(raw).hexdigest()
+        if got != expect:
+            raise ValueError('cloud share checksum mismatch')
+    return raw, meta
+
+
 class WorkingProxyHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         logger.info("%s - %s", self.client_address[0], format % args)
@@ -401,6 +537,32 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self._json(200, {'ok': True, 'file': info})
             except Exception as e:
                 audit_event('annotation_upload_failed', ip=self.client_address[0], taskId=task_id, path=rel_path, error=str(e))
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        # 把本机已落盘的任务打包并分片写入云端 patents，供全员导出
+        if path.startswith('/api/annotation/share-cloud'):
+            if not check_upload_token(self):
+                audit_event('annotation_share_denied', ip=self.client_address[0], reason='invalid_token')
+                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                return
+            try:
+                payload = json.loads((post_data or b'{}').decode('utf-8') or '{}')
+            except json.JSONDecodeError as e:
+                self._json(400, {'ok': False, 'error': f'invalid json: {e}'})
+                return
+            task_id = str(payload.get('taskId') or payload.get('task_id') or '').strip()
+            if not task_id:
+                self._json(400, {'ok': False, 'error': 'taskId required'})
+                return
+            try:
+                meta = share_annotation_task_to_cloud(task_id)
+                audit_event('annotation_share_ok', ip=self.client_address[0], taskId=task_id, bytes=meta.get('bytes'), chunks=meta.get('chunks'))
+                self._json(200, {'ok': True, 'share': meta})
+            except FileNotFoundError as e:
+                self._json(404, {'ok': False, 'error': str(e)})
+            except Exception as e:
+                audit_event('annotation_share_failed', ip=self.client_address[0], taskId=task_id, error=str(e))
                 self._json(400, {'ok': False, 'error': str(e)})
             return
 
@@ -504,6 +666,25 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self.wfile.write(raw)
             except FileNotFoundError:
                 self._json(404, {'ok': False, 'error': 'no uploaded files for this task'})
+            except Exception as e:
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/annotation/fetch-cloud'):
+            task_id = (qs.get('taskId') or [''])[0]
+            try:
+                raw, meta = fetch_annotation_task_from_cloud(task_id)
+                filename = 'annotation-task-%s.zip' % task_id
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/zip')
+                self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename)
+                self.send_header('Content-Length', str(len(raw)))
+                self.send_header('X-Cloud-Share-Bytes', str(meta.get('bytes') or len(raw)))
+                self._cors()
+                self.end_headers()
+                self.wfile.write(raw)
+            except FileNotFoundError as e:
+                self._json(404, {'ok': False, 'error': str(e)})
             except Exception as e:
                 self._json(400, {'ok': False, 'error': str(e)})
             return
