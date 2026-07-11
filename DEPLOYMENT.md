@@ -41,8 +41,8 @@ python -m pip install -r requirements.txt
 ## 智能对话问答
 
 - 知识库通过 `knowledgeData` 云端同步，团队成员互相可见。
-- 未配置百炼密钥：知识库 TopK 检索本地回答。
-- 已配置密钥：优先本机 `/api/aliyun`，其次远程 `API_PROXY`，失败回退知识库。
+- 未配置百炼密钥：全局 TopK 检索本地回答，覆盖项目、任务、周报、训练、标注、文献、数据集和共享文件。
+- 已配置密钥：优先本机 `/api/aliyun`，其次远程 `API_PROXY`，失败回退全局检索。
 - 普通成员可维护自己添加的知识；`admin` / `leader` 可管理全部。
 
 ## 启动服务

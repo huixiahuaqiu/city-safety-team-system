@@ -122,6 +122,158 @@
             0%, 100% { opacity: 0.45; }
             50% { opacity: 0.85; }
         }
+        @keyframes chatBubbleIn {
+            from { opacity: 0; transform: translateY(14px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes chatTypingDot {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+            40% { transform: translateY(-4px); opacity: 1; }
+        }
+        @keyframes chatGlowPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.18); }
+            50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
+        }
+        .team-chat-shell {
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            background:
+                radial-gradient(circle at top right, rgba(129, 140, 248, 0.16), transparent 42%),
+                linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+            overflow: hidden;
+        }
+        .team-chat-stream {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+            min-height: 320px;
+            max-height: 380px;
+            overflow-y: auto;
+            background:
+                linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(238, 242, 255, 0.55));
+        }
+        .team-chat-row {
+            display: flex;
+            width: 100%;
+            animation: chatBubbleIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .team-chat-row.user { justify-content: flex-end; }
+        .team-chat-row.assistant { justify-content: flex-start; }
+        .team-chat-bubble {
+            max-width: min(86%, 560px);
+            padding: 12px 14px;
+            border-radius: 18px;
+            line-height: 1.7;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+            position: relative;
+        }
+        .team-chat-bubble.user {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            border-bottom-right-radius: 6px;
+        }
+        .team-chat-bubble.assistant {
+            background: rgba(255, 255, 255, 0.92);
+            color: #1f2937;
+            border: 1px solid #e0e7ff;
+            border-bottom-left-radius: 6px;
+            backdrop-filter: blur(8px);
+        }
+        .team-chat-label {
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: 0.02em;
+        }
+        .team-chat-bubble.user .team-chat-label { color: rgba(255,255,255,0.82); }
+        .team-chat-bubble.assistant .team-chat-label { color: #4f46e5; }
+        .team-chat-meta {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .team-chat-typing {
+            display: inline-flex;
+            gap: 5px;
+            align-items: center;
+            padding: 4px 2px;
+        }
+        .team-chat-typing span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #818cf8;
+            animation: chatTypingDot 1.1s infinite ease-in-out;
+        }
+        .team-chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+        .team-chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+        .team-chat-chip {
+            border: 1px solid #ddd6fe;
+            background: rgba(255,255,255,0.8);
+            color: #4f46e5;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+        .team-chat-chip:hover {
+            transform: translateY(-2px);
+            background: #eef2ff;
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.12);
+        }
+        .team-chat-send {
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            animation: chatGlowPulse 2.8s ease-in-out infinite;
+        }
+        .team-chat-send:hover { transform: translateY(-1px) scale(1.02); }
+        .openai-hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            padding: 22px 24px;
+            color: #fff;
+            background: linear-gradient(125deg, #4c1d95 0%, #6d28d9 45%, #4338ca 100%);
+            background-size: 180% 180%;
+            animation: navGradientShift 10s ease infinite;
+            box-shadow: 0 18px 40px rgba(76, 29, 149, 0.28);
+            margin-bottom: 18px;
+        }
+        .openai-hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.18) 48%, transparent 72%);
+            transform: translateX(-120%);
+            animation: shimmerSweep 4.8s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .openai-panel {
+            border: 1px solid #e9d5ff;
+            border-radius: 18px;
+            background: linear-gradient(180deg, #ffffff, #faf5ff);
+            box-shadow: 0 14px 36px rgba(88, 28, 135, 0.08);
+            padding: 18px;
+            margin-bottom: 16px;
+            animation: fadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .openai-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 40px rgba(88, 28, 135, 0.12);
+        }
+        .openai-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.22);
+        }
 
         /* 顶部导航栏 */
         .top-nav {
@@ -286,15 +438,62 @@
         .submenu .nav-item {
             font-size: 13px;
             padding-left: 28px;
+            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
         }
         
         .submenu .nav-item:hover {
-            background: rgba(124,58,237,0.08);
+            background: linear-gradient(90deg, rgba(124,58,237,0.12), rgba(79,70,229,0.04));
+            transform: translateX(6px);
+            box-shadow: 0 8px 18px rgba(124, 58, 237, 0.08);
         }
         
         .submenu .nav-item.active {
-            background: rgba(124,58,237,0.12);
+            background: linear-gradient(90deg, rgba(124,58,237,0.18), rgba(79,70,229,0.08));
             border-left-color: var(--brand);
+            box-shadow: inset 0 0 0 1px rgba(124,58,237,0.1), 0 10px 22px rgba(124, 58, 237, 0.1);
+            animation: softPulse 2.8s ease-in-out infinite;
+        }
+        .submenu .nav-item span:first-child {
+            display: inline-flex;
+            transition: transform 0.22s ease;
+        }
+        .submenu .nav-item:hover span:first-child,
+        .submenu .nav-item.active span:first-child {
+            transform: scale(1.12) translateY(-1px);
+        }
+        .chat-hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 18px;
+            padding: 18px 20px;
+            margin-bottom: 18px;
+            color: #312e81;
+            background:
+                radial-gradient(circle at top right, rgba(129, 140, 248, 0.28), transparent 46%),
+                linear-gradient(135deg, #eef2ff 0%, #f5f3ff 55%, #ffffff 100%);
+            border: 1px solid #e0e7ff;
+            box-shadow: 0 14px 34px rgba(79, 70, 229, 0.08);
+        }
+        .chat-hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.45) 48%, transparent 72%);
+            transform: translateX(-120%);
+            animation: shimmerSweep 5.2s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .chat-stat-card {
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 14px 16px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            animation: fadeIn 0.4s ease both;
+        }
+        .chat-stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
         }
         
         /* 主内容区 */
@@ -4382,31 +4581,34 @@
             <!-- 智能对话问答 -->
             <div id="chat" class="module">
                 <div class="card" style="padding:22px 24px;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
-                        <div>
-                            <h2 style="margin:0 0 6px;font-size:22px;color:#111827;">智能对话问答</h2>
-                            <div style="font-size:13px;color:#6b7280;line-height:1.6;">面向团队制度、训练、标注与系统使用；优先检索知识库，配置百炼密钥后可走大模型增强回答。</div>
-                        </div>
-                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                            <span id="chatModeBadge" style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;">知识库模式</span>
-                            <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px;" onclick="clearChatSession()">清空会话</button>
-                            <button class="btn" style="padding:8px 14px;font-size:13px;" onclick="showAddKnowledgeModal()">+ 添加知识</button>
+                    <div class="chat-hero">
+                        <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                            <div>
+                                <div style="font-size:12px;color:#6366f1;font-weight:700;margin-bottom:6px;">全局检索 · 知识库增强</div>
+                                <h2 style="margin:0 0 6px;font-size:22px;color:#111827;">智能对话问答</h2>
+                                <div style="font-size:13px;color:#4b5563;line-height:1.6;max-width:620px;">面向团队制度、项目、周报、训练、标注、文献与共享文件；优先全局检索命中，配置百炼密钥后可走大模型增强回答。</div>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <span id="chatModeBadge" style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;">全局检索模式</span>
+                                <button class="btn btn-secondary" style="padding:8px 14px;font-size:13px;" onclick="clearChatSession()">清空会话</button>
+                                <button class="btn" style="padding:8px 14px;font-size:13px;" onclick="showAddKnowledgeModal()">+ 添加知识</button>
+                            </div>
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px;">
-                        <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+                        <div class="chat-stat-card">
                             <div style="font-size:24px;font-weight:700;color:#4f46e5;line-height:1;" id="chatStatKnowledge">0</div>
                             <div style="font-size:12px;color:#9ca3af;margin-top:6px;">知识条目</div>
                         </div>
-                        <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+                        <div class="chat-stat-card" style="animation-delay:0.05s;">
                             <div style="font-size:24px;font-weight:700;color:#0891b2;line-height:1;" id="chatStatCategory">0</div>
                             <div style="font-size:12px;color:#9ca3af;margin-top:6px;">知识分类</div>
                         </div>
-                        <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+                        <div class="chat-stat-card" style="animation-delay:0.1s;">
                             <div style="font-size:24px;font-weight:700;color:#ea580c;line-height:1;" id="chatStatMessages">0</div>
                             <div style="font-size:12px;color:#9ca3af;margin-top:6px;">本会话消息</div>
                         </div>
-                        <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;">
+                        <div class="chat-stat-card" style="animation-delay:0.15s;">
                             <div style="font-size:14px;font-weight:700;color:#16a34a;line-height:1.3;" id="chatStatSync">本地</div>
                             <div style="font-size:12px;color:#9ca3af;margin-top:6px;">同步状态</div>
                         </div>
@@ -4425,16 +4627,16 @@
                             </div>
                             <div id="knowledgeList" style="flex:1;overflow-y:auto;max-height:420px;"></div>
                         </div>
-                        <div style="border:1px solid #e5e7eb;border-radius:14px;padding:14px;background:#fff;min-height:520px;display:flex;flex-direction:column;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+                        <div class="team-chat-shell" style="min-height:520px;display:flex;flex-direction:column;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 16px 8px;gap:8px;flex-wrap:wrap;">
                                 <strong style="font-size:14px;color:#111827;">AI 助手</strong>
-                                <div style="font-size:12px;color:#6b7280;" id="chatApiHint">未检测到百炼密钥，将使用知识库检索回答</div>
+                                <div style="font-size:12px;color:#6b7280;" id="chatApiHint">未检测到百炼密钥，将使用全局检索回答</div>
                             </div>
-                            <div id="chatQuickChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;"></div>
-                            <div id="chatContainer" style="flex:1;min-height:320px;max-height:360px;overflow-y:auto;padding:12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:12px;margin-bottom:12px;"></div>
-                            <div style="display:flex;gap:10px;align-items:flex-end;">
-                                <textarea id="chatInput" rows="2" placeholder="请输入问题，例如：周报什么时候交？YOLOv8 怎么训？" style="flex:1;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;resize:vertical;font-size:14px;line-height:1.5;" onkeydown="handleTeamChatKeyDown(event)"></textarea>
-                                <button class="btn" id="chatSendBtn" onclick="sendChatMessage()" style="padding:12px 18px;">发送</button>
+                            <div id="chatQuickChips" style="display:flex;flex-wrap:wrap;gap:8px;margin:0 16px 10px;"></div>
+                            <div id="chatContainer" class="team-chat-stream"></div>
+                            <div style="display:flex;gap:10px;align-items:flex-end;padding:14px 16px 16px;border-top:1px solid #eef2ff;background:rgba(255,255,255,0.72);backdrop-filter:blur(8px);">
+                                <textarea id="chatInput" rows="2" placeholder="请输入问题，例如：周报什么时候交？YOLOv8 怎么训？" style="flex:1;padding:12px 14px;border:1px solid #ddd6fe;border-radius:14px;resize:vertical;font-size:14px;line-height:1.5;background:#fff;box-shadow:inset 0 1px 2px rgba(15,23,42,0.03);" onkeydown="handleTeamChatKeyDown(event)"></textarea>
+                                <button class="btn team-chat-send" id="chatSendBtn" onclick="sendChatMessage()" style="padding:12px 18px;">发送</button>
                             </div>
                         </div>
                     </div>
@@ -4487,60 +4689,67 @@
             
             <!-- OpenAI入口 -->
             <div id="openai" class="module">
-                <div class="card">
-                    <h2>🤖 OpenAI入口</h2>
-                    
-                    <!-- API密钥管理 -->
-                    <div class="card" style="background: #f3e5f5; margin-bottom: 20px;">
-                        <h3>API密钥管理</h3>
-                        <div class="form-group">
-                            <label>阿里云百炼API密钥</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="password" id="openaiApiKey" class="form-control" placeholder="请输入阿里云百炼API密钥" value="">
-                                <button class="btn" onclick="saveApiKey()">💾 保存</button>
-                                <button class="btn btn-secondary" onclick="testApiKey()">🔍 测试</button>
+                <div class="card" style="padding:22px 24px;">
+                    <div class="openai-hero">
+                        <div style="position:relative;z-index:1;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+                            <div>
+                                <div style="font-size:12px;opacity:0.85;margin-bottom:6px;">阿里云百炼 · 团队 AI 入口</div>
+                                <h2 style="margin:0 0 8px;font-size:24px;">OpenAI 入口</h2>
+                                <div style="font-size:13px;line-height:1.6;opacity:0.92;max-width:560px;">在此配置百炼密钥与模型参数。智能对话问答会自动读取这里的密钥；密钥只保存在本机浏览器，不上传云端。</div>
                             </div>
-                            <small id="apiKeyDisplay" style="color: #666; display: block; margin-top: 5px;"></small>
-                        </div>
-                        <div id="apiKeyStatus" style="margin-top: 10px; padding: 10px; border-radius: 4px; display: none;"></div>
-                    </div>
-                    
-                    <!-- 模型选择 -->
-                    <div class="card" style="background: #f3e5f5; margin-bottom: 20px;">
-                        <h3>模型设置</h3>
-                        <div class="form-group">
-                            <label>选择模型</label>
-                            <select id="openaiModel" class="form-control">
-                                <option value="qwen3.6-plus" selected>通义千问 3.6 Plus（推荐）</option>
-                                <option value="qwen-turbo">通义千问 Turbo（快速）</option>
-                                <option value="qwen-max">通义千问 Max（最强）</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>温度 (0-2)</label>
-                            <input type="range" id="openaiTemperature" min="0" max="2" step="0.1" value="0.7" class="form-control">
-                            <small style="color: #666; display: block; margin-top: 5px;">值越高，生成内容越随机；值越低，生成内容越确定</small>
-                        </div>
-                        <div class="form-group">
-                            <label>最大 tokens</label>
-                            <input type="number" id="openaiMaxTokens" class="form-control" value="1000" min="1" max="4096">
-                            <small style="color: #666; display: block; margin-top: 5px;">生成内容的最大长度</small>
+                            <div class="openai-status-pill" id="openaiHeroStatus">密钥未配置</div>
                         </div>
                     </div>
-                    
-                    <!-- 对话界面 -->
-                    <div class="card">
-                        <h3>AI对话</h3>
-                        <div class="chat-container" id="openaiChatContainer" style="height: 400px; border: 1px solid #e9ecef; border-radius: 8px; overflow-y: auto; padding: 15px; margin-bottom: 15px; background: #f8f9fa;">
-                            <div class="chat-message ai">
-                                <strong>OpenAI：</strong><br>
-                                您好！我是OpenAI助手，有什么可以帮您的吗？
+
+                    <div style="display:grid;grid-template-columns:minmax(280px,0.95fr) minmax(0,1.2fr);gap:16px;align-items:stretch;">
+                        <div>
+                            <div class="openai-panel">
+                                <h3 style="margin:0 0 12px;font-size:16px;color:#4c1d95;">API 密钥</h3>
+                                <div class="form-group" style="margin-bottom:12px;">
+                                    <label>阿里云百炼 API 密钥</label>
+                                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                        <input type="password" id="openaiApiKey" class="form-control" placeholder="sk-..." value="" style="flex:1;min-width:180px;">
+                                        <button class="btn" onclick="saveApiKey()">保存</button>
+                                        <button class="btn btn-secondary" onclick="testApiKey()">测试</button>
+                                    </div>
+                                    <small id="apiKeyDisplay" style="color:#6b7280;display:block;margin-top:8px;"></small>
+                                </div>
+                                <div id="apiKeyStatus" style="margin-top:10px;padding:10px 12px;border-radius:12px;display:none;"></div>
+                            </div>
+
+                            <div class="openai-panel">
+                                <h3 style="margin:0 0 12px;font-size:16px;color:#4c1d95;">模型参数</h3>
+                                <div class="form-group">
+                                    <label>选择模型</label>
+                                    <select id="openaiModel" class="form-control">
+                                        <option value="qwen-plus" selected>通义千问 Plus（推荐）</option>
+                                        <option value="qwen3.6-plus">通义千问 3.6 Plus</option>
+                                        <option value="qwen-turbo">通义千问 Turbo（快速）</option>
+                                        <option value="qwen-max">通义千问 Max（最强）</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>温度 <span id="openaiTempLabel">0.7</span></label>
+                                    <input type="range" id="openaiTemperature" min="0" max="2" step="0.1" value="0.7" class="form-control" oninput="document.getElementById('openaiTempLabel').textContent=this.value">
+                                    <small style="color:#6b7280;display:block;margin-top:5px;">值越高越发散，值越低越稳定</small>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>最大 tokens</label>
+                                    <input type="number" id="openaiMaxTokens" class="form-control" value="1000" min="1" max="4096">
+                                </div>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="openaiChatInput" class="form-control" placeholder="请输入您的问题..." onkeypress="handleOpenAIChatKeyPress(event)">
-                            <button class="btn" onclick="sendOpenAIMessage()">📤 发送</button>
-                            <button class="btn btn-secondary" onclick="clearOpenAIChat()">🗑️ 清空</button>
+
+                        <div class="team-chat-shell" style="min-height:560px;display:flex;flex-direction:column;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 16px 8px;">
+                                <strong style="font-size:14px;color:#111827;">模型直连对话</strong>
+                                <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="clearOpenAIChat()">清空</button>
+                            </div>
+                            <div class="team-chat-stream" id="openaiChatContainer" style="flex:1;max-height:none;"></div>
+                            <div style="display:flex;gap:10px;align-items:flex-end;padding:14px 16px 16px;border-top:1px solid #f3e8ff;background:rgba(255,255,255,0.75);backdrop-filter:blur(8px);">
+                                <textarea id="openaiChatInput" rows="2" class="form-control" placeholder="直接向大模型提问（不走全局检索）..." style="flex:1;padding:12px 14px;border:1px solid #e9d5ff;border-radius:14px;resize:vertical;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOpenAIMessage();}"></textarea>
+                                <button class="btn team-chat-send" onclick="sendOpenAIMessage()" style="padding:12px 18px;background:linear-gradient(135deg,#7c3aed,#4f46e5);">发送</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -10124,6 +10333,8 @@
                 localStorage.setItem('openaiApiKey', apiKey);
                 updateApiKeyDisplay();
                 showApiKeyStatus('API 密钥保存成功！', 'success');
+                try { if (typeof updateChatModeBadge === 'function') updateChatModeBadge(); } catch (e) {}
+                try { if (typeof updateOpenAIHeroStatus === 'function') updateOpenAIHeroStatus(); } catch (e) {}
             } else {
                 showApiKeyStatus('请输入 API 密钥', 'error');
             }
@@ -10138,6 +10349,23 @@
                 showApiKeyStatus('API 密钥已加载', 'success');
             } else {
                 updateApiKeyDisplay();
+            }
+            try { if (typeof updateOpenAIHeroStatus === 'function') updateOpenAIHeroStatus(); } catch (e) {}
+            try { if (typeof updateChatModeBadge === 'function') updateChatModeBadge(); } catch (e) {}
+        }
+
+        function updateOpenAIHeroStatus() {
+            const el = document.getElementById('openaiHeroStatus');
+            if (!el) return;
+            const key = (document.getElementById('openaiApiKey') && document.getElementById('openaiApiKey').value)
+                || localStorage.getItem('openaiApiKey')
+                || '';
+            if (String(key).trim()) {
+                el.textContent = '密钥已配置';
+                el.style.background = 'rgba(34,197,94,0.22)';
+            } else {
+                el.textContent = '密钥未配置';
+                el.style.background = 'rgba(255,255,255,0.16)';
             }
         }
         
@@ -10513,35 +10741,23 @@
             
             if (!message) return;
             
-            // 添加用户消息
             addOpenAIMessage('user', message);
             input.value = '';
             
-            // 获取API密钥和设置
-            const apiKey = document.getElementById('openaiApiKey').value;
+            const apiKey = document.getElementById('openaiApiKey').value || localStorage.getItem('openaiApiKey') || '';
             const model = document.getElementById('openaiModel').value;
             const temperature = parseFloat(document.getElementById('openaiTemperature').value);
             const maxTokens = parseInt(document.getElementById('openaiMaxTokens').value);
             
             if (!apiKey) {
-                addOpenAIMessage('ai', '请先设置并保存阿里云百炼API密钥');
+                addOpenAIMessage('ai', '请先设置并保存阿里云百炼 API 密钥');
                 return;
             }
             
-            // 添加加载状态
-            const loadingMessageId = addOpenAIMessage('ai', '正在思考...');
+            const loadingMessageId = addOpenAIMessage('ai', '', true);
             
             try {
-                // 使用本地代理服务器
                 const localProxy = `${API_PROXY}/api/aliyun`;
-                
-                console.log('发送消息到API:', message);
-                console.log('使用本地代理:', localProxy);
-                console.log('API 密钥:', apiKey.substring(0, 10) + '...');
-                console.log('模型:', model);
-                console.log('温度:', temperature);
-                console.log('最大tokens:', maxTokens);
-                
                 const response = await fetch(localProxy, {
                     method: 'POST',
                     headers: {
@@ -10551,7 +10767,7 @@
                         apiKey: apiKey,
                         model: model,
                         messages: [
-                            { role: 'system', content: 'You are a helpful assistant.' },
+                            { role: 'system', content: '你是城市安全数智创新团队的阿里云百炼助手，回答简洁、专业、可执行。' },
                             { role: 'user', content: message }
                         ],
                         temperature: temperature,
@@ -10559,20 +10775,12 @@
                     })
                 });
                 
-                console.log('响应状态:', response.status);
-                console.log('响应头:', response.headers);
-                
-                // 先获取响应文本，再尝试解析为JSON
                 const responseText = await response.text();
-                console.log('响应文本:', responseText);
                 
                 if (response.ok) {
                     try {
                         const data = JSON.parse(responseText);
-                        console.log('响应数据:', data);
                         const aiResponse = data.choices?.[0]?.message?.content || '未获取到响应';
-                        
-                        // 替换加载消息
                         replaceOpenAIMessage(loadingMessageId, aiResponse);
                     } catch (jsonError) {
                         console.error('JSON解析错误:', jsonError);
@@ -10581,10 +10789,8 @@
                 } else {
                     try {
                         const errorData = JSON.parse(responseText);
-                        console.error('错误数据:', errorData);
                         replaceOpenAIMessage(loadingMessageId, '错误：' + (errorData.message || errorData.error?.message || 'API 调用失败'));
                     } catch (jsonError) {
-                        console.error('错误响应JSON解析错误:', jsonError);
                         replaceOpenAIMessage(loadingMessageId, '错误：' + responseText);
                     }
                 }
@@ -10595,24 +10801,37 @@
         }
         
         // 添加阿里云百炼消息
-        function addOpenAIMessage(type, content) {
+        function addOpenAIMessage(type, content, typing) {
             const chatContainer = document.getElementById('openaiChatContainer');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'chat-message ' + type;
-            messageDiv.innerHTML = '<strong>' + (type === 'user' ? '您' : '阿里云百炼') + '：</strong><br>' + content;
-            messageDiv.id = 'message_' + Date.now();
-            chatContainer.appendChild(messageDiv);
+            if (!chatContainer) return '';
+            const isUser = type === 'user';
+            const row = document.createElement('div');
+            const mid = 'openai_msg_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            row.id = mid;
+            row.className = 'team-chat-row ' + (isUser ? 'user' : 'assistant');
+            const body = typing
+                ? '<div class="team-chat-typing" aria-label="正在思考"><span></span><span></span><span></span></div>'
+                : '<div>' + String(content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+            row.innerHTML = '<div class="team-chat-bubble ' + (isUser ? 'user' : 'assistant') + '">' +
+                '<div class="team-chat-label">' + (isUser ? '我' : '百炼助手') + '</div>' +
+                body +
+                '</div>';
+            chatContainer.appendChild(row);
             chatContainer.scrollTop = chatContainer.scrollHeight;
-            return messageDiv.id;
+            return mid;
         }
         
         // 替换阿里云百炼消息
         function replaceOpenAIMessage(messageId, content) {
             const messageDiv = document.getElementById(messageId);
             if (messageDiv) {
-                messageDiv.innerHTML = '<strong>阿里云百炼：</strong><br>' + content;
+                messageDiv.className = 'team-chat-row assistant';
+                messageDiv.innerHTML = '<div class="team-chat-bubble assistant">' +
+                    '<div class="team-chat-label">百炼助手</div>' +
+                    '<div>' + String(content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>' +
+                    '<div class="team-chat-meta">大模型直连</div></div>';
                 const chatContainer = document.getElementById('openaiChatContainer');
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+                if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         }
         
@@ -10626,7 +10845,8 @@
         // 清空阿里云百炼对话
         function clearOpenAIChat() {
             const chatContainer = document.getElementById('openaiChatContainer');
-            chatContainer.innerHTML = '<div class="chat-message ai"><strong>阿里云百炼：</strong><br>您好！我是阿里云百炼助手，有什么可以帮您的吗？</div>';
+            if (!chatContainer) return;
+            chatContainer.innerHTML = '<div class="team-chat-row assistant"><div class="team-chat-bubble assistant"><div class="team-chat-label">百炼助手</div><div>您好！我是阿里云百炼助手，可在此直接对话调试模型参数。团队制度/周报等问题请优先使用「智能对话问答」。</div></div></div>';
         }
         
         // Excel处理相关函数
@@ -13258,8 +13478,12 @@ ${outputRequirements}
                     excelDataArray.push(dataForAI);
                 }
                 
-                // 调用通义千问 API
-                const apiKey = 'sk-f21e4fb3971c4542a17aeadd08a0747c';
+                // 调用通义千问 API（密钥统一从「OpenAI入口」配置读取，禁止硬编码）
+                const apiKey = (typeof getChatApiKey === 'function' ? getChatApiKey() : (localStorage.getItem('openaiApiKey') || ''));
+                if (!apiKey) {
+                    alert('未配置百炼 API 密钥，请先到「智能工具 → OpenAI入口」保存密钥后再试。');
+                    return;
+                }
                 const baseUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
                 
                 const systemPrompt = `你是一个专业的数据分析和可视化专家。用户上传了 Excel 文件，并提出了数据处理需求。
@@ -15660,7 +15884,13 @@ ${JSON.stringify(excelDataArray, null, 2)}
 
                     recognizeBtn.innerHTML = '🤖 AI 提取字段中...';
 
-                    const apiKey = 'sk-997a88dd8f274103a2e3d427bf29a873';
+                    const apiKey = (typeof getChatApiKey === 'function' ? getChatApiKey() : (localStorage.getItem('openaiApiKey') || ''));
+                    if (!apiKey) {
+                        recognizeBtn.innerHTML = originalText;
+                        recognizeBtn.disabled = false;
+                        alert('未配置百炼 API 密钥，请先到「智能工具 → OpenAI入口」保存密钥后再试。');
+                        return;
+                    }
 
                     console.log('开始调用 AI 提取字段...');
                     const aiResponse = await fetch(`${API_PROXY}/api/aliyun`, {
@@ -22913,6 +23143,14 @@ ${ocrText}`
         if (moduleId === 'model_training') { initModelTraining(); }
         if (moduleId === 'data_annotation') { initAnnotation(); }
         if (moduleId === 'chat') { initChat(); }
+        if (moduleId === 'openai') {
+            try { if (typeof loadApiKey === 'function') loadApiKey(); } catch (e) {}
+            try { if (typeof updateOpenAIHeroStatus === 'function') updateOpenAIHeroStatus(); } catch (e) {}
+            const box = document.getElementById('openaiChatContainer');
+            if (box && !box.children.length) {
+                try { clearOpenAIChat(); } catch (e) {}
+            }
+        }
         if (moduleId === 'literature_analysis') { initLiteratureAnalysis(); }
         if (moduleId === 'document_analysis') { initDocumentAnalysis(); }
     };
@@ -25014,15 +25252,15 @@ ${ocrText}`
         const hint = document.getElementById('chatApiHint');
         const hasKey = !!getChatApiKey();
         if (badge) {
-            badge.textContent = hasKey ? '大模型模式' : '知识库模式';
+            badge.textContent = hasKey ? '大模型模式' : '全局检索模式';
             badge.style.background = hasKey ? '#ecfdf5' : '#eef2ff';
             badge.style.color = hasKey ? '#047857' : '#4f46e5';
             badge.style.borderColor = hasKey ? '#a7f3d0' : '#c7d2fe';
         }
         if (hint) {
             hint.textContent = hasKey
-                ? '已配置百炼密钥，将结合知识库上下文调用大模型'
-                : '未检测到百炼密钥，将使用知识库检索回答（可在「OpenAI入口」配置）';
+                ? '已配置百炼密钥，将结合全局检索上下文调用大模型'
+                : '未检测到百炼密钥，将使用全局检索回答（可在「OpenAI入口」配置）';
         }
     }
 
@@ -25044,7 +25282,7 @@ ${ocrText}`
         const box = document.getElementById('chatQuickChips');
         if (!box) return;
         box.innerHTML = CHAT_QUICK_QUESTIONS.map(function(q) {
-            return '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;border-radius:999px;" onclick="askQuickChatQuestion(' + JSON.stringify(q) + ')">' + escHtml(q) + '</button>';
+            return '<button type="button" class="btn btn-secondary team-chat-chip" style="padding:6px 12px;font-size:12px;border-radius:999px;" onclick="askQuickChatQuestion(' + JSON.stringify(q) + ')">' + escHtml(q) + '</button>';
         }).join('');
     }
 
@@ -25057,25 +25295,44 @@ ${ocrText}`
     function resetChatWelcome() {
         const container = document.getElementById('chatContainer');
         if (!container) return;
-        container.innerHTML = '<div style="background:#eef2ff;padding:12px 14px;border-radius:10px;margin-bottom:10px;border:1px solid #c7d2fe;"><div style="font-size:12px;color:#4f46e5;font-weight:600;margin-bottom:4px;">AI 助手</div><div style="font-size:14px;color:#312e81;line-height:1.6;">您好！我是城市安全数智创新团队助手。可询问周报、组会、训练、标注与系统使用；左侧知识库支持检索与引用。</div></div>';
+        container.innerHTML = '<div class="team-chat-row assistant"><div class="team-chat-bubble assistant"><div class="team-chat-label">AI 助手</div><div>您好！我是城市安全数智创新团队助手。可全局检索周报、项目、训练、标注、文献、数据集、共享文件和知识库；左侧知识库支持维护与引用。</div><div class="team-chat-meta">试试下方快捷问题，或直接提问</div></div></div>';
     }
 
     function appendChatBubble(role, text, meta) {
         const container = document.getElementById('chatContainer');
         if (!container) return;
         const isUser = role === 'user';
-        const bg = isUser ? '#eff6ff' : '#eef2ff';
-        const border = isUser ? '#bfdbfe' : '#c7d2fe';
-        const color = isUser ? '#1d4ed8' : '#3730a3';
-        const label = isUser ? '我' : 'AI 助手';
+        const row = document.createElement('div');
+        row.className = 'team-chat-row ' + (isUser ? 'user' : 'assistant');
         let extra = '';
-        if (meta) extra = '<div style="margin-top:8px;font-size:12px;color:#6b7280;">' + escHtml(meta) + '</div>';
-        container.innerHTML += '<div style="background:' + bg + ';padding:12px 14px;border-radius:10px;margin-bottom:10px;border:1px solid ' + border + ';"><div style="font-size:12px;color:' + color + ';font-weight:600;margin-bottom:4px;">' + label + '</div><div style="font-size:14px;color:#1f2937;line-height:1.7;white-space:pre-wrap;">' + escHtml(text) + '</div>' + extra + '</div>';
+        if (meta) extra = '<div class="team-chat-meta">' + escHtml(meta) + '</div>';
+        row.innerHTML = '<div class="team-chat-bubble ' + (isUser ? 'user' : 'assistant') + '">' +
+            '<div class="team-chat-label">' + (isUser ? '我' : 'AI 助手') + '</div>' +
+            '<div>' + escHtml(text) + '</div>' + extra + '</div>';
+        container.appendChild(row);
         container.scrollTop = container.scrollHeight;
+    }
+
+    function showChatTyping() {
+        const container = document.getElementById('chatContainer');
+        if (!container) return;
+        hideChatTyping();
+        const row = document.createElement('div');
+        row.id = 'chatTypingRow';
+        row.className = 'team-chat-row assistant';
+        row.innerHTML = '<div class="team-chat-bubble assistant"><div class="team-chat-label">AI 助手</div><div class="team-chat-typing" aria-label="正在思考"><span></span><span></span><span></span></div></div>';
+        container.appendChild(row);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function hideChatTyping() {
+        const el = document.getElementById('chatTypingRow');
+        if (el) el.remove();
     }
 
     function clearChatSession() {
         teamChatHistory = [];
+        hideChatTyping();
         resetChatWelcome();
         updateChatStats();
     }
@@ -25289,19 +25546,232 @@ ${ocrText}`
         }).slice(0, k);
     }
 
+    function stringifyFields(obj, fields) {
+        if (!obj) return '';
+        return fields.map(function(f) {
+            const v = obj[f];
+            if (Array.isArray(v)) return v.join(' ');
+            if (v && typeof v === 'object') {
+                try { return JSON.stringify(v); } catch (e) { return ''; }
+            }
+            return v == null ? '' : String(v);
+        }).filter(Boolean).join(' ');
+    }
+
+    function pushGlobalRecord(records, moduleName, title, content, ref, raw) {
+        title = String(title || '').trim();
+        content = String(content || '').trim();
+        if (!title && !content) return;
+        records.push({
+            module: moduleName,
+            title: title || moduleName,
+            content: content,
+            ref: ref || '',
+            raw: raw || null
+        });
+    }
+
+    function collectGlobalSearchRecords() {
+        const records = [];
+        try {
+            const deadlineEl = document.getElementById('cfg_business.weeklyDeadline');
+            const deadline = (deadlineEl && deadlineEl.value) ? deadlineEl.value : '22:00';
+            pushGlobalRecord(
+                records,
+                '制度流程',
+                '周报提交截止时间',
+                '周报每周提交截止时间为 ' + deadline + '（系统业务规则配置）。请在「团队工作周报」模块填写并提交；逾期会触发周报提醒（若已开启）。常见问法：周报什么时候交、周报截止时间、何时提交周报。',
+                '系统配置 cfg_business.weeklyDeadline',
+                { deadline: deadline }
+            );
+        } catch (e) {}
+        (knowledgeData || []).forEach(function(k) {
+            pushGlobalRecord(
+                records,
+                '知识库',
+                k.title,
+                [k.category, (k.tags || []).join(' '), k.content].join('\n'),
+                k.category || '',
+                k
+            );
+        });
+        (typeof taskData !== 'undefined' ? taskData : []).forEach(function(t) {
+            pushGlobalRecord(records, '科研任务', t.title || t.name || t.taskName, stringifyFields(t, ['description', 'content', 'owner', 'assignee', 'status', 'priority', 'deadline', 'progress']), '任务ID ' + (t.id || ''), t);
+        });
+        (typeof weeklyReportData !== 'undefined' ? weeklyReportData : []).forEach(function(r) {
+            pushGlobalRecord(records, '团队周报', r.title || r.week || r.period || (r.owner ? r.owner + ' 周报' : '周报'), stringifyFields(r, ['owner', 'status', 'period', 'weekRange', 'thisWeek', 'nextWeek', 'problems', 'content', 'summary', 'reviewComment']), '周报ID ' + (r.id || ''), r);
+        });
+        (typeof modelTrainingData !== 'undefined' ? modelTrainingData : []).forEach(function(m) {
+            pushGlobalRecord(records, '模型训练', m.name || m.code || m.jobId, stringifyFields(m, ['type', 'scenario', 'dataset', 'status', 'metric', 'progress', 'owner', 'server', 'env', 'description', 'weightPath', 'logUrl']), m.jobId || ('训练ID ' + (m.id || '')), m);
+        });
+        (typeof annotationData !== 'undefined' ? annotationData : []).forEach(function(a) {
+            pushGlobalRecord(records, 'AI数据标注', a.name || a.dataset, stringifyFields(a, ['dataset', 'type', 'scenario', 'status', 'owner', 'total', 'completed', 'progress', 'linkedTrainJob', 'notes', 'storage', 'fileCount']), '标注ID ' + (a.id || ''), a);
+        });
+        (typeof literatureData !== 'undefined' ? literatureData : []).forEach(function(l) {
+            pushGlobalRecord(records, '文献资料', l.title || l.name, stringifyFields(l, ['author', 'authors', 'journal', 'year', 'keywords', 'abstract', 'summary', 'category', 'remark']), '文献ID ' + (l.id || ''), l);
+        });
+        (typeof compareLiteratureData !== 'undefined' ? compareLiteratureData : []).forEach(function(l) {
+            pushGlobalRecord(records, '文献对比', l.title || l.name, stringifyFields(l, ['author', 'journal', 'year', 'field', 'summary', 'keywords']), '对比文献ID ' + (l.id || ''), l);
+        });
+        (typeof datasetData !== 'undefined' ? datasetData : []).forEach(function(d) {
+            pushGlobalRecord(records, '数据集资源', d.name || d.title, stringifyFields(d, ['type', 'scenario', 'description', 'owner', 'size', 'format', 'source', 'remark']), '数据集ID ' + (d.id || ''), d);
+        });
+        (typeof reportData !== 'undefined' ? reportData : []).forEach(function(r) {
+            pushGlobalRecord(records, '项目报告', r.name || r.title, stringifyFields(r, ['type', 'project', 'owner', 'description', 'summary', 'status', 'date', 'remark']), '报告ID ' + (r.id || ''), r);
+        });
+        (typeof sharedFileData !== 'undefined' ? sharedFileData : []).forEach(function(f) {
+            pushGlobalRecord(records, '共享文件', f.name || f.fileName || f.originalName, stringifyFields(f, ['category', 'fileType', 'uploader', 'remark', 'description', 'uploadTime', 'fileSize', 'tags']), '文件ID ' + (f.id || ''), f);
+        });
+        (typeof longitudinalData !== 'undefined' ? longitudinalData : []).forEach(function(p) {
+            pushGlobalRecord(records, '纵向项目', p.name || p.title || p.projectName, stringifyFields(p, ['leader', 'owner', 'status', 'source', 'funding', 'startDate', 'endDate', 'description', 'remark']), '项目ID ' + (p.id || ''), p);
+        });
+        (typeof horizontalData !== 'undefined' ? horizontalData : []).forEach(function(p) {
+            pushGlobalRecord(records, '横向项目', p.name || p.title || p.projectName, stringifyFields(p, ['leader', 'owner', 'partner', 'company', 'status', 'funding', 'startDate', 'endDate', 'description', 'remark']), '项目ID ' + (p.id || ''), p);
+        });
+        (typeof schoolData !== 'undefined' ? schoolData : []).forEach(function(p) {
+            pushGlobalRecord(records, '校级项目', p.name || p.title || p.projectName, stringifyFields(p, ['leader', 'owner', 'status', 'funding', 'startDate', 'endDate', 'description', 'remark']), '项目ID ' + (p.id || ''), p);
+        });
+        (typeof meetingData !== 'undefined' ? meetingData : []).forEach(function(m) {
+            pushGlobalRecord(records, '会议安排', m.title || m.name || m.topic, stringifyFields(m, ['time', 'date', 'location', 'host', 'participants', 'content', 'agenda', 'summary']), '会议ID ' + (m.id || ''), m);
+        });
+        (typeof noticeData !== 'undefined' ? noticeData : []).forEach(function(n) {
+            pushGlobalRecord(records, '通知公告', n.title || n.name, stringifyFields(n, ['content', 'publisher', 'date', 'type', 'status', 'summary']), '通知ID ' + (n.id || ''), n);
+        });
+        (typeof newsData !== 'undefined' ? newsData : []).forEach(function(n) {
+            pushGlobalRecord(records, '团队新闻', n.title || n.name, stringifyFields(n, ['content', 'publisher', 'date', 'category', 'summary']), '新闻ID ' + (n.id || ''), n);
+        });
+        return records;
+    }
+
+    function expandQueryTokens(query) {
+        const q = String(query || '').toLowerCase().trim();
+        const tokens = [];
+        const seen = {};
+        const add = function(t) {
+            t = String(t || '').trim();
+            if (!t || t.length < 2) return;
+            if (seen[t]) return;
+            seen[t] = true;
+            tokens.push(t);
+        };
+        if (!q) return tokens;
+        add(q);
+        q.split(/[\s,，。？?！!、；;：:（）()【】\[\]""''\/\-_]+/).forEach(add);
+        const cjkRuns = q.match(/[\u4e00-\u9fff]+/g) || [];
+        cjkRuns.forEach(function(run) {
+            add(run);
+            for (let i = 0; i < run.length - 1; i++) add(run.slice(i, i + 2));
+            for (let i = 0; i < run.length - 2; i++) add(run.slice(i, i + 3));
+        });
+        const synonymGroups = [
+            ['周报', '工作周报', '提交周报', '交周报', '周报提交'],
+            ['什么时候', '何时', '几点', '截止', '截止时间', 'deadline', '时间'],
+            ['交', '提交', '上交', '递交'],
+            ['组会', '会议', '开会', '例会'],
+            ['标注', '数据标注', '标注规范'],
+            ['训练', '模型训练', 'yolo', 'yolov8'],
+            ['mlops', '上报', '状态上报']
+        ];
+        synonymGroups.forEach(function(group) {
+            let hit = false;
+            for (let i = 0; i < group.length; i++) {
+                if (q.indexOf(group[i]) >= 0 || seen[group[i]]) { hit = true; break; }
+            }
+            if (hit) group.forEach(add);
+        });
+        return tokens;
+    }
+
+    function scoreGlobalRecord(query, record) {
+        const q = String(query || '').toLowerCase().trim();
+        if (!q) return 0;
+        const title = String(record.title || '').toLowerCase();
+        const moduleName = String(record.module || '').toLowerCase();
+        const ref = String(record.ref || '').toLowerCase();
+        const content = String(record.content || '').toLowerCase();
+        const blob = title + '\n' + moduleName + '\n' + ref + '\n' + content;
+        let score = 0;
+        if (title === q) score += 120;
+        if (title.indexOf(q) >= 0) score += 48;
+        if (content.indexOf(q) >= 0) score += 28;
+        if (moduleName.indexOf(q) >= 0) score += 16;
+        const tokens = expandQueryTokens(q);
+        let matched = 0;
+        tokens.forEach(function(t) {
+            let local = 0;
+            if (title.indexOf(t) >= 0) local += (t.length >= 3 ? 22 : 14);
+            if (moduleName.indexOf(t) >= 0) local += 10;
+            if (ref.indexOf(t) >= 0) local += 8;
+            if (content.indexOf(t) >= 0) local += (t.length >= 3 ? 8 : 4);
+            if (local > 0) {
+                matched += 1;
+                score += local;
+            }
+        });
+        if (matched >= 2) score += 18;
+        if (matched >= 3) score += 12;
+        if ((moduleName.indexOf('知识') >= 0 || moduleName.indexOf('制度') >= 0) && matched > 0) score += 10;
+        // 主题词强匹配：问周报却命中周报制度
+        if (q.indexOf('周报') >= 0 && blob.indexOf('周报') >= 0) score += 36;
+        if ((q.indexOf('交') >= 0 || q.indexOf('提交') >= 0 || q.indexOf('截止') >= 0 || q.indexOf('什么时候') >= 0) &&
+            (blob.indexOf('提交') >= 0 || blob.indexOf('截止') >= 0 || blob.indexOf('22:00') >= 0 || blob.indexOf('交') >= 0)) {
+            score += 24;
+        }
+        if (q.indexOf('组会') >= 0 && (blob.indexOf('组会') >= 0 || blob.indexOf('会议') >= 0)) score += 30;
+        return score;
+    }
+
+    function retrieveGlobalTopK(query, k) {
+        k = k || 8;
+        return collectGlobalSearchRecords().map(function(record) {
+            return { item: record, score: scoreGlobalRecord(query, record) };
+        }).filter(function(x) {
+            return x.score >= 18;
+        }).sort(function(a, b) {
+            return b.score - a.score;
+        }).slice(0, k);
+    }
+
     function buildLocalRagAnswer(query, hits) {
         if (!hits || !hits.length) {
             return {
-                text: '未在知识库中找到足够相关内容。你可以尝试：周报提交、组会安排、YOLOv8 训练、标注规范、MLOps 上报，或在左侧补充知识后再问。',
+                text: '未在全局数据中找到足够相关内容。你可以尝试更具体的关键词，例如任务名、成员名、项目名、训练 jobId、标注数据集、周报周期或文件名。',
                 meta: '来源：无命中'
             };
         }
+        const q = String(query || '');
+        const top = hits[0].item;
+        const topBlob = [top.title, top.content, top.module].join('\n');
+        if (q.indexOf('周报') >= 0 && (q.indexOf('交') >= 0 || q.indexOf('提交') >= 0 || q.indexOf('截止') >= 0 || q.indexOf('什么时候') >= 0 || q.indexOf('何时') >= 0)) {
+            const timeMatch = topBlob.match(/(\d{1,2}:\d{2})/);
+            const dayHint = /每周[日一二三四五六]/.exec(topBlob);
+            let direct = '根据团队制度/配置：';
+            if (dayHint && timeMatch) {
+                direct += dayHint[0] + ' ' + timeMatch[1] + ' 前提交周报。';
+            } else if (timeMatch) {
+                direct += '周报每周提交截止时间为 ' + timeMatch[1] + '。';
+            } else {
+                direct += top.content;
+            }
+            direct += '\n\n详细说明：\n' + top.content;
+            if (hits.length > 1) {
+                direct += '\n\n其他相关条目：\n' + hits.slice(1, 3).map(function(h, i) {
+                    return (i + 2) + '. 【' + h.item.module + ' · ' + h.item.title + '】' + h.item.content.slice(0, 120);
+                }).join('\n');
+            }
+            return {
+                text: direct,
+                meta: '来源：' + hits.map(function(h) { return h.item.module + '/' + h.item.title; }).join('、')
+            };
+        }
         const parts = hits.map(function(h, idx) {
-            return (idx + 1) + '. 【' + h.item.title + '】\n' + h.item.content;
+            return (idx + 1) + '. 【' + h.item.module + ' · ' + h.item.title + '】'
+                + (h.item.ref ? '\n标识：' + h.item.ref : '')
+                + '\n' + h.item.content;
         });
         return {
-            text: '根据团队知识库，与「' + query + '」相关的内容如下：\n\n' + parts.join('\n\n'),
-            meta: '来源：' + hits.map(function(h) { return h.item.title; }).join('、')
+            text: '根据全局数据检索，与「' + query + '」相关的内容如下：\n\n' + parts.join('\n\n'),
+            meta: '来源：' + hits.map(function(h) { return h.item.module + '/' + h.item.title; }).join('、')
         };
     }
 
@@ -25309,23 +25779,26 @@ ${ocrText}`
         const apiKey = getChatApiKey();
         if (!apiKey) throw new Error('no api key');
         const context = (hits || []).map(function(h, i) {
-            return '[' + (i + 1) + '] ' + h.item.title + '\n' + h.item.content;
+            return '[' + (i + 1) + '] 模块：' + h.item.module + '\n标题：' + h.item.title + (h.item.ref ? '\n标识：' + h.item.ref : '') + '\n内容：' + h.item.content;
         }).join('\n\n');
+        const hasHits = !!(hits && hits.length);
         const messages = [
             {
                 role: 'system',
-                content: '你是城市安全数智创新团队的助手。优先依据给定知识库回答，简洁准确；若知识库不足，可补充一般性建议并说明。不要编造团队内部不存在的制度。'
+                content: hasHits
+                    ? '你是城市安全数智创新团队助手。必须优先且仅依据【全局检索上下文】回答团队内部问题（周报截止、组会、制度、任务等）。直接给出明确结论，可引用原文关键句；禁止说“不知道/未提供”如果上下文已有答案；禁止编造不存在的制度。'
+                    : '你是城市安全数智创新团队助手。当前没有检索到团队内部资料；只能给一般性建议，并明确说明“未在团队知识库/全局数据中找到依据”，不要编造团队制度或截止时间。'
             },
             {
                 role: 'user',
-                content: (context ? ('【知识库】\n' + context + '\n\n') : '') + '【问题】\n' + query
+                content: (context ? ('【全局检索上下文】\n' + context + '\n\n') : '【全局检索上下文】\n（无命中）\n\n') + '【问题】\n' + query
             }
         ];
         const payload = {
             apiKey: apiKey,
             model: (document.getElementById('openaiModel') && document.getElementById('openaiModel').value) || 'qwen-plus',
             messages: messages,
-            temperature: 0.3,
+            temperature: 0.2,
             max_tokens: 1200
         };
         const endpoints = [];
@@ -25350,7 +25823,7 @@ ${ocrText}`
                 if (content) {
                     return {
                         text: String(content).trim(),
-                        meta: '大模型回答' + (hits && hits.length ? (' · 参考：' + hits.map(function(h) { return h.item.title; }).join('、')) : '')
+                        meta: '大模型回答' + (hits && hits.length ? (' · 参考：' + hits.map(function(h) { return h.item.module + '/' + h.item.title; }).join('、')) : ' · 无检索命中')
                     };
                 }
                 lastErr = new Error('empty model response');
@@ -25380,11 +25853,16 @@ ${ocrText}`
         teamChatHistory.push({ role: 'user', content: message });
         if (input) input.value = '';
         updateChatStats();
+        showChatTyping();
 
-        const hits = retrieveKnowledgeTopK(message, 3);
+        const hits = retrieveGlobalTopK(message, 8);
+        const topScore = hits.length ? hits[0].score : 0;
         let answer;
         try {
-            if (getChatApiKey()) {
+            // 强命中时优先本地精确回答，避免大模型忽略上下文
+            if (topScore >= 60 && /周报|组会|标注|训练|mlops|截止|提交/.test(message)) {
+                answer = buildLocalRagAnswer(message, hits);
+            } else if (getChatApiKey()) {
                 answer = await callChatAliyun(message, hits);
             } else {
                 answer = buildLocalRagAnswer(message, hits);
@@ -25393,9 +25871,10 @@ ${ocrText}`
             const fallback = buildLocalRagAnswer(message, hits);
             answer = {
                 text: fallback.text,
-                meta: '大模型不可用，已回退知识库 · ' + (e && e.message ? e.message : 'error')
+                meta: '大模型不可用，已回退全局检索 · ' + (e && e.message ? e.message : 'error')
             };
         }
+        hideChatTyping();
         appendChatBubble('assistant', answer.text, answer.meta);
         teamChatHistory.push({ role: 'assistant', content: answer.text });
         teamChatBusy = false;

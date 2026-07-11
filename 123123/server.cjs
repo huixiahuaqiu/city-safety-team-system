@@ -1,7 +1,32 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const mammoth = require('mammoth');
 const pdfParse = require('pdf-parse');
+
+// 轻量加载 .env（不引入额外依赖），仅在变量未设置时填充。
+(function loadDotEnv() {
+    try {
+        const envPath = path.join(__dirname, '.env');
+        if (!fs.existsSync(envPath)) return;
+        const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+            const eq = trimmed.indexOf('=');
+            if (eq <= 0) continue;
+            const key = trimmed.slice(0, eq).trim();
+            let val = trimmed.slice(eq + 1).trim();
+            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+                val = val.slice(1, -1);
+            }
+            if (!(key in process.env)) process.env[key] = val;
+        }
+    } catch (e) {
+        console.warn('[WARN] 读取 .env 失败:', e.message);
+    }
+})();
 
 const app = express();
 const PORT = 3000;
@@ -12,8 +37,10 @@ app.use(express.static(__dirname));
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
-const BAIDU_OCR_API_KEY = 'oRABG7OrjSWqlB3zFidpzcaQ';
-const BAIDU_OCR_SECRET_KEY = 'f4VsRRzAf19lViqj57wRrEmcrGGPidWN';
+// 敏感密钥必须通过环境变量注入，禁止硬编码提交。
+// 部署时在 .env 或运行环境设置 BAIDU_OCR_API_KEY / BAIDU_OCR_SECRET_KEY。
+const BAIDU_OCR_API_KEY = process.env.BAIDU_OCR_API_KEY || '';
+const BAIDU_OCR_SECRET_KEY = process.env.BAIDU_OCR_SECRET_KEY || '';
 
 let baiduOcrToken = null;
 let baiduOcrTokenExpireTime = 0;
@@ -132,6 +159,9 @@ ${text.substring(0, 8000)}`;
 
 app.post('/api/baidu-ocr', async (req, res) => {
     try {
+        if (!BAIDU_OCR_API_KEY || !BAIDU_OCR_SECRET_KEY) {
+            return res.status(503).json({ error: '百度 OCR 未配置：请在 .env 设置 BAIDU_OCR_API_KEY 与 BAIDU_OCR_SECRET_KEY' });
+        }
         const { image } = req.body;
         const token = await getBaiduOcrToken();
         const ocrUrl = `https://aip.baidubce.com/rest/2.0/ocr/v1/general_basic?access_token=${token}`;
