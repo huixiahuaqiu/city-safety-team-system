@@ -296,6 +296,47 @@
             z-index: 1000;
             overflow: visible;
         }
+        .nav-back-btn {
+            position: relative; z-index: 2; flex-shrink: 0;
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-right: 12px; padding: 7px 14px;
+            border: 1px solid rgba(255,255,255,0.35); border-radius: 999px;
+            background: rgba(255,255,255,0.12); color: #fff;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: background 0.18s, border-color 0.18s, opacity 0.18s;
+        }
+        .nav-back-btn:hover:not(:disabled) {
+            background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.55);
+        }
+        .nav-back-btn:disabled,
+        .nav-back-btn.is-disabled {
+            opacity: 0.42; cursor: not-allowed;
+        }
+        .nav-back-btn .back-arrow { font-size: 14px; line-height: 1; }
+        .module-back-fab {
+            position: fixed; left: 288px; bottom: 28px; z-index: 1200;
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 18px; border: 1px solid #dbe3ee; border-radius: 999px;
+            background: #0f2740; color: #f8fafc; font-size: 13px; font-weight: 650;
+            box-shadow: 0 12px 28px rgba(15, 39, 64, 0.28);
+            cursor: pointer; transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s, background 0.18s;
+        }
+        .module-back-fab:hover:not(:disabled) {
+            transform: translateY(-2px); background: #155e75;
+            box-shadow: 0 16px 32px rgba(15, 39, 64, 0.34);
+        }
+        .module-back-fab:disabled,
+        .module-back-fab.is-disabled {
+            opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+        .module-back-fab .fab-prev {
+            max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            font-size: 12px; font-weight: 500; color: rgba(226,232,240,0.85);
+        }
+        @media (max-width: 900px) {
+            .module-back-fab .fab-prev { display: none; }
+            .module-back-fab { left: 16px; bottom: 16px; padding: 11px 14px; }
+        }
         .top-nav::before {
             content: '';
             position: absolute;
@@ -484,128 +525,352 @@
         .global-notice-empty { padding: 28px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
         .global-notice-empty .btn { margin-top: 10px; }
         .home-notice-banner {
-            display: none; margin-bottom: 16px; border-radius: 12px; padding: 14px 16px;
-            background: linear-gradient(135deg, #fff1f2, #eef2ff); border: 1px solid #fecdd3;
-            box-shadow: 0 8px 20px rgba(244,63,94,0.08);
+            display: none; margin-bottom: 18px; border-radius: 4px; padding: 14px 18px;
+            background: #fffaf8; border: 1px solid #f0d9d0; border-left: 3px solid #9a3412;
         }
         .home-notice-banner.show { display: block; }
         .home-notice-banner .row { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
-        .home-notice-banner .label { font-size: 12px; font-weight: 800; color: #be123c; margin-bottom: 4px; }
-        .home-notice-banner .title { font-size: 15px; font-weight: 800; color: #111827; }
-        .home-notice-banner .desc { font-size: 12px; color: #64748b; margin-top: 4px; line-height: 1.5; }
+        .home-notice-banner .label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9a3412; margin-bottom: 4px; }
+        .home-notice-banner .title { font-family: 'Noto Serif SC', serif; font-size: 16px; font-weight: 700; color: #1c1917; }
+        .home-notice-banner .desc { font-size: 12px; color: #78716c; margin-top: 4px; line-height: 1.55; }
 
-        /* 首页工作台 */
+        /* 首页 · 全宽密铺（flex，避免栅格塌缩） */
+        .main-content:has(> #home.active) {
+            padding: 10px 12px 12px;
+        }
         #home.module {
-            --home-ink: #0f172a;
-            --home-muted: #64748b;
-            --home-line: #e8edf5;
-            --home-accent: #5b4fd6;
+            --home-ink: #1e1b4b;
+            --home-muted: #6b7280;
+            --home-line: #e9e4f8;
+            --home-accent: #7c3aed;
+            --home-accent-deep: #5b21b6;
             --home-surface: #ffffff;
-            --home-soft: #f4f6fb;
+            --home-soft: #f5f3ff;
+            --home-serif: 'Noto Serif SC', 'Songti SC', serif;
+            --home-sans: 'Outfit', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            font-family: var(--home-sans);
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background: linear-gradient(180deg, #f3f0ff 0%, #f7f5fc 45%, #eef2ff 100%);
+            border-radius: 8px;
         }
-        .home-dashboard { display: flex; flex-direction: column; gap: 18px; }
+        .home-dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
         .home-hero {
-            display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
-            padding: 22px 24px; border-radius: 16px;
-            background:
-                radial-gradient(900px 180px at 0% 0%, rgba(91,79,214,0.14), transparent 55%),
-                radial-gradient(700px 160px at 100% 0%, rgba(14,165,233,0.10), transparent 50%),
-                linear-gradient(180deg, #ffffff 0%, #f7f8fc 100%);
-            border: 1px solid var(--home-line);
+            position: relative;
+            border-radius: 10px;
+            background: linear-gradient(118deg, #4c1d95 0%, #5b21b6 38%, #7c3aed 72%, #4f46e5 100%);
+            color: #f8fafc;
+            overflow: hidden;
+            box-shadow: 0 14px 32px rgba(76, 29, 149, 0.28);
         }
-        .home-hero h2 { margin: 0; font-size: 22px; font-weight: 750; color: var(--home-ink); letter-spacing: -0.02em; }
-        .home-hero .sub { margin-top: 6px; font-size: 13px; color: var(--home-muted); line-height: 1.55; }
-        .home-hero-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .home-hero::after {
+            content: '';
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 22px 22px;
+            opacity: 0.35;
+            pointer-events: none;
+        }
+        .home-hero-inner {
+            position: relative; z-index: 1;
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 20px;
+            flex-wrap: wrap;
+        }
+        .home-hero-main {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1 1 420px;
+            min-width: 0;
+        }
+        .home-hero-avatar {
+            width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+            background: linear-gradient(145deg, #7c3aed, #4f46e5);
+            color: #ede9fe; font-size: 24px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border: 2px solid rgba(255,255,255,0.4);
+            box-shadow: 0 8px 20px rgba(76, 29, 149, 0.35);
+        }
+        .home-hero-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .home-eyebrow {
+            font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+            color: rgba(221,214,254,0.95); font-weight: 650; margin-bottom: 6px;
+        }
+        .home-hero h2 {
+            margin: 0; font-family: var(--home-serif); font-size: 28px; font-weight: 700;
+            color: #fff; line-height: 1.25;
+        }
+        .home-hero .sub {
+            margin-top: 6px; font-size: 13px; line-height: 1.55;
+            color: rgba(237,233,254,0.92);
+        }
+        .home-hero-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
         .home-chip {
-            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
-            background: #fff; border: 1px solid var(--home-line); font-size: 12px; color: #334155; font-weight: 600;
+            display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+            background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
+            font-size: 12px; color: #ede9fe; font-weight: 500;
         }
-        .home-chip strong { color: var(--home-accent); font-weight: 750; }
-        .home-stats {
-            display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px;
+        .home-chip strong { color: #c4b5fd; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .home-hero-aside {
+            flex: 1 1 320px;
+            display: flex; flex-direction: row; gap: 8px;
+            min-width: 280px;
+            flex-wrap: wrap;
+        }
+        .home-focus-card {
+            background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 8px; padding: 10px 12px;
+            flex: 1 1 160px;
+            min-width: 150px;
+        }
+        .home-sync-card .sync-line {
+            display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
+            font-size: 12px; color: rgba(237,233,254,0.92); margin-top: 6px; line-height: 1.45;
+        }
+        .home-sync-card .sync-line:first-of-type { margin-top: 0; }
+        .home-sync-card .sync-line strong { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .home-sync-card .sync-ok { color: #bbf7d0 !important; }
+        .home-sync-card .sync-bad { color: #fda4af !important; }
+        .home-sync-card .sync-warn { color: #fde68a !important; }
+        .home-sync-actions {
+            display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+        }
+        .home-sync-actions button {
+            border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.14);
+            color: #f8fafc; border-radius: 999px; padding: 5px 12px; font-size: 12px;
+            font-weight: 650; cursor: pointer;
+        }
+        .home-sync-actions button:hover { background: rgba(255,255,255,0.24); }
+        .home-focus-card .label {
+            font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+            color: rgba(221,214,254,0.95); font-weight: 650; margin-bottom: 8px;
+        }
+        .home-focus-bars { display: flex; flex-direction: column; gap: 7px; }
+        .home-focus-row { display: flex; align-items: center; gap: 8px; }
+        .home-focus-row span { width: 36px; font-size: 11px; color: rgba(237,233,254,0.9); flex-shrink: 0; }
+        .home-focus-row strong { width: 28px; font-size: 12px; color: #fff; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+        .home-focus-track {
+            flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.16); overflow: hidden;
+        }
+        .home-focus-track i {
+            display: block; height: 100%; border-radius: inherit;
+            background: linear-gradient(90deg, #c4b5fd, #a78bfa, #818cf8);
+        }
+        .home-focus-quote {
+            margin: 0; font-family: var(--home-serif); font-size: 12.5px; line-height: 1.6;
+            color: rgba(245,243,255,0.95);
+        }
+
+        .home-ledger {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap;
+            width: 100%;
+            background: #fff;
+            border: 1px solid var(--home-line);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(76, 29, 149, 0.06);
         }
         .home-stat {
-            background: var(--home-surface); border: 1px solid var(--home-line); border-radius: 14px;
-            padding: 16px 14px; cursor: pointer; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s;
-            min-height: 108px;
-        }
-        .home-stat:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15,23,42,0.08); border-color: #c7d2fe; }
-        .home-stat .k { font-size: 12px; color: var(--home-muted); font-weight: 600; }
-        .home-stat .v { margin-top: 10px; font-size: 26px; font-weight: 780; color: var(--home-ink); letter-spacing: -0.03em; line-height: 1; }
-        .home-stat .h { margin-top: 8px; font-size: 11px; color: #94a3b8; }
-        .home-stat.accent-a .v { color: #5b4fd6; }
-        .home-stat.accent-b .v { color: #0f766e; }
-        .home-stat.accent-c .v { color: #0369a1; }
-        .home-stat.accent-d .v { color: #b45309; }
-        .home-stat.accent-e .v { color: #be123c; }
-        .home-stat.accent-f .v { color: #4338ca; }
-        .home-quick {
-            display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px;
-        }
-        .home-quick-item {
-            background: var(--home-surface); border: 1px solid var(--home-line); border-radius: 12px;
-            padding: 14px 10px; text-align: center; cursor: pointer; transition: all 0.18s ease;
-        }
-        .home-quick-item:hover { border-color: #a5b4fc; background: #f8f7ff; transform: translateY(-1px); }
-        .home-quick-item .ico {
-            width: 36px; height: 36px; margin: 0 auto 8px; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center; font-size: 16px;
-            background: #eef2ff; color: #4338ca; font-weight: 700;
-        }
-        .home-quick-item .t { font-size: 12px; color: #334155; font-weight: 650; }
-        .home-grid {
-            display: grid; grid-template-columns: 1.55fr 1fr; gap: 16px; align-items: start;
-        }
-        .home-panel {
-            background: var(--home-surface); border: 1px solid var(--home-line); border-radius: 14px; overflow: hidden;
-        }
-        .home-panel + .home-panel { margin-top: 16px; }
-        .home-panel-hd {
-            display: flex; justify-content: space-between; align-items: center; gap: 10px;
-            padding: 14px 16px; border-bottom: 1px solid var(--home-line);
-        }
-        .home-panel-hd h3 { margin: 0; font-size: 15px; font-weight: 720; color: var(--home-ink); }
-        .home-panel-hd .link {
-            border: 0; background: transparent; color: var(--home-accent); font-size: 12px; font-weight: 650; cursor: pointer;
-        }
-        .home-panel-bd { padding: 6px 8px 10px; }
-        .home-empty { padding: 28px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
-        .home-todo-item, .home-feed-item, .home-member-item {
-            display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; cursor: pointer;
+            position: relative;
+            flex: 1 1 0;
+            min-width: 0;
+            padding: 12px 10px 10px;
+            cursor: pointer;
+            border-right: 1px solid var(--home-line);
             transition: background 0.15s;
         }
+        .home-stat:last-child { border-right: 0; }
+        .home-stat::before {
+            content: ''; position: absolute; left: 0; top: 0; right: 0; height: 3px;
+            background: #c4b5fd;
+        }
+        .home-stat.accent-a::before { background: #7c3aed; }
+        .home-stat.accent-b::before { background: #6366f1; }
+        .home-stat.accent-c::before { background: #8b5cf6; }
+        .home-stat.accent-d::before { background: #a855f7; }
+        .home-stat.accent-e::before { background: #4f46e5; }
+        .home-stat.accent-f::before { background: #db2777; }
+        .home-stat:hover { background: #faf8ff; }
+        .home-stat .k {
+            font-size: 11px; color: var(--home-muted); font-weight: 700;
+            letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .home-stat .v {
+            margin-top: 8px; font-family: var(--home-serif); font-size: 26px; font-weight: 700;
+            color: var(--home-ink); line-height: 1; font-variant-numeric: tabular-nums;
+        }
+        .home-stat .h {
+            margin-top: 6px; font-size: 11px; color: #94a3b8;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        .home-quick {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap;
+            align-items: stretch;
+            gap: 8px;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid var(--home-line);
+        }
+        .home-quick-label {
+            flex: 0 0 auto;
+            display: flex; align-items: center;
+            font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--home-muted); font-weight: 750; padding: 0 4px;
+        }
+        .home-quick-item {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+            gap: 6px; padding: 10px 12px;
+            border: 1px solid #e9e4f8; border-radius: 8px; background: #fff;
+            cursor: pointer; transition: all 0.15s; color: #334155; font-weight: 650;
+        }
+        .home-quick-item:hover {
+            border-color: #c4b5fd; color: var(--home-accent-deep); background: #f5f3ff;
+            transform: translateY(-1px);
+        }
+        .home-quick-item .ico {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 26px; height: 26px; border-radius: 7px; font-size: 12px; font-weight: 800;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #ede9fe;
+        }
+        .home-quick-item .t {
+            font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+        }
+
+        .home-grid {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: stretch;
+            gap: 10px;
+            width: 100%;
+            min-height: 420px;
+        }
+        .home-col {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .home-panel {
+            flex: 1 1 0;
+            min-height: 160px;
+            background: #fff;
+            border: 1px solid var(--home-line);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 18px rgba(76, 29, 149, 0.05);
+            display: flex;
+            flex-direction: column;
+        }
+        .home-panel-hd {
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+            padding: 11px 14px; border-bottom: 1px solid var(--home-line);
+            background: linear-gradient(180deg, #faf8ff, #fff);
+            flex-shrink: 0;
+        }
+        .home-panel-hd h3 {
+            margin: 0; font-family: var(--home-serif); font-size: 15px; font-weight: 700; color: var(--home-ink);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .home-panel-hd h3::before {
+            content: ''; width: 3px; height: 13px; border-radius: 2px; background: var(--home-accent);
+        }
+        .home-panel-hd .link {
+            border: 0; background: transparent; color: var(--home-accent-deep);
+            font-size: 12px; font-weight: 650; cursor: pointer;
+        }
+        .home-panel-bd { padding: 4px 8px 8px; flex: 1; overflow: auto; }
+        .home-empty {
+            min-height: 120px; display: flex; align-items: center; justify-content: center;
+            text-align: center; color: #94a3b8; font-size: 13px; line-height: 1.6; padding: 20px;
+        }
+        .home-todo-item, .home-feed-item, .home-member-item {
+            display: flex; gap: 10px; align-items: flex-start; padding: 11px 8px;
+            border-radius: 6px; cursor: pointer; transition: background 0.15s;
+            border-bottom: 1px solid #f1eef9;
+        }
+        .home-todo-item:last-child, .home-feed-item:last-child, .home-member-item:last-child { border-bottom: 0; }
         .home-todo-item:hover, .home-feed-item:hover, .home-member-item:hover { background: var(--home-soft); }
         .home-todo-item .pri {
-            flex-shrink: 0; margin-top: 2px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+            flex-shrink: 0; margin-top: 2px; font-size: 10px; font-weight: 750; padding: 3px 7px; border-radius: 4px;
         }
-        .home-todo-item .pri.high { background: #fff1f2; color: #be123c; }
+        .home-todo-item .pri.high { background: #fef2f2; color: #b91c1c; }
         .home-todo-item .pri.medium { background: #fff7ed; color: #c2410c; }
         .home-todo-item .pri.low { background: #f0fdf4; color: #15803d; }
-        .home-todo-item .title, .home-feed-item .title { font-size: 13px; font-weight: 650; color: #1e293b; line-height: 1.4; }
+        .home-todo-item .title, .home-feed-item .title {
+            font-size: 13px; font-weight: 650; color: #1e293b; line-height: 1.4;
+        }
         .home-todo-item .meta, .home-feed-item .meta { margin-top: 4px; font-size: 11px; color: #94a3b8; }
+        .home-feed-item { position: relative; padding-left: 20px; }
         .home-feed-dot {
-            width: 8px; height: 8px; border-radius: 50%; background: #818cf8; margin-top: 6px; flex-shrink: 0;
+            position: absolute; left: 6px; top: 16px;
+            width: 8px; height: 8px; border-radius: 50%; background: var(--home-accent);
+            box-shadow: 0 0 0 3px rgba(124,58,237,0.16);
         }
+        .home-member-item { align-items: center; }
         .home-member-item .av {
-            width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-            background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+            width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+            background: linear-gradient(145deg, #5b21b6, #7c3aed); color: #ede9fe;
             display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+            overflow: hidden; border: 2px solid #fff; box-shadow: 0 0 0 1px #ddd6fe;
         }
-        .home-member-item .name { font-size: 13px; font-weight: 650; color: #1e293b; }
+        .home-member-item .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .home-member-item .name { font-size: 13px; font-weight: 700; color: #1e293b; }
         .home-member-item .tag { font-size: 11px; color: #64748b; margin-top: 2px; }
         .home-member-item .badge {
-            margin-left: auto; font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+            margin-left: auto; font-size: 11px; padding: 2px 8px; border-radius: 4px; white-space: nowrap;
         }
-        .home-member-item .badge.on { background: #e0f2fe; color: #0369a1; }
+        .home-member-item .badge.on { background: #f5f3ff; color: #6d28d9; }
         .home-member-item .badge.off { background: #f1f5f9; color: #64748b; }
-        @media (max-width: 1200px) {
-            .home-stats { grid-template-columns: repeat(3, 1fr); }
-            .home-quick { grid-template-columns: repeat(3, 1fr); }
+        .home-foot-note {
+            display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+            padding: 8px 12px; border-radius: 8px; font-size: 12px; color: #64748b;
+            background: rgba(255,255,255,0.8); border: 1px dashed #ddd6fe;
         }
-        @media (max-width: 900px) {
-            .home-grid { grid-template-columns: 1fr; }
-            .home-stats { grid-template-columns: repeat(2, 1fr); }
+        .home-foot-note strong { color: #5b21b6; font-weight: 700; }
+        body:has(#home.module.active) .module-back-fab {
+            display: none !important;
         }
+        @media (max-width: 1100px) {
+            .home-ledger { flex-wrap: wrap; }
+            .home-stat { flex: 1 1 33.33%; border-bottom: 1px solid var(--home-line); }
+            .home-stat:nth-child(3n) { border-right: 0; }
+            .home-quick { flex-wrap: wrap; }
+            .home-quick-label { flex: 1 1 100%; }
+            .home-quick-item { flex: 1 1 30%; }
+            .home-grid { flex-direction: column; min-height: 0; }
+        }
+        @media (max-width: 700px) {
+            .home-stat { flex: 1 1 50%; }
+            .home-stat:nth-child(2n) { border-right: 0; }
+            .home-quick-item { flex: 1 1 45%; }
+        }
+
         .notice-stat-card {
             background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             cursor: pointer; transition: all 0.18s ease; border: 2px solid transparent;
@@ -2177,6 +2442,8 @@
             align-items: center;
             justify-content: center;
             font-size: 14px;
+            overflow: hidden;
+            flex-shrink: 0;
         }
         .tab-nav {
             display: flex;
@@ -3283,9 +3550,15 @@
 
     <!-- 顶部导航栏 -->
     <div class="top-nav">
-            <div class="logo">
-                <div style="font-size: 24px; font-weight: bold;">🔬</div>
-                <div class="logo-text">城市安全数智创新团队管理系统</div>
+            <div class="top-nav-left" style="display:flex;align-items:center;gap:4px;min-width:0;position:relative;z-index:2;">
+                <button type="button" class="nav-back-btn is-disabled" id="moduleBackBtn" onclick="goBackModule()" disabled title="返回上一级（Alt+←）">
+                    <span class="back-arrow">←</span>
+                    <span class="back-text">返回</span>
+                </button>
+                <div class="logo">
+                    <div style="font-size: 24px; font-weight: bold;">🔬</div>
+                    <div class="logo-text">城市安全数智创新团队管理系统</div>
+                </div>
             </div>
             <div class="global-search" id="globalSearchWrap">
                 <span class="global-search-icon">🔍</span>
@@ -3326,6 +3599,11 @@
             </div>
         </div>
     
+    <button type="button" class="module-back-fab is-disabled" id="moduleBackFab" onclick="goBackModule()" disabled title="返回上一级（Alt+←）">
+        <span>← 返回</span>
+        <span class="fab-prev" id="moduleBackFabPrev"></span>
+    </button>
+
     <!-- 主容器 -->
     <div class="app-shell">
         <!-- 左侧菜单 -->
@@ -3488,23 +3766,43 @@
                 <div id="homeNoticeBanner" class="home-notice-banner"></div>
                 <div class="home-dashboard">
                     <div class="home-hero">
-                        <div>
-                            <h2 id="homeWelcomeTitle">工作台</h2>
-                            <div class="sub" id="homeWelcomeSub">数据与团队状态实时联动自各业务模块</div>
+                        <div class="home-hero-inner">
+                            <div class="home-hero-main">
+                                <div class="home-hero-avatar" id="homeHeroAvatar">研</div>
+                                <div style="min-width:0;flex:1;">
+                                    <div class="home-eyebrow">城市安全数智创新团队 · Research Workspace</div>
+                                    <h2 id="homeWelcomeTitle">工作台</h2>
+                                    <div class="sub" id="homeWelcomeSub">成果、经费、成员与待办统一汇聚，点击指标即可进入对应业务模块</div>
+                                    <div class="home-hero-meta" id="homeHeroMeta"></div>
+                                </div>
+                            </div>
+                            <div class="home-hero-aside">
+                                <div class="home-focus-card home-sync-card">
+                                    <div class="label">数据同步 · 真实状态</div>
+                                    <div id="homeSyncStatus"></div>
+                                    <div class="home-sync-actions">
+                                        <button type="button" onclick="manualHomeCloudSync()">立即同步</button>
+                                    </div>
+                                </div>
+                                <div class="home-focus-card">
+                                    <div class="label">成果结构（实时计数）</div>
+                                    <div class="home-focus-bars" id="homeFocusBars"></div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="home-hero-meta" id="homeHeroMeta"></div>
                     </div>
 
-                    <div class="home-stats" id="homeStatsGrid">
-                        <div class="home-stat accent-a" onclick="showModule('patent_management')"><div class="k">专利</div><div class="v" id="homeStatPatent">-</div><div class="h">专利全库</div></div>
-                        <div class="home-stat accent-b" onclick="showModule('paper_management')"><div class="k">论文</div><div class="v" id="homeStatPaper">-</div><div class="h">论文成果</div></div>
-                        <div class="home-stat accent-c" onclick="showModule('project_overview')"><div class="k">项目</div><div class="v" id="homeStatProject">-</div><div class="h">纵/横/校级合计</div></div>
-                        <div class="home-stat accent-d" onclick="showModule('funding_management')"><div class="k">经费</div><div class="v" id="homeStatFunding">-</div><div class="h">万元</div></div>
-                        <div class="home-stat accent-e" onclick="showModule('member_archive')"><div class="k">在读成员</div><div class="v" id="homeStatMember">-</div><div class="h" id="homeStatMemberHint">团队档案联动</div></div>
-                        <div class="home-stat accent-f" onclick="showModule('task_management')"><div class="k">待办任务</div><div class="v" id="homeStatTask">-</div><div class="h">未完成 · 排除毕业生</div></div>
+                    <div class="home-ledger" id="homeStatsGrid">
+                        <div class="home-stat accent-a" onclick="showModule('patent_management')"><div class="k">专利</div><div class="v" id="homeStatPatent">-</div><div class="h">进入专利档案</div></div>
+                        <div class="home-stat accent-b" onclick="showModule('paper_management')"><div class="k">论文</div><div class="v" id="homeStatPaper">-</div><div class="h">进入论文成果</div></div>
+                        <div class="home-stat accent-c" onclick="showModule('longitudinal_project')"><div class="k">项目</div><div class="v" id="homeStatProject">-</div><div class="h">进入项目管理</div></div>
+                        <div class="home-stat accent-d" onclick="showModule('achievements')"><div class="k">经费</div><div class="v" id="homeStatFunding">-</div><div class="h">单位：万元</div></div>
+                        <div class="home-stat accent-e" onclick="showModule('member_archive')"><div class="k">在读成员</div><div class="v" id="homeStatMember">-</div><div class="h" id="homeStatMemberHint">进入团队档案</div></div>
+                        <div class="home-stat accent-f" onclick="showModule('task_management')"><div class="k">待办</div><div class="v" id="homeStatTask">-</div><div class="h">未完成任务</div></div>
                     </div>
 
                     <div class="home-quick" id="homeQuickNav">
+                        <span class="home-quick-label">入口</span>
                         <div class="home-quick-item" onclick="showModule('member_archive')"><div class="ico">团</div><div class="t">团队成员</div></div>
                         <div class="home-quick-item" onclick="showModule('task_management')"><div class="ico">任</div><div class="t">任务待办</div></div>
                         <div class="home-quick-item" onclick="showModule('notice_publish')"><div class="ico">通</div><div class="t">通知公告</div></div>
@@ -3514,7 +3812,7 @@
                     </div>
 
                     <div class="home-grid">
-                        <div>
+                        <div class="home-col">
                             <div class="home-panel">
                                 <div class="home-panel-hd">
                                     <h3>我的待办</h3>
@@ -3522,30 +3820,36 @@
                                 </div>
                                 <div class="home-panel-bd" id="homeTodoList"></div>
                             </div>
+                        </div>
+                        <div class="home-col">
                             <div class="home-panel">
                                 <div class="home-panel-hd">
-                                    <h3>最近动态</h3>
+                                    <h3>研究动态</h3>
                                     <button type="button" class="link" onclick="showModule('notice_publish')">通知中心 →</button>
                                 </div>
                                 <div class="home-panel-bd" id="homeFeedList"></div>
                             </div>
-                        </div>
-                        <div>
                             <div class="home-panel">
                                 <div class="home-panel-hd">
-                                    <h3>新闻动态</h3>
+                                    <h3>新闻发布</h3>
                                     <button type="button" class="link" onclick="showModule('news_management')">更多 →</button>
                                 </div>
                                 <div class="home-panel-bd" id="homeNewsList"></div>
                             </div>
+                        </div>
+                        <div class="home-col">
                             <div class="home-panel">
                                 <div class="home-panel-hd">
-                                    <h3>在读成员</h3>
+                                    <h3>在读名录</h3>
                                     <button type="button" class="link" onclick="showModule('member_archive')">团队档案 →</button>
                                 </div>
                                 <div class="home-panel-bd" id="homeMemberList"></div>
                             </div>
                         </div>
+                    </div>
+                    <div class="home-foot-note" id="homeFootNote">
+                        <span>数据来源：专利 / 论文 / 项目 / 成员 / 任务实时联动</span>
+                        <span>点击任意指标或入口即可进入对应模块</span>
                     </div>
                 </div>
             </div>
@@ -8943,6 +9247,24 @@
 
         let cloudSyncReady = false;
         let cloudSyncEnabled = Boolean(SUPABASE_URL && SUPABASE_KEY);
+        var cloudSyncState = {
+            enabled: cloudSyncEnabled,
+            lastAt: 0,
+            lastOk: null,
+            lastApplied: 0,
+            lastError: '',
+            lastReason: '',
+            pollMs: 15000
+        };
+        function markCloudSyncState( partial ) {
+            try {
+                Object.assign(cloudSyncState, partial || {});
+                cloudSyncState.enabled = !!cloudSyncEnabled;
+                if (typeof window !== 'undefined') window.cloudSyncState = cloudSyncState;
+            } catch (e) {}
+        }
+        window.cloudSyncState = cloudSyncState;
+        window.markCloudSyncState = markCloudSyncState;
         let cloudPulling = false;
         const cloudUpsertTimers = {};
         const cloudRowIdCache = {};
@@ -9102,7 +9424,10 @@
 
         async function pullAllFromCloud(options) {
             options = options || {};
-            if (!cloudSyncEnabled) return { ok: false, reason: 'disabled' };
+            if (!cloudSyncEnabled) {
+                markCloudSyncState({ lastAt: Date.now(), lastOk: false, lastReason: 'disabled', lastError: '未配置云端', lastApplied: 0 });
+                return { ok: false, reason: 'disabled' };
+            }
             try {
                 cloudPulling = true;
                 var rows = await supabaseRequest(
@@ -9135,12 +9460,20 @@
                         console.warn('apply cloud key failed', key, e);
                     }
                 });
+                markCloudSyncState({ lastAt: Date.now(), lastOk: true, lastApplied: applied, lastError: '', lastReason: 'ok' });
                 if (options.silent !== true) {
                     showCloudSyncBanner(applied > 0 ? ('已同步云端数据 ' + applied + ' 项') : '云端暂无共享数据', false);
                 }
                 return { ok: true, applied: applied };
             } catch (err) {
                 console.warn('pullAllFromCloud failed', err);
+                markCloudSyncState({
+                    lastAt: Date.now(),
+                    lastOk: false,
+                    lastApplied: 0,
+                    lastError: String(err && err.message || err),
+                    lastReason: 'error'
+                });
                 if (options.silent !== true) showCloudSyncBanner('拉取云端数据失败', true);
                 return { ok: false, error: String(err && err.message || err) };
             } finally {
@@ -9257,7 +9590,129 @@
         }, 400);
 
         // 显示模块
+        var moduleNavHistory = [];
+        var currentModuleId = 'home';
+        var moduleNavSkipHistory = false;
+        var MODULE_LABEL_MAP = {
+            home: '首页',
+            about: '团队介绍',
+            achievements: '团队成果',
+            projects: '团队项目',
+            members: '团队成员',
+            contact: '联系我们',
+            member_archive: '团队成员档案',
+            role_permission: '角色权限',
+            task_management: '任务管理',
+            weekly_report: '工作周报',
+            longitudinal_project: '纵向项目',
+            horizontal_project: '横向项目',
+            school_project: '校级项目',
+            project_overview: '项目总览',
+            patent_management: '专利管理',
+            paper_management: '论文管理',
+            standard_management: '标准规范',
+            competition_management: '竞赛成果',
+            software_copyright: '软著管理',
+            funding_management: '经费管理',
+            model_training: '模型训练',
+            data_annotation: '数据标注',
+            chat: 'AI 问答',
+            openai: 'OpenAI 入口',
+            literature_analysis: '文献分析',
+            excel: 'Excel 工具',
+            document_analysis: '文档分析',
+            notice_publish: '通知公告',
+            news_management: '新闻管理',
+            meeting_management: '组会管理',
+            literature_library: '文献资料',
+            dataset_library: '数据集',
+            project_report: '项目报告',
+            shared_files: '共享文件',
+            account_permission: '账号权限',
+            system_config: '系统配置',
+            operation_log: '操作日志',
+            data_backup: '数据备份',
+            collection: '专利收集'
+        };
+
+        function getModuleLabel(moduleId) {
+            if (!moduleId) return '';
+            if (MODULE_LABEL_MAP[moduleId]) return MODULE_LABEL_MAP[moduleId];
+            try {
+                var items = document.querySelectorAll('.nav-item, .top-nav .nav-links a');
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    var handler = item.getAttribute('onclick') || '';
+                    if (handler.indexOf("'" + moduleId + "'") >= 0 || handler.indexOf('"' + moduleId + '"') >= 0) {
+                        return String(item.textContent || '').replace(/\s+/g, ' ').trim() || moduleId;
+                    }
+                }
+            } catch (e) {}
+            return moduleId;
+        }
+
+        function updateModuleBackButton() {
+            var can = moduleNavHistory.length > 0;
+            var prevId = can ? moduleNavHistory[moduleNavHistory.length - 1] : '';
+            var prevLabel = prevId ? getModuleLabel(prevId) : '';
+            var title = can ? ('返回上一级：' + prevLabel + '（Alt+←）') : '暂无上一级页面';
+            var btn = document.getElementById('moduleBackBtn');
+            var fab = document.getElementById('moduleBackFab');
+            var fabPrev = document.getElementById('moduleBackFabPrev');
+            var btnText = btn ? btn.querySelector('.back-text') : null;
+            [btn, fab].forEach(function (el) {
+                if (!el) return;
+                el.disabled = !can;
+                el.classList.toggle('is-disabled', !can);
+                el.title = title;
+            });
+            if (btnText) btnText.textContent = can ? ('返回 ' + prevLabel) : '返回';
+            if (fabPrev) fabPrev.textContent = can ? prevLabel : '';
+            try {
+                window.__moduleNavHistory = moduleNavHistory.slice();
+                window.__currentModuleId = currentModuleId;
+            } catch (e) {}
+        }
+
+        function pushModuleHistory(fromId) {
+            if (!fromId) return;
+            if (moduleNavHistory[moduleNavHistory.length - 1] === fromId) return;
+            moduleNavHistory.push(fromId);
+            if (moduleNavHistory.length > 40) moduleNavHistory.shift();
+        }
+
+        function goBackModule() {
+            var active = document.querySelector('.module.active');
+            var curId = (active && active.id) || currentModuleId || '';
+            while (moduleNavHistory.length) {
+                var prev = moduleNavHistory.pop();
+                if (!prev || prev === curId) continue;
+                if (!document.getElementById(prev)) continue;
+                moduleNavSkipHistory = true;
+                try {
+                    showModule(prev);
+                } finally {
+                    moduleNavSkipHistory = false;
+                    currentModuleId = prev;
+                    updateModuleBackButton();
+                }
+                return;
+            }
+            updateModuleBackButton();
+        }
+
         function showModule(moduleId) {
+            if (!moduleId) return;
+            var target = document.getElementById(moduleId);
+            if (!target) {
+                console.warn('[showModule] 模块不存在:', moduleId);
+                return;
+            }
+
+            // 历史记录改由最外层 navigateShowModule 统一处理，避免重复 push
+            currentModuleId = moduleId;
+            updateModuleBackButton();
+
             if (cloudSyncEnabled) {
                 clearTimeout(window.__cloudModuleSyncTimer);
                 window.__cloudModuleSyncTimer = setTimeout(function() {
@@ -9271,7 +9726,7 @@
             });
             
             // 显示选中模块
-            document.getElementById(moduleId).classList.add('active');
+            target.classList.add('active');
             
             // 更新导航状态
             document.querySelectorAll('.nav-item').forEach(item => {
@@ -9324,6 +9779,20 @@
                 initSystemConfigModule();
             }
         }
+
+        document.addEventListener('keydown', function (e) {
+            if (!(e.altKey && (e.key === 'ArrowLeft' || e.code === 'ArrowLeft'))) return;
+            var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+            if (tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable)) return;
+            e.preventDefault();
+            goBackModule();
+        });
+        document.addEventListener('DOMContentLoaded', function () {
+            try { updateModuleBackButton(); } catch (eBack) {}
+        });
+        window.goBackModule = goBackModule;
+        window.updateModuleBackButton = updateModuleBackButton;
+        window.pushModuleHistory = pushModuleHistory;
         
         // 切换子菜单
         function toggleSubMenu(element) {
@@ -19932,6 +20401,30 @@ ${ocrText}`
         document.getElementById('loginAttemptWarning').style.display = 'none';
     }
 
+    function resolveMemberAvatarUrl(person) {
+        if (!person) return '';
+        var direct = person.avatar || person.dataUrl || '';
+        if (direct && String(direct).length > 20) return String(direct);
+        try {
+            var name = person.name || person.realName || '';
+            var list = (typeof teamMemberData !== 'undefined' && teamMemberData) ? teamMemberData : [];
+            var hit = null;
+            if (person.id != null) hit = list.find(function (m) { return m.id === person.id; });
+            if (!hit && name) hit = list.find(function (m) { return m.name === name; });
+            if (hit && hit.avatar && String(hit.avatar).length > 20) return String(hit.avatar);
+        } catch (e) {}
+        return '';
+    }
+
+    function renderHomeMemberAvatarHtml(m) {
+        var url = resolveMemberAvatarUrl(m);
+        var ch = escHtml(String((m && m.name) || '?').charAt(0));
+        if (url) {
+            return '<div class="av"><img src="' + String(url).replace(/"/g, '&quot;') + '" alt="' + ch + '" onerror="this.remove();this.parentNode.textContent=\'' + ch + '\';"></div>';
+        }
+        return '<div class="av">' + ch + '</div>';
+    }
+
     function updateHeaderUserInfo() {
         if (!currentUser) return;
         const nameEl = document.getElementById('headerUserName');
@@ -19939,7 +20432,16 @@ ${ocrText}`
         const avEl = document.getElementById('headerAvatar');
         if (nameEl) nameEl.textContent = currentUser.realName || currentUser.studentId || '';
         if (roleEl) roleEl.textContent = (typeof ROLE_LABELS !== 'undefined' && ROLE_LABELS[currentUser.role]) ? ROLE_LABELS[currentUser.role] : (currentUser.role || '');
-        if (avEl) avEl.textContent = String(currentUser.realName || currentUser.studentId || '?').charAt(0);
+        if (avEl) {
+            var avUrl = resolveMemberAvatarUrl(currentUser) || resolveMemberAvatarUrl({ name: currentUser.realName, id: currentUser.memberId });
+            var ch = String(currentUser.realName || currentUser.studentId || '?').charAt(0);
+            if (avUrl) {
+                avEl.innerHTML = '<img src="' + String(avUrl).replace(/"/g, '&quot;') + '" alt="' + escHtml(ch) + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentNode.textContent=\'' + ch + '\';">';
+            } else {
+                avEl.innerHTML = '';
+                avEl.textContent = ch;
+            }
+        }
         try { if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter(); } catch (e) {}
         try { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); } catch (e2) {}
     }
@@ -20006,12 +20508,13 @@ ${ocrText}`
             });
         });
 
-        // 如果当前在隐藏的模块，跳回首页
+        // 如果当前在隐藏的模块，跳回首页（不写入历史，避免干扰返回栈）
         const activeModule = document.querySelector('.module.active');
         if (activeModule) {
             const moduleId = activeModule.id;
             if (menuVisibility[moduleId] === false) {
-                showModule('home');
+                moduleNavSkipHistory = true;
+                try { showModule('home'); } finally { moduleNavSkipHistory = false; }
             }
         }
 
@@ -23586,8 +24089,25 @@ ${ocrText}`
         if (titleEl) titleEl.textContent = name ? (hello + '，' + name) : (hello + '，欢迎回来');
         if (subEl) {
             subEl.textContent = name
-                ? ('当前身份：' + roleLabel + ' · 首页数据与团队档案、任务、项目、成果实时联动')
-                : '登录后可查看与您相关的待办与团队动态';
+                ? ('身份：' + roleLabel + ' · 下方数字均来自各业务模块当前数据')
+                : '登录后可查看与您相关的待办、通知与团队研究动态';
+        }
+
+        const heroAv = document.getElementById('homeHeroAvatar');
+        if (heroAv) {
+            const ch = String(name || '研').charAt(0);
+            let avUrl = '';
+            try {
+                if (typeof resolveMemberAvatarUrl === 'function') {
+                    avUrl = resolveMemberAvatarUrl(user) || resolveMemberAvatarUrl({ name: name });
+                }
+            } catch (eAv) {}
+            if (avUrl) {
+                heroAv.innerHTML = '<img src="' + String(avUrl).replace(/"/g, '&quot;') + '" alt="' + ch + '">';
+            } else {
+                heroAv.innerHTML = '';
+                heroAv.textContent = ch;
+            }
         }
 
         const today = new Date();
@@ -23618,6 +24138,59 @@ ${ocrText}`
         setText('homeStatMember', String(memberInfo.active.length));
         setText('homeStatMemberHint', '共 ' + memberInfo.total + ' 人 · 毕业 ' + memberInfo.graduatedCount);
         setText('homeStatTask', String(todos.length));
+
+        const patentN = getHomePatentCount();
+        const paperN = getHomePaperCount();
+        const projectN = projects.count;
+        const maxOut = Math.max(patentN, paperN, projectN, 1);
+        const bars = document.getElementById('homeFocusBars');
+        if (bars) {
+            const row = function (label, val) {
+                const pct = Math.max(8, Math.round((val / maxOut) * 100));
+                return '<div class="home-focus-row"><span>' + label + '</span><div class="home-focus-track"><i style="width:' + pct + '%"></i></div><strong>' + val + '</strong></div>';
+            };
+            bars.innerHTML = row('专利', patentN) + row('论文', paperN) + row('项目', projectN);
+        }
+
+        const syncBox = document.getElementById('homeSyncStatus');
+        if (syncBox) {
+            const st = (typeof window.cloudSyncState !== 'undefined' && window.cloudSyncState) ? window.cloudSyncState : null;
+            const enabled = st ? !!st.enabled : (typeof cloudSyncEnabled !== 'undefined' && !!cloudSyncEnabled);
+            const lastAt = st && st.lastAt ? new Date(st.lastAt) : null;
+            const agoSec = lastAt ? Math.max(0, Math.round((Date.now() - lastAt.getTime()) / 1000)) : null;
+            const timeStr = lastAt
+                ? (String(lastAt.getHours()).padStart(2, '0') + ':' + String(lastAt.getMinutes()).padStart(2, '0') + ':' + String(lastAt.getSeconds()).padStart(2, '0'))
+                : '尚未同步';
+            let statusText = '等待首次同步';
+            let statusCls = 'sync-warn';
+            if (!enabled) {
+                statusText = '仅本机（未配置云端）';
+                statusCls = 'sync-warn';
+            } else if (st && st.lastOk === true) {
+                statusText = '同步成功 · 写入 ' + (st.lastApplied || 0) + ' 项';
+                statusCls = 'sync-ok';
+            } else if (st && st.lastOk === false) {
+                statusText = st.lastReason === 'disabled' ? '云端未启用' : ('同步失败' + (st.lastError ? '：' + String(st.lastError).slice(0, 36) : ''));
+                statusCls = 'sync-bad';
+            }
+            const pollSec = st && st.pollMs ? Math.round(st.pollMs / 1000) : 15;
+            syncBox.innerHTML =
+                '<div class="sync-line"><span>通道</span><strong class="' + (enabled ? 'sync-ok' : 'sync-warn') + '">' + (enabled ? 'Supabase 云端' : '本机 localStorage') + '</strong></div>' +
+                '<div class="sync-line"><span>状态</span><strong class="' + statusCls + '">' + statusText + '</strong></div>' +
+                '<div class="sync-line"><span>上次</span><strong>' + timeStr + (agoSec != null ? ('（' + agoSec + 's 前）') : '') + '</strong></div>' +
+                '<div class="sync-line"><span>轮询</span><strong>每 ' + pollSec + ' 秒自动拉取</strong></div>';
+        }
+
+        const foot = document.getElementById('homeFootNote');
+        if (foot) {
+            const st2 = (typeof window.cloudSyncState !== 'undefined' && window.cloudSyncState) ? window.cloudSyncState : null;
+            const syncHint = !st2 || !st2.enabled
+                ? '当前为仅本机数据'
+                : (st2.lastOk ? ('云端已同步 ' + (st2.lastApplied || 0) + ' 项') : '云端同步异常，显示本机缓存');
+            foot.innerHTML =
+                '<span>在读 <strong>' + memberInfo.active.length + '</strong> · 待办 <strong>' + todos.length + '</strong> · 专利/论文 <strong>' + patentN + '/' + paperN + '</strong> · 项目 <strong>' + projectN + '</strong></span>' +
+                '<span>' + syncHint + ' · 点击指标进入对应模块核验</span>';
+        }
 
         const todoBox = document.getElementById('homeTodoList');
         if (todoBox) {
@@ -23673,7 +24246,7 @@ ${ocrText}`
                         ? '<span class="badge on">导师</span>'
                         : '<span class="badge on">在读</span>';
                     return '<div class="home-member-item" onclick="showModule(\'member_archive\'); setTimeout(function(){ if(typeof showMemberDetail===\'function\') showMemberDetail(' + m.id + '); }, 80);">' +
-                        '<div class="av">' + escHtml(String(m.name || '?').charAt(0)) + '</div>' +
+                        renderHomeMemberAvatarHtml(m) +
                         '<div style="min-width:0;">' +
                         '<div class="name">' + escHtml(m.name || '') + '</div>' +
                         '<div class="tag">' + escHtml(label) + (m.title ? ' · ' + escHtml(m.title) : '') + '</div>' +
@@ -23685,6 +24258,40 @@ ${ocrText}`
         try { if (typeof renderHomeNewsPanel === 'function') renderHomeNewsPanel(); } catch (eN) {}
         try { if (typeof updateHomeNoticeBanner === 'function') updateHomeNoticeBanner(); } catch (eB) {}
     }
+
+    async function manualHomeCloudSync() {
+        if (typeof syncFromCloudAndRefresh !== 'function') {
+            alert('同步模块未就绪');
+            return;
+        }
+        try {
+            if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('正在从云端拉取…', false);
+        } catch (e0) {}
+        try {
+            await syncFromCloudAndRefresh({ silent: false });
+        } catch (e1) {
+            try { if (typeof markCloudSyncState === 'function') markCloudSyncState({ lastAt: Date.now(), lastOk: false, lastError: String(e1 && e1.message || e1), lastReason: 'error' }); } catch (e2) {}
+        }
+        try { renderHomeDashboard(); } catch (e3) {}
+    }
+    window.manualHomeCloudSync = manualHomeCloudSync;
+
+    function refreshHomeSyncClock() {
+        var home = document.getElementById('home');
+        if (!home || !home.classList.contains('active')) return;
+        var syncBox = document.getElementById('homeSyncStatus');
+        if (!syncBox) return;
+        var st = (typeof window.cloudSyncState !== 'undefined' && window.cloudSyncState) ? window.cloudSyncState : null;
+        if (!st || !st.lastAt) return;
+        var ago = Math.max(0, Math.round((Date.now() - st.lastAt) / 1000));
+        var strongs = syncBox.querySelectorAll('.sync-line strong');
+        if (strongs && strongs[2]) {
+            var d = new Date(st.lastAt);
+            var timeStr = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+            strongs[2].textContent = timeStr + '（' + ago + 's 前）';
+        }
+    }
+    setInterval(refreshHomeSyncClock, 1000);
 
     function updateHomeNoticeBanner() {
         const box = document.getElementById('homeNoticeBanner');
@@ -25913,6 +26520,31 @@ ${ocrText}`
         }
         if (moduleId === 'document_analysis') { initDocumentAnalysis(); }
     };
+
+    // 导航历史：作为最外层包装，保证「返回上一级」按访问栈回退（而不是总回首页）
+    (function installModuleNavHistoryWrapper() {
+        var innerShow = showModule;
+        showModule = function (moduleId) {
+            if (!moduleId) return;
+            if (!document.getElementById(moduleId)) {
+                console.warn('[showModule] 模块不存在:', moduleId);
+                return;
+            }
+            if (!moduleNavSkipHistory) {
+                var active = document.querySelector('.module.active');
+                var fromId = (active && active.id) || currentModuleId || '';
+                if (fromId && fromId !== moduleId) {
+                    pushModuleHistory(fromId);
+                }
+            }
+            var ret = innerShow(moduleId);
+            currentModuleId = moduleId;
+            updateModuleBackButton();
+            return ret;
+        };
+        window.showModule = showModule;
+        window.goBackModule = goBackModule;
+    })();
 
     // ===== 智能工具模块 =====
 
