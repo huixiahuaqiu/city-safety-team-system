@@ -3473,7 +3473,7 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="css/portal-public.css?v=20260713-portal8">
+    <link rel="stylesheet" href="css/portal-public.css?v=20260713-portal11">
 </head>
 <body>
     <!-- 登录页 -->
@@ -16520,17 +16520,27 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('memberEditModal').style.display = 'flex';
         }
         
-        function closeMemberEditModal() { document.getElementById('memberEditModal').style.display = 'none'; }
+        function closeMemberEditModal() {
+            document.getElementById('memberEditModal').style.display = 'none';
+            ['memberName', 'memberCategory'].forEach(function (fid) {
+                var el = document.getElementById(fid);
+                if (el) el.disabled = false;
+            });
+            var graduatedCb = document.getElementById('memberGraduated');
+            if (graduatedCb) graduatedCb.disabled = false;
+        }
         
         function editMember(id) {
-            if (typeof canEditTeamMembers === 'function' && !canEditTeamMembers()) {
-                alert('当前角色无「团队成员档案（编辑）」权限');
+            var fullEdit = typeof canEditTeamMembers === 'function' && canEditTeamMembers();
+            var selfEdit = typeof canEditOwnMemberProfile === 'function' && canEditOwnMemberProfile(id);
+            if (!fullEdit && !selfEdit) {
+                alert('当前角色无编辑权限。研究生请使用本人账号完善自己的档案。');
                 return;
             }
             const m = teamMemberData.find(d => d.id === id);
             if (!m) return;
             editingMemberId = id;
-            document.getElementById('memberEditModalTitle').textContent = '编辑成员';
+            document.getElementById('memberEditModalTitle').textContent = selfEdit && !fullEdit ? '完善我的档案' : '编辑成员';
             document.getElementById('memberName').value = m.name;
             fillMemberCategorySelect(m.category);
             document.getElementById('memberCategory').value = m.category;
@@ -16545,14 +16555,34 @@ ${JSON.stringify(excelDataArray, null, 2)}
             document.getElementById('memberProjects').value = m.projects || '';
             document.getElementById('memberAwards').value = m.awards || '';
             document.getElementById('memberBio').value = m.bio || '';
+            // 研究生完善本人信息时锁定姓名/分类/毕业状态，避免误改组织字段
+            var lockOrg = selfEdit && !fullEdit;
+            ['memberName', 'memberCategory'].forEach(function (fid) {
+                var el = document.getElementById(fid);
+                if (el) el.disabled = lockOrg;
+            });
+            if (graduatedCb) graduatedCb.disabled = lockOrg;
             document.getElementById('memberEditModal').style.display = 'flex';
         }
         
         function saveMember() {
-            const name = document.getElementById('memberName').value.trim();
-            const category = document.getElementById('memberCategory').value;
+            var fullEdit = typeof canEditTeamMembers === 'function' && canEditTeamMembers();
+            var selfEdit = editingMemberId && typeof canEditOwnMemberProfile === 'function' && canEditOwnMemberProfile(editingMemberId);
+            if (!fullEdit && !selfEdit) {
+                alert('当前角色无编辑权限');
+                return;
+            }
+            const nameEl = document.getElementById('memberName');
+            const categoryEl = document.getElementById('memberCategory');
+            // 临时解除 disabled 以便读取（部分浏览器对 disabled 不提交）
+            var wasNameDisabled = nameEl.disabled;
+            var wasCatDisabled = categoryEl.disabled;
+            nameEl.disabled = false;
+            categoryEl.disabled = false;
+            const name = nameEl.value.trim();
+            const category = categoryEl.value;
             const title = document.getElementById('memberTitle').value.trim();
-            if (!name || !category || !title) { alert('请填写姓名、分类和职称/身份'); return; }
+            if (!name || !category || !title) { alert('请填写姓名、分类和职称/身份'); nameEl.disabled = wasNameDisabled; categoryEl.disabled = wasCatDisabled; return; }
             const graduatedEl = document.getElementById('memberGraduated');
             const data = {
                 name, category, title,
@@ -16565,9 +16595,17 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 awards: document.getElementById('memberAwards').value.trim(),
                 bio: document.getElementById('memberBio').value.trim()
             };
+            nameEl.disabled = wasNameDisabled;
+            categoryEl.disabled = wasCatDisabled;
             if (editingMemberId) {
                 const idx = teamMemberData.findIndex(d => d.id === editingMemberId);
                 if (idx !== -1) {
+                    if (!fullEdit && selfEdit) {
+                        // 本人完善：保留姓名、分类、毕业标记
+                        data.name = teamMemberData[idx].name;
+                        data.category = teamMemberData[idx].category;
+                        data.graduated = !!teamMemberData[idx].graduated;
+                    }
                     const oldName = normalizeTeamMemberName(teamMemberData[idx].name);
                     const newName = normalizeTeamMemberName(data.name);
                     if (oldName && newName && oldName !== newName) {
@@ -16577,6 +16615,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
                     teamMemberData[idx] = { ...teamMemberData[idx], ...data, name: newName || data.name };
                 }
             } else {
+                if (!fullEdit) {
+                    alert('仅导师可新增成员档案');
+                    return;
+                }
                 const newId = teamMemberData.length > 0 ? Math.max(...teamMemberData.map(d => d.id)) + 1 : 1;
                 teamMemberData.push({ id: newId, ...data, avatar: '', fileName: '' });
             }
@@ -16597,6 +16639,12 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 if (activeNav) activeNav.click();
             }
             closeMemberEditModal();
+            try {
+                if (typeof invalidatePortalCache === 'function') invalidatePortalCache();
+                if (typeof renderMembersPortal === 'function' && document.getElementById('members') && document.getElementById('members').classList.contains('active')) {
+                    renderMembersPortal();
+                }
+            } catch (ePortal) {}
             alert('保存成功！');
         }
         
@@ -16648,6 +16696,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
         }
 
         function changeMemberAvatar(id) {
+            if (typeof canEditOwnMemberProfile === 'function' && !canEditOwnMemberProfile(id)) {
+                alert('仅可修改本人头像，或由导师编辑其他成员');
+                return;
+            }
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
@@ -16694,6 +16746,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 alert('请先点击“更换头像”选择图片');
                 return;
             }
+            if (typeof canEditOwnMemberProfile === 'function' && !canEditOwnMemberProfile(pendingMemberAvatar.id)) {
+                alert('仅可修改本人头像，或由导师编辑其他成员');
+                return;
+            }
             const member = teamMemberData.find(d => d.id === pendingMemberAvatar.id);
             if (!member) {
                 alert('成员不存在');
@@ -16712,6 +16768,12 @@ ${JSON.stringify(excelDataArray, null, 2)}
             pendingMemberAvatar = null;
             renderTeamMembers();
             showMemberDetail(member.id);
+            try {
+                if (typeof invalidatePortalCache === 'function') invalidatePortalCache();
+                if (typeof renderMembersPortal === 'function' && document.getElementById('members') && document.getElementById('members').classList.contains('active')) {
+                    renderMembersPortal();
+                }
+            } catch (e2) {}
             if (typeof showCloudSyncBanner === 'function') {
                 showCloudSyncBanner('头像已保存并同步到云端', false);
             } else {
@@ -16729,16 +16791,19 @@ ${JSON.stringify(excelDataArray, null, 2)}
         function showMemberDetail(id) {
             const m = teamMemberData.find(d => d.id === id);
             if (!m) return;
+            const canEdit = typeof canEditOwnMemberProfile === 'function' ? canEditOwnMemberProfile(m.id) : (typeof canEditTeamMembers === 'function' && canEditTeamMembers());
             const content = document.getElementById('memberDetailContent');
             const graduatedBadge = m.category === 'advisor' ? '' : (isMemberGraduated(m)
                 ? '<div style="display:inline-block;background:#f5f5f5;color:#888;padding:4px 12px;border-radius:20px;font-size:12px;margin-top:8px;margin-left:6px;border:1px solid #e8e8e8;">已毕业（不接收通知）</div>'
                 : '<div style="display:inline-block;background:#e6f7ff;color:#1890ff;padding:4px 12px;border-radius:20px;font-size:12px;margin-top:8px;margin-left:6px;border:1px solid #91d5ff;">在读</div>');
+            const avatarClick = canEdit ? `onclick="changeMemberAvatar(${m.id})"` : '';
+            const avatarCursor = canEdit ? 'cursor:pointer;' : '';
             content.innerHTML = `
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div id="memberAvatarPreview">
-                    ${(pendingMemberAvatar && pendingMemberAvatar.id === m.id && pendingMemberAvatar.dataUrl) ? `<img src="${pendingMemberAvatar.dataUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:3px solid #52c41a;" />` : (m.avatar ? `<img src="${m.avatar}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 12px;cursor:pointer;border:3px solid #667eea;" onclick="changeMemberAvatar(${m.id})" />` : `<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:bold;cursor:pointer;border:3px solid #667eea;" onclick="changeMemberAvatar(${m.id})">${m.name.charAt(0)}</div>`)}
+                    ${(pendingMemberAvatar && pendingMemberAvatar.id === m.id && pendingMemberAvatar.dataUrl) ? `<img src="${pendingMemberAvatar.dataUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:3px solid #52c41a;" />` : (m.avatar ? `<img src="${m.avatar}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 12px;${avatarCursor}border:3px solid #667eea;" ${avatarClick} />` : `<div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:bold;${avatarCursor}border:3px solid #667eea;" ${avatarClick}>${m.name.charAt(0)}</div>`)}
                     </div>
-                    <p style="font-size:12px;color:#667eea;margin-top:4px;cursor:pointer;" onclick="changeMemberAvatar(${m.id})">点击更换头像</p>
+                    ${canEdit ? `<p style="font-size:12px;color:#667eea;margin-top:4px;cursor:pointer;" onclick="changeMemberAvatar(${m.id})">点击更换头像</p>` : ''}
                     <div id="memberAvatarPendingTip" style="display:${(pendingMemberAvatar && pendingMemberAvatar.id === m.id) ? 'block' : 'none'};margin:10px auto 0;padding:8px 12px;background:#f6ffed;border:1px solid #b7eb8f;border-radius:8px;color:#389e0d;font-size:12px;width:fit-content;">已选择新头像，请点击下方「保存头像」完成保存与同步</div>
                     <h2 style="margin: 12px 0 0; color: #333;">${m.name}</h2>
                     <div style="display: inline-block; background: #667eea; color: #fff; padding: 4px 16px; border-radius: 20px; font-size: 13px; margin-top: 8px;">${getMemberCategoryLabel(m.category)}</div>${graduatedBadge}
@@ -16776,14 +16841,26 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 ${m.awards ? `<div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-top: 16px;"><h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">获奖情况</h4><p style="margin: 0; color: #666; font-size: 14px;">${m.awards}</p></div>` : ''}
                 <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; flex-wrap:wrap; position:sticky; bottom:0; background:#fff; padding-top:12px; border-top:1px solid #f0f0f0;">
                     <button class="btn btn-secondary" onclick="cancelPendingMemberAvatar(); closeMemberDetailModal();">关闭</button>
-                    <button class="btn btn-secondary" onclick="closeMemberDetailModal(); editMember(${m.id});">编辑资料</button>
-                    <button class="btn" id="saveMemberAvatarBtn" onclick="saveMemberAvatar()" style="${(pendingMemberAvatar && pendingMemberAvatar.id === m.id) ? '' : 'opacity:0.55;'}">保存头像</button>
+                    ${canEdit ? `<button class="btn btn-secondary" onclick="closeMemberDetailModal(); editMember(${m.id});">${(typeof canEditTeamMembers === 'function' && canEditTeamMembers()) ? '编辑资料' : '完善我的资料'}</button>
+                    <button class="btn" id="saveMemberAvatarBtn" onclick="saveMemberAvatar()" style="${(pendingMemberAvatar && pendingMemberAvatar.id === m.id) ? '' : 'opacity:0.55;'}">保存头像</button>` : ''}
                 </div>
             `;
             document.getElementById('memberDetailModal').style.display = 'flex';
         }
         
         function closeMemberDetailModal() { document.getElementById('memberDetailModal').style.display = 'none'; }
+        window.editMember = editMember;
+        window.showMemberDetail = showMemberDetail;
+        window.closeMemberDetailModal = closeMemberDetailModal;
+        window.closeMemberEditModal = closeMemberEditModal;
+        window.saveMember = saveMember;
+        // 编辑弹窗挂到 body，避免在隐藏的 member_archive 内无法显示
+        (function hoistMemberModals() {
+            ['memberEditModal', 'memberDetailModal'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el && el.parentElement !== document.body) document.body.appendChild(el);
+            });
+        })();
         
         function switchMemberCategory(category, element) {
             document.querySelectorAll('.member-nav-item').forEach(item => {
@@ -19865,6 +19942,37 @@ ${ocrText}`
     function canEditTeamMembers() {
         return hasPermission('团队成员档案（编辑）');
     }
+
+    /** 导师可编全部；研究生/组长可完善与本人账号关联的档案 */
+    function getCurrentUserTeamMember() {
+        if (!currentUser || currentUser.role === 'visitor') return null;
+        try {
+            if (typeof findTeamMemberForAccount === 'function') {
+                var linked = findTeamMemberForAccount(currentUser);
+                if (linked) return linked;
+            }
+        } catch (e0) {}
+        try {
+            if (typeof teamMemberData === 'undefined' || !Array.isArray(teamMemberData)) return null;
+            if (currentUser.teamMemberId != null) {
+                var byId = teamMemberData.find(function (m) { return m && Number(m.id) === Number(currentUser.teamMemberId); });
+                if (byId) return byId;
+            }
+            if (currentUser.realName) {
+                return teamMemberData.find(function (m) { return m && m.name === currentUser.realName; }) || null;
+            }
+        } catch (e1) {}
+        return null;
+    }
+
+    function canEditOwnMemberProfile(memberId) {
+        if (canEditTeamMembers()) return true;
+        if (!hasPermission('团队成员档案（仅自己）')) return false;
+        var me = getCurrentUserTeamMember();
+        return !!(me && Number(me.id) === Number(memberId));
+    }
+    window.getCurrentUserTeamMember = getCurrentUserTeamMember;
+    window.canEditOwnMemberProfile = canEditOwnMemberProfile;
 
     function applyRolePermissions() {
         if (!currentUser) return;
@@ -30798,6 +30906,6 @@ ${ocrText}`
     <script src="js/notice-enhance.js?v=20260712-3000"></script>
     <script src="js/competition-management.js?v=20260712-3000"></script>
     <script src="js/home-dashboard-p3.js?v=20260713-p3"></script>
-    <script src="js/portal-public.js?v=20260713-portal8"></script>
+    <script src="js/portal-public.js?v=20260713-portal11"></script>
 </body>
 </html>

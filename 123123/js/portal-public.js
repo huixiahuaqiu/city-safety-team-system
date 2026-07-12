@@ -411,17 +411,12 @@
         }
 
         function sparkCard(wave, moduleId, value, delta, label) {
-            var bars = '';
-            for (var b = 0; b < 7; b++) {
-                var h = 35 + ((wave * 3 + b * 17) % 55);
-                bars += '<i style="--b:' + b + ';height:' + h + '%"></i>';
-            }
             return '<div class="ach-card ach-stat portal-reveal" style="--d:' + (60 + wave * 50) + 'ms;--wave:' + wave +
                 '" onclick="showModule(\'' + moduleId + '\')">' +
                 '<div class="n" data-count="' + value + '">0</div>' +
                 '<div class="delta">' + esc(delta) + '</div>' +
                 '<div class="l">' + esc(label) + '</div>' +
-                '<div class="ach-spark" aria-hidden="true">' + bars + '</div></div>';
+                '<div class="ach-spark" aria-hidden="true"><i></i></div></div>';
         }
 
         root.innerHTML =
@@ -722,17 +717,12 @@
         }).concat([1]));
 
         function sparkCard(wave, moduleId, value, delta, label) {
-            var bars = '';
-            for (var b = 0; b < 7; b++) {
-                var h = 35 + ((wave * 3 + b * 17) % 55);
-                bars += '<i style="--b:' + b + ';height:' + h + '%"></i>';
-            }
             return '<div class="pj-stat portal-reveal" style="--d:' + (40 + wave * 45) + 'ms;--wave:' + wave +
                 '" onclick="showModule(\'' + moduleId + '\')">' +
                 '<div class="n" data-count="' + value + '">0</div>' +
                 '<div class="delta">' + esc(delta) + '</div>' +
                 '<div class="l">' + esc(label) + '</div>' +
-                '<div class="pj-spark" aria-hidden="true">' + bars + '</div></div>';
+                '<div class="pj-spark" aria-hidden="true"><i></i></div></div>';
         }
 
         function itemHtml(p, live, idx) {
@@ -920,43 +910,221 @@
         else if (membersTab === 'student') list = d.students;
         else list = d.members;
 
+        var me = typeof global.getCurrentUserTeamMember === 'function' ? global.getCurrentUserTeamMember() : null;
+        var role = global.currentUser && global.currentUser.role;
+        var canSelf = !!(me && role && role !== 'visitor');
+        var selfBanner = canSelf
+            ? '<div class="pm-self-bar">' +
+              '<div><strong>你好，' + esc(me.name) + '</strong><span>登录后可完善本人简介、研究方向、教育背景与联系方式</span></div>' +
+              '<button type="button" class="pm-self-btn" data-pm-action="edit-own">完善我的信息</button></div>'
+            : (role === 'visitor' || !role
+                ? '<div class="pm-self-bar guest"><div><strong>研究生完善档案</strong><span>请使用本人学号账号登录后，点击「完善我的信息」更新公开资料</span></div></div>'
+                : '<div class="pm-self-bar guest"><div><strong>未关联成员档案</strong><span>当前账号未匹配到团队成员，请联系导师在「团队成员档案」中建档并绑定</span></div></div>');
+
         root.innerHTML =
             '<div class="portal-members">' +
-            '<div class="pm-head"><h1>团队成员</h1><p>公开名录仅展示姓名、职称与研究方向，联系方式已脱敏。</p></div>' +
+            '<div class="pm-head"><h1>团队成员</h1><p>点击卡片查看公开详情 · 联系方式默认脱敏 · 研究生可登录完善本人信息</p></div>' +
+            selfBanner +
             '<div class="pm-tabs">' +
-            '<button type="button" class="' + (membersTab === 'advisor' ? 'active' : '') + '" onclick="renderMembersPortal(\'advisor\')">导师 (' + d.advisors.length + ')</button>' +
-            '<button type="button" class="' + (membersTab === 'student' ? 'active' : '') + '" onclick="renderMembersPortal(\'student\')">在读学生 (' + d.students.length + ')</button>' +
-            '<button type="button" class="' + (membersTab === 'all' ? 'active' : '') + '" onclick="renderMembersPortal(\'all\')">全部公开 (' + d.members.length + ')</button>' +
+            '<button type="button" data-pm-tab="advisor" class="' + (membersTab === 'advisor' ? 'active' : '') + '">导师 (' + d.advisors.length + ')</button>' +
+            '<button type="button" data-pm-tab="student" class="' + (membersTab === 'student' ? 'active' : '') + '">在读学生 (' + d.students.length + ')</button>' +
+            '<button type="button" data-pm-tab="all" class="' + (membersTab === 'all' ? 'active' : '') + '">全部公开 (' + d.members.length + ')</button>' +
             '</div>' +
             '<div class="pm-grid">' +
             (list.length ? list.map(function (m) {
                 var title = m.title || (m.category === 'advisor' ? '导师' : ((m.category || '') + '级'));
                 var research = m.research || m.direction || m.field || '研究方向完善中';
                 var mid = m.id != null ? m.id : '';
-                return '<div class="pm-card" onclick="portalOpenMemberDetail(' + JSON.stringify(String(mid)) + ')">' +
+                var isMe = me && Number(me.id) === Number(mid);
+                return '<div class="pm-card' + (isMe ? ' is-me' : '') + '" data-pm-action="open" data-pm-id="' + esc(String(mid)) + '" role="button" tabindex="0">' +
+                    (isMe ? '<span class="pm-me-tag">我</span>' : '') +
                     '<div class="row">' + avatarHtml(m) +
                     '<div><div class="name">' + esc(m.name) + '</div><div class="meta">' + esc(title) + '</div></div></div>' +
-                    '<div class="research">' + esc(String(research).slice(0, 80)) + '</div></div>';
+                    '<div class="research">' + esc(String(research).slice(0, 80)) + '</div>' +
+                    '<div class="pm-card-foot">查看详情 →</div></div>';
             }).join('') : '<div style="grid-column:1/-1;color:#94a3b8;padding:24px;text-align:center;">暂无公开成员，请在团队成员档案维护后同步。</div>') +
             '</div></div>';
+
+        bindMembersPortalEvents(root);
     }
     global.renderMembersPortal = renderMembersPortal;
 
+    function bindMembersPortalEvents(root) {
+        if (!root || root.__pmBound) return;
+        root.__pmBound = true;
+        root.addEventListener('click', function (ev) {
+            var t = ev.target;
+            if (!t || !t.closest) return;
+            var tabBtn = t.closest('[data-pm-tab]');
+            if (tabBtn && root.contains(tabBtn)) {
+                ev.preventDefault();
+                renderMembersPortal(tabBtn.getAttribute('data-pm-tab'));
+                return;
+            }
+            var ownBtn = t.closest('[data-pm-action="edit-own"]');
+            if (ownBtn && root.contains(ownBtn)) {
+                ev.preventDefault();
+                portalEditOwnProfile();
+                return;
+            }
+            var card = t.closest('[data-pm-action="open"]');
+            if (card && root.contains(card)) {
+                ev.preventDefault();
+                portalOpenMemberDetail(card.getAttribute('data-pm-id'));
+            }
+        });
+        root.addEventListener('keydown', function (ev) {
+            if (ev.key !== 'Enter' && ev.key !== ' ') return;
+            var card = ev.target && ev.target.closest && ev.target.closest('[data-pm-action="open"]');
+            if (!card || !root.contains(card)) return;
+            ev.preventDefault();
+            portalOpenMemberDetail(card.getAttribute('data-pm-id'));
+        });
+    }
+
+    function maskContact(v, showFull) {
+        if (!v) return '未公开';
+        if (showFull) return String(v);
+        var s = String(v);
+        if (s.indexOf('@') > 0) {
+            var parts = s.split('@');
+            var u = parts[0];
+            return (u.length <= 2 ? u[0] + '*' : u.slice(0, 2) + '***') + '@' + parts.slice(1).join('@');
+        }
+        if (/^\d{7,}$/.test(s.replace(/\D/g, ''))) {
+            var d = s.replace(/\D/g, '');
+            return d.slice(0, 3) + '****' + d.slice(-4);
+        }
+        return s.length <= 2 ? s[0] + '*' : s.slice(0, 1) + '***' + s.slice(-1);
+    }
+
+    function ensurePortalMemberModal() {
+        var el = document.getElementById('portalMemberDetailModal');
+        if (el) return el;
+        el = document.createElement('div');
+        el.id = 'portalMemberDetailModal';
+        el.className = 'pm-detail-modal';
+        el.setAttribute('aria-hidden', 'true');
+        el.innerHTML = '<div class="pm-detail-backdrop" data-pm-close="1"></div><div class="pm-detail-panel" role="dialog" aria-modal="true"><div id="portalMemberDetailBody"></div></div>';
+        el.addEventListener('click', function (ev) {
+            if (ev.target && ev.target.getAttribute && ev.target.getAttribute('data-pm-close') === '1') {
+                closePortalMemberDetail();
+            }
+        });
+        document.body.appendChild(el);
+        return el;
+    }
+
+    function closePortalMemberDetail() {
+        var el = document.getElementById('portalMemberDetailModal');
+        if (!el) return;
+        el.classList.remove('is-open');
+        el.setAttribute('aria-hidden', 'true');
+    }
+    global.closePortalMemberDetail = closePortalMemberDetail;
+
+    function hoistMemberModalsToBody() {
+        ['memberEditModal', 'memberDetailModal'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && el.parentElement !== document.body) {
+                document.body.appendChild(el);
+            }
+        });
+    }
+
+    function portalEditOwnProfile() {
+        var me = typeof global.getCurrentUserTeamMember === 'function' ? global.getCurrentUserTeamMember() : null;
+        if (!me) {
+            alert('未找到与当前账号关联的成员档案，请联系导师绑定。');
+            return;
+        }
+        portalEditMember(me.id);
+    }
+    global.portalEditOwnProfile = portalEditOwnProfile;
+
+    function portalEditMember(id) {
+        closePortalMemberDetail();
+        hoistMemberModalsToBody();
+        if (typeof global.editMember === 'function') {
+            try {
+                global.editMember(Number(id) || id);
+                return;
+            } catch (e0) { console.warn('[portal] editMember', e0); }
+        }
+        // 回退：先打开档案模块再编辑
+        if (typeof global.showModule === 'function') {
+            global.showModule('member_archive');
+            setTimeout(function () {
+                hoistMemberModalsToBody();
+                try {
+                    if (typeof global.editMember === 'function') global.editMember(Number(id) || id);
+                    else if (typeof global.showMemberDetail === 'function') global.showMemberDetail(Number(id) || id);
+                } catch (e1) { console.warn(e1); }
+            }, 160);
+            return;
+        }
+        alert('无法打开编辑窗口，请前往「团队成员档案」完善信息');
+    }
+    global.portalEditMember = portalEditMember;
+
     function portalOpenMemberDetail(id) {
-        if (id === '' || id == null) {
-            showModule('member_archive');
+        if (id === '' || id == null) return;
+        var all = arr('teamMemberData');
+        var m = all.find(function (x) { return x && (String(x.id) === String(id) || Number(x.id) === Number(id)); });
+        if (!m) {
+            alert('未找到该成员档案');
             return;
         }
-        // 访客仅看公开页卡片信息；登录用户可进档案
-        var role = global.currentUser && global.currentUser.role;
-        if (role === 'visitor' || !role) {
-            alert('公开门户仅展示基本信息。如需完整档案，请使用内部账号登录。');
-            return;
-        }
-        showModule('member_archive');
-        setTimeout(function () {
-            try { if (typeof global.showMemberDetail === 'function') global.showMemberDetail(Number(id) || id); } catch (e) {}
-        }, 100);
+
+        var me = typeof global.getCurrentUserTeamMember === 'function' ? global.getCurrentUserTeamMember() : null;
+        var isSelf = !!(me && Number(me.id) === Number(m.id));
+        var canEdit = typeof global.canEditOwnMemberProfile === 'function' && global.canEditOwnMemberProfile(m.id);
+        var catLabel = m.category === 'advisor' ? '导师'
+            : (typeof global.getMemberCategoryLabel === 'function' ? global.getMemberCategoryLabel(m.category) : ((m.category || '') + '级'));
+        var graduated = m.category !== 'advisor' && (typeof global.isMemberGraduated === 'function' ? global.isMemberGraduated(m) : !!m.graduated);
+
+        var modal = ensurePortalMemberModal();
+        var body = document.getElementById('portalMemberDetailBody');
+        body.innerHTML =
+            '<div class="pm-detail-head">' +
+            avatarHtml(m) +
+            '<div><h2>' + esc(m.name) + (isSelf ? ' <em>我</em>' : '') + '</h2>' +
+            '<div class="pm-detail-tags"><span>' + esc(catLabel) + '</span>' +
+            (graduated ? '<span class="gone">已毕业</span>' : (m.category !== 'advisor' ? '<span class="ok">在读</span>' : '')) +
+            '</div></div></div>' +
+            '<div class="pm-detail-bio"><h4>个人简介</h4><p>' + esc(m.bio || '暂无简介，欢迎补充') + '</p></div>' +
+            '<div class="pm-detail-grid">' +
+            '<div><h4>职称 / 身份</h4><p>' + esc(m.title || '-') + '</p></div>' +
+            '<div><h4>研究方向</h4><p>' + esc(m.research || m.direction || '-') + '</p></div>' +
+            '<div><h4>教育背景</h4><p>' + esc(m.education || '-') + '</p></div>' +
+            '<div><h4>主持 / 参与项目</h4><p>' + esc(m.projects || '-') + '</p></div>' +
+            '<div><h4>联系电话</h4><p>' + esc(maskContact(m.phone, isSelf || canEdit)) + '</p></div>' +
+            '<div><h4>电子邮箱</h4><p>' + esc(maskContact(m.email, isSelf || canEdit)) + '</p></div>' +
+            '</div>' +
+            (m.awards ? '<div class="pm-detail-bio"><h4>获奖情况</h4><p>' + esc(m.awards) + '</p></div>' : '') +
+            '<div class="pm-detail-actions">' +
+            '<button type="button" class="pm-btn ghost" data-pm-close="1">关闭</button>' +
+            (canEdit
+                ? '<button type="button" class="pm-btn primary" data-pm-edit="' + esc(String(m.id)) + '">' +
+                  (isSelf ? '完善我的信息' : '编辑资料') + '</button>'
+                : '') +
+            '</div>';
+
+        body.onclick = function (ev) {
+            var t = ev.target;
+            if (!t || !t.closest) return;
+            if (t.closest('[data-pm-close="1"]')) {
+                closePortalMemberDetail();
+                return;
+            }
+            var editBtn = t.closest('[data-pm-edit]');
+            if (editBtn) {
+                portalEditMember(editBtn.getAttribute('data-pm-edit'));
+            }
+        };
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
     }
     global.portalOpenMemberDetail = portalOpenMemberDetail;
 
