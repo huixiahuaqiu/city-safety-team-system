@@ -5843,66 +5843,20 @@
                     <div style="display: flex; gap: 20px;">
                         <!-- 左侧导航 -->
                         <div style="width: 160px; flex-shrink: 0;">
-                            <div style="background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                <div class="member-nav-item active" onclick="switchMemberCategory('all', this)" style="padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s;"> 全部成员</div>
-                                <div class="member-nav-item" onclick="switchMemberCategory('advisor', this)" style="padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s;"> 导师</div>
-                                <div class="member-nav-item" onclick="switchMemberCategory('2022', this)" style="padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s;">2022级</div>
-                                <div class="member-nav-item" onclick="switchMemberCategory('2023', this)" style="padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s;">2023级</div>
-                                <div class="member-nav-item" onclick="switchMemberCategory('2024', this)" style="padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s;">2024级</div>
-                                <div class="member-nav-item" onclick="switchMemberCategory('2025', this)" style="padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s;">2025级</div>
-                                <div class="member-nav-item" onclick="switchMemberCategory('2026', this)" style="padding: 12px 16px; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s;">2026级</div>
+                            <div id="memberNavList" style="background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <!-- 由 renderMemberNav() 动态渲染 -->
                             </div>
+                            <button type="button" id="addMemberGradeBtn" onclick="promptAddMemberGrade()" data-perm="member-edit"
+                                style="width:100%;margin-top:10px;padding:10px 12px;border:1px dashed #667eea;border-radius:8px;background:#f8faff;color:#667eea;font-size:13px;font-weight:600;cursor:pointer;">
+                                ＋ 增加年级
+                            </button>
                         </div>
                         
                         <!-- 右侧内容 -->
                         <div style="flex: 1;">
-                            <!-- 按分类展示成员 -->
                             <div id="memberCategoryAll">
-                                <div class="member-category-section" data-category="advisor" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                                        <span>导师</span>
-                                        <button type="button" onclick="showAddMemberModal('advisor')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
-                                    </div>
-                                    <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGridAdvisor"></div>
-                                </div>
-                                <div class="member-category-section" data-category="2022" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                                        <span>2022级</span>
-                                        <button type="button" onclick="showAddMemberModal('2022')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
-                                    </div>
-                                    <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2022"></div>
-                                </div>
-                                <div class="member-category-section" data-category="2023" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                                        <span>2023级</span>
-                                        <button type="button" onclick="showAddMemberModal('2023')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
-                                    </div>
-                                    <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2023"></div>
-                                </div>
-                                <div class="member-category-section" data-category="2024" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                                        <span>2024级</span>
-                                        <button type="button" onclick="showAddMemberModal('2024')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
-                                    </div>
-                                    <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2024"></div>
-                                </div>
-                                <div class="member-category-section" data-category="2025" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                                        <span>2025级</span>
-                                        <button type="button" onclick="showAddMemberModal('2025')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
-                                    </div>
-                                    <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2025"></div>
-                                </div>
-                                <div class="member-category-section" data-category="2026" style="margin-bottom: 24px;">
-                                    <div style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                                        <span>2026级</span>
-                                        <button type="button" onclick="showAddMemberModal('2026')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
-                                    </div>
-                                    <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="memberGrid2026"></div>
-                                </div>
+                                <!-- 由 renderMemberAllSections() 动态渲染 -->
                             </div>
-                            
-                            <!-- 单个分类展示（点击左侧导航时显示） -->
                             <div id="memberCategorySingle" style="display: none;"></div>
                         </div>
                     </div>
@@ -5926,15 +5880,14 @@
                         </div>
                         <div class="form-group">
                             <label>分类 *</label>
-                            <select id="memberCategory" class="form-control">
-                                <option value="">请选择分类</option>
-                                <option value="advisor"> 导师</option>
-                                <option value="2022">2022级</option>
-                                <option value="2023">2023级</option>
-                                <option value="2024">2024级</option>
-                                <option value="2025">2025级</option>
-                                <option value="2026">2026级</option>
-                            </select>
+                            <select id="memberCategory" class="form-control" onchange="onMemberCategoryChange()"></select>
+                        </div>
+                        <div class="form-group" id="memberGraduatedWrap">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+                                <input type="checkbox" id="memberGraduated" style="width:16px;height:16px;">
+                                已毕业（毕业生将不再接收通知推送）
+                            </label>
+                            <div style="font-size:12px;color:#888;margin-top:4px;">勾选后：通知/催读/全员消息均不再发送给该成员</div>
                         </div>
                         <div class="form-group">
                             <label>职称/身份 *</label>
@@ -7230,9 +7183,14 @@
                                 </select>
                             </div>
                             <div class="toolbar-right">
-                                <button class="btn" data-perm="account-create" onclick="showAddAccountModal()">+ 新建账号</button>
+                                <button class="btn btn-secondary" data-perm="account-create" onclick="purgeAccountsNotInTeam()" title="删除未在团队成员档案中的正式账号，访客保留">清理非团队账号</button>
+                                <button class="btn btn-secondary" data-perm="account-create" onclick="showOpenTeamAccountModal()" title="为尚未开通登录账号的团队成员开通">从团队开通</button>
+                                <button class="btn" data-perm="account-create" onclick="showAddVisitorAccountModal()">+ 新建访客</button>
                                 <button class="btn btn-secondary" onclick="exportAccounts()">📥 导出</button>
                             </div>
+                        </div>
+                        <div style="margin:0 0 12px;padding:10px 14px;background:#f0f5ff;border:1px solid #adc6ff;border-radius:8px;font-size:13px;color:#1d39c4;line-height:1.6;">
+                            <strong>全局联动：</strong>正式成员账号与「团队成员档案」一一对应（同名重复会自动合并，非团队正式账号会自动清理）。访客为唯一例外，可独立新建。姓名/年级/毕业状态以团队管理为准。
                         </div>
                         <div style="overflow-x:auto;">
                             <table class="table" id="accountTable">
@@ -7241,6 +7199,8 @@
                                         <th>用户名</th>
                                         <th>姓名</th>
                                         <th>角色</th>
+                                        <th>年级</th>
+                                        <th>毕业</th>
                                         <th>所属小组</th>
                                         <th>邮箱</th>
                                         <th>状态</th>
@@ -7269,10 +7229,13 @@
                             <div class="form-group">
                                 <label>角色 <span style="color:red;">*</span></label>
                                 <select id="regRole" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;" onchange="onRegRoleChange()">
-                                    <option value="student">研究生（硕博）</option>
-                                    <option value="leader">小组组长</option>
-                                    <option value="visitor">访客/临时账号</option>
+                                    <option value="visitor">访客/临时账号（可独立创建）</option>
+                                    <option value="student">研究生（须已在团队成员档案中）</option>
+                                    <option value="leader">小组组长（须已在团队成员档案中）</option>
                                 </select>
+                            </div>
+                            <div style="margin-bottom:12px;padding:10px 12px;background:#fff7e6;border:1px solid #ffd591;border-radius:8px;font-size:12px;color:#ad6800;line-height:1.5;">
+                                提示：正式成员请先在「团队成员档案」维护，再在此开通账号；访客可直接注册，无需进入团队管理。
                             </div>
                             <div class="form-group" id="regGroupField">
                                 <label>所属小组</label>
@@ -7720,12 +7683,16 @@
                 </div>
 
                 <div id="logDetailModal" class="modal-overlay" style="display: none;">
-                    <div class="modal-content" style="width: 700px; max-height: 80vh; overflow-y: auto;">
-                        <div class="modal-header">
-                            <h3>📋 日志详情</h3>
+                    <div class="modal-content" style="width: 720px; max-width: 94vw; max-height: 85vh; overflow-y: auto; border-radius: 14px;">
+                        <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                            <div>
+                                <h3 style="margin:0;">操作详情</h3>
+                                <div id="detailStatusBadge" style="margin-top:6px;"></div>
+                            </div>
                             <button class="modal-close" onclick="closeLogDetailModal()">×</button>
                         </div>
                         <div class="modal-body">
+                            <div id="detailOperatorCard" style="display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:14px;border-radius:10px;background:linear-gradient(135deg,#f8faff 0%,#eef2ff 100%);border:1px solid #d6e0ff;"></div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                                 <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
                                     <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作模块</div>
@@ -7736,48 +7703,46 @@
                                     <div id="detailType" style="font-weight: 600;"></div>
                                 </div>
                                 <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作人</div>
-                                    <div id="detailOperator" style="font-weight: 600;"></div>
-                                </div>
-                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
                                     <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作IP</div>
                                     <div id="detailIp" style="font-weight: 600;"></div>
-                                </div>
-                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">请求方式</div>
-                                    <div id="detailMethod" style="font-weight: 600;"></div>
                                 </div>
                                 <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
                                     <div style="font-size: 12px; color: #666; margin-bottom: 4px;">耗时</div>
                                     <div id="detailCostTime" style="font-weight: 600;"></div>
                                 </div>
-                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">浏览器 / 系统</div>
+                                    <div id="detailClient" style="font-weight: 600;font-size:13px;"></div>
+                                </div>
+                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
                                     <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作时间</div>
                                     <div id="detailTime" style="font-weight: 600;"></div>
                                 </div>
                                 <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
-                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">请求地址</div>
-                                    <div id="detailUrl" style="font-weight: 600; font-size: 12px; word-break: break-all;"></div>
-                                </div>
-                                <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
                                     <div style="font-size: 12px; color: #666; margin-bottom: 4px;">操作描述</div>
-                                    <div id="detailDesc" style="font-weight: 600;"></div>
+                                    <div id="detailDesc" style="font-weight: 600;line-height:1.6;"></div>
                                 </div>
                                 <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
                                     <div style="font-size: 12px; color: #666; margin-bottom: 4px;">请求参数</div>
-                                    <pre id="detailParams" style="background: #fff; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; font-size: 12px; margin: 0;"></pre>
+                                    <pre id="detailParams" style="background: #fff; padding: 10px; border-radius: 4px; max-height: 180px; overflow-y: auto; font-size: 12px; margin: 0;border:1px solid #eee;"></pre>
                                 </div>
                                 <div style="padding: 10px; background: #f8f9fa; border-radius: 6px; grid-column: 1 / 3;">
                                     <div style="font-size: 12px; color: #666; margin-bottom: 4px;">返回结果</div>
-                                    <pre id="detailResponse" style="background: #fff; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; font-size: 12px; margin: 0;"></pre>
+                                    <pre id="detailResponse" style="background: #fff; padding: 10px; border-radius: 4px; max-height: 180px; overflow-y: auto; font-size: 12px; margin: 0;border:1px solid #eee;"></pre>
                                 </div>
-                                <div id="detailErrorContainer" style="padding: 10px; background: #fff5f5; border-radius: 6px; grid-column: 1 / 3; display: none;">
+                                <div id="detailErrorContainer" style="padding: 10px; background: #fff5f5; border-radius: 6px; grid-column: 1 / 3; display: none;border:1px solid #ffccc7;">
                                     <div style="font-size: 12px; color: #e53935; margin-bottom: 4px;">错误信息</div>
                                     <div id="detailError" style="color: #e53935; font-family: monospace; font-size: 12px;"></div>
                                 </div>
                             </div>
+                            <div style="display:none;">
+                                <div id="detailOperator"></div>
+                                <div id="detailMethod"></div>
+                                <div id="detailUrl"></div>
+                            </div>
                         </div>
-                        <div class="modal-footer">
+                        <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                            <button type="button" class="btn btn-secondary" id="detailOpenMemberBtn" style="display:none;" onclick="openMemberFromLogDetail()">查看团队档案</button>
                             <button class="btn btn-secondary" onclick="closeLogDetailModal()">关闭</button>
                         </div>
                     </div>
@@ -8986,7 +8951,7 @@
         // ========== 全站云端同步（复用已有 patents 表，无需新建表） ==========
         // 同步记录标记：classification=__APP_SYNC__，patent_number=__SYNC_KV__{key}
         const CLOUD_SYNC_KEYS = new Set([
-            'teamMemberData', 'accountData', 'permissionMatrix', 'passwordPolicy', 'loginLogData',
+            'teamMemberData', 'memberGradeYears', 'accountData', 'permissionMatrix', 'passwordPolicy', 'loginLogData',
             'longitudinalData', 'horizontalData', 'schoolData',
             'taskData', 'weeklyReportData', 'noticeData', 'newsData', 'meetingData',
             'literatureData', 'datasetData', 'reportData', 'sharedFileData',
@@ -9269,10 +9234,17 @@
             hydrateInMemoryFromLocalStorage();
             try { if (typeof onCloudAccountPermissionHydrated === 'function') onCloudAccountPermissionHydrated(); } catch (e) {}
             try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (e) {}
-            try { if (typeof renderTeamMembers === 'function') renderTeamMembers(); } catch (e) {}
+            try {
+                if (typeof ensureMemberGradeYears === 'function') ensureMemberGradeYears();
+                if (typeof renderMemberNav === 'function') renderMemberNav();
+                if (typeof renderMemberAllSections === 'function') renderMemberAllSections();
+                if (typeof renderTeamMembers === 'function') renderTeamMembers();
+            } catch (e) {}
             try { if (typeof renderFileList === 'function') renderFileList(); } catch (e) {}
             try { if (typeof renderAccountTable === 'function') renderAccountTable(); } catch (e) {}
             try { if (typeof renderPermissionMatrix === 'function') renderPermissionMatrix(); } catch (e) {}
+            try { if (typeof applyRolePermissions === 'function') applyRolePermissions(); } catch (e) {}
+            try { if (typeof updateHeaderUserInfo === 'function') updateHeaderUserInfo(); } catch (e) {}
             try { if (typeof populateOwnerSelects === 'function') populateOwnerSelects(); } catch (e) {}
             try { if (typeof renderTaskList === 'function') renderTaskList(); } catch (e) {}
             try { if (typeof renderNoticeList === 'function') renderNoticeList(); } catch (e) {}
@@ -9354,6 +9326,16 @@
             // 模块初始化
             if (moduleId === 'news_management') {
                 initNewsManagement();
+            } else if (moduleId === 'member_archive') {
+                try {
+                    if (typeof ensureMemberGradeYears === 'function') ensureMemberGradeYears();
+                    if (typeof renderMemberNav === 'function') renderMemberNav();
+                    if (typeof renderMemberAllSections === 'function') renderMemberAllSections();
+                    if (typeof fillMemberCategorySelect === 'function') fillMemberCategorySelect();
+                    if (typeof renderTeamMembers === 'function') renderTeamMembers();
+                    var activeNav = document.querySelector('#member_archive .member-nav-item.active');
+                    if (!activeNav) switchMemberCategory('all', document.querySelector('#member_archive .member-nav-item[data-category="all"]'));
+                } catch (eMem) {}
             } else if (moduleId === 'literature_library') {
                 try { if (typeof initLiteratureLibrary === 'function') initLiteratureLibrary(); } catch (eLit) {}
             } else if (moduleId === 'competition_management') {
@@ -15926,7 +15908,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
         function importAdvisorsFromProfileUI() {
             const n = importProfileLibraryAdvisors(true);
             closeImportMembersModal();
-            switchMemberCategory('advisor', document.querySelector('.member-nav-item[onclick*=\"advisor\"]') || null);
+            switchMemberCategory('advisor', document.querySelector('.member-nav-item[data-category="advisor"]') || null);
             alert(n > 0 ? ('已导入/更新导师信息，并同步到云端（王丽萍、罗文文、罗钧）') : '导师信息已是最新');
         }
 
@@ -15941,7 +15923,12 @@ ${JSON.stringify(excelDataArray, null, 2)}
             }
             // 从个人信息库导入三位导师，并同步到云端
             importProfileLibraryAdvisors(true);
+            ensureMemberGradeYears();
+            renderMemberNav();
+            renderMemberAllSections();
+            fillMemberCategorySelect();
             renderTeamMembers();
+            switchMemberCategory('all', document.querySelector('.member-nav-item[data-category="all"]') || null);
         }
         
         function resetToDefaultMembers() {
@@ -15965,6 +15952,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
         
         function saveTeamMemberData() {
             teamMemberData = normalizeTeamMembers(teamMemberData);
+            ensureMemberGradeYearsFromMembers();
             syncTeamMembersAcrossSystem();
             localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData));
             try { if (typeof cloudUpsert === 'function') cloudUpsert('teamMemberData', JSON.stringify(teamMemberData)); } catch (e) {}
@@ -15973,14 +15961,214 @@ ${JSON.stringify(excelDataArray, null, 2)}
             if (typeof renderAccountTable === 'function') renderAccountTable();
         }
 
+        var DEFAULT_MEMBER_GRADE_YEARS = ['2022', '2023', '2024', '2025', '2026'];
+        var MEMBER_GRADE_GRADIENTS = [
+            'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+            'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+            'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+            'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)'
+        ];
+
+        function isMemberYearCategory(cat) {
+            return /^20\d{2}$/.test(String(cat || '').trim());
+        }
+
+        function getMemberCategoryLabel(cat) {
+            if (cat === 'advisor') return '导师';
+            if (isMemberYearCategory(cat)) return cat + '级';
+            return String(cat || '') || '未分类';
+        }
+
+        function getMemberGradeGradient(year) {
+            const years = getMemberGradeYears();
+            const idx = Math.max(0, years.indexOf(String(year)));
+            return MEMBER_GRADE_GRADIENTS[idx % MEMBER_GRADE_GRADIENTS.length];
+        }
+
+        function getMemberGradeYears() {
+            let years = [];
+            try {
+                const saved = JSON.parse(localStorage.getItem('memberGradeYears') || 'null');
+                if (Array.isArray(saved)) years = saved.map(String);
+            } catch (e) {}
+            if (!years.length) years = DEFAULT_MEMBER_GRADE_YEARS.slice();
+            years = years.filter(isMemberYearCategory);
+            years = Array.from(new Set(years)).sort();
+            return years.length ? years : DEFAULT_MEMBER_GRADE_YEARS.slice();
+        }
+
+        function saveMemberGradeYears(years) {
+            const cleaned = Array.from(new Set((years || []).map(String).filter(isMemberYearCategory))).sort();
+            const finalYears = cleaned.length ? cleaned : DEFAULT_MEMBER_GRADE_YEARS.slice();
+            localStorage.setItem('memberGradeYears', JSON.stringify(finalYears));
+            try { if (typeof cloudUpsert === 'function') cloudUpsert('memberGradeYears', JSON.stringify(finalYears)); } catch (e) {}
+            return finalYears;
+        }
+
+        function ensureMemberGradeYearsFromMembers() {
+            const years = getMemberGradeYears();
+            const set = new Set(years);
+            (Array.isArray(teamMemberData) ? teamMemberData : []).forEach(function(m) {
+                if (isMemberYearCategory(m && m.category)) set.add(String(m.category));
+            });
+            return saveMemberGradeYears(Array.from(set));
+        }
+
+        function ensureMemberGradeYears() {
+            return ensureMemberGradeYearsFromMembers();
+        }
+
+        function promptAddMemberGrade() {
+            if (typeof canEditTeamMembers === 'function' && !canEditTeamMembers()) {
+                alert('当前角色无「团队成员档案（编辑）」权限');
+                return;
+            }
+            const input = prompt('请输入要增加的年级（四位年份，如 2027）：', String(new Date().getFullYear()));
+            if (input == null) return;
+            const year = String(input).trim().replace(/级/g, '');
+            if (!isMemberYearCategory(year)) {
+                alert('年级格式不正确，请输入四位年份，例如 2027');
+                return;
+            }
+            const years = getMemberGradeYears();
+            if (years.indexOf(year) >= 0) {
+                alert(year + '级已存在');
+                switchMemberCategory(year, document.querySelector('.member-nav-item[data-category="' + year + '"]') || null);
+                return;
+            }
+            years.push(year);
+            saveMemberGradeYears(years);
+            renderMemberNav();
+            renderMemberAllSections();
+            fillMemberCategorySelect();
+            renderTeamMembers();
+            switchMemberCategory(year, document.querySelector('.member-nav-item[data-category="' + year + '"]') || null);
+            alert('已增加 ' + year + '级');
+        }
+
+        function removeMemberGrade(year) {
+            if (typeof canEditTeamMembers === 'function' && !canEditTeamMembers()) {
+                alert('当前角色无「团队成员档案（编辑）」权限');
+                return;
+            }
+            year = String(year || '').trim();
+            if (!isMemberYearCategory(year)) return;
+            const count = (teamMemberData || []).filter(function(m) { return m.category === year; }).length;
+            if (count > 0) {
+                alert(year + '级仍有 ' + count + ' 名成员，请先调整他们的年级后再删除');
+                return;
+            }
+            if (!confirm('确定删除「' + year + '级」？')) return;
+            saveMemberGradeYears(getMemberGradeYears().filter(function(y) { return y !== year; }));
+            renderMemberNav();
+            renderMemberAllSections();
+            fillMemberCategorySelect();
+            renderTeamMembers();
+            switchMemberCategory('all', document.querySelector('.member-nav-item[data-category="all"]') || null);
+        }
+
+        function renderMemberNav(activeCategory) {
+            const nav = document.getElementById('memberNavList');
+            if (!nav) return;
+            const active = activeCategory || (document.querySelector('.member-nav-item.active') || {}).getAttribute?.('data-category') || 'all';
+            const years = getMemberGradeYears();
+            let html = '';
+            html += '<div class="member-nav-item' + (active === 'all' ? ' active' : '') + '" data-category="all" onclick="switchMemberCategory(\'all\', this)" style="padding:12px 16px;cursor:pointer;border-left:3px solid ' + (active === 'all' ? '#667eea' : 'transparent') + ';background:' + (active === 'all' ? '#f0f4ff' : '') + ';color:' + (active === 'all' ? '#667eea' : '') + ';transition:all 0.2s;">全部成员</div>';
+            html += '<div class="member-nav-item' + (active === 'advisor' ? ' active' : '') + '" data-category="advisor" onclick="switchMemberCategory(\'advisor\', this)" style="padding:12px 16px;cursor:pointer;border-left:3px solid ' + (active === 'advisor' ? '#667eea' : 'transparent') + ';background:' + (active === 'advisor' ? '#f0f4ff' : '') + ';color:' + (active === 'advisor' ? '#667eea' : '') + ';transition:all 0.2s;">导师</div>';
+            years.forEach(function(y) {
+                const isActive = active === y;
+                html += '<div class="member-nav-item' + (isActive ? ' active' : '') + '" data-category="' + y + '" onclick="switchMemberCategory(\'' + y + '\', this)" style="padding:12px 16px;cursor:pointer;border-left:3px solid ' + (isActive ? '#667eea' : 'transparent') + ';background:' + (isActive ? '#f0f4ff' : '') + ';color:' + (isActive ? '#667eea' : '') + ';transition:all 0.2s;display:flex;justify-content:space-between;align-items:center;">'
+                    + '<span>' + y + '级</span>';
+                if (typeof canEditTeamMembers !== 'function' || canEditTeamMembers()) {
+                    html += '<span title="删除年级" onclick="event.stopPropagation();removeMemberGrade(\'' + y + '\')" style="color:#bbb;font-size:14px;padding:0 4px;line-height:1;">×</span>';
+                }
+                html += '</div>';
+            });
+            nav.innerHTML = html;
+        }
+
+        function renderMemberAllSections() {
+            const host = document.getElementById('memberCategoryAll');
+            if (!host) return;
+            const years = getMemberGradeYears();
+            let html = '';
+            html += '<div class="member-category-section" data-category="advisor" style="margin-bottom:24px;">'
+                + '<div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:12px 20px;border-radius:8px 8px 0 0;font-size:16px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;">'
+                + '<span>导师</span>'
+                + '<button type="button" onclick="showAddMemberModal(\'advisor\')" style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.45);color:#fff;padding:4px 12px;border-radius:6px;font-size:13px;cursor:pointer;">＋ 增加人员</button>'
+                + '</div>'
+                + '<div style="background:#f8f9fa;padding:16px;border-radius:0 0 8px 8px;display:flex;flex-wrap:wrap;gap:12px;" id="memberGridAdvisor"></div></div>';
+            years.forEach(function(y) {
+                html += '<div class="member-category-section" data-category="' + y + '" style="margin-bottom:24px;">'
+                    + '<div style="background:' + getMemberGradeGradient(y) + ';color:#fff;padding:12px 20px;border-radius:8px 8px 0 0;font-size:16px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;">'
+                    + '<span>' + y + '级</span>'
+                    + '<button type="button" onclick="showAddMemberModal(\'' + y + '\')" style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.45);color:#fff;padding:4px 12px;border-radius:6px;font-size:13px;cursor:pointer;">＋ 增加人员</button>'
+                    + '</div>'
+                    + '<div style="background:#f8f9fa;padding:16px;border-radius:0 0 8px 8px;display:flex;flex-wrap:wrap;gap:12px;" id="memberGrid' + y + '"></div></div>';
+            });
+            host.innerHTML = html;
+        }
+
+        function fillMemberCategorySelect(selected) {
+            const sel = document.getElementById('memberCategory');
+            if (!sel) return;
+            const years = getMemberGradeYears();
+            const cur = selected != null ? selected : sel.value;
+            let html = '<option value="">请选择分类</option><option value="advisor">导师</option>';
+            years.forEach(function(y) {
+                html += '<option value="' + y + '">' + y + '级</option>';
+            });
+            sel.innerHTML = html;
+            if (cur) sel.value = cur;
+            onMemberCategoryChange();
+        }
+
+        function onMemberCategoryChange() {
+            const cat = (document.getElementById('memberCategory') || {}).value || '';
+            const wrap = document.getElementById('memberGraduatedWrap');
+            if (wrap) wrap.style.display = cat === 'advisor' ? 'none' : '';
+            if (cat === 'advisor') {
+                const cb = document.getElementById('memberGraduated');
+                if (cb) cb.checked = false;
+            }
+        }
+
+        function isMemberGraduated(member) {
+            if (!member || member.category === 'advisor') return false;
+            return !!member.graduated;
+        }
+
+        function isAccountGraduated(account) {
+            if (!account) return false;
+            if (account.graduated === true || account.graduated === 'true' || account.graduated === 1) return true;
+            const name = String(account.realName || account.username || '').trim();
+            if (!name || !Array.isArray(teamMemberData)) return false;
+            const m = teamMemberData.find(function(x) {
+                return x && (x.name === name || (account.email && x.email === account.email));
+            });
+            return isMemberGraduated(m);
+        }
+
+        function getNotifiableTeamOwnerNames() {
+            const members = Array.isArray(teamMemberData) ? teamMemberData : [];
+            return members.filter(function(m) {
+                return m && m.name && !isMemberGraduated(m);
+            }).map(function(m) { return m.name; });
+        }
+
         function normalizeMemberCategory(value, title) {
             const raw = String(value || '').trim();
             if (raw === 'advisor' || raw === '导师') return 'advisor';
             const source = raw + ' ' + String(title || '');
-            const yearMatch = source.match(/20(22|23|24|25|26)/);
-            if (yearMatch) return '20' + yearMatch[1];
+            const yearMatch = source.match(/(20\d{2})/);
+            if (yearMatch && isMemberYearCategory(yearMatch[1])) return yearMatch[1];
             if (/教授|导师|博士后|高级工程师/.test(source) && !/研究生|硕士|博士生/.test(source)) return 'advisor';
-            return raw || '2024';
+            if (isMemberYearCategory(raw.replace(/级/g, ''))) return raw.replace(/级/g, '');
+            return raw.replace(/级/g, '') || '2024';
         }
 
         function normalizeTeamMemberName(name) {
@@ -15999,6 +16187,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 copy.name = normalizeTeamMemberName(copy.name);
                 copy.category = normalizeMemberCategory(copy.category, copy.title);
                 copy.title = String(copy.title || '').trim() || (copy.category === 'advisor' ? '导师' : copy.category + '级硕士研究生');
+                copy.graduated = copy.category === 'advisor' ? false : !!copy.graduated;
                 if (!copy.id) copy.id = nextId++;
                 return copy;
             }).filter(function(m) {
@@ -16022,6 +16211,53 @@ ${JSON.stringify(excelDataArray, null, 2)}
             return 'member' + member.id;
         }
 
+        function getPreferredStudentId(member) {
+            const preferredMap = {
+                '王丽萍': 'admin',
+                '王明': 'leader01',
+                '陈浩': 'stu001',
+                '赵芳': 'stu002',
+                '罗文文': 'luowenwen326',
+                '罗钧': 'jluo'
+            };
+            if (member && preferredMap[member.name]) return preferredMap[member.name];
+            try {
+                if (typeof accountData !== 'undefined' && Array.isArray(accountData)) {
+                    const existing = accountData.find(function(a) {
+                        return a && a.role !== 'visitor' && a.realName === member.name;
+                    });
+                    if (existing && existing.studentId) return existing.studentId;
+                }
+            } catch (e) {}
+            return getMemberStudentId(member);
+        }
+
+        function accountMatchesTeamMember(a, m, preferredStudentId) {
+            if (!a || !m || a.role === 'visitor') return false;
+            if (a.teamMemberId != null && Number(a.teamMemberId) === Number(m.id)) return true;
+            if (a.realName && m.name && a.realName === m.name) return true;
+            if (m.email && a.email && String(a.email).toLowerCase() === String(m.email).toLowerCase()) return true;
+            if (preferredStudentId && a.studentId === preferredStudentId) return true;
+            const autoId = getMemberStudentId(m);
+            if (autoId && a.studentId === autoId) return true;
+            return false;
+        }
+
+        function scoreLinkedAccount(a, preferredStudentId) {
+            let s = 0;
+            try {
+                if (typeof currentUser !== 'undefined' && currentUser && Number(currentUser.id) === Number(a.id)) s += 10000;
+            } catch (e0) {}
+            if (preferredStudentId && a.studentId === preferredStudentId) s += 500;
+            if (a.studentId === 'admin') s += 200;
+            if (a.lastLogin) s += 80;
+            if (a.role === 'leader') s += 40;
+            if (a.role === 'admin') s += 20;
+            if (a.status === 'active') s += 10;
+            s -= (Number(a.id) || 0) * 0.001;
+            return s;
+        }
+
         function syncTeamMembersAcrossSystem() {
             const members = normalizeTeamMembers(teamMemberData);
             teamMemberData = members;
@@ -16041,55 +16277,162 @@ ${JSON.stringify(excelDataArray, null, 2)}
             localStorage.setItem('memberData', JSON.stringify(legacyMembers));
             try { if (typeof cloudUpsert === 'function') cloudUpsert('memberData', JSON.stringify(legacyMembers)); } catch (e) {}
 
-            if (typeof accountData !== 'undefined' && Array.isArray(accountData)) {
-                let changed = false;
-                let nextId = accountData.length > 0 ? Math.max(...accountData.map(a => Number(a.id) || 0)) + 1 : 1;
-                members.forEach(function(m) {
-                    const studentId = getMemberStudentId(m);
-                    let acc = accountData.find(function(a) {
-                        return a.realName === m.name || (m.email && a.email === m.email) || (studentId && a.studentId === studentId);
+            if (typeof accountData === 'undefined' || !Array.isArray(accountData)) {
+                reconcileCollaborativeDataWithTeamMembers();
+                return;
+            }
+
+            let changed = false;
+            let nextId = accountData.length > 0 ? Math.max(...accountData.map(a => Number(a.id) || 0)) + 1 : 1;
+            const linkedAccountIds = new Set();
+            const removeAccountIds = new Set();
+
+            members.forEach(function(m) {
+                const preferredStudentId = getPreferredStudentId(m);
+                const candidates = accountData.filter(function(a) {
+                    if (removeAccountIds.has(a.id)) return false;
+                    return accountMatchesTeamMember(a, m, preferredStudentId);
+                });
+
+                let role = 'student';
+                if (m.category === 'advisor') role = 'admin';
+                else if (candidates.some(function(c) { return c.role === 'leader'; })) role = 'leader';
+                else role = getMemberRole(m);
+
+                const patch = {
+                    realName: m.name,
+                    role: role,
+                    grade: m.category === 'advisor' ? '' : (m.category + '级'),
+                    research: m.research || '',
+                    phone: m.phone || '',
+                    email: m.email || '',
+                    avatar: m.avatar || '',
+                    graduated: !!m.graduated,
+                    fromTeam: true,
+                    teamMemberId: m.id,
+                    teamOrphan: false
+                };
+
+                let primary = null;
+                if (candidates.length) {
+                    candidates.sort(function(a, b) {
+                        return scoreLinkedAccount(b, preferredStudentId) - scoreLinkedAccount(a, preferredStudentId);
                     });
-                    const patch = {
-                        realName: m.name,
-                        role: getMemberRole(m),
-                        grade: m.category === 'advisor' ? '' : (m.category + '级'),
-                        research: m.research || '',
-                        phone: m.phone || '',
-                        email: m.email || '',
-                        avatar: m.avatar || ''
-                    };
-                    if (acc) {
-                        Object.keys(patch).forEach(function(k) {
-                            if ((patch[k] || '') !== (acc[k] || '')) {
-                                acc[k] = patch[k];
+                    primary = candidates[0];
+                    // 合并重复账号：保留主账号，删除同名/同邮箱的多余正式账号
+                    candidates.slice(1).forEach(function(dup) {
+                        if (dup.lastLogin && !primary.lastLogin) primary.lastLogin = dup.lastLogin;
+                        if (dup.lastLoginIp && !primary.lastLoginIp) primary.lastLoginIp = dup.lastLoginIp;
+                        if (dup.password && primary.mustChangePwd && !dup.mustChangePwd) {
+                            primary.password = dup.password;
+                            primary.mustChangePwd = dup.mustChangePwd;
+                        }
+                        if (dup.group && !primary.group) primary.group = dup.group;
+                        removeAccountIds.add(dup.id);
+                        changed = true;
+                    });
+                    // 若主账号不是首选登录名，且首选名未被占用，则改用首选学号（如王丽萍→admin）
+                    if (preferredStudentId && primary.studentId !== preferredStudentId) {
+                        const preferredTaken = accountData.some(function(a) {
+                            return a && a.id !== primary.id && !removeAccountIds.has(a.id) && a.studentId === preferredStudentId;
+                        });
+                        if (!preferredTaken) {
+                            primary.studentId = preferredStudentId;
+                            changed = true;
+                        }
+                    }
+                    Object.keys(patch).forEach(function(k) {
+                        if (k === 'graduated' || k === 'fromTeam' || k === 'teamOrphan' || typeof patch[k] === 'boolean' || typeof patch[k] === 'number') {
+                            if (patch[k] !== primary[k]) {
+                                primary[k] = patch[k];
                                 changed = true;
                             }
-                        });
-                    } else {
-                        accountData.push(Object.assign({
-                            id: nextId++,
-                            studentId: studentId,
-                            group: '',
-                            status: 'active',
-                            password: (typeof DEFAULT_PASSWORD !== 'undefined' ? DEFAULT_PASSWORD : '123456'),
-                            mustChangePwd: true,
-                            firstLogin: true,
-                            lastLogin: '',
-                            lastLoginIp: '',
-                            createdAt: new Date().toISOString().split('T')[0],
-                            loginFailCount: 0,
-                            lockedUntil: null
-                        }, patch));
-                        changed = true;
-                    }
-                });
-                if (changed) {
-                    localStorage.setItem('accountData', JSON.stringify(accountData));
-                    try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
+                        } else if ((patch[k] || '') !== (primary[k] || '')) {
+                            primary[k] = patch[k];
+                            changed = true;
+                        }
+                    });
+                } else {
+                    primary = Object.assign({
+                        id: nextId++,
+                        studentId: preferredStudentId,
+                        group: '',
+                        status: 'active',
+                        password: (typeof DEFAULT_PASSWORD !== 'undefined' ? DEFAULT_PASSWORD : '123456'),
+                        mustChangePwd: true,
+                        firstLogin: true,
+                        lastLogin: '',
+                        lastLoginIp: '',
+                        createdAt: new Date().toISOString().split('T')[0],
+                        loginFailCount: 0,
+                        lockedUntil: null
+                    }, patch);
+                    accountData.push(primary);
+                    changed = true;
                 }
+                if (primary) linkedAccountIds.add(primary.id);
+            });
+
+            // 全局清理：非访客且未关联当前团队成员的账号一律移除（访客例外）
+            let currentId = null;
+            try { if (typeof currentUser !== 'undefined' && currentUser) currentId = currentUser.id; } catch (e1) {}
+            accountData.forEach(function(a) {
+                if (!a || a.role === 'visitor') return;
+                if (linkedAccountIds.has(a.id)) return;
+                // 当前登录用户若成了孤儿，先保留以免被踢出，但仍标记
+                if (currentId != null && Number(a.id) === Number(currentId)) {
+                    if (!a.teamOrphan) { a.teamOrphan = true; changed = true; }
+                    return;
+                }
+                removeAccountIds.add(a.id);
+            });
+
+            if (removeAccountIds.size) {
+                const before = accountData.length;
+                accountData = accountData.filter(function(a) { return a && !removeAccountIds.has(a.id); });
+                if (accountData.length !== before) changed = true;
+            }
+
+            if (changed) {
+                localStorage.setItem('accountData', JSON.stringify(accountData));
+                try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
             }
 
             reconcileCollaborativeDataWithTeamMembers();
+        }
+
+        /** 强制按团队档案清理账号库（访客保留），供账号页一键联动 */
+        function purgeAccountsNotInTeam(options) {
+            options = options || {};
+            syncTeamMembersAcrossSystem();
+            const members = Array.isArray(teamMemberData) ? teamMemberData : [];
+            const keepIds = new Set();
+            members.forEach(function(m) {
+                const preferred = getPreferredStudentId(m);
+                accountData.forEach(function(a) {
+                    if (accountMatchesTeamMember(a, m, preferred)) keepIds.add(a.id);
+                });
+            });
+            const before = accountData.slice();
+            const removed = [];
+            accountData = accountData.filter(function(a) {
+                if (!a) return false;
+                if (a.role === 'visitor') return true;
+                if (keepIds.has(a.id)) return true;
+                removed.push(a);
+                return false;
+            });
+            if (removed.length) {
+                localStorage.setItem('accountData', JSON.stringify(accountData));
+                try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
+            }
+            if (typeof renderAccountTable === 'function') renderAccountTable();
+            if (!options.silent) {
+                alert(removed.length
+                    ? ('已清理 ' + removed.length + ' 个非团队正式账号：\n' + removed.map(function(a) { return a.studentId + '（' + a.realName + '）'; }).join('\n'))
+                    : '账号已与团队成员档案完全对齐，无需清理');
+            }
+            return removed.length;
         }
 
         function replaceUnknownOwnerWithTeamMember(ownerName) {
@@ -16248,6 +16591,17 @@ ${JSON.stringify(excelDataArray, null, 2)}
             card.appendChild(avatar);
             card.appendChild(nameEl);
             card.appendChild(titleEl);
+            if (isMemberGraduated(m)) {
+                const badge = document.createElement('div');
+                badge.style.cssText = 'margin-top:8px;display:inline-block;padding:2px 8px;border-radius:10px;background:#f5f5f5;color:#888;font-size:11px;border:1px solid #e8e8e8;';
+                badge.textContent = '已毕业';
+                card.appendChild(badge);
+            } else if (m.category !== 'advisor') {
+                const badge = document.createElement('div');
+                badge.style.cssText = 'margin-top:8px;display:inline-block;padding:2px 8px;border-radius:10px;background:#e6f7ff;color:#1890ff;font-size:11px;border:1px solid #91d5ff;';
+                badge.textContent = '在读';
+                card.appendChild(badge);
+            }
             return card;
         }
 
@@ -16261,10 +16615,23 @@ ${JSON.stringify(excelDataArray, null, 2)}
             return card;
         }
         
+        function getMemberGridCategories() {
+            return ['advisor'].concat(getMemberGradeYears());
+        }
+
+        function memberGridId(cat) {
+            return cat === 'advisor' ? 'memberGridAdvisor' : ('memberGrid' + cat);
+        }
+        
         function renderTeamMembers() {
-            const categories = { advisor: 'memberGridAdvisor', '2022': 'memberGrid2022', '2023': 'memberGrid2023', '2024': 'memberGrid2024', '2025': 'memberGrid2025', '2026': 'memberGrid2026' };
-            Object.entries(categories).forEach(([cat, gridId]) => {
-                const grid = document.getElementById(gridId);
+            ensureMemberGradeYears();
+            renderMemberNav((document.querySelector('.member-nav-item.active') || {}).getAttribute?.('data-category') || 'all');
+            const allVisible = document.getElementById('memberCategoryAll');
+            if (allVisible && allVisible.style.display !== 'none') {
+                renderMemberAllSections();
+            }
+            getMemberGridCategories().forEach(function(cat) {
+                const grid = document.getElementById(memberGridId(cat));
                 if (!grid) return;
                 const members = teamMemberData.filter(m => m.category === cat);
                 grid.innerHTML = '';
@@ -16283,9 +16650,15 @@ ${JSON.stringify(excelDataArray, null, 2)}
             editingMemberId = null;
             document.getElementById('memberEditModalTitle').textContent = '新增成员';
             document.getElementById('memberName').value = '';
+            fillMemberCategorySelect(preselectCategory || '');
             document.getElementById('memberCategory').value = preselectCategory || '';
-            const defaultTitles = { advisor: '导师', '2022': '2022级硕士研究生', '2023': '2023级硕士研究生', '2024': '2024级硕士研究生', '2025': '2025级硕士研究生', '2026': '2026级硕士研究生' };
-            document.getElementById('memberTitle').value = (preselectCategory && defaultTitles[preselectCategory]) ? defaultTitles[preselectCategory] : '';
+            onMemberCategoryChange();
+            const titleEl = document.getElementById('memberTitle');
+            if (preselectCategory === 'advisor') titleEl.value = '导师';
+            else if (isMemberYearCategory(preselectCategory)) titleEl.value = preselectCategory + '级硕士研究生';
+            else titleEl.value = '';
+            const graduatedCb = document.getElementById('memberGraduated');
+            if (graduatedCb) graduatedCb.checked = false;
             document.getElementById('memberResearch').value = '';
             document.getElementById('memberEducation').value = '';
             document.getElementById('memberPhone').value = '';
@@ -16308,8 +16681,12 @@ ${JSON.stringify(excelDataArray, null, 2)}
             editingMemberId = id;
             document.getElementById('memberEditModalTitle').textContent = '编辑成员';
             document.getElementById('memberName').value = m.name;
+            fillMemberCategorySelect(m.category);
             document.getElementById('memberCategory').value = m.category;
+            onMemberCategoryChange();
             document.getElementById('memberTitle').value = m.title;
+            const graduatedCb = document.getElementById('memberGraduated');
+            if (graduatedCb) graduatedCb.checked = !!m.graduated;
             document.getElementById('memberResearch').value = m.research || '';
             document.getElementById('memberEducation').value = m.education || '';
             document.getElementById('memberPhone').value = m.phone || '';
@@ -16325,8 +16702,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
             const category = document.getElementById('memberCategory').value;
             const title = document.getElementById('memberTitle').value.trim();
             if (!name || !category || !title) { alert('请填写姓名、分类和职称/身份'); return; }
+            const graduatedEl = document.getElementById('memberGraduated');
             const data = {
                 name, category, title,
+                graduated: category === 'advisor' ? false : !!(graduatedEl && graduatedEl.checked),
                 research: document.getElementById('memberResearch').value.trim(),
                 education: document.getElementById('memberEducation').value.trim(),
                 phone: document.getElementById('memberPhone').value.trim(),
@@ -16350,7 +16729,16 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 const newId = teamMemberData.length > 0 ? Math.max(...teamMemberData.map(d => d.id)) + 1 : 1;
                 teamMemberData.push({ id: newId, ...data, avatar: '', fileName: '' });
             }
+            if (isMemberYearCategory(category)) {
+                const years = getMemberGradeYears();
+                if (years.indexOf(category) < 0) {
+                    years.push(category);
+                    saveMemberGradeYears(years);
+                }
+            }
             saveTeamMemberData();
+            renderMemberNav(category === 'advisor' ? 'advisor' : (isMemberYearCategory(category) ? category : 'all'));
+            renderMemberAllSections();
             renderTeamMembers();
             const single = document.getElementById('memberCategorySingle');
             if (single && single.style.display !== 'none') {
@@ -16366,11 +16754,28 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 alert('当前角色无「团队成员档案（编辑）」权限');
                 return;
             }
-            if (!confirm('确定要删除该成员吗？')) return;
+            if (!confirm('确定要删除该成员吗？\n关联的登录账号（非访客）将一并清理。')) return;
+            const removed = teamMemberData.find(d => d.id === id);
             teamMemberData = teamMemberData.filter(d => d.id !== id);
+            // 全局联动：删除对应正式账号
+            try {
+                if (removed && typeof accountData !== 'undefined' && Array.isArray(accountData)) {
+                    const preferred = typeof getPreferredStudentId === 'function' ? getPreferredStudentId(removed) : '';
+                    accountData = accountData.filter(function(a) {
+                        if (!a || a.role === 'visitor') return true;
+                        if (typeof accountMatchesTeamMember === 'function' && accountMatchesTeamMember(a, removed, preferred)) return false;
+                        if (a.teamMemberId != null && Number(a.teamMemberId) === Number(removed.id)) return false;
+                        if (a.realName === removed.name) return false;
+                        return true;
+                    });
+                    localStorage.setItem('accountData', JSON.stringify(accountData));
+                    try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e2) {}
+                }
+            } catch (eDelAcc) {}
             saveTeamMemberData();
             renderTeamMembers();
             switchMemberCategory('all', document.querySelector('.member-nav-item.active') || document.querySelector('.member-nav-item'));
+            try { if (typeof renderAccountTable === 'function') renderAccountTable(); } catch (e3) {}
         }
         
         function compressMemberAvatar(img, maxSize, quality) {
@@ -16474,7 +16879,9 @@ ${JSON.stringify(excelDataArray, null, 2)}
             const m = teamMemberData.find(d => d.id === id);
             if (!m) return;
             const content = document.getElementById('memberDetailContent');
-            const categoryLabels = { advisor: '导师', '2022': '2022级', '2023': '2023级', '2024': '2024级', '2025': '2025级', '2026': '2026级' };
+            const graduatedBadge = m.category === 'advisor' ? '' : (isMemberGraduated(m)
+                ? '<div style="display:inline-block;background:#f5f5f5;color:#888;padding:4px 12px;border-radius:20px;font-size:12px;margin-top:8px;margin-left:6px;border:1px solid #e8e8e8;">已毕业（不接收通知）</div>'
+                : '<div style="display:inline-block;background:#e6f7ff;color:#1890ff;padding:4px 12px;border-radius:20px;font-size:12px;margin-top:8px;margin-left:6px;border:1px solid #91d5ff;">在读</div>');
             content.innerHTML = `
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div id="memberAvatarPreview">
@@ -16483,7 +16890,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
                     <p style="font-size:12px;color:#667eea;margin-top:4px;cursor:pointer;" onclick="changeMemberAvatar(${m.id})">点击更换头像</p>
                     <div id="memberAvatarPendingTip" style="display:${(pendingMemberAvatar && pendingMemberAvatar.id === m.id) ? 'block' : 'none'};margin:10px auto 0;padding:8px 12px;background:#f6ffed;border:1px solid #b7eb8f;border-radius:8px;color:#389e0d;font-size:12px;width:fit-content;">已选择新头像，请点击下方「保存头像」完成保存与同步</div>
                     <h2 style="margin: 12px 0 0; color: #333;">${m.name}</h2>
-                    <div style="display: inline-block; background: #667eea; color: #fff; padding: 4px 16px; border-radius: 20px; font-size: 13px; margin-top: 8px;">${categoryLabels[m.category]}</div>
+                    <div style="display: inline-block; background: #667eea; color: #fff; padding: 4px 16px; border-radius: 20px; font-size: 13px; margin-top: 8px;">${getMemberCategoryLabel(m.category)}</div>${graduatedBadge}
                 </div>
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 16px;">
                     <h4 style="margin: 0 0 8px; color: #333;">个人简介</h4>
@@ -16539,20 +16946,32 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 element.style.borderLeftColor = '#667eea';
                 element.style.background = '#f0f4ff';
                 element.style.color = '#667eea';
+            } else {
+                const navItem = document.querySelector('.member-nav-item[data-category="' + category + '"]');
+                if (navItem) {
+                    navItem.classList.add('active');
+                    navItem.style.borderLeftColor = '#667eea';
+                    navItem.style.background = '#f0f4ff';
+                    navItem.style.color = '#667eea';
+                }
             }
             
             if (category === 'all') {
                 document.getElementById('memberCategoryAll').style.display = 'block';
                 document.getElementById('memberCategorySingle').style.display = 'none';
+                renderMemberAllSections();
+                renderTeamMembers();
             } else {
                 document.getElementById('memberCategoryAll').style.display = 'none';
                 document.getElementById('memberCategorySingle').style.display = 'block';
                 const members = teamMemberData.filter(m => m.category === category);
-                const categoryLabels = { advisor: '导师', '2022': '2022级', '2023': '2023级', '2024': '2024级', '2025': '2025级', '2026': '2026级' };
+                const headerBg = category === 'advisor'
+                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    : getMemberGradeGradient(category);
                 const single = document.getElementById('memberCategorySingle');
                 single.innerHTML = `<div style="margin-bottom: 24px;">
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-                        <span>${categoryLabels[category]}</span>
+                    <div style="background: ${headerBg}; color: #fff; padding: 12px 20px; border-radius: 8px 8px 0 0; font-size: 16px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${getMemberCategoryLabel(category)}</span>
                         <button type="button" onclick="showAddMemberModal('${category}')" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">＋ 增加人员</button>
                     </div>
                     <div style="background: #f8f9fa; padding: 16px; border-radius: 0 0 8px 8px; display: flex; flex-wrap: wrap; gap: 12px;" id="singleMemberGrid"></div>
@@ -16572,9 +16991,8 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 return;
             }
             const filtered = teamMemberData.filter(m => m.name.toLowerCase().includes(keyword));
-            const categories = { advisor: 'memberGridAdvisor', '2022': 'memberGrid2022', '2023': 'memberGrid2023', '2024': 'memberGrid2024', '2025': 'memberGrid2025', '2026': 'memberGrid2026' };
-            Object.entries(categories).forEach(([cat, gridId]) => {
-                const grid = document.getElementById(gridId);
+            getMemberGridCategories().forEach(function(cat) {
+                const grid = document.getElementById(memberGridId(cat));
                 if (!grid) return;
                 grid.innerHTML = '';
                 filtered.filter(m => m.category === cat).forEach(m => { grid.appendChild(createMemberCard(m)); });
@@ -16586,9 +17004,9 @@ ${JSON.stringify(excelDataArray, null, 2)}
         
         function exportMembers() {
             if (teamMemberData.length === 0) { alert('没有可导出的数据'); return; }
-            let csv = '\ufeff姓名,分类,职称/身份,研究方向,教育背景,联系电话,电子邮箱,主持项目,获奖情况,个人简介\n';
+            let csv = '\ufeff姓名,分类,是否毕业,职称/身份,研究方向,教育背景,联系电话,电子邮箱,主持项目,获奖情况,个人简介\n';
             teamMemberData.forEach(d => {
-                csv += `"${d.name}","${d.category}","${d.title}","${d.research || ''}","${d.education || ''}","${d.phone || ''}","${d.email || ''}","${d.projects || ''}","${d.awards || ''}","${(d.bio || '').replace(/"/g, '""')}"\n`;
+                csv += `"${d.name}","${getMemberCategoryLabel(d.category)}","${isMemberGraduated(d) ? '已毕业' : (d.category === 'advisor' ? '-' : '在读')}","${d.title}","${d.research || ''}","${d.education || ''}","${d.phone || ''}","${d.email || ''}","${d.projects || ''}","${d.awards || ''}","${(d.bio || '').replace(/"/g, '""')}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -16698,7 +17116,10 @@ ${JSON.stringify(excelDataArray, null, 2)}
             let html = `<div style="padding:12px; background:#e8f5e9; border-radius:6px; color:#2e7d32; margin-bottom:12px;">✓ 成功识别 ${pendingImportMembers.length} 位成员，点击确认导入后会同步到账号权限和云端</div>`;
             html += '<div style="max-height:300px; overflow-y:auto; border:1px solid #eee; border-radius:6px; padding:8px;">';
             pendingImportMembers.forEach((m, idx) => {
-                const catLabels = { advisor: '导师', '2022': '2022级', '2023': '2023级', '2024': '2024级', '2025': '2025级', '2026': '2026级' };
+                const catLabels = {};
+                const years = typeof getMemberGradeYears === 'function' ? getMemberGradeYears() : ['2022','2023','2024','2025','2026'];
+                catLabels.advisor = '导师';
+                years.forEach(function(y) { catLabels[y] = y + '级'; });
                 const avatarSrc = importImages && importImages[idx] ? importImages[idx] : '';
                 const avatarHtml = avatarSrc ? `<img src="${avatarSrc}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; margin-right:12px;" />` : `<div style="width:40px; height:40px; border-radius:50%; background:#667eea; color:white; display:flex; justify-content:center; align-items:center; font-size:14px; margin-right:12px;">${(m.name || '未')[0]}</div>`;
                 html += `<div style="padding:8px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center;">
@@ -16708,7 +17129,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
                         <span style="color:#888; margin-left:8px;">${m.title || ''}</span>
                         <div style="font-size:12px;color:#999;margin-top:2px;">${m.phone || ''} ${m.email || ''}</div>
                     </div>
-                    <span style="font-size:12px; padding:2px 8px; background:#f0f0ff; border-radius:10px; color:#667eea;">${catLabels[m.category] || m.category || '未分类'}</span>
+                    <span style="font-size:12px; padding:2px 8px; background:#f0f0ff; border-radius:10px; color:#667eea;">${(typeof getMemberCategoryLabel === 'function' ? getMemberCategoryLabel(m.category) : (catLabels[m.category] || m.category || '未分类'))}${m.graduated ? ' · 已毕业' : ''}</span>
                 </div>`;
             });
             html += '</div>';
@@ -19117,13 +19538,9 @@ ${ocrText}`
         var start = function() {
             accountData = JSON.parse(localStorage.getItem('accountData') || 'null');
 
-            // 确保 5 个默认账号始终存在（兼容旧缓存）；姓名与团队真实成员对齐
+            // 仅保证访客演示账号存在；正式成员一律由团队档案全局联动生成，不再灌入演示学生账号
             const defaults = [
-                { id: 1, studentId: 'admin', realName: '王丽萍', role: 'admin', group: '', grade: '', research: '城市安全、智能运维、结构抗震', phone: '13996488662', email: 'wangliping98@163.com', mustChangePwd: false, firstLogin: false },
-                { id: 2, studentId: 'leader01', realName: '王明', role: 'leader', group: '第一小组', grade: '2022级', research: '自然语言处理、知识图谱', phone: '13800002001', email: 'wangm@university.edu.cn', mustChangePwd: true, firstLogin: true },
-                { id: 3, studentId: 'stu001', realName: '陈浩', role: 'student', group: '第一小组', grade: '2023级', research: '深度学习、图像分割', phone: '13800003001', email: 'chenh@university.edu.cn', mustChangePwd: true, firstLogin: true },
-                { id: 4, studentId: 'stu002', realName: '赵芳', role: 'student', group: '第二小组', grade: '2022级', research: '机器学习、数据挖掘', phone: '13800002002', email: 'zhaof@university.edu.cn', mustChangePwd: true, firstLogin: true },
-                { id: 5, studentId: 'visitor01', realName: '访客', role: 'visitor', group: '', grade: '', research: '', phone: '', email: 'visitor@example.com', mustChangePwd: true, firstLogin: true }
+                { id: 5, studentId: 'visitor01', realName: '访客', role: 'visitor', group: '', grade: '', research: '', phone: '', email: 'visitor@example.com', mustChangePwd: true, firstLogin: true, fromTeam: false }
             ];
 
             if (!accountData) { accountData = []; }
@@ -19142,6 +19559,17 @@ ${ocrText}`
             });
             if (migrateDemoAccountNames()) changed = true;
             if (changed) saveAccountData();
+            // 若本地已有团队成员数据，立即联动清理账号
+            try {
+                var rawTeam = localStorage.getItem('teamMemberData');
+                if (rawTeam && typeof syncTeamMembersAcrossSystem === 'function') {
+                    var parsedTeam = JSON.parse(rawTeam);
+                    if (Array.isArray(parsedTeam) && parsedTeam.length && typeof teamMemberData !== 'undefined') {
+                        teamMemberData = parsedTeam;
+                        syncTeamMembersAcrossSystem();
+                    }
+                }
+            } catch (eTeamSync) {}
             loginLogData = JSON.parse(localStorage.getItem('loginLogData') || '[]');
             permissionMatrix = JSON.parse(localStorage.getItem('permissionMatrix') || 'null');
             if (!permissionMatrix) {
@@ -19402,7 +19830,7 @@ ${ocrText}`
         if (loginLogData.length > 500) loginLogData = loginLogData.slice(-500);
         localStorage.setItem('loginLogData', JSON.stringify(loginLogData));
 
-        recordOperationLog('系统登录', '登录', `${account.realName}(${account.studentId}) 登录系统`, { studentId: account.studentId }, { success: true }, 1, '', 0);
+        recordOperationLog('系统登录', '登录', `${account.realName}(${account.studentId}) 登录系统`, { studentId: account.studentId, realName: account.realName, role: account.role }, { success: true }, 1, '', 0, account.id, account.realName);
 
         currentUser = account;
         try { window.currentUser = currentUser; } catch (eSync) {}
@@ -19675,34 +20103,100 @@ ${ocrText}`
     }
 
     // ===== 4. 账号管理 - 列表 =====
+    function findTeamMemberForAccount(account) {
+        if (!account || account.role === 'visitor') return null;
+        try {
+            if (typeof teamMemberData === 'undefined' || !Array.isArray(teamMemberData)) return null;
+            return teamMemberData.find(function(m) {
+                if (!m) return false;
+                const pref = typeof getPreferredStudentId === 'function' ? getPreferredStudentId(m) : '';
+                if (typeof accountMatchesTeamMember === 'function') {
+                    return accountMatchesTeamMember(account, m, pref);
+                }
+                if (account.teamMemberId && Number(m.id) === Number(account.teamMemberId)) return true;
+                if (account.realName && m.name === account.realName) return true;
+                if (account.email && m.email && account.email === m.email) return true;
+                return false;
+            }) || null;
+        } catch (e) { return null; }
+    }
+
+    function isVisitorAccount(account) {
+        return !!(account && account.role === 'visitor');
+    }
+
+    function getTeamMembersWithoutAccount() {
+        const members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData)) ? teamMemberData : [];
+        return members.filter(function(m) {
+            if (!m || !m.name) return false;
+            return !accountData.some(function(a) {
+                if (!a || a.role === 'visitor') return false;
+                return a.realName === m.name || (m.email && a.email === m.email) || (a.teamMemberId && Number(a.teamMemberId) === Number(m.id));
+            });
+        });
+    }
+
+    function getAccountGradeDisplay(a) {
+        const m = findTeamMemberForAccount(a);
+        if (m) {
+            if (m.category === 'advisor') return '-';
+            return (typeof getMemberCategoryLabel === 'function' ? getMemberCategoryLabel(m.category) : (m.category + '级'));
+        }
+        if (isVisitorAccount(a)) return '-';
+        return a.grade || '-';
+    }
+
+    function getAccountGraduatedDisplay(a) {
+        if (isVisitorAccount(a)) return '-';
+        const m = findTeamMemberForAccount(a);
+        const graduated = m ? (typeof isMemberGraduated === 'function' ? isMemberGraduated(m) : !!m.graduated) : !!a.graduated;
+        if (m && m.category === 'advisor') return '-';
+        return graduated ? '已毕业' : '在读';
+    }
+
     function renderAccountTable() {
+        try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (eSyncAcc) {}
+
         const search = (document.getElementById('accountSearchInput')?.value || '').toLowerCase();
         const roleFilter = document.getElementById('accountRoleFilter')?.value || '';
         const statusFilter = document.getElementById('accountStatusFilter')?.value || '';
 
         let filtered = accountData.filter(a => {
+            if (!a) return false;
+            // 全局联动：列表只显示「访客」+「已关联团队成员」的正式账号
+            if (!isVisitorAccount(a)) {
+                const linked = findTeamMemberForAccount(a);
+                if (!linked) return false;
+            }
             if (search && !a.studentId.toLowerCase().includes(search) && !a.realName.toLowerCase().includes(search)) return false;
             if (roleFilter && a.role !== roleFilter) return false;
             if (statusFilter && a.status !== statusFilter) return false;
-            // 数据隔离：学生只能看自己
             if (currentUser && currentUser.role === 'student' && a.id !== currentUser.id) return false;
-            // 数据隔离：组长只能看本组
             if (currentUser && currentUser.role === 'leader' && a.group !== currentUser.group && a.id !== currentUser.id) return false;
             return true;
         });
 
         const totalPages = Math.ceil(filtered.length / ACCOUNTS_PER_PAGE) || 1;
         if (accountPage > totalPages) accountPage = totalPages;
-        const start = (accountPage - 1) * ACCOUNTS_PER_PAGE;
-        const pageData = filtered.slice(start, start + ACCOUNTS_PER_PAGE);
+        const startIdx = (accountPage - 1) * ACCOUNTS_PER_PAGE;
+        const pageData = filtered.slice(startIdx, startIdx + ACCOUNTS_PER_PAGE);
 
         const tbody = document.getElementById('accountTableBody');
         if (!tbody) return;
-        tbody.innerHTML = pageData.map(a => `
+        tbody.innerHTML = pageData.map(a => {
+            const gradeText = getAccountGradeDisplay(a);
+            const gradText = getAccountGraduatedDisplay(a);
+            const gradStyle = gradText === '已毕业' ? 'color:#888;background:#f5f5f5;' : (gradText === '在读' ? 'color:#1890ff;background:#e6f7ff;' : '');
+            const sourceTip = isVisitorAccount(a)
+                ? '<div style="font-size:11px;color:#e65100;margin-top:2px;">访客（独立账号）</div>'
+                : '<div style="font-size:11px;color:#52c41a;margin-top:2px;">来自团队管理</div>';
+            return `
             <tr>
-                <td><strong>${escHtml(a.studentId)}</strong></td>
+                <td><strong>${escHtml(a.studentId)}</strong>${sourceTip}</td>
                 <td>${escHtml(a.realName)}</td>
                 <td><span class="role-badge ${ROLE_BADGE_CLASS[a.role] || ''}">${ROLE_LABELS[a.role] || a.role}</span></td>
+                <td>${escHtml(gradeText)}</td>
+                <td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;${gradStyle}">${escHtml(gradText)}</span></td>
                 <td>${escHtml(a.group || '-')}</td>
                 <td>${escHtml(a.email || '-')}</td>
                 <td><span class="status-dot ${a.status}"></span>${a.status === 'active' ? '已启用' : '已禁用'}</td>
@@ -19711,17 +20205,19 @@ ${ocrText}`
                     <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="showEditAccountModal(${a.id})">编辑</button>
                     ${a.role !== 'admin' ? `<button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;color:#1565c0;" onclick="resetAccountPassword(${a.id})">重置密码</button>` : ''}
                     ${a.role !== 'admin' ? `<button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;color:#e65100;" onclick="toggleAccountStatus(${a.id})">${a.status === 'active' ? '禁用' : '启用'}</button>` : ''}
-                    ${a.role === 'student' && a.status === 'active' ? `<button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;color:#666;" onclick="graduateAccount(${a.id})">毕业归档</button>` : ''}
+                    ${(a.role === 'student' || a.role === 'leader') && a.status === 'active' && gradText !== '已毕业' ? `<button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;color:#666;" onclick="graduateAccount(${a.id})">毕业归档</button>` : ''}
                     <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;color:#555;" onclick="showLoginLogModal('${escHtml(a.studentId)}')">日志</button>
                     ${a.role !== 'admin' && currentUser && currentUser.role === 'admin' ? `<button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;color:#e53935;" onclick="deleteAccount(${a.id})">删除</button>` : ''}
                 </td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
 
         const pagDiv = document.getElementById('accountPagination');
         if (pagDiv) {
+            const teamCount = filtered.filter(a => !isVisitorAccount(a)).length;
+            const visitorCount = filtered.filter(a => isVisitorAccount(a)).length;
             pagDiv.innerHTML = `
-                <span>共 ${filtered.length} 条</span>
+                <span>共 ${filtered.length} 条（团队 ${teamCount} · 访客 ${visitorCount}）</span>
                 <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="accountPage=1;renderAccountTable()" ${accountPage<=1?'disabled':''}>首页</button>
                 <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="accountPage--;renderAccountTable()" ${accountPage<=1?'disabled':''}>上一页</button>
                 <span>${accountPage} / ${totalPages}</span>
@@ -19732,59 +20228,210 @@ ${ocrText}`
     function filterAccountTable() { accountPage = 1; renderAccountTable(); }
 
     function showAddAccountModal() {
+        showAddVisitorAccountModal();
+    }
+
+    function showAddVisitorAccountModal() {
         if (!hasPermission('账号管理（新建/删除）')) { alert('当前角色无「账号管理（新建/删除）」权限'); return; }
-        document.body.appendChild(createAccountModal('新建账号'));
+        document.body.appendChild(createAccountModal('新建访客账号', null, { mode: 'visitor' }));
+    }
+
+    function showOpenTeamAccountModal() {
+        if (!hasPermission('账号管理（新建/删除）')) { alert('当前角色无「账号管理（新建/删除）」权限'); return; }
+        try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (e0) {}
+        const pending = getTeamMembersWithoutAccount();
+        if (!pending.length) {
+            alert('所有团队成员均已开通账号。\n如需新增正式成员，请先到「团队成员档案」添加人员。');
+            return;
+        }
+        const modalId = 'openTeamAccountModal_' + Date.now();
+        const div = document.createElement('div');
+        div.id = modalId;
+        div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;';
+        div.innerHTML = `
+            <div style="background:#fff;border-radius:12px;padding:28px;width:520px;max-width:90vw;max-height:85vh;overflow-y:auto;">
+                <h3 style="margin:0 0 12px;">从团队成员开通账号</h3>
+                <p style="margin:0 0 16px;font-size:13px;color:#666;line-height:1.6;">以下成员已在「团队成员档案」中，但尚未开通登录账号。选择后将自动带入姓名、年级等信息。</p>
+                <div class="form-group">
+                    <label>选择团队成员<span style="color:red;">*</span></label>
+                    <select id="openTeamMemberPick" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;" onchange="onOpenTeamMemberPickChange()">
+                        <option value="">请选择</option>
+                        ${pending.map(function(m) {
+                            const label = (typeof getMemberCategoryLabel === 'function' ? getMemberCategoryLabel(m.category) : m.category) + ' · ' + m.name;
+                            return '<option value="' + m.id + '">' + escHtml(label) + '</option>';
+                        }).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>登录学号/用户名<span style="color:red;">*</span></label>
+                    <input type="text" id="openTeamStudentId" placeholder="将作为登录账号" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                </div>
+                <div class="form-group">
+                    <label>角色</label>
+                    <select id="openTeamRole" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                        <option value="student">学生</option>
+                        <option value="leader">组长</option>
+                        <option value="admin">导师</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>所属小组</label>
+                    <select id="openTeamGroup" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                        <option value="">请选择小组</option>
+                        ${GROUPS.map(g => '<option value="' + g + '">' + g + '</option>').join('')}
+                    </select>
+                </div>
+                <div id="openTeamMemberPreview" style="display:none;padding:10px 12px;background:#f6ffed;border:1px solid #b7eb8f;border-radius:8px;font-size:13px;color:#389e0d;margin-bottom:12px;"></div>
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+                    <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
+                    <button class="btn" onclick="confirmOpenTeamAccount('${modalId}')">开通账号</button>
+                </div>
+            </div>`;
+        document.body.appendChild(div);
+    }
+
+    function onOpenTeamMemberPickChange() {
+        const pick = document.getElementById('openTeamMemberPick');
+        const preview = document.getElementById('openTeamMemberPreview');
+        const sid = document.getElementById('openTeamStudentId');
+        const roleSel = document.getElementById('openTeamRole');
+        if (!pick || !pick.value) {
+            if (preview) preview.style.display = 'none';
+            return;
+        }
+        const m = (teamMemberData || []).find(function(x) { return Number(x.id) === Number(pick.value); });
+        if (!m) return;
+        if (sid && !sid.value) {
+            sid.value = (typeof getMemberStudentId === 'function' ? getMemberStudentId(m) : ('member' + m.id));
+        }
+        if (roleSel) roleSel.value = m.category === 'advisor' ? 'admin' : 'student';
+        if (preview) {
+            const grade = m.category === 'advisor' ? '导师' : ((typeof getMemberCategoryLabel === 'function' ? getMemberCategoryLabel(m.category) : m.category + '级') + (m.graduated ? ' · 已毕业' : ' · 在读'));
+            preview.style.display = 'block';
+            preview.innerHTML = '将开通：<strong>' + escHtml(m.name) + '</strong>（' + escHtml(grade) + '）' + (m.email ? ' · ' + escHtml(m.email) : '');
+        }
+    }
+
+    function confirmOpenTeamAccount(modalId) {
+        const pick = document.getElementById('openTeamMemberPick');
+        const sidEl = document.getElementById('openTeamStudentId');
+        const roleEl = document.getElementById('openTeamRole');
+        const groupEl = document.getElementById('openTeamGroup');
+        if (!pick || !pick.value) { alert('请选择团队成员'); return; }
+        const studentId = (sidEl && sidEl.value || '').trim();
+        if (!studentId) { alert('请填写登录学号/用户名'); return; }
+        if (accountData.find(a => a.studentId === studentId)) { alert('该学号已存在，不可重复'); return; }
+        const m = (teamMemberData || []).find(function(x) { return Number(x.id) === Number(pick.value); });
+        if (!m) { alert('团队成员不存在'); return; }
+        let role = (roleEl && roleEl.value) || 'student';
+        if (m.category === 'advisor') role = 'admin';
+        else if (role === 'admin') role = 'student';
+        const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
+        accountData.push({
+            id: newId,
+            studentId: studentId,
+            realName: m.name,
+            role: role,
+            group: role === 'admin' ? '' : ((groupEl && groupEl.value) || ''),
+            grade: m.category === 'advisor' ? '' : (m.category + '级'),
+            graduated: !!m.graduated,
+            research: m.research || '',
+            phone: m.phone || '',
+            email: m.email || '',
+            avatar: m.avatar || '',
+            fromTeam: true,
+            teamMemberId: m.id,
+            status: 'active',
+            password: DEFAULT_PASSWORD,
+            mustChangePwd: true,
+            firstLogin: true,
+            lastLogin: '',
+            lastLoginIp: '',
+            createdAt: new Date().toISOString().split('T')[0],
+            loginFailCount: 0,
+            lockedUntil: null
+        });
+        saveAccountData();
+        document.getElementById(modalId)?.remove();
+        renderAccountTable();
+        recordOperationLog('账号管理', '新增', '从团队开通账号：' + m.name + '(' + studentId + ')', { studentId: studentId, realName: m.name, role: role }, { success: true }, 1, '', 0);
+        alert('已为「' + m.name + '」开通账号\n登录账号：' + studentId + '\n初始密码：' + DEFAULT_PASSWORD);
     }
 
     function showEditAccountModal(id) {
         const account = accountData.find(a => a.id === id);
         if (!account) return;
-        document.body.appendChild(createAccountModal('编辑账号', account));
+        const mode = isVisitorAccount(account) ? 'visitor' : 'team';
+        document.body.appendChild(createAccountModal('编辑账号', account, { mode: mode }));
     }
 
-    function createAccountModal(title, account) {
+    function createAccountModal(title, account, options) {
         const isEdit = !!account;
+        options = options || {};
+        const mode = options.mode || (isEdit && isVisitorAccount(account) ? 'visitor' : (isEdit ? 'team' : 'visitor'));
+        const isVisitorMode = mode === 'visitor';
+        const teamMember = isEdit && !isVisitorMode ? findTeamMemberForAccount(account) : null;
         const modalId = 'accountModal_' + Date.now();
         const div = document.createElement('div');
         div.id = modalId;
         div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:5000;display:flex;justify-content:center;align-items:center;';
+        const gradeValue = teamMember
+            ? (teamMember.category === 'advisor' ? '' : (teamMember.category + '级'))
+            : (account && account.grade || '');
+        const graduatedChecked = teamMember ? !!teamMember.graduated : !!(account && account.graduated);
+        const tipHtml = isVisitorMode
+            ? '<div style="margin-bottom:14px;padding:10px 12px;background:#fff7e6;border:1px solid #ffd591;border-radius:8px;font-size:12px;color:#ad6800;line-height:1.5;">访客为独立账号，不进入「团队成员档案」。</div>'
+            : '<div style="margin-bottom:14px;padding:10px 12px;background:#f0f5ff;border:1px solid #adc6ff;border-radius:8px;font-size:12px;color:#1d39c4;line-height:1.5;">正式成员资料来自「团队成员档案」。姓名/年级/毕业状态请在团队管理中修改；此处可调整小组、角色与启用状态。</div>';
+        const nameReadonly = !isVisitorMode && isEdit;
+        const gradeReadonly = !isVisitorMode;
+        const roleOptions = isVisitorMode
+            ? '<option value="visitor" selected>访客（外校交流生/实习生）</option>'
+            : ('<option value="admin" ' + (isEdit && account.role==='admin'?'selected':'') + '>导师（超级管理员）</option>'
+                + '<option value="leader" ' + (isEdit && account.role==='leader'?'selected':'') + '>组长（大师兄/大师姐）</option>'
+                + '<option value="student" ' + ((!isEdit || account.role==='student')?'selected':'') + '>学生（研究生/硕博）</option>');
+        const gradeOpts = (typeof getMemberGradeYears === 'function' ? getMemberGradeYears() : ['2022','2023','2024','2025','2026']).map(function(y) {
+            const g = y + '级';
+            return '<option value="' + g + '" ' + (gradeValue===g?'selected':'') + '>' + g + '</option>';
+        }).join('');
         div.innerHTML = `
             <div style="background:#fff;border-radius:12px;padding:28px;width:500px;max-width:90vw;max-height:85vh;overflow-y:auto;">
                 <h3 style="margin:0 0 20px;">${title}</h3>
+                ${tipHtml}
                 <div class="form-group">
                     <label>学号（登录账号）<span style="color:red;">*</span> ${isEdit ? '<span style="color:#888;font-weight:normal;">(不可修改)</span>' : ''}</label>
                     <input type="text" id="modalStudentId" value="${isEdit ? escHtml(account.studentId) : ''}" ${isEdit ? 'disabled' : ''} placeholder="学号，作为系统登录账号" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
                 </div>
                 <div class="form-group">
                     <label>姓名<span style="color:red;">*</span></label>
-                    <input type="text" id="modalRealName" value="${isEdit ? escHtml(account.realName) : ''}" placeholder="真实姓名" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                    <input type="text" id="modalRealName" value="${isEdit ? escHtml(account.realName) : ''}" ${nameReadonly ? 'readonly' : ''} placeholder="真实姓名" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;${nameReadonly ? 'background:#f5f5f5;' : ''}">
                 </div>
                 <div class="form-group">
                     <label>角色<span style="color:red;">*</span></label>
-                    <select id="modalRole" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;" onchange="onModalRoleChange()">
-                        <option value="admin" ${isEdit && account.role==='admin'?'selected':''}>导师（超级管理员）</option>
-                        <option value="leader" ${isEdit && account.role==='leader'?'selected':''}>组长（大师兄/大师姐）</option>
-                        <option value="student" ${isEdit && account.role==='student'?'selected':''}>学生（研究生/硕博）</option>
-                        <option value="visitor" ${isEdit && account.role==='visitor'?'selected':''}>访客（外校交流生/实习生）</option>
-                    </select>
+                    <select id="modalRole" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;" onchange="onModalRoleChange()">${roleOptions}</select>
                 </div>
-                <div class="form-group" id="modalGroupField" style="${isEdit && account.role==='admin' ? 'display:none;' : ''}">
+                <div class="form-group" id="modalGroupField" style="${(isEdit && account.role==='admin') || (!isEdit && isVisitorMode) ? 'display:none;' : ''}">
                     <label>所属小组</label>
                     <select id="modalGroup" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
                         <option value="">请选择小组</option>
-                        ${GROUPS.map(g => `<option value="${g}" ${isEdit && account.group===g?'selected':''}>${g}</option>`).join('')}
+                        ${GROUPS.map(function(g){ return '<option value="' + g + '" ' + (isEdit && account.group===g?'selected':'') + '>' + g + '</option>'; }).join('')}
                     </select>
                 </div>
-                <div class="form-group" id="modalGradeField" style="${isEdit && account.role==='student' ? '' : (isEdit ? 'display:none;' : '')}">
-                    <label>年级</label>
-                    <select id="modalGrade" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                <div class="form-group" id="modalGradeField" style="${isVisitorMode ? 'display:none;' : ((isEdit && (account.role==='student' || account.role==='leader')) || (!isEdit) ? '' : 'display:none;')}">
+                    <label>年级 ${gradeReadonly ? '<span style="color:#888;font-weight:normal;">(来自团队管理)</span>' : ''}</label>
+                    <select id="modalGrade" ${gradeReadonly ? 'disabled' : ''} style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;${gradeReadonly ? 'background:#f5f5f5;' : ''}">
                         <option value="">请选择年级</option>
-                        ${['2022级','2023级','2024级','2025级','2026级'].map(g => `<option value="${g}" ${isEdit && account.grade===g?'selected':''}>${g}</option>`).join('')}
+                        ${gradeOpts}
                     </select>
+                </div>
+                <div class="form-group" id="modalGraduatedField" style="${isVisitorMode ? 'display:none;' : ((isEdit && (account.role==='student' || account.role==='leader')) ? '' : 'display:none;')}">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" id="modalGraduated" ${graduatedChecked ? 'checked' : ''} ${gradeReadonly ? 'disabled' : ''}>
+                        已毕业（请在团队成员档案中修改）
+                    </label>
                 </div>
                 <div class="form-group">
                     <label>研究方向</label>
-                    <input type="text" id="modalResearch" value="${isEdit ? escHtml(account.research||'') : ''}" placeholder="选填" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                    <input type="text" id="modalResearch" value="${isEdit ? escHtml(account.research||'') : ''}" ${nameReadonly ? 'readonly' : ''} placeholder="选填" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;${nameReadonly ? 'background:#f5f5f5;' : ''}">
                 </div>
                 <div class="form-group">
                     <label>手机号</label>
@@ -19802,6 +20449,7 @@ ${ocrText}`
                     </div>
                 </div>
                 ${!isEdit ? `<div style="background:#f5f5f5;padding:10px;border-radius:6px;font-size:13px;color:#666;margin-bottom:16px;">新账号将自动生成默认密码：<strong>${DEFAULT_PASSWORD}</strong>，首次登录需修改密码</div>` : ''}
+                <input type="hidden" id="modalAccountMode" value="${isVisitorMode ? 'visitor' : 'team'}">
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
                     <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
                     <button class="btn" onclick="saveAccountFromModal(${isEdit ? account.id : 'null'}, '${modalId}')">${isEdit ? '保存修改' : '创建账号'}</button>
@@ -19812,13 +20460,19 @@ ${ocrText}`
 
     function onModalRoleChange() {
         const role = document.getElementById('modalRole').value;
-        document.getElementById('modalGroupField').style.display = role === 'admin' ? 'none' : '';
-        document.getElementById('modalGradeField').style.display = role === 'student' ? '' : 'none';
+        const modeEl = document.getElementById('modalAccountMode');
+        const isVisitorMode = (modeEl && modeEl.value === 'visitor') || role === 'visitor';
+        const groupField = document.getElementById('modalGroupField');
+        const gradeField = document.getElementById('modalGradeField');
+        const gf = document.getElementById('modalGraduatedField');
+        if (groupField) groupField.style.display = (role === 'admin' || isVisitorMode) ? 'none' : '';
+        if (gradeField) gradeField.style.display = (!isVisitorMode && (role === 'student' || role === 'leader')) ? '' : 'none';
+        if (gf) gf.style.display = (!isVisitorMode && (role === 'student' || role === 'leader')) ? '' : 'none';
     }
 
     function onRegRoleChange() {
         const role = document.getElementById('regRole').value;
-        document.getElementById('regGroupField').style.display = role === 'admin' ? 'none' : '';
+        document.getElementById('regGroupField').style.display = (role === 'admin' || role === 'visitor') ? 'none' : '';
     }
 
     function saveAccountFromModal(editId, modalId) {
@@ -19830,11 +20484,16 @@ ${ocrText}`
             alert('当前角色无权编辑账号');
             return;
         }
+        const modeEl = document.getElementById('modalAccountMode');
+        const accountMode = (modeEl && modeEl.value) || 'visitor';
         const studentId = document.getElementById('modalStudentId').value.trim();
         const realName = document.getElementById('modalRealName').value.trim();
-        const role = document.getElementById('modalRole').value;
-        const group = document.getElementById('modalGroup').value;
-        const grade = document.getElementById('modalGrade').value;
+        let role = document.getElementById('modalRole').value;
+        const groupEl = document.getElementById('modalGroup');
+        const group = groupEl ? groupEl.value : '';
+        const gradeEl = document.getElementById('modalGrade');
+        const grade = gradeEl ? gradeEl.value : '';
+        const graduatedEl = document.getElementById('modalGraduated');
         const research = document.getElementById('modalResearch').value.trim();
         const phone = document.getElementById('modalPhone').value.trim();
         const email = document.getElementById('modalEmail').value.trim();
@@ -19842,21 +20501,53 @@ ${ocrText}`
 
         if (!studentId || !realName) { alert('学号和姓名为必填项'); return; }
 
+        // 新建仅允许访客；正式成员须走「从团队开通」
+        if (!editId) {
+            role = 'visitor';
+        }
+        if (accountMode === 'visitor' || role === 'visitor') {
+            role = 'visitor';
+        }
+
         if (editId) {
             const account = accountData.find(a => a.id === editId);
             if (account) {
-                account.realName = realName; account.role = role;
-                account.group = role === 'admin' ? '' : group;
-                account.grade = role === 'student' ? grade : '';
-                account.research = research; account.phone = phone; account.email = email; account.status = status;
+                if (isVisitorAccount(account) || role === 'visitor') {
+                    account.realName = realName;
+                    account.role = 'visitor';
+                    account.group = '';
+                    account.grade = '';
+                    account.graduated = false;
+                    account.fromTeam = false;
+                    account.teamMemberId = null;
+                } else {
+                    // 正式成员：姓名/年级/毕业以团队为准，此处只改角色/小组/联系方式/状态
+                    const m = findTeamMemberForAccount(account);
+                    account.role = role === 'visitor' ? account.role : role;
+                    account.group = account.role === 'admin' ? '' : group;
+                    if (m) {
+                        account.realName = m.name;
+                        account.grade = m.category === 'advisor' ? '' : (m.category + '级');
+                        account.graduated = !!m.graduated;
+                        account.research = m.research || research;
+                        account.fromTeam = true;
+                        account.teamMemberId = m.id;
+                    }
+                }
+                account.phone = phone;
+                account.email = email;
+                account.status = status;
+                if (isVisitorAccount(account)) account.research = research;
             }
         } else {
             if (accountData.find(a => a.studentId === studentId)) { alert('该学号已存在，不可重复'); return; }
             const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
             accountData.push({
-                id: newId, studentId, realName, role,
-                group: role === 'admin' ? '' : group,
-                grade: role === 'student' ? grade : '',
+                id: newId, studentId, realName, role: 'visitor',
+                group: '',
+                grade: '',
+                graduated: false,
+                fromTeam: false,
                 research, phone, email, status,
                 password: DEFAULT_PASSWORD,
                 mustChangePwd: true, firstLogin: true,
@@ -19875,10 +20566,10 @@ ${ocrText}`
         if (editId) {
             recordOperationLog('账号管理', '修改', `编辑账号：${realName}(${studentId})`, { studentId, realName, role }, { success: true }, 1, '', 0);
         } else {
-            recordOperationLog('账号管理', '新增', `创建账号：${realName}(${studentId})`, { studentId, realName, role }, { success: true }, 1, '', 0);
+            recordOperationLog('账号管理', '新增', `创建访客账号：${realName}(${studentId})`, { studentId, realName, role: 'visitor' }, { success: true }, 1, '', 0);
         }
         
-        alert(editId ? '账号已更新' : `账号创建成功！\n学号：${studentId}\n初始密码：${DEFAULT_PASSWORD}\n首次登录需修改密码`);
+        alert(editId ? '账号已更新' : `访客账号创建成功！\n学号：${studentId}\n初始密码：${DEFAULT_PASSWORD}\n首次登录需修改密码`);
     }
 
     function resetAccountPassword(id) {
@@ -19903,27 +20594,38 @@ ${ocrText}`
     }
 
     function graduateAccount(id) {
-        if (!confirm('确定要将该学生标记为毕业归档吗？\n归档后账号将自动禁用，历史数据保留。')) return;
+        if (!confirm('确定要将该学生标记为毕业归档吗？\n将同步到「团队成员档案」并禁用账号，历史数据保留。')) return;
         const account = accountData.find(a => a.id === id);
-        if (account) {
-            account.status = 'disabled';
-            account.research = (account.research ? account.research + ' | ' : '') + '已毕业';
-            saveAccountData();
-            renderAccountTable();
-            alert(`"${account.realName}" 已毕业归档，账号已禁用`);
-        }
+        if (!account) return;
+        account.status = 'disabled';
+        account.graduated = true;
+        // 同步到团队成员档案
+        try {
+            const m = findTeamMemberForAccount(account);
+            if (m && m.category !== 'advisor') {
+                m.graduated = true;
+                if (typeof saveTeamMemberData === 'function') saveTeamMemberData();
+                if (typeof renderTeamMembers === 'function') renderTeamMembers();
+            }
+        } catch (eGrad) {}
+        saveAccountData();
+        renderAccountTable();
+        alert(`"${account.realName}" 已毕业归档，账号已禁用，且不再接收通知`);
     }
 
     function deleteAccount(id) {
         if (!hasPermission('账号管理（新建/删除）')) { alert('当前角色无「账号管理（新建/删除）」权限'); return; }
-        if (!confirm('确定要删除此账号吗？此操作不可恢复。')) return;
         const account = accountData.find(a => a.id === id);
+        if (!account) return;
+        if (!isVisitorAccount(account) && findTeamMemberForAccount(account)) {
+            if (!confirm('该账号关联「团队成员档案」。删除后下次同步可能重新生成登录账号。\n建议优先「禁用」账号，或先在团队管理中删除成员。\n\n仍要删除此账号吗？')) return;
+        } else {
+            if (!confirm('确定要删除此账号吗？此操作不可恢复。')) return;
+        }
         accountData = accountData.filter(a => a.id !== id);
         saveAccountData();
         renderAccountTable();
-        if (account) {
-            recordOperationLog('账号管理', '删除', `删除账号：${account.realName}(${account.studentId})`, { studentId: account.studentId }, { success: true }, 1, '', 0);
-        }
+        recordOperationLog('账号管理', '删除', `删除账号：${account.realName}(${account.studentId})`, { studentId: account.studentId }, { success: true }, 1, '', 0);
     }
 
     function showLoginLogModal(studentId) {
@@ -19976,21 +20678,55 @@ ${ocrText}`
         if (!validatePassword(password)) { alert('密码不符合安全策略要求'); return; }
         if (password !== passwordConfirm) { alert('两次输入的密码不一致'); return; }
 
-        const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
-        accountData.push({
-            id: newId, studentId, realName, role,
-            group: role === 'admin' ? '' : group,
-            grade: role === 'student' ? '' : '',
-            research: '', phone: '', email, status: 'active',
-            password, mustChangePwd: true, firstLogin: true,
-            lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
-            loginFailCount: 0, lockedUntil: null, avatar: ''
-        });
+        // 正式成员须已在团队档案中；访客可独立注册
+        if (role !== 'visitor') {
+            const members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData)) ? teamMemberData : [];
+            const m = members.find(function(x) {
+                return x && (x.name === realName || (email && x.email === email));
+            });
+            if (!m) {
+                alert('正式成员须先在「团队成员档案」中添加，再注册账号。\n访客角色可直接注册。');
+                return;
+            }
+            if (accountData.some(function(a) {
+                return a.role !== 'visitor' && (a.realName === m.name || (a.teamMemberId && Number(a.teamMemberId) === Number(m.id)));
+            })) {
+                alert('该团队成员已有账号，请勿重复注册');
+                return;
+            }
+            const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
+            let finalRole = role;
+            if (m.category === 'advisor') finalRole = 'admin';
+            else if (finalRole === 'admin') finalRole = 'student';
+            accountData.push({
+                id: newId, studentId, realName: m.name, role: finalRole,
+                group: finalRole === 'admin' ? '' : group,
+                grade: m.category === 'advisor' ? '' : (m.category + '级'),
+                graduated: !!m.graduated,
+                research: m.research || '', phone: m.phone || '', email: email || m.email || '',
+                fromTeam: true, teamMemberId: m.id,
+                status: 'active',
+                password, mustChangePwd: true, firstLogin: true,
+                lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
+                loginFailCount: 0, lockedUntil: null, avatar: m.avatar || ''
+            });
+        } else {
+            const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
+            accountData.push({
+                id: newId, studentId, realName, role: 'visitor',
+                group: '', grade: '', graduated: false, fromTeam: false,
+                research: '', phone: '', email, status: 'active',
+                password, mustChangePwd: true, firstLogin: true,
+                lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
+                loginFailCount: 0, lockedUntil: null, avatar: ''
+            });
+        }
         saveAccountData();
         ['regUsername','regRealName','regEmail','regPassword','regPasswordConfirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         document.getElementById('regPwdStrength').textContent = '';
         document.getElementById('regPwdStrengthBar').style.width = '0';
         alert(`账号 "${studentId}" 注册成功！`);
+        try { renderAccountTable(); } catch (e) {}
     }
 
     // ===== 6. 批量导入 =====
@@ -21692,6 +22428,8 @@ ${ocrText}`
         const accounts = Array.isArray(accountData) ? accountData : [];
         let raw = accounts.filter(function (a) {
             if (!a || a.role === 'visitor') return false;
+            // 已毕业成员不接收通知
+            if (typeof isAccountGraduated === 'function' ? isAccountGraduated(a) : !!a.graduated) return false;
             return true;
         }).map(function (a) {
             return {
@@ -21706,7 +22444,11 @@ ${ocrText}`
 
         // 定向通知：年级 / 小组 / 指定成员
         if (notice && notice.audience === 'grade' && notice.audienceGrade) {
-            raw = raw.filter(function (m) { return String(m.grade || '') === String(notice.audienceGrade); });
+            const want = String(notice.audienceGrade || '').replace(/级/g, '');
+            raw = raw.filter(function (m) {
+                const g = String(m.grade || '').replace(/级/g, '');
+                return g === want || String(m.grade || '') === String(notice.audienceGrade);
+            });
         } else if (notice && notice.audience === 'group' && notice.audienceGroup) {
             raw = raw.filter(function (m) { return String(m.group || '') === String(notice.audienceGroup); });
         } else {
@@ -21720,6 +22462,13 @@ ${ocrText}`
                 raw = raw.filter(function (m) { return !!nameSet[m.userName]; });
                 names.forEach(function (n) {
                     if (raw.some(function (m) { return m.userName === n; })) return;
+                    // 自定义名单里若是已毕业成员，仍不纳入通知
+                    try {
+                        if (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData)) {
+                            const tm = teamMemberData.find(function (x) { return x && x.name === n; });
+                            if (tm && typeof isMemberGraduated === 'function' && isMemberGraduated(tm)) return;
+                        }
+                    } catch (eGrad) {}
                     raw.push({
                         userId: null,
                         studentId: '',
@@ -21757,13 +22506,23 @@ ${ocrText}`
     function isNoticeVisibleToUser(notice, user) {
         if (!notice || !user) return false;
         if (user.role === 'visitor') return false;
+        // 已毕业用户不接收通知
+        if (typeof isAccountGraduated === 'function' && isAccountGraduated(user)) return false;
+        if (user.graduated) return false;
         const names = Array.isArray(notice.audienceNames) ? notice.audienceNames : [];
-        const isCustom = notice.audience === 'custom' || (notice.audience !== 'all' && names.length > 0);
-        if (!isCustom) return true; // 全员
+        const isCustom = notice.audience === 'custom' || (notice.audience !== 'all' && notice.audience !== 'grade' && notice.audience !== 'group' && names.length > 0);
+        if (notice.audience === 'grade' && notice.audienceGrade) {
+            const want = String(notice.audienceGrade || '').replace(/级/g, '');
+            const mine = String(user.grade || '').replace(/级/g, '');
+            if (want && mine && want !== mine && String(user.grade || '') !== String(notice.audienceGrade)) return false;
+        }
+        if (notice.audience === 'group' && notice.audienceGroup) {
+            if (String(user.group || '') !== String(notice.audienceGroup)) return false;
+        }
+        if (!isCustom && notice.audience !== 'custom') return true; // 全员 / 年级 / 小组（已按条件过滤）
         const myName = String(user.realName || user.username || '').trim();
         const mySid = String(user.studentId || '').trim();
         if (names.indexOf(myName) >= 0) return true;
-        // 也允许按账号库反查（audienceNames 存的是团队成员名）
         const audience = getNoticeAudienceMembers(notice);
         return audience.some(function (m) {
             if (m.userId != null && Number(m.userId) === Number(user.id)) return true;
@@ -22094,16 +22853,15 @@ ${ocrText}`
         notice = notice || {};
         const gradeSel = document.getElementById('noticeAudienceGrade');
         const groupSel = document.getElementById('noticeAudienceGroup');
-        const accounts = Array.isArray(accountData) ? accountData : [];
-        const grades = [];
-        accounts.forEach(function (a) {
-            const g = String(a.grade || '').trim();
-            if (g && grades.indexOf(g) < 0) grades.push(g);
-        });
-        if (!grades.length) ['2022', '2023', '2024', '2025', '2026'].forEach(function (g) { grades.push(g); });
+        const years = (typeof getMemberGradeYears === 'function' ? getMemberGradeYears() : ['2022', '2023', '2024', '2025', '2026']);
+        const grades = years.map(function (y) { return y + '级'; });
         if (gradeSel) {
+            const selected = String(notice.audienceGrade || '');
+            const selectedNorm = selected.replace(/级/g, '');
             gradeSel.innerHTML = grades.map(function (g) {
-                return `<option value="${escHtml(g)}" ${String(notice.audienceGrade || '') === g ? 'selected' : ''}>${escHtml(g)}级</option>`;
+                const y = g.replace(/级/g, '');
+                const sel = (selected === g || selectedNorm === y) ? 'selected' : '';
+                return `<option value="${escHtml(g)}" ${sel}>${escHtml(g)}</option>`;
             }).join('');
         }
         const groups = (typeof GROUPS !== 'undefined' && Array.isArray(GROUPS)) ? GROUPS.slice() : ['第一小组', '第二小组', '第三小组', '第四小组'];
@@ -22117,7 +22875,9 @@ ${ocrText}`
     function fillNoticeAudienceOptions(selectedNames) {
         const sel = document.getElementById('noticeAudienceNames');
         if (!sel) return;
-        const names = typeof getRealTeamOwnerNames === 'function' ? getRealTeamOwnerNames() : [];
+        const names = typeof getNotifiableTeamOwnerNames === 'function'
+            ? getNotifiableTeamOwnerNames()
+            : (typeof getRealTeamOwnerNames === 'function' ? getRealTeamOwnerNames() : []);
         const selected = new Set((selectedNames || []).map(String));
         sel.innerHTML = names.map(n => `<option value="${escHtml(n)}" ${selected.has(n) ? 'selected' : ''}>${escHtml(n)}</option>`).join('');
     }
@@ -22955,14 +23715,14 @@ ${ocrText}`
         document.getElementById('meetingModal').style.display = 'flex';
     }
 
-    var MEETING_PARTICIPANT_GROUPS = [
-        { key: 'advisor', label: '导师' },
-        { key: '2022', label: '2022级' },
-        { key: '2023', label: '2023级' },
-        { key: '2024', label: '2024级' },
-        { key: '2025', label: '2025级' },
-        { key: '2026', label: '2026级' }
-    ];
+    function getMeetingParticipantGroups() {
+        const years = (typeof getMemberGradeYears === 'function' ? getMemberGradeYears() : ['2022', '2023', '2024', '2025', '2026']);
+        return [{ key: 'advisor', label: '导师' }].concat(years.map(function (y) {
+            return { key: y, label: y + '级' };
+        }));
+    }
+
+    var MEETING_PARTICIPANT_GROUPS = getMeetingParticipantGroups();
 
     function getTeamMembersForMeeting() {
         try {
@@ -22993,7 +23753,7 @@ ${ocrText}`
     function syncMeetingParticipantsFromSet(nameSet) {
         const ordered = [];
         const members = getTeamMembersForMeeting();
-        MEETING_PARTICIPANT_GROUPS.forEach(function (g) {
+        getMeetingParticipantGroups().forEach(function (g) {
             members.filter(function (m) { return m.category === g.key && nameSet.has(m.name); })
                 .forEach(function (m) { if (ordered.indexOf(m.name) < 0) ordered.push(m.name); });
         });
@@ -23075,7 +23835,7 @@ ${ocrText}`
             '<span style="font-size:13px;font-weight:600;color:#333;">按年级选择参会人</span>' +
             '<input type="text" id="meetingParticipantSearch" placeholder="搜索姓名..." oninput="filterMeetingParticipantPicker(this.value)" style="flex:1;max-width:180px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;">' +
             '</div>';
-        MEETING_PARTICIPANT_GROUPS.forEach(function (g) {
+        getMeetingParticipantGroups().forEach(function (g) {
             const list = members.filter(function (m) { return m.category === g.key; });
             if (!list.length) return;
             const allChecked = list.every(function (m) { return selected.has(m.name); });
@@ -28711,8 +29471,103 @@ ${ocrText}`
         return result;
     }
 
+    function resolveLogOperatorProfile(log) {
+        const result = {
+            displayName: '',
+            studentId: '',
+            role: '',
+            roleLabel: '',
+            grade: '',
+            source: '',
+            account: null,
+            member: null,
+            memberId: null
+        };
+        let params = {};
+        try {
+            if (log && log.requestParams) params = JSON.parse(log.requestParams) || {};
+        } catch (e) {}
+
+        const accounts = (typeof accountData !== 'undefined' && Array.isArray(accountData)) ? accountData : [];
+        let account = null;
+        if (log && log.operatorId) {
+            account = accounts.find(function(a) { return a && Number(a.id) === Number(log.operatorId); }) || null;
+        }
+        if (!account && params.studentId) {
+            account = accounts.find(function(a) { return a && a.studentId === params.studentId; }) || null;
+        }
+        if (!account && (params.realName || log.operatorName)) {
+            const nameHint = params.realName || log.operatorName;
+            account = accounts.find(function(a) { return a && a.realName === nameHint; }) || null;
+        }
+        // 历史脏数据：operatorName 写成了 admin / studentId
+        if (!account && log && log.operatorName) {
+            account = accounts.find(function(a) { return a && a.studentId === log.operatorName; }) || null;
+        }
+
+        result.account = account;
+        if (account) {
+            result.displayName = account.realName || account.studentId || '';
+            result.studentId = account.studentId || '';
+            result.role = account.role || '';
+            result.roleLabel = (typeof ROLE_LABELS !== 'undefined' && ROLE_LABELS[account.role]) ? ROLE_LABELS[account.role] : (account.role || '');
+            if (account.role === 'visitor') {
+                result.source = '访客账号';
+                result.grade = '-';
+            } else {
+                const member = (typeof findTeamMemberForAccount === 'function') ? findTeamMemberForAccount(account) : null;
+                result.member = member;
+                result.memberId = member ? member.id : null;
+                result.source = member ? '团队成员' : '账号库';
+                if (member && typeof getMemberCategoryLabel === 'function') {
+                    result.grade = member.category === 'advisor' ? '导师' : getMemberCategoryLabel(member.category);
+                } else {
+                    result.grade = account.grade || '-';
+                }
+            }
+        } else {
+            // 从描述里尽量还原「姓名(学号)」
+            const desc = String((log && log.operationDesc) || '');
+            const m = desc.match(/^([^\s(（]+)[(（]([^)）]+)[)）]/);
+            if (m) {
+                result.displayName = m[1];
+                result.studentId = m[2];
+            } else {
+                result.displayName = (log && log.operatorName) || '未知';
+                result.studentId = params.studentId || '';
+            }
+            result.source = '历史记录';
+            result.roleLabel = '-';
+            result.grade = '-';
+        }
+        if (!result.displayName) result.displayName = '未知';
+        return result;
+    }
+
+    function formatLogOperatorCell(log) {
+        const p = resolveLogOperatorProfile(log);
+        const sid = p.studentId ? ('<div style="font-size:11px;color:#888;margin-top:2px;">' + escHtml(p.studentId) + '</div>') : '';
+        return '<div><strong>' + escHtml(p.displayName) + '</strong>' + sid + '</div>';
+    }
+
     function recordOperationLog(module, type, desc, params = null, response = null, status = 1, errorMsg = '', costTime = 0, opId = null, opName = null) {
         const now = new Date();
+        const user = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : null;
+        const resolvedId = opId !== null && opId !== undefined
+            ? opId
+            : (user ? user.id : 0);
+        const resolvedName = opName !== null && opName !== undefined && String(opName).trim()
+            ? String(opName).trim()
+            : (user ? (user.realName || user.studentId || '系统') : '系统');
+        const enrichedParams = Object.assign({}, (params && typeof params === 'object' ? params : {}), {
+            studentId: (params && params.studentId) || (user && user.studentId) || undefined,
+            realName: (params && params.realName) || (user && user.realName) || resolvedName || undefined,
+            role: (params && params.role) || (user && user.role) || undefined
+        });
+        Object.keys(enrichedParams).forEach(function(k) {
+            if (enrichedParams[k] === undefined) delete enrichedParams[k];
+        });
+
         const log = {
             id: operationLogData.length > 0 ? Math.max(...operationLogData.map(l => l.id)) + 1 : 1,
             module: module,
@@ -28720,10 +29575,10 @@ ${ocrText}`
             operationDesc: desc,
             requestMethod: 'POST',
             requestUrl: '/system/operation',
-            requestParams: params ? desensitizeData(JSON.stringify(params)) : null,
+            requestParams: Object.keys(enrichedParams).length ? desensitizeData(JSON.stringify(enrichedParams)) : (params ? desensitizeData(JSON.stringify(params)) : null),
             responseResult: response ? desensitizeData(JSON.stringify(response)) : null,
-            operatorId: opId !== null ? opId : (currentUser ? currentUser.id : 0),
-            operatorName: opName !== null ? opName : (currentUser ? currentUser.name : 'admin'),
+            operatorId: resolvedId,
+            operatorName: resolvedName,
             ipAddress: getClientIp(),
             ipLocation: '本地',
             browser: getBrowserInfo(),
@@ -28735,6 +29590,7 @@ ${ocrText}`
         };
 
         operationLogData.unshift(log);
+        if (operationLogData.length > 2000) operationLogData = operationLogData.slice(0, 2000);
         saveOperationLogData();
 
         if (document.getElementById('operation_log') && document.getElementById('operation_log').classList.contains('active')) {
@@ -28777,29 +29633,30 @@ ${ocrText}`
         btn.disabled = selectedLogIds.length === 0;
     }
 
-    function renderOperationLogList() {
-        const tableBody = document.getElementById('logTableBody');
-        const emptyDiv = document.getElementById('logEmpty');
-        const totalSpan = document.getElementById('logTotal');
-        const pageInfoSpan = document.getElementById('logPageInfo');
-        const prevBtn = document.getElementById('logPrevBtn');
-        const nextBtn = document.getElementById('logNextBtn');
-
+    function getFilteredOperationLogs() {
         let filteredData = [...operationLogData];
+        const module = (document.getElementById('logModule') || {}).value || '';
+        const operator = (document.getElementById('logOperator') || {}).value || '';
+        const status = (document.getElementById('logStatus') || {}).value;
+        const startDate = (document.getElementById('logStartDate') || {}).value || '';
+        const endDate = (document.getElementById('logEndDate') || {}).value || '';
 
-        const module = document.getElementById('logModule').value.trim();
-        const operator = document.getElementById('logOperator').value.trim();
-        const status = document.getElementById('logStatus').value;
-        const startDate = document.getElementById('logStartDate').value;
-        const endDate = document.getElementById('logEndDate').value;
+        const moduleQ = String(module).trim();
+        const operatorQ = String(operator).trim().toLowerCase();
 
-        if (module) {
-            filteredData = filteredData.filter(l => l.module.includes(module));
+        if (moduleQ) {
+            filteredData = filteredData.filter(l => String(l.module || '').includes(moduleQ));
         }
-        if (operator) {
-            filteredData = filteredData.filter(l => l.operatorName.includes(operator));
+        if (operatorQ) {
+            filteredData = filteredData.filter(function(l) {
+                const p = resolveLogOperatorProfile(l);
+                return String(p.displayName || '').toLowerCase().includes(operatorQ)
+                    || String(p.studentId || '').toLowerCase().includes(operatorQ)
+                    || String(l.operatorName || '').toLowerCase().includes(operatorQ)
+                    || String(l.operationDesc || '').toLowerCase().includes(operatorQ);
+            });
         }
-        if (status !== '') {
+        if (status !== '' && status !== undefined && status !== null) {
             filteredData = filteredData.filter(l => l.status === parseInt(status));
         }
         if (startDate) {
@@ -28808,27 +29665,37 @@ ${ocrText}`
         if (endDate) {
             filteredData = filteredData.filter(l => l.operationTime <= endDate + ' 23:59:59');
         }
+        return filteredData;
+    }
 
+    function renderOperationLogList() {
+        const tableBody = document.getElementById('logTableBody');
+        const emptyDiv = document.getElementById('logEmpty');
+        const totalSpan = document.getElementById('logTotal');
+        const pageInfoSpan = document.getElementById('logPageInfo');
+        const prevBtn = document.getElementById('logPrevBtn');
+        const nextBtn = document.getElementById('logNextBtn');
+        if (!tableBody) return;
+
+        const filteredData = getFilteredOperationLogs();
         const total = filteredData.length;
         const totalPages = Math.max(1, Math.ceil(total / logPageSize));
+        if (currentLogPage > totalPages) currentLogPage = totalPages;
 
-        totalSpan.textContent = total;
-        pageInfoSpan.textContent = currentLogPage + ' / ' + totalPages;
-
-        prevBtn.disabled = currentLogPage <= 1;
-        nextBtn.disabled = currentLogPage >= totalPages;
+        if (totalSpan) totalSpan.textContent = total;
+        if (pageInfoSpan) pageInfoSpan.textContent = currentLogPage + ' / ' + totalPages;
+        if (prevBtn) prevBtn.disabled = currentLogPage <= 1;
+        if (nextBtn) nextBtn.disabled = currentLogPage >= totalPages;
 
         const start = (currentLogPage - 1) * logPageSize;
-        const end = start + logPageSize;
-        const pageData = filteredData.slice(start, end);
+        const pageData = filteredData.slice(start, start + logPageSize);
 
         if (total === 0) {
             tableBody.innerHTML = '';
-            emptyDiv.style.display = 'block';
+            if (emptyDiv) emptyDiv.style.display = 'block';
             return;
         }
-
-        emptyDiv.style.display = 'none';
+        if (emptyDiv) emptyDiv.style.display = 'none';
 
         let html = '';
         pageData.forEach(log => {
@@ -28841,8 +29708,8 @@ ${ocrText}`
                 <td><input type="checkbox" class="log-checkbox" value="${log.id}" ${isSelected ? 'checked' : ''} onchange="toggleLogSelect(${log.id})"></td>
                 <td>${escHtml(log.module)}</td>
                 <td>${escHtml(log.operationType)}</td>
-                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escHtml(log.operationDesc)}">${escHtml(log.operationDesc)}</td>
-                <td>${escHtml(log.operatorName)}</td>
+                <td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escHtml(log.operationDesc)}">${escHtml(log.operationDesc)}</td>
+                <td>${formatLogOperatorCell(log)}</td>
                 <td>${escHtml(log.ipAddress)}</td>
                 <td>${statusHtml}</td>
                 <td style="text-align: right;">${log.costTime}</td>
@@ -28864,7 +29731,7 @@ ${ocrText}`
     }
 
     function nextLogPage() {
-        const total = operationLogData.length;
+        const total = getFilteredOperationLogs().length;
         const totalPages = Math.max(1, Math.ceil(total / logPageSize));
         if (currentLogPage < totalPages) {
             currentLogPage++;
@@ -28890,19 +29757,52 @@ ${ocrText}`
         renderOperationLogList();
     }
 
+    var __currentLogDetailMemberId = null;
+
     function openLogDetail(id) {
         const log = operationLogData.find(l => l.id === id);
         if (!log) return;
 
+        const profile = resolveLogOperatorProfile(log);
+        __currentLogDetailMemberId = profile.memberId || null;
+
+        const statusBadge = document.getElementById('detailStatusBadge');
+        if (statusBadge) {
+            statusBadge.innerHTML = log.status === 1
+                ? '<span style="display:inline-block;padding:2px 10px;border-radius:999px;background:#f6ffed;color:#389e0d;border:1px solid #b7eb8f;font-size:12px;">成功</span>'
+                : '<span style="display:inline-block;padding:2px 10px;border-radius:999px;background:#fff2f0;color:#cf1322;border:1px solid #ffccc7;font-size:12px;">失败</span>';
+        }
+
+        const opCard = document.getElementById('detailOperatorCard');
+        if (opCard) {
+            const initial = String(profile.displayName || '?').charAt(0);
+            const metaBits = [
+                profile.roleLabel && profile.roleLabel !== '-' ? profile.roleLabel : '',
+                profile.grade && profile.grade !== '-' ? profile.grade : '',
+                profile.source || ''
+            ].filter(Boolean).join(' · ');
+            opCard.innerHTML = `
+                <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;">${escHtml(initial)}</div>
+                <div style="min-width:0;flex:1;">
+                    <div style="font-size:16px;font-weight:700;color:#1f2937;">${escHtml(profile.displayName)}</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:4px;">${escHtml(profile.studentId || '无登录账号')} ${metaBits ? ' · ' + escHtml(metaBits) : ''}</div>
+                </div>`;
+        }
+
+        const openBtn = document.getElementById('detailOpenMemberBtn');
+        if (openBtn) openBtn.style.display = profile.memberId ? '' : 'none';
+
         document.getElementById('detailModule').textContent = log.module || '-';
         document.getElementById('detailType').textContent = log.operationType || '-';
-        document.getElementById('detailOperator').textContent = log.operatorName || '-';
-        document.getElementById('detailIp').textContent = log.ipAddress || '-';
+        document.getElementById('detailOperator').textContent = profile.displayName || '-';
+        document.getElementById('detailIp').textContent = (log.ipAddress || '-') + (log.ipLocation ? '（' + log.ipLocation + '）' : '');
         document.getElementById('detailMethod').textContent = log.requestMethod || '-';
         document.getElementById('detailCostTime').textContent = (log.costTime || 0) + ' ms';
         document.getElementById('detailTime').textContent = log.operationTime || '-';
         document.getElementById('detailUrl').textContent = log.requestUrl || '-';
         document.getElementById('detailDesc').textContent = log.operationDesc || '-';
+        const clientEl = document.getElementById('detailClient');
+        if (clientEl) clientEl.textContent = [log.browser, log.os].filter(Boolean).join(' / ') || '-';
         
         try {
             const params = log.requestParams ? JSON.stringify(JSON.parse(log.requestParams), null, 2) : '-';
@@ -28929,8 +29829,20 @@ ${ocrText}`
         document.getElementById('logDetailModal').style.display = 'flex';
     }
 
+    function openMemberFromLogDetail() {
+        if (!__currentLogDetailMemberId) return;
+        closeLogDetailModal();
+        try {
+            if (typeof showModule === 'function') showModule('member_archive');
+            setTimeout(function() {
+                if (typeof showMemberDetail === 'function') showMemberDetail(__currentLogDetailMemberId);
+            }, 120);
+        } catch (e) {}
+    }
+
     function closeLogDetailModal() {
         document.getElementById('logDetailModal').style.display = 'none';
+        __currentLogDetailMemberId = null;
     }
 
     function handleBatchDeleteLog() {
@@ -28966,45 +29878,26 @@ ${ocrText}`
     }
 
     function handleExportLog() {
-        let filteredData = [...operationLogData];
-
-        const module = document.getElementById('logModule').value.trim();
-        const operator = document.getElementById('logOperator').value.trim();
-        const status = document.getElementById('logStatus').value;
-        const startDate = document.getElementById('logStartDate').value;
-        const endDate = document.getElementById('logEndDate').value;
-
-        if (module) {
-            filteredData = filteredData.filter(l => l.module.includes(module));
-        }
-        if (operator) {
-            filteredData = filteredData.filter(l => l.operatorName.includes(operator));
-        }
-        if (status !== '') {
-            filteredData = filteredData.filter(l => l.status === parseInt(status));
-        }
-        if (startDate) {
-            filteredData = filteredData.filter(l => l.operationTime >= startDate);
-        }
-        if (endDate) {
-            filteredData = filteredData.filter(l => l.operationTime <= endDate + ' 23:59:59');
-        }
+        const filteredData = getFilteredOperationLogs();
 
         if (filteredData.length === 0) {
             alert('没有数据可导出');
             return;
         }
 
-        const headers = ['操作模块', '操作类型', '操作描述', '操作人', '操作IP', '状态', '耗时(ms)', '操作时间'];
+        const headers = ['操作模块', '操作类型', '操作描述', '操作人', '登录账号', '身份来源', '操作IP', '状态', '耗时(ms)', '操作时间'];
         let csv = headers.join(',') + '\n';
 
         filteredData.forEach(log => {
             const statusText = log.status === 1 ? '成功' : '失败';
+            const p = resolveLogOperatorProfile(log);
             const row = [
                 `"${log.module || ''}"`,
                 `"${log.operationType || ''}"`,
                 `"${(log.operationDesc || '').replace(/"/g, '""')}"`,
-                `"${log.operatorName || ''}"`,
+                `"${(p.displayName || '').replace(/"/g, '""')}"`,
+                `"${(p.studentId || '').replace(/"/g, '""')}"`,
+                `"${(p.source || '').replace(/"/g, '""')}"`,
                 `"${log.ipAddress || ''}"`,
                 `"${statusText}"`,
                 `"${log.costTime || 0}"`,
