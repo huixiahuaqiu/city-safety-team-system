@@ -148,16 +148,18 @@
             if (cfg && cfg.notice && cfg.notice.siteMessage === false) siteOn = false;
         } catch (e3) {}
         if (!siteOn) return;
-        if (typeof global.noticeData === 'undefined' || !Array.isArray(global.noticeData)) return;
         if (typeof global.normalizeNoticeRecord !== 'function' || typeof global.saveNoticeData !== 'function') return;
+        if (!Array.isArray(global.noticeData)) {
+            try { global.noticeData = JSON.parse(localStorage.getItem('noticeData') || '[]') || []; } catch (eLoad) { return; }
+        }
 
         var adminNames = [];
         try {
-            (global.accountData || []).forEach(function (a) {
+            (global.accountData || JSON.parse(localStorage.getItem('accountData') || '[]') || []).forEach(function (a) {
                 if (a && (a.role === 'admin' || a.role === 'leader') && a.realName) adminNames.push(a.realName);
             });
         } catch (e4) {}
-        if (!adminNames.length) return;
+        if (!adminNames.length) adminNames = ['系统管理员'];
 
         var id = Date.now();
         var notice = global.normalizeNoticeRecord({
@@ -176,6 +178,11 @@
             status: 'published',
             reads: []
         });
+        // 避免重复刷屏：同标题未读告警 30 分钟内不重复
+        var dup = (global.noticeData || []).some(function (n) {
+            return n && n.title === notice.title && String(n.publishTime || '').slice(0, 10) === String(notice.publishTime).slice(0, 10);
+        });
+        if (dup) return;
         global.noticeData.push(notice);
         global.saveNoticeData({
             silent: false,

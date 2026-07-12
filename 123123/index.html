@@ -2621,7 +2621,7 @@
         .footer {
             background: #7c3aed;
             color: white;
-            padding: 20px;
+            padding: 18px 20px 16px;
             text-align: center;
             font-size: 12px;
             line-height: 1.8;
@@ -2629,6 +2629,7 @@
         
         .footer p {
             margin: 4px 0;
+            color: rgba(255,255,255,0.88);
         }
         
         /* Excel 处理模块新样式 */
@@ -3472,6 +3473,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="css/portal-public.css?v=20260713-portal8">
 </head>
 <body>
     <!-- 登录页 -->
@@ -3569,11 +3571,11 @@
                 <div class="global-search-panel" id="globalSearchPanel"></div>
             </div>
                 <div class="nav-links">
-                <a href="#" onclick="showModule('about')">团队介绍</a>
-                <a href="#" onclick="showModule('achievements')">团队成果</a>
-                <a href="#" onclick="showModule('projects')">团队项目</a>
-                <a href="#" onclick="showModule('members')">团队成员</a>
-                <a href="#" onclick="showModule('contact')">联系我们</a>
+                <a href="#" data-portal="about" onclick="showModule('about');return false;">团队介绍</a>
+                <a href="#" data-portal="achievements" onclick="showModule('achievements');return false;">团队成果</a>
+                <a href="#" data-portal="projects" onclick="showModule('projects');return false;">团队项目</a>
+                <a href="#" data-portal="members" onclick="showModule('members');return false;">团队成员</a>
+                <a href="#" data-portal="contact" onclick="showModule('contact');return false;">联系我们</a>
                 <button type="button" class="nav-sync-chip" id="navSyncChip" onclick="manualHomeCloudSync()" title="云端同步状态，点击立即同步">
                     <span class="dot"></span>
                     <span id="navSyncChipText">同步</span>
@@ -3822,7 +3824,7 @@
                     <div class="home-quick" id="homeQuickNav"></div>
 
                     <div class="home-grid">
-                        <div class="home-col">
+        <div class="home-col" data-col="todo">
                             <div class="home-panel">
                                 <div class="home-panel-hd">
                                     <h3>我的待办</h3>
@@ -3832,7 +3834,7 @@
                                 <div class="home-panel-bd" id="homeTodoList"></div>
                             </div>
                         </div>
-                        <div class="home-col">
+                        <div class="home-col" data-col="feed">
                             <div class="home-panel">
                                 <div class="home-panel-hd">
                                     <h3>研究动态</h3>
@@ -3842,7 +3844,7 @@
                                 <div class="home-panel-bd" id="homeFeedList"></div>
                             </div>
                         </div>
-                        <div class="home-col">
+                        <div class="home-col" data-col="member">
                             <div class="home-panel">
                                 <div class="home-panel-hd">
                                     <h3>在读名录</h3>
@@ -8357,758 +8359,16 @@
                 </div>
             </div>
             
-            <!-- 团队介绍 -->
-            <div id="about" class="module">
-                <div class="card">
-                    <div style="background: #003366; color: white; padding: 10px 20px; border-radius: 8px; display: inline-block; margin-bottom: 20px;">
-                        <h2 style="margin: 0; font-size: 20px;">团队介绍</h2>
-                    </div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 30px; line-height: 1.8;">
-                        <div style="flex: 1; min-width: 300px;">
-                            <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                                <div style="font-size: 24px; margin-right: 10px;">▶</div>
-                                <h3 style="margin: 0; color: #003366;">城市安全数智创新团队</h3>
-                            </div>
-                            <p style="margin-bottom: 20px;">一支产教融合、交叉学科的精英队伍，致力于将前沿科技转化为城市安全的核心力量。</p>
-                        </div>
-                        <div style="flex: 1; min-width: 300px;">
-                            <h3 style="color: #003366; border-bottom: 2px solid #003366; padding-bottom: 10px; margin-bottom: 20px;">城市安全数智创新团队</h3>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <h4 style="color: #003366; margin-bottom: 10px;">团队成员</h4>
-                                <ul style="margin: 0; padding-left: 20px;">
-                                    <li><span style="color: red;">6名博士（3名教授，3名副教授）</span></li>
-                                    <li><span style="color: red;">14名博士后</span></li>
-                                    <li><span style="color: red;">58名硕士研究生（在读21人，毕业37人）</span></li>
-                                </ul>
-                            </div>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <h4 style="color: #003366; margin-bottom: 10px;">团队成果</h4>
-                                <ul style="margin: 0; padding-left: 20px;">
-                                    <li>55篇高水平论文（SCI15篇）</li>
-                                    <li>68项授权专利（发明专利32项）</li>
-                                    <li>12项软件著作权</li>
-                                    <li>1项重庆市科技进步二等奖专利</li>
-                                    <li>2项重庆市科技进步三等奖</li>
-                                </ul>
-                            </div>
-                            
-                            <div style="margin-bottom: 20px;">
-                                <h4 style="color: #003366; margin-bottom: 10px;">主研方向</h4>
-                                <div style="margin-bottom: 20px;">
-                                    <h5 style="color: #003366; margin-bottom: 5px;">1. 智能巡检（隐患AI识别+自主巡航）</h5>
-                                    <p style="margin: 5px 0; font-size: 14px; padding-left: 20px;"><strong>主要功能：</strong>排查任务自动派发、事故隐患自动识别、重大隐患及时预警、整改措施靶向发送、隐患台账一键生成</p>
-                                    <p style="margin: 5px 0; font-size: 14px; padding-left: 20px;"><strong>技术特点：</strong>无人机空中覆盖巡查、机器人地面精准排查、摄像头重点部位监控、图像数据上传云端实时处理、双模型驱动智能识别隐患</p>
-                                </div>
-                                <div style="margin-bottom: 20px;">
-                                    <h5 style="color: #003366; margin-bottom: 5px;">2. 城市内涝预警与预报</h5>
-                                    <p style="margin: 5px 0; font-size: 14px; padding-left: 20px;"><strong>研究背景：</strong>山地地形复杂，局部管网改造难以应对不同重现期极端降雨下的排水需求，无法完全从根本上消除内涝风险</p>
-                                    <p style="margin: 5px 0; font-size: 14px; padding-left: 20px;"><strong>技术特点：</strong>实时监测、科学预测、及时预警、合理防控，将城市内涝灾害风险置于可控状态</p>
-                                    <p style="margin: 5px 0; font-size: 14px; padding-left: 20px;"><strong>应用情况：</strong>已在33个积水内涝点开展应用，覆盖多个城区</p>
-                                </div>
-                                <div style="margin-bottom: 20px;">
-                                    <h5 style="color: #003366; margin-bottom: 5px;">3. 三维扫描精度控制与自动装配技术</h5>
-                                    <p style="margin: 5px 0; font-size: 14px; padding-left: 20px;"><strong>核心技术：</strong>基于AI自主学习驱动的三维扫描精度可控智能标定与布站一体化算法，基于AI驱动的装配式结构智能预拼装与质量评估</p>
-                                    <p style="margin: 5px 0; font-size: 14px; padding-left: 20px;"><strong>技术优势：</strong>快速数据采集与建模、高精度与准确性、预判实际装配潜在问题、减少返厂成本</p>
-                                </div>
-                                <div style="margin-bottom: 20px;">
-                                    <h5 style="color: #003366; margin-bottom: 5px;">4. 可更换式装配式结构</h5>
-                                    <p style="margin: 5px 0; font-size: 14px; padding-left: 20px;"><strong>创新点：</strong>创新性提出可恢复功能的装配式钢框架梁柱节点及不同拼缝措施下的装配式混凝土空心楼盖</p>
-                                    <p style="margin: 5px 0; font-size: 14px; padding-left: 20px;"><strong>技术特点：</strong>节点抗震性能好、可恢复功能、施工便捷、质量可控</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- portal public pages: rendered by js/portal-public.js -->
+            <div id="about" class="module"></div>
             
-            <!-- 团队成果 -->
-            <div id="achievements" class="module">
-                <div style="padding: 0;">
-                    <h2 class="achievements-page-title">🏆 团队成果</h2>
-                    
-                    <!-- 模块1：顶部通栏-核心总览看板 -->
-                    <div class="achievements-stats-grid">
-                        <div class="achievements-stat-card" onclick="showStatsDetails('funding')">
-                            <div class="achievements-stat-label">科研总经费</div>
-                            <div><span class="achievements-stat-number">407.2</span><span class="achievements-stat-unit">万元</span></div>
-                            <div class="achievements-stat-sub"><span class="achievements-stat-growth">↑ +236%</span> 同比增长</div>
-                        </div>
-                        <div class="achievements-stat-card" onclick="showStatsDetails('papers')">
-                            <div class="achievements-stat-label">高水平论文</div>
-                            <div class="achievements-stat-number">65</div>
-                            <div class="achievements-stat-sub">SCI 30篇 · EI 35篇</div>
-                        </div>
-                        <div class="achievements-stat-card" onclick="showStatsDetails('ip')">
-                            <div class="achievements-stat-label">知识产权</div>
-                            <div class="achievements-stat-number">75</div>
-                            <div class="achievements-stat-sub">发明专利45项 · 软著30项</div>
-                        </div>
-                        <div class="achievements-stat-card" onclick="showStatsDetails('standards')">
-                            <div class="achievements-stat-label">标准制定</div>
-                            <div class="achievements-stat-number">33</div>
-                            <div class="achievements-stat-sub">地方标准2项 · 行业标准31项</div>
-                        </div>
-                        <div class="achievements-stat-card" onclick="showStatsDetails('awards')">
-                            <div class="achievements-stat-label">赛事获奖</div>
-                            <div class="achievements-stat-number">5+</div>
-                            <div class="achievements-stat-sub">国家级 · 省部级</div>
-                        </div>
-                    </div>
-                    
-                    <!-- 模块2：2025年度核心业绩双栏对比区 -->
-                    <div class="achievements-two-columns">
-                        <!-- 知识产权业绩 -->
-                        <div class="achievements-section-card" onclick="showPerformanceDetails('ip')">
-                            <div class="achievements-section-title">
-                                <span class="achievements-section-badge">知识产权</span>
-                                <h3 class="achievements-section-header">构筑知识产权护城河</h3>
-                            </div>
-                            <div class="achievements-comparison-grid">
-                                <!-- 2024 vs 2025 对比 -->
-                                <div class="achievements-year-box">
-                                    <h4 class="achievements-year-title">2024 vs 2025 同比增长</h4>
-                                    <div class="achievements-data-row">
-                                        <span class="achievements-data-label">发明专利受理</span>
-                                        <div class="achievements-data-values">
-                                            <span class="achievements-data-old">6项</span>
-                                            <span class="achievements-data-arrow">→</span>
-                                            <span class="achievements-data-new">10项</span>
-                                            <span class="achievements-data-growth">+67%</span>
-                                        </div>
-                                    </div>
-                                    <div class="achievements-data-row">
-                                        <span class="achievements-data-label">发明专利授权</span>
-                                        <div class="achievements-data-values">
-                                            <span class="achievements-data-old">2项</span>
-                                            <span class="achievements-data-arrow">→</span>
-                                            <span class="achievements-data-new">4项</span>
-                                            <span class="achievements-data-growth">+100%</span>
-                                        </div>
-                                    </div>
-                                    <div class="achievements-data-row">
-                                        <span class="achievements-data-label">实用新型受理</span>
-                                        <div class="achievements-data-values">
-                                            <span class="achievements-data-old">0项</span>
-                                            <span class="achievements-data-arrow">→</span>
-                                            <span class="achievements-data-new">2项</span>
-                                            <span class="achievements-new-badge">新增</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- 结构分布 -->
-                                <div class="achievements-chart-wrapper">
-                                    <div class="achievements-pie-chart"></div>
-                                    <div class="achievements-chart-legend">
-                                        <div class="achievements-legend-item">
-                                            <div class="achievements-legend-color" style="background: #165DFF;"></div>
-                                            <span class="achievements-legend-text">智能巡检与安全AI算法</span>
-                                            <span class="achievements-legend-percent">75%</span>
-                                        </div>
-                                        <div class="achievements-legend-item">
-                                            <div class="achievements-legend-color" style="background: #3b82f6;"></div>
-                                            <span class="achievements-legend-text">城市内涝与水利监测</span>
-                                            <span class="achievements-legend-percent">25%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 科研经费业绩 -->
-                        <div class="achievements-section-card" onclick="showPerformanceDetails('funding')">
-                            <div class="achievements-section-title">
-                                <span class="achievements-section-badge">科研经费</span>
-                                <h3 class="achievements-section-header">爆发式增长</h3>
-                            </div>
-                            <div class="achievements-comparison-grid">
-                                <!-- 2024 vs 2025 对比 -->
-                                <div class="achievements-year-box">
-                                    <h4 class="achievements-year-title">经费与项目 · 爆发式增长</h4>
-                                    <div class="achievements-data-row">
-                                        <span class="achievements-data-label">总经费</span>
-                                        <div class="achievements-data-values">
-                                            <span class="achievements-data-old">121.1万</span>
-                                            <span class="achievements-data-arrow">→</span>
-                                            <span class="achievements-data-new">407.2万</span>
-                                            <span class="achievements-data-growth">+236%</span>
-                                        </div>
-                                    </div>
-                                    <div class="achievements-data-row">
-                                        <span class="achievements-data-label">新立项</span>
-                                        <div class="achievements-data-values">
-                                            <span class="achievements-data-old">5项</span>
-                                            <span class="achievements-data-arrow">→</span>
-                                            <span class="achievements-data-new">9项</span>
-                                            <span class="achievements-data-growth">+80%</span>
-                                        </div>
-                                    </div>
-                                    <div class="achievements-data-row">
-                                        <span class="achievements-data-label">代表性纵向</span>
-                                        <div class="achievements-data-values">
-                                            <span class="achievements-data-old">-</span>
-                                            <span class="achievements-data-arrow">→</span>
-                                            <span class="achievements-data-new">120万元</span>
-                                        </div>
-                                    </div>
-                                    <div class="achievements-data-row">
-                                        <span class="achievements-data-label">代表性横向</span>
-                                        <div class="achievements-data-values">
-                                            <span class="achievements-data-old">-</span>
-                                            <span class="achievements-data-arrow">→</span>
-                                            <span class="achievements-data-new">200万元</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- 结构分布 -->
-                                <div class="achievements-chart-wrapper">
-                                    <div class="achievements-pie-chart" style="background: conic-gradient(#165DFF 0deg 306deg, #3b82f6 306deg 345.6deg, #94a3b8 345.6deg 360deg);"></div>
-                                    <div class="achievements-chart-legend">
-                                        <div class="achievements-legend-item">
-                                            <div class="achievements-legend-color" style="background: #165DFF;"></div>
-                                            <span class="achievements-legend-text">智能巡检与安全AI</span>
-                                            <span class="achievements-legend-percent">85%</span>
-                                        </div>
-                                        <div class="achievements-legend-item">
-                                            <div class="achievements-legend-color" style="background: #3b82f6;"></div>
-                                            <span class="achievements-legend-text">城市内涝与水利</span>
-                                            <span class="achievements-legend-percent">12%</span>
-                                        </div>
-                                        <div class="achievements-legend-item">
-                                            <div class="achievements-legend-color" style="background: #94a3b8;"></div>
-                                            <span class="achievements-legend-text">其他</span>
-                                            <span class="achievements-legend-percent">3%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 模块4：分类成果三栏明细卡片区 -->
-                    <div class="achievements-three-columns">
-                        <!-- 学术成果 -->
-                        <div class="achievements-category-card" onclick="showCategoryDetails('academic')">
-                            <div class="achievements-category-header">
-                                <span class="achievements-category-icon">📚</span>
-                                <span class="achievements-category-name">学术成果</span>
-                                <span class="achievements-category-count">65+</span>
-                            </div>
-                            <div class="achievements-category-list">
-                                <div class="achievements-category-item">
-                                    <h5>论文发表</h5>
-                                    <p>SCI/高水平论文<span class="highlight-number">65篇</span>（SCI <span class="highlight-number">30篇</span> · EI <span class="highlight-number">35篇</span>）</p>
-                                </div>
-                                <div class="achievements-category-item">
-                                    <h5>专著出版</h5>
-                                    <p>学术专著<span class="highlight-number">3部</span>（城市安全管理 · 智能运维）</p>
-                                </div>
-                                <div class="achievements-category-item">
-                                    <h5>标准制定</h5>
-                                    <p>牵头地方标准<span class="highlight-number">2项</span> · 参与行业标准<span class="highlight-number">31项</span></p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 技术成果 -->
-                        <div class="achievements-category-card" onclick="showCategoryDetails('tech')">
-                            <div class="achievements-category-header">
-                                <span class="achievements-category-icon">💡</span>
-                                <span class="achievements-category-name">技术成果</span>
-                                <span class="achievements-category-count">75+</span>
-                            </div>
-                            <div class="achievements-category-list">
-                                <div class="achievements-category-item">
-                                    <h5>知识产权</h5>
-                                    <p>发明专利<span class="highlight-number">45项</span> · 软件著作权<span class="highlight-number">30项</span></p>
-                                </div>
-                                <div class="achievements-category-item">
-                                    <h5>科技奖励</h5>
-                                    <p>省部级科技奖<span class="highlight-number">3项</span> · 市级科技进步奖<span class="highlight-number">2项</span></p>
-                                </div>
-                                <div class="achievements-category-item">
-                                    <h5>技术转化</h5>
-                                    <p>多项成果工程应用 · 显著经济社会效益</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 荣誉称号 -->
-                        <div class="achievements-category-card" onclick="showCategoryDetails('honor')">
-                            <div class="achievements-category-header">
-                                <span class="achievements-category-icon">🏅</span>
-                                <span class="achievements-category-name">荣誉称号</span>
-                                <span class="achievements-category-count">3+</span>
-                            </div>
-                            <div class="achievements-category-list">
-                                <div class="achievements-category-item">
-                                    <h5>重庆市巾帼创新团队</h5>
-                                    <p>市级荣誉称号</p>
-                                </div>
-                                <div class="achievements-category-item">
-                                    <h5>重庆市高校创新团队</h5>
-                                    <p>市级荣誉称号</p>
-                                </div>
-                                <div class="achievements-category-item">
-                                    <h5>重庆科技大学优秀科研团队</h5>
-                                    <p>校级荣誉称号</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 模块3：重磅里程碑成果时间线 -->
-                    <div class="achievements-timeline">
-                        <h3 class="achievements-module-title">重磅里程碑成果</h3>
-                        
-                        <div class="achievements-timeline-item" onclick="showMilestoneDetails(0)">
-                            <div class="achievements-timeline-line">
-                                <div class="achievements-timeline-dot"></div>
-                            </div>
-                            <div class="achievements-timeline-date">2025.01</div>
-                            <div class="achievements-timeline-content">
-                                <h4>《地震灾害风险评估规范》获批发布</h4>
-                                <p>重庆市地方标准（DB50/T 1701-2024）填补了国内地震灾害风险评估地方标准的空白，有效指导各区县开展风险评估工作。</p>
-                                <div class="achievements-timeline-tags">
-                                    <span class="achievements-timeline-tag">标准制定</span>
-                                    <span class="achievements-timeline-tag">应急管理</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="achievements-timeline-item" onclick="showMilestoneDetails(1)">
-                            <div class="achievements-timeline-line">
-                                <div class="achievements-timeline-dot"></div>
-                            </div>
-                            <div class="achievements-timeline-date">2025.03</div>
-                            <div class="achievements-timeline-content">
-                                <h4>联合国世界气象组织肯定重庆数智气象</h4>
-                                <p>副秘书长·巴雷特表示"<span class="highlight">看到了体系有多先进</span>"，希望合作将专业技术带向世界。系统已在33个积水内涝点应用。</p>
-                                <div class="achievements-timeline-tags">
-                                    <span class="achievements-timeline-tag">国际认可</span>
-                                    <span class="achievements-timeline-tag">水利监测</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="achievements-timeline-item" onclick="showMilestoneDetails(2)">
-                            <div class="achievements-timeline-line">
-                                <div class="achievements-timeline-dot"></div>
-                            </div>
-                            <div class="achievements-timeline-date">2025.05</div>
-                            <div class="achievements-timeline-content">
-                                <h4>陆空一体化AI巡检技术试点落地</h4>
-                                <p>在中交一公局重庆轨道交通15号线项目成功试点，<span class="highlight">获央广网报道</span>，标志团队工业AI融合领域迈出关键一步。</p>
-                                <div class="achievements-timeline-tags">
-                                    <span class="achievements-timeline-tag">技术落地</span>
-                                    <span class="achievements-timeline-tag">AI技术</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="achievements-timeline-item" onclick="showMilestoneDetails(3)">
-                            <div class="achievements-timeline-line">
-                                <div class="achievements-timeline-dot"></div>
-                            </div>
-                            <div class="achievements-timeline-date">2025.07</div>
-                            <div class="achievements-timeline-content">
-                                <h4>自然灾害预警响应能力提升项目完成</h4>
-                                <p><span class="highlight">重庆预警短信每秒可发布4500条</span>，5~10分钟内送达社会公众，高质量完成"十四五"应急管理体系现代化建设任务。</p>
-                                <div class="achievements-timeline-tags">
-                                    <span class="achievements-timeline-tag">项目完成</span>
-                                    <span class="achievements-timeline-tag">应急管理</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="achievements-timeline-item" onclick="showMilestoneDetails(4)">
-                            <div class="achievements-timeline-line">
-                                <div class="achievements-timeline-dot"></div>
-                            </div>
-                            <div class="achievements-timeline-date">2025.09</div>
-                            <div class="achievements-timeline-content">
-                                <h4>智能巡检四足机器人获全国建筑机器人大赛二等奖</h4>
-                                <p>在"智能建造·慧享未来"第三届全国建筑机器人大赛获二等奖，并在中国国际大学生创新大赛获院赛二等奖、校赛银奖。</p>
-                                <div class="achievements-timeline-tags">
-                                    <span class="achievements-timeline-tag">竞赛获奖</span>
-                                    <span class="achievements-timeline-tag">机器人技术</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div id="achievements" class="module"></div>
             
-            <!-- 团队项目 -->
-            <div id="projects" class="module">
-                <div class="card">
-                    <h2>📋 团队项目</h2>
-                    <div style="line-height: 1.8;">
-                        <div style="background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e6f2ff;">
-                            <h3>在研项目</h3>
-                            <ul style="margin: 15px 0; padding-left: 20px;">
-                                <li><strong>中交集团攻关项目：</strong>陆空一体化事故隐患AI智能巡检技术(200万元)</li>
-                                <li><strong>教育部大项目：</strong>基于AI精度可控三维扫描的大型预制建模与预拼装(120万元)</li>
-                                <li><strong>应急管理局项目：</strong>露天非煤矿山非现场执行法典型隐患识别关键技术研究(20万元)</li>
-                                <li><strong>重庆市科技局项目：</strong>城市洪涝灾害智能预警与应急响应系统研究(50万元)</li>
-                            </ul>
-                        </div>
-                        
-                        <div style="background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e6f2ff;">
-                            <h3>已完成项目</h3>
-                            <ul style="margin: 15px 0; padding-left: 20px;">
-                                <li><strong>国家自然科学基金：</strong>基于深度学习的土木工程结构健康监测与损伤识别(60万元)</li>
-                                <li><strong>重庆市重点研发项目：</strong>城市基础设施智能运维关键技术研究(80万元)</li>
-                                <li><strong>企业合作项目：</strong>重庆轨道交通15号线智能巡检系统开发(150万元)</li>
-                            </ul>
-                        </div>
-                        
-                        <div style="background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e6f2ff;">
-                            <h3>项目合作</h3>
-                            <p>团队积极与企业、科研院所开展合作，建立了良好的产学研合作关系。</p>
-                            <ul style="margin: 15px 0; padding-left: 20px;">
-                                <li>中交集团</li>
-                                <li>重庆市应急管理局</li>
-                                <li>重庆轨道交通集团</li>
-                                <li>中国建筑科学研究院</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div id="projects" class="module"></div>
             
-            <!-- 团队成员 -->
-            <div id="members" class="module">
-                <div class="card">
-                    <h2>👥 团队成员</h2>
-                    <div style="line-height: 1.8;">
-                        <div style="background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e6f2ff;">
-                            <h3>个人信息库</h3>
-                            <p>团队成员个人信息库，包含硕士论文、个人简历和相关数据。</p>
-                            
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
-                                <!-- 王丽萍 -->
-                                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                    <h4 style="color: #8A2BE2; margin-bottom: 15px;">王丽萍</h4>
-                                    <div style="margin-bottom: 20px;">
-                                        <p><strong>职位：</strong>重庆科技大学教授、科技处处长</p>
-                                        <p><strong>研究方向：</strong>城市安全、智能运维、结构抗震</p>
-                                        <p><strong>邮箱：</strong>wangliping98@163.com</p>
-                                        <p><strong>电话：</strong>13996488662</p>
-                                    </div>
-                                    <div style="margin-top: 20px;">
-                                        <h5>个人简介</h5>
-                                        <p style="margin: 5px 0; font-size: 14px; line-height: 1.6;">王丽萍，1980年11月生，女，重庆科技大学教授，重庆科技大学科技处处长，重庆安全生产科学研究院副院长，防灾减灾及防护工程专业博士，重庆市巾帼科技创新团队负责人。2013年，赴新加坡南洋理工大学巨灾风险管理研究院访问；2016年，赴美国内华达拉斯维加斯大学访学。长期从事工程结构抗灾和城市区域防灾方面的研究。</p>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>学习工作经历</h5>
-                                        <div style="margin: 10px 0;">
-                                            <h6 style="font-weight: bold; margin-bottom: 5px;">教育背景</h6>
-                                            <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                                <li>2005-2010年，重庆大学，防灾减灾及防护工程博士</li>
-                                                <li>2002-2005年，新疆大学，结构工程硕士</li>
-                                                <li>1998-2002年，新疆大学，工民建学士</li>
-                                            </ul>
-                                        </div>
-                                        <div style="margin: 10px 0;">
-                                            <h6 style="font-weight: bold; margin-bottom: 5px;">工作经历</h6>
-                                            <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                                <li>2022年至今，重庆科技学院，科研处处长</li>
-                                                <li>2020年至今，重庆科技学院，教授</li>
-                                                <li>2019年至今，重庆市安全生产科学研究院，副院长</li>
-                                                <li>2018-2019年，重庆市沙区应急管理局，挂职副局长</li>
-                                                <li>2016-2017年，美国内华达拉斯维加斯大学，访学</li>
-                                                <li>2013-2014年，新加坡南洋理工巨灾风险管理研究中心，访学</li>
-                                                <li>2012-2020年，重庆科技学院，副教授</li>
-                                                <li>2011-2012年，重庆科技学院，讲师</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>主要研究项目</h5>
-                                        <div style="margin: 10px 0;">
-                                            <h6 style="font-weight: bold; margin-bottom: 5px;">纵向项目</h6>
-                                            <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                                <li>2015-2017年，主持国家自然科学基金青年项目"典型山地RC框架结构抗震破坏模式及易损性研究"</li>
-                                                <li>2015-2018年，主持国家自然科学基金地区项目"钢丝网水泥砂浆加固砌体环梁结点连接效应试验研究"</li>
-                                                <li>2019-2021年，主持国家自然科学基金青年项目"考虑受弯受剪损伤向伸长效应的RC框架结构震害破坏模式及易损性研究"</li>
-                                                <li>2019-2020年，主持重庆市科委社会类重点研发项目"基于大数据的市政供水管网病害智能动态诊断预警技术与应用示范"</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>知识产权</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>王丽萍;罗钧;陈嘉鑫;罗文文等.一种在给定精度条件下的三维扫描距离及范围确定方法，发明专利、授权号：202411289242.7</li>
-                                            <li>王丽萍;彭双庆;罗文文;刘东升等.一种基于降雨阈值的区域滑坡危险性预警方法，发明专利、专利号：202320569441.2</li>
-                                            <li>王丽萍;罗钧;张宛静;罗文文等.一种考虑不确定性的供水管道渗漏诊断方法，发明专利、专利号：202310645504.8</li>
-                                            <li>罗文文;陈刚;王丽萍;宁超列等.一种基于地质条件划分斜坡单元的方法，发明专利、专利号：202210607050.0</li>
-                                            <li>王丽萍;田颖;罗文文;李桂臣等.一种测量结构梁被动产生轴力的装置及方法，发明专利、专利号：201710078116.0</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>教学成果</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>2012年获得"第二届全国高等学校土木工程专业多媒体教学课件竞赛"三等奖</li>
-                                            <li>2014年获得重庆科技学院"青年教师技能比赛"二等奖</li>
-                                            <li>2020年指导研究生参加第六届中国国际"互联网+"大学生创新创业大赛重庆赛区选拔赛获银奖</li>
-                                            <li>2020年指导研究生参加"创青春"全国大学生创业大赛获得重庆科技学院赛区二等奖</li>
-                                            <li>2021年9月 参加第七届中国国际"互联网+"大学生创新创业大赛校内选拔赛银奖</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>科研成果</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>2009年获得重庆市科学技术科技进步二等奖；</li>
-                                            <li>2011年获得重庆市建设创新一等奖；</li>
-                                            <li>2011年获得重庆市科学技术科技进步奖三等奖；</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>个人简历</h5>
-                                        <a href="https://civil.cqust.edu.cn/info/1111/2399.htm" target="_blank" style="color: #8A2BE2; text-decoration: none; font-size: 14px;">查看详细简历 →</a>
-                                    </div>
-                                </div>
-                                
-                                <!-- 罗文文 -->
-                                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                    <h4 style="color: #8A2BE2; margin-bottom: 15px;">罗文文</h4>
-                                    <div style="margin-bottom: 20px;">
-                                        <p><strong>职位：</strong>博士、副教授</p>
-                                        <p><strong>研究方向：</strong>工程结构抗震与城市灾害风险研究</p>
-                                        <p><strong>电话：</strong>18523539873</p>
-                                        <p><strong>邮箱：</strong>luowenwen326@163.com</p>
-                                    </div>
-                                    <div style="margin-top: 20px;">
-                                        <h5>个人简介</h5>
-                                        <p style="margin: 5px 0; font-size: 14px; line-height: 1.6;">罗文文，男，博士，副教授。1987年10月出生于四川省绵阳市。2009年、2015年分别获得重庆大学学士和博士学位，主要从事工程结构抗震与城市灾害风险研究工作。主持国家自然科学基金1项，重庆市自然科学基金2项，兵团重点领域科技攻关项目1项，重庆市教委科学技术研究项目1项、重点项目1项，重庆市建设科技项目1项，主持横向项目10余项。获得兵团自然科学奖二等奖1项，发表学术论文20余篇，SCI/EI收录10余篇，授权国家发明专利6项，参编学术专著2部，编写地方标准2项。</p>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>教育背景</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>2009/09～2015/12，重庆大学土木工程学院，工学博士(直攻博)</li>
-                                            <li>2005/09～2009/06，重庆大学土木工程学院，工学学士</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>工作经历</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>2015/12~ 至今，重庆科技大学，教师</li>
-                                            <li>2022/01~2025/07，重庆大学/中冶赛迪集团有限公司，博士后</li>
-                                            <li>2012/03 至 2013/03, 东京工业大学Materials and Structures Laboratory, 准客座研究员</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>主要研究项目</h5>
-                                        <div style="margin: 10px 0;">
-                                            <h6 style="font-weight: bold; margin-bottom: 5px;">纵向项目</h6>
-                                            <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                                <li>2018~2022年，主持国家自然科学基金青年项目"考虑梁受弯损伤轴向伸长效应的RC框架结构强震破坏模式及易损性研究"</li>
-                                                <li>2024~2027年，主持兵团重点领域科技攻关项目（课题）"南天山地震带兵团城镇强震输入特征与防震减灾对策研究及应用"</li>
-                                                <li>2018~2021年，主持重庆市自然科学基金"基于可更换耗能型钢连接的装配式混凝土梁柱节点抗震性能研究"</li>
-                                                <li>2023~2026年，主持重庆市自然科学基金面上项目"基于耗能杆连接的自复位装配式混凝土梁柱节点抗震性能研究"</li>
-                                                <li>2024~2026年，主持重庆市建设科技计划项目"山地城市下穿道内涝预警与智能排水关键技术研究"</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>知识产权</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>罗文文等.一种可更换式预埋地锚件，发明专利授权、授权号：202010107936.X</li>
-                                            <li>罗文文等.一种基于地质条件划分斜坡单元的方法，发明专利授权、授权号：202210607050.0</li>
-                                            <li>罗文文等.一种断层上覆土层位错概率危险性分析方法，发明专利授权、授权号：202210422485.8</li>
-                                            <li>罗文文等.一种抗滑移地锚连接系统，发明专利授权、授权号：202210371482.06</li>
-                                            <li>罗文文等.一种预埋反力地锚整体定位装置及施工方法，发明专利授权、授权号：202110233727.4</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>规范标准</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>2025年参编重庆市工程建设标准《装配式混凝土空心楼盖结构技术标准》</li>
-                                            <li>2024年参编重庆市地方标准《地震灾害风险评估规范》</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>科研成果</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>《基于合理破坏模式控制的低多层民居抗震理论研究与创新实践》获2025年新疆建设兵团科学技术奖自然科学奖二等奖</li>
-                                        </ul>
-                                    </div>
-
-                                    <div style="margin-top: 15px;">
-                                        <h5>个人简历</h5>
-                                        <a href="https://civil.cqust.edu.cn/info/1111/2552.htm" target="_blank" style="color: #8A2BE2; text-decoration: none; font-size: 14px;">查看详细简历 →</a>
-                                    </div>
-                                </div>
-                                
-                                <!-- 罗钧 -->
-                                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                    <h4 style="color: #8A2BE2; margin-bottom: 15px;">罗钧</h4>
-                                    <div style="margin-bottom: 20px;">
-                                        <p><strong>职位：</strong>土木工程博士/博士后，高级工程师，硕士生导师</p>
-                                        <p><strong>研究方向：</strong>基于人工智能和图像信息的结构振动测试和损伤诊断，多信息融合的结构三维数字模型构建</p>
-                                        <p><strong>电话：</strong>13452426159</p>
-                                        <p><strong>邮箱：</strong>jluo@cqust.edu.cn</p>
-                                    </div>
-                                    <div style="margin-top: 20px;">
-                                        <h5>个人简介</h5>
-                                        <p style="margin: 5px 0; font-size: 14px; line-height: 1.6;">罗钧，出生于1986年5月，土木工程博士/博士后，高级工程师，硕士生导师，土木与水利工程学院教师。主要从事基于人工智能和图像信息的结构振动测试和损伤诊断，以及多信息融合的结构三维数字模型构建等方面的研究。主持重庆市自然科学基金创新发展联合基金重点项目1项，以及重庆市博士后特别资助项目等省部级项目2项；参与国家重点研发计划项目1项，国家自然科学基金面上项目2项，以及重庆市建设科技计划项目等省部级项目4项。荣获省部级科技进步奖1项，以第一作者或通讯作者发表论文17篇，其中SCI/EI检索14篇，获得实用新型专利3项，参与撰写专著1部，参编重庆市地方标准2项。</p>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>教育背景</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>2009-2016年，重庆大学，土木工程博士（直博），研究方向：结构损伤诊断</li>
-                                            <li>2005-2009年，重庆大学，土木工程学士</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>工作经历</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>2019年-至今，重庆科技大学教师</li>
-                                            <li>2016-2019年，重庆市建设工程质量检验测试中心工程师</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>主要研究项目</h5>
-                                        <div style="margin: 10px 0;">
-                                            <h6 style="font-weight: bold; margin-bottom: 5px;">纵向项目</h6>
-                                            <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                                <li>2023-2026年，主持重庆市自然科学基金创新发展联合基金重点项目"基于构件风荷载的输电塔线承载力理论和直接设计方法"</li>
-                                                <li>2022-2024年，主持重庆市博士后特别资助项目"基于无人机迭代摄影测量的输电塔损伤诊断方法研究"</li>
-                                                <li>2020-2023年，主持重庆市自然科学基金面上项目"基于多参考点迭代摄影测量技术的输电塔损伤诊断方法研究"</li>
-                                            </ul>
-                                        </div>
-                                        <div style="margin: 10px 0;">
-                                            <h6 style="font-weight: bold; margin-bottom: 5px;">教研教改项目</h6>
-                                            <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                                <li>2020-2022年，主持重庆科技学院教育教学改革研究项目 (202037) "基于具象化的结构力学课程教学改革"</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>知识产权</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>罗钧等.一种法兰连接螺栓松动监测装置，实用新型授权、授权号：ZL 2021 2 0366944.6</li>
-                                            <li>罗钧等.一种适用于无人机双目摄影测量的左右相机参数标定方法，发明专利授权、授权号：ZL 20241 1647182.1</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>教学成果</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>2024年获"重庆科技大学教学成果奖"二等奖</li>
-                                        </ul>
-                                    </div>
-                                    <div style="margin-top: 15px;">
-                                        <h5>科研成果</h5>
-                                        <ul style="list-style-type: disc; padding-left: 20px; font-size: 14px; line-height: 1.5;">
-                                            <li>《基于QR码和图像处理技术的输电塔法兰连接节点防松动螺栓松动诊断方法研究》获第34届全国结构工程学术会议优秀论文一等奖</li>
-                                        </ul>
-                                    </div>
-
-                                    <div style="margin-top: 15px;">
-                                        <h5>个人简历</h5>
-                                        <a href="https://civil.cqust.edu.cn/info/1111/2542.htm" target="_blank" style="color: #8A2BE2; text-decoration: none; font-size: 14px;">查看详细简历 →</a>
-                                    </div>
-                                </div>
-                                
-
-                            </div>
-                        </div>
-                        
-                        <div style="background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e6f2ff;">
-                            <h3>成员管理</h3>
-                            <p>团队成员信息管理功能，支持添加、编辑和删除成员信息。</p>
-                            <div style="margin-top: 20px;">
-                                <button class="btn" onclick="addMember()">➕ 添加成员</button>
-                                <button class="btn btn-secondary" onclick="exportMemberData()">📤 导出成员数据</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div id="members" class="module"></div>
             
-            <!-- 联系我们 -->
-            <div id="contact" class="module">
-                <div class="card">
-                    <h2>📞 联系我们</h2>
-                    <div style="line-height: 1.8;">
-                        <p>如果您在使用过程中遇到任何问题，或有任何建议，请通过以下方式联系我们：</p>
-                        
-                        <div style="margin: 20px 0; padding: 20px; background: #f9f9f9; border-radius: 8px;">
-                            <h3>团队成员</h3>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 15px;">
-
-                            </div>
-                        </div>
-                        
-                        <h3>其他联系方式</h3>
-                        <ul style="margin: 15px 0; padding-left: 20px;">
-                            <li><strong>邮箱：</strong>1533074793@qq.com</li>
-                            <li><strong>地址：</strong>重庆市沙坪坝区大学城东路20号重庆科技大学</li>
-                            <li><strong>工作时间：</strong>周一至周五 9:00-17:00</li>
-                        </ul>
-                        
-                        <div style="margin-top: 30px;">
-                            <h3>意见反馈</h3>
-                            <p>欢迎您对系统提出宝贵意见，我们将不断改进系统功能和用户体验。</p>
-                            <textarea style="width: 100%; height: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-top: 10px; resize: vertical;"></textarea>
-                            <div style="text-align: right; margin-top: 10px;">
-                                <button class="btn">提交反馈</button>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 40px;">
-                            <h3>📚 帮助中心</h3>
-                            <div class="help-content">
-                                <div class="help-section">
-                                    <h4>🚀 快速开始</h4>
-                                    <div class="help-item">
-                                        <h5>1. 专利收集</h5>
-                                        <p>通过批量导入、在线检索或手动录入的方式添加专利文献。支持PDF、DOC、XLS等多种文件格式。</p>
-                                    </div>
-                                    <div class="help-item">
-                                        <h5>2. AI智能处理</h5>
-                                        <p>上传专利文件后，系统会自动分析并提取关键技术点、创新点和法律状态等信息。</p>
-                                    </div>
-                                    <div class="help-item">
-                                        <h5>3. 分类整理</h5>
-                                        <p>创建自定义分类体系，对专利文献进行系统化管理，支持按技术领域、申请日期等多维度分类。</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="help-section" style="margin-top: 30px;">
-                                    <h4>💡 常见问题</h4>
-                                    <div class="help-item">
-                                        <h5>Q: 如何批量导入专利文件？</h5>
-                                        <p>A: 在专利收集模块的批量导入标签页中，点击或拖拽文件到上传区域，选择文件后点击"开始导入"按钮。</p>
-                                    </div>
-                                    <div class="help-item">
-                                        <h5>Q: 系统支持哪些文件格式？</h5>
-                                        <p>A: 支持PDF、DOC、DOCX、XLS、XLSX、TXT等常见文件格式。</p>
-                                    </div>
-                                    <div class="help-item">
-                                        <h5>Q: 如何使用对比分析功能？</h5>
-                                        <p>A: 在对比分析模块中，选择要对比的专利，点击"开始对比"按钮，系统会生成可视化对比表格。</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="help-section" style="margin-top: 30px;">
-                                    <h4>🔧 故障排查</h4>
-                                    <div class="help-item">
-                                        <h5>Q: 上传文件失败怎么办？</h5>
-                                        <p>A: 检查文件格式是否支持，文件大小是否超过限制，网络连接是否正常。</p>
-                                    </div>
-                                    <div class="help-item">
-                                        <h5>Q: 分析结果不准确怎么办？</h5>
-                                        <p>A: 确保上传的文件内容清晰完整，尝试使用更规范的专利文档格式。</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div id="contact" class="module"></div>
             
             <!-- 开发日志 -->
             <div id="devlog" class="module">
@@ -9156,7 +8416,14 @@
 
     <!-- 全局页脚 -->
     <div class="footer">
-        <p>© 2025 城市安全数智创新团队 · All Rights Reserved</p>
+        <nav class="footer-nav" aria-label="页脚导航">
+            <a href="#" data-portal="about" onclick="showModule('about');return false;">团队介绍</a>
+            <a href="#" data-portal="achievements" onclick="showModule('achievements');return false;">团队成果</a>
+            <a href="#" data-portal="projects" onclick="showModule('projects');return false;">团队项目</a>
+            <a href="#" data-portal="members" onclick="showModule('members');return false;">团队成员</a>
+            <a href="#" data-portal="contact" onclick="showModule('contact');return false;">联系我们</a>
+        </nav>
+        <p id="footerCopyright">© 2025 城市安全数智创新团队 · All Rights Reserved</p>
         <p>地址：重庆市沙坪坝区大学城东路 20 号 | 电话：023-65022222</p>
     </div>
 
@@ -9617,6 +8884,7 @@
             try { apply('noticeData', function(v){
                 if (typeof window.mergeIncomingNoticeData === 'function') noticeData = window.mergeIncomingNoticeData(v);
                 else noticeData = v;
+                try { window.noticeData = noticeData; } catch (eN) {}
             }); } catch(e){}
             try { apply('newsData', function(v){
                 if (typeof window.mergeIncomingNewsData === 'function') {
@@ -9696,6 +8964,9 @@
                     invalidateHomeOverviewCache('cloud-sync');
                 }
             } catch (eInv) {}
+            try {
+                if (typeof invalidatePortalCache === 'function') invalidatePortalCache();
+            } catch (ePortal) {}
             return result;
         }
         window.syncFromCloudAndRefresh = syncFromCloudAndRefresh;
@@ -24969,6 +24240,8 @@ ${ocrText}`
 
         try { if (typeof updateHomeNoticeBanner === 'function') updateHomeNoticeBanner(); } catch (eB) {}
     }
+    window.renderHomeDashboard = renderHomeDashboard;
+    window.homeDashUi = homeDashUi;
 
     async function manualHomeCloudSync() {
         if (typeof syncFromCloudAndRefresh !== 'function') {
@@ -31525,5 +30798,6 @@ ${ocrText}`
     <script src="js/notice-enhance.js?v=20260712-3000"></script>
     <script src="js/competition-management.js?v=20260712-3000"></script>
     <script src="js/home-dashboard-p3.js?v=20260713-p3"></script>
+    <script src="js/portal-public.js?v=20260713-portal8"></script>
 </body>
 </html>
