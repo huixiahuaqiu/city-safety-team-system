@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -286,10 +286,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: linear-gradient(120deg, #5b21b6 0%, #7c3aed 45%, #4f46e5 100%);
-            background-size: 180% 180%;
-            animation: navGradientShift 10s ease infinite;
-            box-shadow: 0 10px 30px rgba(76, 29, 149, 0.28);
+            background: #7c3aed;
+            box-shadow: 0 8px 24px rgba(124, 58, 237, 0.22);
             backdrop-filter: blur(12px);
             position: sticky;
             top: 0;
@@ -534,173 +532,92 @@
         .home-notice-banner .title { font-family: 'Noto Serif SC', serif; font-size: 16px; font-weight: 700; color: #1c1917; }
         .home-notice-banner .desc { font-size: 12px; color: #78716c; margin-top: 4px; line-height: 1.55; }
 
-        /* 首页 · 全宽密铺（flex，避免栅格塌缩） */
-        .main-content:has(> #home.active) {
-            padding: 10px 12px 12px;
-        }
+        /* 首页工作台 · 欢迎概览 + 统计 + 快捷 + 三栏 */
+        .main-content:has(> #home.active) { padding: 10px 12px 12px; }
         #home.module {
             --home-ink: #1e1b4b;
             --home-muted: #6b7280;
             --home-line: #e9e4f8;
             --home-accent: #7c3aed;
             --home-accent-deep: #5b21b6;
-            --home-surface: #ffffff;
             --home-soft: #f5f3ff;
             --home-serif: 'Noto Serif SC', 'Songti SC', serif;
             --home-sans: 'Outfit', 'PingFang SC', 'Microsoft YaHei', sans-serif;
             font-family: var(--home-sans);
-            width: 100%;
-            max-width: none;
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            background: linear-gradient(180deg, #f3f0ff 0%, #f7f5fc 45%, #eef2ff 100%);
+            width: 100%; max-width: none; margin: 0; padding: 0; box-sizing: border-box;
+            background: linear-gradient(180deg, #faf8ff 0%, #f8f7fc 50%, #f3f0ff 100%);
             border-radius: 8px;
         }
-        .home-dashboard {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-            box-sizing: border-box;
-        }
+        .home-dashboard { display: flex; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box; }
         .home-hero {
-            position: relative;
-            border-radius: 10px;
-            background: linear-gradient(118deg, #4c1d95 0%, #5b21b6 38%, #7c3aed 72%, #4f46e5 100%);
-            color: #f8fafc;
-            overflow: hidden;
-            box-shadow: 0 14px 32px rgba(76, 29, 149, 0.28);
+            position: relative; border-radius: 10px; overflow: hidden;
+            background: linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0.15)),
+                linear-gradient(118deg, #ede9fe 0%, #e0e7ff 48%, #ddd6fe 100%);
+            color: #4c1d95; border: 1px solid #e9e4f8; box-shadow: 0 8px 22px rgba(167, 139, 250, 0.12);
         }
         .home-hero::after {
-            content: '';
-            position: absolute; inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.9;
+            background-image: linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
             background-size: 22px 22px;
-            opacity: 0.35;
-            pointer-events: none;
         }
         .home-hero-inner {
-            position: relative; z-index: 1;
-            display: flex;
-            align-items: stretch;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 18px 20px;
-            flex-wrap: wrap;
+            position: relative; z-index: 1; display: flex; align-items: stretch;
+            justify-content: space-between; gap: 16px; padding: 16px 18px; flex-wrap: wrap;
         }
-        .home-hero-main {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            flex: 1 1 420px;
-            min-width: 0;
-        }
+        .home-hero-main { display: flex; align-items: center; gap: 14px; flex: 1 1 380px; min-width: 0; }
         .home-hero-avatar {
-            width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
-            background: linear-gradient(145deg, #7c3aed, #4f46e5);
-            color: #ede9fe; font-size: 24px; font-weight: 700;
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden; border: 2px solid rgba(255,255,255,0.4);
-            box-shadow: 0 8px 20px rgba(76, 29, 149, 0.35);
+            width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0;
+            background: linear-gradient(145deg, #a78bfa, #818cf8); color: #fff;
+            font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border: 2px solid rgba(255,255,255,0.85);
+            box-shadow: 0 6px 16px rgba(139, 92, 246, 0.2);
         }
         .home-hero-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .home-eyebrow {
-            font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-            color: rgba(221,214,254,0.95); font-weight: 650; margin-bottom: 6px;
-        }
-        .home-hero h2 {
-            margin: 0; font-family: var(--home-serif); font-size: 28px; font-weight: 700;
-            color: #fff; line-height: 1.25;
-        }
-        .home-hero .sub {
-            margin-top: 6px; font-size: 13px; line-height: 1.55;
-            color: rgba(237,233,254,0.92);
-        }
+        .home-eyebrow { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #8b5cf6; font-weight: 650; margin-bottom: 4px; }
+        .home-hero h2 { margin: 0; font-family: var(--home-serif); font-size: 26px; font-weight: 700; color: #4c1d95; line-height: 1.25; }
+        .home-hero .sub { margin-top: 4px; font-size: 13px; line-height: 1.5; color: #6d28d9; }
         .home-hero-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
         .home-chip {
             display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
-            background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);
-            font-size: 12px; color: #ede9fe; font-weight: 500;
+            background: rgba(255,255,255,0.72); border: 1px solid #ddd6fe; font-size: 12px; color: #5b21b6; font-weight: 500;
         }
-        .home-chip strong { color: #c4b5fd; font-weight: 700; font-variant-numeric: tabular-nums; }
-        .home-hero-aside {
-            flex: 1 1 320px;
-            display: flex; flex-direction: row; gap: 8px;
-            min-width: 280px;
-            flex-wrap: wrap;
+        .home-chip strong { color: #7c3aed; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .home-chip.warn { border-color: #fdba74; background: #fff7ed; color: #c2410c; }
+        .home-chip.warn strong { color: #ea580c; }
+        .home-hero-aside { flex: 0 1 280px; display: flex; flex-direction: column; gap: 8px; min-width: 220px; }
+        .home-quick-launch { display: flex; flex-wrap: wrap; gap: 6px; }
+        .home-quick-launch button {
+            border: 1px solid #ddd6fe; background: #fff; color: #6d28d9; border-radius: 999px;
+            padding: 6px 12px; font-size: 12px; font-weight: 650; cursor: pointer;
         }
-        .home-focus-card {
-            background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18);
-            border-radius: 8px; padding: 10px 12px;
-            flex: 1 1 160px;
-            min-width: 150px;
+        .home-quick-launch button:hover { background: #f5f3ff; border-color: #c4b5fd; }
+        .home-ring-card {
+            background: rgba(255,255,255,0.75); border: 1px solid #e9e4f8; border-radius: 8px;
+            padding: 10px 12px; display: flex; align-items: center; gap: 12px;
         }
-        .home-sync-card .sync-line {
-            display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
-            font-size: 12px; color: rgba(237,233,254,0.92); margin-top: 6px; line-height: 1.45;
+        .home-ring-card .label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #8b5cf6; font-weight: 650; margin-bottom: 6px; }
+        .home-ring-svg { width: 72px; height: 72px; flex-shrink: 0; }
+        .home-ring-legend { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+        .home-ring-legend button {
+            display: flex; justify-content: space-between; gap: 8px; width: 100%;
+            border: 0; background: transparent; padding: 2px 0; cursor: pointer; font-size: 12px; color: #5b21b6;
         }
-        .home-sync-card .sync-line:first-of-type { margin-top: 0; }
-        .home-sync-card .sync-line strong { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
-        .home-sync-card .sync-ok { color: #bbf7d0 !important; }
-        .home-sync-card .sync-bad { color: #fda4af !important; }
-        .home-sync-card .sync-warn { color: #fde68a !important; }
-        .home-sync-actions {
-            display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
-        }
-        .home-sync-actions button {
-            border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.14);
-            color: #f8fafc; border-radius: 999px; padding: 5px 12px; font-size: 12px;
-            font-weight: 650; cursor: pointer;
-        }
-        .home-sync-actions button:hover { background: rgba(255,255,255,0.24); }
-        .home-focus-card .label {
-            font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-            color: rgba(221,214,254,0.95); font-weight: 650; margin-bottom: 8px;
-        }
-        .home-focus-bars { display: flex; flex-direction: column; gap: 7px; }
-        .home-focus-row { display: flex; align-items: center; gap: 8px; }
-        .home-focus-row span { width: 36px; font-size: 11px; color: rgba(237,233,254,0.9); flex-shrink: 0; }
-        .home-focus-row strong { width: 28px; font-size: 12px; color: #fff; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-        .home-focus-track {
-            flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.16); overflow: hidden;
-        }
-        .home-focus-track i {
-            display: block; height: 100%; border-radius: inherit;
-            background: linear-gradient(90deg, #c4b5fd, #a78bfa, #818cf8);
-        }
-        .home-focus-quote {
-            margin: 0; font-family: var(--home-serif); font-size: 12.5px; line-height: 1.6;
-            color: rgba(245,243,255,0.95);
-        }
+        .home-ring-legend button:hover { color: #7c3aed; }
+        .home-ring-legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 
         .home-ledger {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap;
-            width: 100%;
-            background: #fff;
-            border: 1px solid var(--home-line);
-            border-radius: 10px;
-            overflow: hidden;
+            display: flex !important; flex-direction: row !important; flex-wrap: nowrap; width: 100%;
+            background: #fff; border: 1px solid var(--home-line); border-radius: 10px; overflow: hidden;
             box-shadow: 0 8px 20px rgba(76, 29, 149, 0.06);
         }
         .home-stat {
-            position: relative;
-            flex: 1 1 0;
-            min-width: 0;
-            padding: 12px 10px 10px;
-            cursor: pointer;
-            border-right: 1px solid var(--home-line);
-            transition: background 0.15s;
+            position: relative; flex: 1 1 0; min-width: 0; padding: 12px 10px 10px;
+            cursor: pointer; border-right: 1px solid var(--home-line); transition: background 0.15s;
         }
         .home-stat:last-child { border-right: 0; }
-        .home-stat::before {
-            content: ''; position: absolute; left: 0; top: 0; right: 0; height: 3px;
-            background: #c4b5fd;
-        }
+        .home-stat.is-hidden { display: none; }
+        .home-stat::before { content: ''; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: #c4b5fd; }
         .home-stat.accent-a::before { background: #7c3aed; }
         .home-stat.accent-b::before { background: #6366f1; }
         .home-stat.accent-c::before { background: #8b5cf6; }
@@ -708,102 +625,73 @@
         .home-stat.accent-e::before { background: #4f46e5; }
         .home-stat.accent-f::before { background: #db2777; }
         .home-stat:hover { background: #faf8ff; }
-        .home-stat .k {
-            font-size: 11px; color: var(--home-muted); font-weight: 700;
-            letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
+        .home-stat .k { font-size: 11px; color: var(--home-muted); font-weight: 700; letter-spacing: 0.06em; }
         .home-stat .v {
             margin-top: 8px; font-family: var(--home-serif); font-size: 26px; font-weight: 700;
             color: var(--home-ink); line-height: 1; font-variant-numeric: tabular-nums;
         }
-        .home-stat .h {
-            margin-top: 6px; font-size: 11px; color: #94a3b8;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
+        .home-stat .h { margin-top: 6px; font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .home-stat .delta { color: #16a34a; font-weight: 650; }
+        .home-stat .delta.neg { color: #dc2626; }
+        .home-stat .delta.flat { color: #94a3b8; }
 
         .home-quick {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap;
-            align-items: stretch;
-            gap: 8px;
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-            border-radius: 10px;
-            background: rgba(255,255,255,0.9);
-            border: 1px solid var(--home-line);
+            display: flex !important; flex-direction: row !important; flex-wrap: nowrap; align-items: stretch;
+            gap: 8px; width: 100%; padding: 10px; box-sizing: border-box; border-radius: 10px;
+            background: rgba(255,255,255,0.9); border: 1px solid var(--home-line);
         }
         .home-quick-label {
-            flex: 0 0 auto;
-            display: flex; align-items: center;
-            font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-            color: var(--home-muted); font-weight: 750; padding: 0 4px;
+            flex: 0 0 auto; display: flex; align-items: center; font-size: 11px; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--home-muted); font-weight: 750; padding: 0 4px;
         }
         .home-quick-item {
-            flex: 1 1 0;
-            min-width: 0;
+            position: relative; flex: 1 1 0; min-width: 0;
             display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
-            gap: 6px; padding: 10px 12px;
-            border: 1px solid #e9e4f8; border-radius: 8px; background: #fff;
+            gap: 6px; padding: 10px 12px; border: 1px solid #e9e4f8; border-radius: 8px; background: #fff;
             cursor: pointer; transition: all 0.15s; color: #334155; font-weight: 650;
         }
-        .home-quick-item:hover {
-            border-color: #c4b5fd; color: var(--home-accent-deep); background: #f5f3ff;
-            transform: translateY(-1px);
-        }
+        .home-quick-item:hover { border-color: #c4b5fd; color: var(--home-accent-deep); background: #f5f3ff; transform: translateY(-1px); }
         .home-quick-item .ico {
             display: inline-flex; align-items: center; justify-content: center;
             width: 26px; height: 26px; border-radius: 7px; font-size: 12px; font-weight: 800;
             background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #ede9fe;
         }
-        .home-quick-item .t {
-            font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+        .home-quick-item .t { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .home-quick-badge {
+            position: absolute; top: 6px; right: 8px; min-width: 16px; height: 16px; padding: 0 4px;
+            border-radius: 999px; background: #e11d48; color: #fff; font-size: 10px; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center; line-height: 1;
         }
 
-        .home-grid {
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: stretch;
-            gap: 10px;
-            width: 100%;
-            min-height: 420px;
-        }
-        .home-col {
-            flex: 1 1 0;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+        .home-grid { display: flex !important; flex-direction: row !important; align-items: stretch; gap: 10px; width: 100%; min-height: 440px; }
+        .home-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
         .home-panel {
-            flex: 1 1 0;
-            min-height: 160px;
-            background: #fff;
-            border: 1px solid var(--home-line);
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 8px 18px rgba(76, 29, 149, 0.05);
-            display: flex;
-            flex-direction: column;
+            flex: 1 1 0; min-height: 200px; background: #fff; border: 1px solid var(--home-line);
+            border-radius: 10px; overflow: hidden; box-shadow: 0 8px 18px rgba(76, 29, 149, 0.05);
+            display: flex; flex-direction: column;
         }
         .home-panel-hd {
-            display: flex; justify-content: space-between; align-items: center; gap: 8px;
-            padding: 11px 14px; border-bottom: 1px solid var(--home-line);
-            background: linear-gradient(180deg, #faf8ff, #fff);
-            flex-shrink: 0;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+            padding: 10px 12px; border-bottom: 1px solid var(--home-line);
+            background: linear-gradient(180deg, #faf8ff, #fff); flex-shrink: 0;
         }
         .home-panel-hd h3 {
             margin: 0; font-family: var(--home-serif); font-size: 15px; font-weight: 700; color: var(--home-ink);
             display: flex; align-items: center; gap: 8px;
         }
-        .home-panel-hd h3::before {
-            content: ''; width: 3px; height: 13px; border-radius: 2px; background: var(--home-accent);
+        .home-panel-hd h3::before { content: ''; width: 3px; height: 13px; border-radius: 2px; background: var(--home-accent); }
+        .home-panel-hd .link { border: 0; background: transparent; color: var(--home-accent-deep); font-size: 12px; font-weight: 650; cursor: pointer; }
+        .home-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 10px 0; }
+        .home-tab {
+            border: 1px solid #e9e4f8; background: #fff; color: #64748b; border-radius: 999px;
+            padding: 3px 10px; font-size: 11px; font-weight: 650; cursor: pointer;
         }
-        .home-panel-hd .link {
-            border: 0; background: transparent; color: var(--home-accent-deep);
-            font-size: 12px; font-weight: 650; cursor: pointer;
+        .home-tab.active { background: #f5f3ff; border-color: #c4b5fd; color: #6d28d9; }
+        .home-member-search {
+            width: 100%; box-sizing: border-box; margin: 8px 10px 0; padding: 7px 10px;
+            border: 1px solid #e9e4f8; border-radius: 8px; font-size: 12px; outline: none;
         }
+        .home-member-search:focus { border-color: #c4b5fd; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
         .home-panel-bd { padding: 4px 8px 8px; flex: 1; overflow: auto; }
         .home-empty {
             min-height: 120px; display: flex; align-items: center; justify-content: center;
@@ -811,26 +699,37 @@
         }
         .home-todo-item, .home-feed-item, .home-member-item {
             display: flex; gap: 10px; align-items: flex-start; padding: 11px 8px;
-            border-radius: 6px; cursor: pointer; transition: background 0.15s;
-            border-bottom: 1px solid #f1eef9;
+            border-radius: 6px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid #f1eef9;
         }
         .home-todo-item:last-child, .home-feed-item:last-child, .home-member-item:last-child { border-bottom: 0; }
         .home-todo-item:hover, .home-feed-item:hover, .home-member-item:hover { background: var(--home-soft); }
-        .home-todo-item .pri {
-            flex-shrink: 0; margin-top: 2px; font-size: 10px; font-weight: 750; padding: 3px 7px; border-radius: 4px;
-        }
+        .home-todo-item.is-urgent { background: #fff7f7; }
+        .home-todo-item .pri { flex-shrink: 0; margin-top: 2px; font-size: 10px; font-weight: 750; padding: 3px 7px; border-radius: 4px; }
         .home-todo-item .pri.high { background: #fef2f2; color: #b91c1c; }
         .home-todo-item .pri.medium { background: #fff7ed; color: #c2410c; }
         .home-todo-item .pri.low { background: #f0fdf4; color: #15803d; }
-        .home-todo-item .title, .home-feed-item .title {
-            font-size: 13px; font-weight: 650; color: #1e293b; line-height: 1.4;
-        }
+        .home-todo-item .title, .home-feed-item .title { font-size: 13px; font-weight: 650; color: #1e293b; line-height: 1.4; }
         .home-todo-item .meta, .home-feed-item .meta { margin-top: 4px; font-size: 11px; color: #94a3b8; }
+        .home-todo-item .meta.due-soon { color: #ea580c; font-weight: 650; }
+        .home-todo-actions { display: none; gap: 6px; margin-top: 6px; }
+        .home-todo-item:hover .home-todo-actions { display: flex; }
+        .home-todo-actions button {
+            border: 1px solid #e2e8f0; background: #fff; border-radius: 6px; padding: 3px 8px;
+            font-size: 11px; font-weight: 650; cursor: pointer;
+        }
+        .home-todo-actions .ok { color: #16a34a; border-color: #bbf7d0; }
+        .home-todo-actions .bad { color: #dc2626; border-color: #fecaca; }
         .home-feed-item { position: relative; padding-left: 20px; }
+        .home-feed-item.is-read { opacity: 0.62; }
+        .home-feed-item.is-read .home-feed-dot { background: #cbd5e1; box-shadow: none; }
+        .home-feed-item.is-urgent .title { color: #b91c1c; }
         .home-feed-dot {
-            position: absolute; left: 6px; top: 16px;
-            width: 8px; height: 8px; border-radius: 50%; background: var(--home-accent);
-            box-shadow: 0 0 0 3px rgba(124,58,237,0.16);
+            position: absolute; left: 6px; top: 16px; width: 8px; height: 8px; border-radius: 50%;
+            background: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.16);
+        }
+        .home-feed-tag {
+            display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 4px;
+            font-size: 10px; font-weight: 700; background: #f5f3ff; color: #6d28d9;
         }
         .home-member-item { align-items: center; }
         .home-member-item .av {
@@ -842,9 +741,7 @@
         .home-member-item .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .home-member-item .name { font-size: 13px; font-weight: 700; color: #1e293b; }
         .home-member-item .tag { font-size: 11px; color: #64748b; margin-top: 2px; }
-        .home-member-item .badge {
-            margin-left: auto; font-size: 11px; padding: 2px 8px; border-radius: 4px; white-space: nowrap;
-        }
+        .home-member-item .badge { margin-left: auto; font-size: 11px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
         .home-member-item .badge.on { background: #f5f3ff; color: #6d28d9; }
         .home-member-item .badge.off { background: #f1f5f9; color: #64748b; }
         .home-foot-note {
@@ -853,9 +750,35 @@
             background: rgba(255,255,255,0.8); border: 1px dashed #ddd6fe;
         }
         .home-foot-note strong { color: #5b21b6; font-weight: 700; }
-        body:has(#home.module.active) .module-back-fab {
-            display: none !important;
+
+        .nav-sync-chip {
+            display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; padding: 5px 10px;
+            border-radius: 999px; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.92); font-size: 11px; font-weight: 650; cursor: pointer; white-space: nowrap;
         }
+        .nav-sync-chip:hover { background: rgba(255,255,255,0.2); }
+        .nav-sync-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: #fbbf24; }
+        .nav-sync-chip.is-ok .dot { background: #4ade80; }
+        .nav-sync-chip.is-bad .dot { background: #fb7185; }
+        .nav-sync-chip.is-syncing .dot { background: #93c5fd; animation: homeSyncPulse 1s ease-in-out infinite; }
+        @keyframes homeSyncPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+        .cloud-sync-fab {
+            position: fixed; right: 24px; bottom: 28px; z-index: 1210;
+            display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px;
+            border: 1px solid #ddd6fe; border-radius: 999px; background: #fff; color: #5b21b6;
+            font-size: 13px; font-weight: 700; cursor: pointer;
+            box-shadow: 0 12px 28px rgba(91, 33, 182, 0.18);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .cloud-sync-fab:hover { transform: translateY(-1px); box-shadow: 0 14px 32px rgba(91, 33, 182, 0.24); }
+        .cloud-sync-fab .fab-dot { width: 9px; height: 9px; border-radius: 50%; background: #fbbf24; }
+        .cloud-sync-fab.is-ok .fab-dot { background: #22c55e; }
+        .cloud-sync-fab.is-bad .fab-dot { background: #ef4444; }
+        .cloud-sync-fab.is-syncing .fab-dot { background: #3b82f6; animation: homeSyncPulse 1s ease-in-out infinite; }
+        .cloud-sync-fab .fab-sub { font-size: 11px; font-weight: 500; color: #64748b; }
+
+        body:has(#home.module.active) .module-back-fab { display: none !important; }
         @media (max-width: 1100px) {
             .home-ledger { flex-wrap: wrap; }
             .home-stat { flex: 1 1 33.33%; border-bottom: 1px solid var(--home-line); }
@@ -869,7 +792,76 @@
             .home-stat { flex: 1 1 50%; }
             .home-stat:nth-child(2n) { border-right: 0; }
             .home-quick-item { flex: 1 1 45%; }
+            .cloud-sync-fab { right: 12px; bottom: 16px; }
         }
+
+        .home-quick-toolbar {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            padding: 0 2px;
+        }
+        .home-quick-toolbar button {
+            border: 1px solid #e9e4f8; background: #fff; color: #6d28d9;
+            border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 650; cursor: pointer;
+        }
+        .home-quick-toolbar button:hover { background: #f5f3ff; border-color: #c4b5fd; }
+        .home-dashboard.is-compact .home-hero-inner { padding: 12px 14px; }
+        .home-dashboard.is-compact .home-stat .v { font-size: 22px; }
+        .home-dashboard.is-compact .home-grid { min-height: 360px; }
+        .home-modal-mask {
+            display: none; position: fixed; inset: 0; z-index: 13000;
+            background: rgba(15, 23, 42, 0.45); align-items: center; justify-content: center; padding: 16px;
+        }
+        .home-modal {
+            width: min(560px, 100%); max-height: min(80vh, 720px); overflow: auto;
+            background: #fff; border-radius: 14px; border: 1px solid #e9e4f8;
+            box-shadow: 0 24px 60px rgba(76, 29, 149, 0.22); padding: 16px 18px 18px;
+        }
+        .home-modal h3 { margin: 0 0 8px; font-size: 17px; color: #4c1d95; }
+        .home-modal .desc { font-size: 12px; color: #64748b; margin-bottom: 12px; line-height: 1.5; }
+        .home-modal-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+        .home-modal-actions button {
+            border: 1px solid #e2e8f0; background: #fff; border-radius: 8px;
+            padding: 7px 14px; font-size: 13px; font-weight: 650; cursor: pointer;
+        }
+        .home-modal-actions .primary { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+        .home-customize-row {
+            display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+            border: 1px solid #f1eef9; border-radius: 8px; margin-bottom: 6px; cursor: default;
+        }
+        .home-customize-row .ico {
+            width: 24px; height: 24px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+            background: #f5f3ff; color: #6d28d9; font-size: 12px; font-weight: 800;
+        }
+        .home-customize-row .t { flex: 1; font-size: 13px; color: #334155; font-weight: 650; }
+        .home-customize-row .ops button {
+            border: 1px solid #e2e8f0; background: #fff; border-radius: 6px; width: 28px; height: 28px; cursor: pointer;
+        }
+        .home-sync-log-head {
+            display: grid; gap: 4px; padding: 10px 12px; border-radius: 8px; background: #faf8ff;
+            border: 1px solid #e9e4f8; margin-bottom: 10px; font-size: 12px; color: #64748b;
+        }
+        .home-sync-log-head .ok { color: #16a34a; }
+        .home-sync-log-head .bad { color: #dc2626; }
+        .home-sync-log-item {
+            padding: 8px 10px; border-radius: 8px; border: 1px solid #f1eef9; margin-bottom: 6px;
+        }
+        .home-sync-log-item.ok { border-left: 3px solid #22c55e; }
+        .home-sync-log-item.bad { border-left: 3px solid #ef4444; background: #fff7f7; }
+        .home-sync-log-item .t { font-size: 12px; font-weight: 700; color: #334155; }
+        .home-sync-log-item .m { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+        .home-foot-extra a { color: #6d28d9; font-weight: 650; text-decoration: none; }
+        .home-foot-extra a:hover { text-decoration: underline; }
+        .cloud-sync-fab .fab-menu {
+            position: absolute; right: 0; bottom: calc(100% + 8px); min-width: 140px;
+            background: #fff; border: 1px solid #e9e4f8; border-radius: 10px; padding: 6px;
+            box-shadow: 0 12px 28px rgba(91,33,182,0.18); display: none;
+        }
+        .cloud-sync-fab:hover .fab-menu, .cloud-sync-fab:focus-within .fab-menu { display: block; }
+        .cloud-sync-fab .fab-menu button {
+            display: block; width: 100%; text-align: left; border: 0; background: transparent;
+            padding: 8px 10px; border-radius: 6px; font-size: 12px; color: #5b21b6; cursor: pointer; font-weight: 650;
+        }
+        .cloud-sync-fab .fab-menu button:hover { background: #f5f3ff; }
 
         .notice-stat-card {
             background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -917,17 +909,27 @@
         .sidebar {
             width: 260px;
             flex-shrink: 0;
-            background: rgba(255,255,255,0.78);
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(250,248,255,0.88) 100%);
             backdrop-filter: blur(16px) saturate(140%);
             -webkit-backdrop-filter: blur(16px) saturate(140%);
-            border-right: 1px solid var(--line);
-            box-shadow: 8px 0 30px rgba(49, 30, 100, 0.06);
-            padding: 18px 12px;
-            overflow-y: auto;
+            border-right: 1px solid rgba(167, 139, 250, 0.18);
+            box-shadow: 8px 0 24px rgba(139, 92, 246, 0.05);
+            padding: 12px 10px 10px;
+            overflow: hidden;
             max-height: calc(100vh - 64px);
+            height: calc(100vh - 64px);
             position: sticky;
             top: 64px;
             align-self: flex-start;
+            box-sizing: border-box;
+        }
+        .sidebar-nav {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 2px;
         }
         
         .nav-item {
@@ -3566,12 +3568,16 @@
                     oninput="onGlobalSearchInput()" onkeydown="onGlobalSearchKeyDown(event)" onfocus="onGlobalSearchInput()">
                 <div class="global-search-panel" id="globalSearchPanel"></div>
             </div>
-            <div class="nav-links">
+                <div class="nav-links">
                 <a href="#" onclick="showModule('about')">团队介绍</a>
                 <a href="#" onclick="showModule('achievements')">团队成果</a>
                 <a href="#" onclick="showModule('projects')">团队项目</a>
                 <a href="#" onclick="showModule('members')">团队成员</a>
                 <a href="#" onclick="showModule('contact')">联系我们</a>
+                <button type="button" class="nav-sync-chip" id="navSyncChip" onclick="manualHomeCloudSync()" title="云端同步状态，点击立即同步">
+                    <span class="dot"></span>
+                    <span id="navSyncChipText">同步</span>
+                </button>
                 <div class="global-notice-wrap" id="globalNoticeWrap">
                     <button type="button" class="global-notice-bell" id="globalNoticeBell" onclick="onGlobalNoticeBellClick(event)" title="全局通知中心：查看全部通知">
                         🔔
@@ -3603,11 +3609,25 @@
         <span>← 返回</span>
         <span class="fab-prev" id="moduleBackFabPrev"></span>
     </button>
+    <button type="button" class="cloud-sync-fab" id="cloudSyncFab" onclick="manualHomeCloudSync()" title="点击增量同步；悬停可看更多操作">
+        <span class="fab-dot"></span>
+        <span>
+            <span id="cloudSyncFabLabel">云端同步</span>
+            <div class="fab-sub" id="cloudSyncFabSub">点击同步</div>
+        </span>
+        <div class="fab-menu" onclick="event.stopPropagation()">
+            <button type="button" onclick="manualHomeCloudSync()">增量同步</button>
+            <button type="button" onclick="manualHomeCloudSyncFull()">全量同步</button>
+            <button type="button" onclick="openHomeSyncLogPanel()">同步日志</button>
+            <button type="button" onclick="runHomeConsistencyCheck(false)">一致性校验</button>
+        </div>
+    </button>
 
     <!-- 主容器 -->
     <div class="app-shell">
         <!-- 左侧菜单 -->
         <div class="sidebar">
+            <div class="sidebar-nav">
             <div class="nav-item active" onclick="showModule('home')">
                 <span>🏠</span> 首页
             </div>
@@ -3757,6 +3777,7 @@
                     <span>💾</span> 数据备份管理
                 </div>
             </div>
+            </div>
         </div>
         
         <!-- 主内容区 -->
@@ -3772,52 +3793,42 @@
                                 <div style="min-width:0;flex:1;">
                                     <div class="home-eyebrow">城市安全数智创新团队 · Research Workspace</div>
                                     <h2 id="homeWelcomeTitle">工作台</h2>
-                                    <div class="sub" id="homeWelcomeSub">成果、经费、成员与待办统一汇聚，点击指标即可进入对应业务模块</div>
+                                    <div class="sub" id="homeWelcomeSub">问候、身份与今日关键指标一览</div>
                                     <div class="home-hero-meta" id="homeHeroMeta"></div>
+                                    <div class="home-quick-launch" id="homeQuickLaunch" style="margin-top:10px;"></div>
                                 </div>
                             </div>
                             <div class="home-hero-aside">
-                                <div class="home-focus-card home-sync-card">
-                                    <div class="label">数据同步 · 真实状态</div>
-                                    <div id="homeSyncStatus"></div>
-                                    <div class="home-sync-actions">
-                                        <button type="button" onclick="manualHomeCloudSync()">立即同步</button>
+                                <div class="home-ring-card">
+                                    <div>
+                                        <div class="label">成果结构</div>
+                                        <svg class="home-ring-svg" id="homeRingSvg" viewBox="0 0 36 36" aria-hidden="true"></svg>
                                     </div>
-                                </div>
-                                <div class="home-focus-card">
-                                    <div class="label">成果结构（实时计数）</div>
-                                    <div class="home-focus-bars" id="homeFocusBars"></div>
+                                    <div class="home-ring-legend" id="homeRingLegend"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="home-ledger" id="homeStatsGrid">
-                        <div class="home-stat accent-a" onclick="showModule('patent_management')"><div class="k">专利</div><div class="v" id="homeStatPatent">-</div><div class="h">进入专利档案</div></div>
-                        <div class="home-stat accent-b" onclick="showModule('paper_management')"><div class="k">论文</div><div class="v" id="homeStatPaper">-</div><div class="h">进入论文成果</div></div>
-                        <div class="home-stat accent-c" onclick="showModule('longitudinal_project')"><div class="k">项目</div><div class="v" id="homeStatProject">-</div><div class="h">进入项目管理</div></div>
-                        <div class="home-stat accent-d" onclick="showModule('achievements')"><div class="k">经费</div><div class="v" id="homeStatFunding">-</div><div class="h">单位：万元</div></div>
-                        <div class="home-stat accent-e" onclick="showModule('member_archive')"><div class="k">在读成员</div><div class="v" id="homeStatMember">-</div><div class="h" id="homeStatMemberHint">进入团队档案</div></div>
-                        <div class="home-stat accent-f" onclick="showModule('task_management')"><div class="k">待办</div><div class="v" id="homeStatTask">-</div><div class="h">未完成任务</div></div>
+                        <div class="home-stat accent-a" data-stat="patent" onclick="homeJumpStat('patent')"><div class="k">专利</div><div class="v" id="homeStatPatent">-</div><div class="h" id="homeStatPatentHint">进入专利档案</div></div>
+                        <div class="home-stat accent-b" data-stat="paper" onclick="homeJumpStat('paper')"><div class="k">论文</div><div class="v" id="homeStatPaper">-</div><div class="h" id="homeStatPaperHint">进入论文成果</div></div>
+                        <div class="home-stat accent-c" data-stat="project" onclick="homeJumpStat('project')"><div class="k">项目</div><div class="v" id="homeStatProject">-</div><div class="h" id="homeStatProjectHint">进入项目管理</div></div>
+                        <div class="home-stat accent-d" data-stat="funding" onclick="homeJumpStat('funding')"><div class="k">经费</div><div class="v" id="homeStatFunding">-</div><div class="h" id="homeStatFundingHint">单位：万元</div></div>
+                        <div class="home-stat accent-e" data-stat="member" onclick="homeJumpStat('member')"><div class="k">在籍成员</div><div class="v" id="homeStatMember">-</div><div class="h" id="homeStatMemberHint">进入团队档案</div></div>
+                        <div class="home-stat accent-f" data-stat="task" onclick="homeJumpStat('task')"><div class="k">待办</div><div class="v" id="homeStatTask">-</div><div class="h" id="homeStatTaskHint">未完成任务</div></div>
                     </div>
 
-                    <div class="home-quick" id="homeQuickNav">
-                        <span class="home-quick-label">入口</span>
-                        <div class="home-quick-item" onclick="showModule('member_archive')"><div class="ico">团</div><div class="t">团队成员</div></div>
-                        <div class="home-quick-item" onclick="showModule('task_management')"><div class="ico">任</div><div class="t">任务待办</div></div>
-                        <div class="home-quick-item" onclick="showModule('notice_publish')"><div class="ico">通</div><div class="t">通知公告</div></div>
-                        <div class="home-quick-item" onclick="showModule('literature_library')"><div class="ico">献</div><div class="t">文献资料</div></div>
-                        <div class="home-quick-item" onclick="showModule('weekly_report')"><div class="ico">报</div><div class="t">工作周报</div></div>
-                        <div class="home-quick-item" onclick="showModule('meeting_management')"><div class="ico">会</div><div class="t">组会管理</div></div>
-                    </div>
+                    <div class="home-quick" id="homeQuickNav"></div>
 
                     <div class="home-grid">
                         <div class="home-col">
                             <div class="home-panel">
                                 <div class="home-panel-hd">
                                     <h3>我的待办</h3>
-                                    <button type="button" class="link" onclick="showModule('task_management')">全部任务 →</button>
+                                    <button type="button" class="link" onclick="showModule('task_management')">查看全部 →</button>
                                 </div>
+                                <div class="home-tabs" id="homeTodoTabs"></div>
                                 <div class="home-panel-bd" id="homeTodoList"></div>
                             </div>
                         </div>
@@ -3825,16 +3836,10 @@
                             <div class="home-panel">
                                 <div class="home-panel-hd">
                                     <h3>研究动态</h3>
-                                    <button type="button" class="link" onclick="showModule('notice_publish')">通知中心 →</button>
+                                    <button type="button" class="link" onclick="showModule('notice_publish')">更多 →</button>
                                 </div>
+                                <div class="home-tabs" id="homeFeedTabs"></div>
                                 <div class="home-panel-bd" id="homeFeedList"></div>
-                            </div>
-                            <div class="home-panel">
-                                <div class="home-panel-hd">
-                                    <h3>新闻发布</h3>
-                                    <button type="button" class="link" onclick="showModule('news_management')">更多 →</button>
-                                </div>
-                                <div class="home-panel-bd" id="homeNewsList"></div>
                             </div>
                         </div>
                         <div class="home-col">
@@ -3843,13 +3848,15 @@
                                     <h3>在读名录</h3>
                                     <button type="button" class="link" onclick="showModule('member_archive')">团队档案 →</button>
                                 </div>
+                                <div class="home-tabs" id="homeMemberTabs"></div>
+                                <input type="search" class="home-member-search" id="homeMemberSearch" placeholder="搜索姓名快速定位…" oninput="onHomeMemberSearch(this.value)" />
                                 <div class="home-panel-bd" id="homeMemberList"></div>
                             </div>
                         </div>
                     </div>
                     <div class="home-foot-note" id="homeFootNote">
-                        <span>数据来源：专利 / 论文 / 项目 / 成员 / 任务实时联动</span>
-                        <span>点击任意指标或入口即可进入对应模块</span>
+                        <span>数据来源：各业务模块实时聚合（同源统计）</span>
+                        <span>点击指标、入口或条目可直达对应模块</span>
                     </div>
                 </div>
             </div>
@@ -9153,6 +9160,49 @@
         <p>地址：重庆市沙坪坝区大学城东路 20 号 | 电话：023-65022222</p>
     </div>
 
+    <div class="home-modal-mask" id="homeQuickCustomizeModal" onclick="if(event.target===this)closeHomeQuickCustomize()">
+        <div class="home-modal" role="dialog" aria-modal="true">
+            <h3>自定义快捷入口</h3>
+            <div class="desc">勾选要显示的入口，用 ↑↓ 调整顺序。偏好按角色保存在本机，并随账号使用习惯生效。</div>
+            <div id="homeQuickCustomizeList"></div>
+            <div class="home-modal-actions">
+                <button type="button" onclick="resetHomeQuickCustomize()">恢复默认</button>
+                <button type="button" onclick="closeHomeQuickCustomize()">取消</button>
+                <button type="button" class="primary" onclick="saveHomeQuickCustomize()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="home-modal-mask" id="homeLayoutCustomizeModal" onclick="if(event.target===this)closeHomeLayoutCustomize()">
+        <div class="home-modal" role="dialog" aria-modal="true">
+            <h3>工作台布局</h3>
+            <div class="desc">调整三栏顺序（todo=待办，feed=动态，member=名录），可选紧凑模式。</div>
+            <label style="display:block;font-size:13px;margin-bottom:8px;">栏顺序（逗号分隔）
+                <input id="homeLayoutOrder" class="form-control" style="margin-top:6px;" value="todo,feed,member">
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+                <input type="checkbox" id="homeLayoutCompact"> 紧凑模式
+            </label>
+            <div class="home-modal-actions">
+                <button type="button" onclick="closeHomeLayoutCustomize()">取消</button>
+                <button type="button" class="primary" onclick="saveHomeLayoutCustomize()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="home-modal-mask" id="homeSyncLogModal" onclick="if(event.target===this)closeHomeSyncLogPanel()">
+        <div class="home-modal" role="dialog" aria-modal="true">
+            <h3>云端同步日志</h3>
+            <div class="desc">记录近期增量/全量同步结果，便于排查失败原因。关键失败会向管理员发送站内信告警。</div>
+            <div id="homeSyncLogList"></div>
+            <div class="home-modal-actions">
+                <button type="button" onclick="clearHomeSyncLogs()">清空日志</button>
+                <button type="button" onclick="manualHomeCloudSyncFull()">立即全量同步</button>
+                <button type="button" class="primary" onclick="closeHomeSyncLogPanel()">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         window.onerror = function(msg, url, line, col, error) {
             console.error('Global error:', msg, 'at', url, line, col);
@@ -9404,6 +9454,14 @@
                     showCloudSyncBanner('云端同步权限不足', true);
                 }
             }
+            try {
+                var fp = {};
+                try { fp = JSON.parse(localStorage.getItem('cloudSyncFingerprints') || '{}') || {}; } catch (eFp) { fp = {}; }
+                var h = 5381;
+                for (var i = 0; i < summary.length; i++) h = ((h << 5) + h) + summary.charCodeAt(i);
+                fp[key] = (h >>> 0).toString(36) + ':' + summary.length;
+                localStorage.setItem('cloudSyncFingerprints', JSON.stringify(fp));
+            } catch (eFp2) {}
         }
 
         function queueCloudUpsert(key, rawValue) {
@@ -9426,22 +9484,37 @@
             options = options || {};
             if (!cloudSyncEnabled) {
                 markCloudSyncState({ lastAt: Date.now(), lastOk: false, lastReason: 'disabled', lastError: '未配置云端', lastApplied: 0 });
-                return { ok: false, reason: 'disabled' };
+                return { ok: false, reason: 'disabled', applied: 0, skipped: 0, changedKeys: [] };
+            }
+            function syncContentHash(str) {
+                var h = 5381;
+                str = String(str || '');
+                for (var i = 0; i < str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
+                return (h >>> 0).toString(36) + ':' + str.length;
+            }
+            function loadSyncFingerprints() {
+                try { return JSON.parse(localStorage.getItem('cloudSyncFingerprints') || '{}') || {}; } catch (e) { return {}; }
+            }
+            function saveSyncFingerprints(map) {
+                try { localStorage.setItem('cloudSyncFingerprints', JSON.stringify(map || {})); } catch (e) {}
             }
             try {
                 cloudPulling = true;
                 var rows = await supabaseRequest(
                     'GET',
                     'patents?classification=eq.' + encodeURIComponent(CLOUD_SYNC_MARK),
-                    { select: 'id,patent_number,summary', limit: 500 }
+                    { select: 'id,patent_number,summary,remark', limit: 500 }
                 );
                 cloudSyncReady = true;
                 var applied = 0;
+                var skipped = 0;
+                var changedKeys = [];
+                var fingerprints = loadSyncFingerprints();
+                var forceFull = !!options.full;
                 var latestByKey = {};
                 (rows || []).forEach(function(row) {
                     var key = patentNumberToSyncKey(row.patent_number);
                     if (!key || !CLOUD_SYNC_KEYS.has(key)) return;
-                    // 若有重复，保留 id 更大的
                     if (!latestByKey[key] || (row.id > latestByKey[key].id)) {
                         latestByKey[key] = row;
                     }
@@ -9450,21 +9523,58 @@
                     var row = latestByKey[key];
                     cloudRowIdCache[key] = row.id;
                     try {
-                        var parsed = JSON.parse(row.summary || 'null');
+                        var summaryRaw = row.summary || 'null';
+                        var hash = syncContentHash(summaryRaw);
+                        var localRaw = null;
+                        try { localRaw = localStorage.getItem(key); } catch (eL) { localRaw = null; }
+                        if (!forceFull && fingerprints[key] === hash && localRaw != null) {
+                            skipped++;
+                            return;
+                        }
+                        var parsed = JSON.parse(summaryRaw);
                         if (key === 'teamMemberData' && Array.isArray(parsed)) {
                             parsed = mergeCloudTeamMembersWithLocalAvatars(parsed);
                         }
-                        Storage.prototype.setItem.call(localStorage, key, JSON.stringify(parsed));
+                        var nextRaw = JSON.stringify(parsed);
+                        if (!forceFull && localRaw === nextRaw) {
+                            fingerprints[key] = hash;
+                            skipped++;
+                            return;
+                        }
+                        Storage.prototype.setItem.call(localStorage, key, nextRaw);
+                        fingerprints[key] = hash;
                         applied++;
+                        changedKeys.push(key);
                     } catch (e) {
                         console.warn('apply cloud key failed', key, e);
                     }
                 });
-                markCloudSyncState({ lastAt: Date.now(), lastOk: true, lastApplied: applied, lastError: '', lastReason: 'ok' });
+                saveSyncFingerprints(fingerprints);
+                markCloudSyncState({
+                    lastAt: Date.now(),
+                    lastOk: true,
+                    lastApplied: applied,
+                    lastSkipped: skipped,
+                    lastMode: forceFull ? 'full' : 'incremental',
+                    lastChangedKeys: changedKeys,
+                    lastError: '',
+                    lastReason: 'ok'
+                });
                 if (options.silent !== true) {
-                    showCloudSyncBanner(applied > 0 ? ('已同步云端数据 ' + applied + ' 项') : '云端暂无共享数据', false);
+                    if (forceFull) {
+                        showCloudSyncBanner('全量同步完成：更新 ' + applied + ' 项，跳过 ' + skipped + ' 项', false);
+                    } else {
+                        showCloudSyncBanner(applied > 0
+                            ? ('增量同步：更新 ' + applied + ' 项，未变 ' + skipped + ' 项')
+                            : ('增量同步：无变更（已核对 ' + skipped + ' 项）'), false);
+                    }
                 }
-                return { ok: true, applied: applied };
+                try {
+                    if (typeof window !== 'undefined' && window.__homeRealtimeBroadcast && applied > 0) {
+                        window.__homeRealtimeBroadcast({ type: 'cloud-applied', applied: applied, keys: changedKeys });
+                    }
+                } catch (eBc) {}
+                return { ok: true, applied: applied, skipped: skipped, changedKeys: changedKeys, full: forceFull };
             } catch (err) {
                 console.warn('pullAllFromCloud failed', err);
                 markCloudSyncState({
@@ -9475,11 +9585,17 @@
                     lastReason: 'error'
                 });
                 if (options.silent !== true) showCloudSyncBanner('拉取云端数据失败', true);
-                return { ok: false, error: String(err && err.message || err) };
+                try {
+                    if (typeof window !== 'undefined' && typeof window.notifyHomeSyncFailure === 'function') {
+                        window.notifyHomeSyncFailure(String(err && err.message || err));
+                    }
+                } catch (eN) {}
+                return { ok: false, error: String(err && err.message || err), applied: 0, skipped: 0, changedKeys: [] };
             } finally {
                 cloudPulling = false;
             }
         }
+        window.pullAllFromCloud = pullAllFromCloud;
 
         function hydrateInMemoryFromLocalStorage() {
             function apply(name, setter) {
@@ -9575,18 +9691,36 @@
             try { if (typeof renderLiteratureList === 'function') renderLiteratureList(); } catch (e) {}
             try { if (typeof renderDatasetList === 'function') renderDatasetList(); } catch (e) {}
             try { if (typeof renderReportList === 'function') renderReportList(); } catch (e) {}
+            try {
+                if (result && result.applied > 0 && typeof invalidateHomeOverviewCache === 'function') {
+                    invalidateHomeOverviewCache('cloud-sync');
+                }
+            } catch (eInv) {}
             return result;
         }
+        window.syncFromCloudAndRefresh = syncFromCloudAndRefresh;
 
         setInterval(function() {
             if (!cloudSyncEnabled) return;
             if (document.hidden) return;
-            syncFromCloudAndRefresh({ silent: true });
+            var home = document.getElementById('home');
+            // 首页激活时由 5s 定时器负责，避免重复拉取
+            if (home && home.classList.contains('active')) return;
+            syncFromCloudAndRefresh({ silent: true, full: false });
         }, 15000);
+
+        // 首页激活时 5s 增量同步，提升「实时」感
+        setInterval(function() {
+            if (!cloudSyncEnabled) return;
+            if (document.hidden) return;
+            var home = document.getElementById('home');
+            if (!home || !home.classList.contains('active')) return;
+            syncFromCloudAndRefresh({ silent: true, full: false });
+        }, 5000);
 
         window.__cloudBootstrapped = true;
         setTimeout(function() {
-            syncFromCloudAndRefresh({ silent: true });
+            syncFromCloudAndRefresh({ silent: true, full: false });
         }, 400);
 
         // 显示模块
@@ -20444,6 +20578,7 @@ ${ocrText}`
         }
         try { if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter(); } catch (e) {}
         try { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); } catch (e2) {}
+        try { if (typeof updateHomeSyncChrome === 'function') updateHomeSyncChrome(); } catch (e3) {}
     }
 
     // ===== 3. 权限控制 =====
@@ -22738,6 +22873,7 @@ ${ocrText}`
 
     // ===== 通知管理模块（全局联动 + 已读回执） =====
     let noticeData = [];
+    try { window.noticeData = noticeData; } catch (eNoticeBind) {}
     let editingNoticeId = null;
     let noticePage = 1;
     let noticeStatFilter = '';
@@ -22897,6 +23033,7 @@ ${ocrText}`
         options = options || {};
         noticeData = (noticeData || []).map(normalizeNoticeRecord);
         localStorage.setItem('noticeData', JSON.stringify(noticeData));
+        try { window.noticeData = noticeData; } catch (eW) {}
         try { if (typeof cloudUpsert === 'function') cloudUpsert('noticeData', JSON.stringify(noticeData)); } catch (e) {}
         if (options.silent !== true) {
             refreshGlobalNoticeCenter();
@@ -22908,6 +23045,8 @@ ${ocrText}`
             }
         } catch (e2) {}
     }
+    window.normalizeNoticeRecord = normalizeNoticeRecord;
+    window.saveNoticeData = saveNoticeData;
 
     function getNoticeAudienceMembers(notice) {
         const accounts = Array.isArray(accountData) ? accountData : [];
@@ -23958,304 +24097,876 @@ ${ocrText}`
         return Array.isArray(list) ? list.length : 0;
     }
 
-    function getHomePatentCount() {
-        try {
-            if (typeof patentData !== 'undefined' && Array.isArray(patentData)) return patentData.length;
-        } catch (e) {}
-        try {
-            const raw = JSON.parse(localStorage.getItem('patentData') || '[]');
-            return Array.isArray(raw) ? raw.length : 0;
-        } catch (e2) { return 0; }
+    var homeDashUi = {
+        todoTab: 'all',
+        feedTab: 'all',
+        memberGroup: 'all',
+        memberQuery: '',
+        syncing: false,
+        lastOverview: null
+    };
+
+    var HOME_QUICK_PREF_KEY = 'homeQuickNavPrefs_v1';
+    var HOME_SYNC_LOG_KEY = 'homeCloudSyncLogs_v1';
+
+    function getHomeRoleKind() {
+        var role = (typeof currentUser !== 'undefined' && currentUser && currentUser.role) ? currentUser.role : '';
+        if (role === 'admin' || role === 'leader') return 'mentor';
+        if (role === 'visitor') return 'visitor';
+        if (role === 'student') return 'student';
+        return 'guest';
     }
 
-    function getHomePaperCount() {
+    function canViewHomeSensitiveStats() {
+        var kind = getHomeRoleKind();
+        return kind === 'mentor';
+    }
+
+    function homeCanAccessModule(moduleId) {
+        if (!moduleId) return false;
+        if (typeof hasPermission !== 'function') return true;
+        var map = {
+            member_archive: function () { return hasPermission('团队成员档案（查看全组）') || hasPermission('团队成员档案（仅自己）'); },
+            task_management: function () { return true; },
+            notice_publish: function () { return true; },
+            weekly_report: function () { return hasPermission('团队工作周报（查看全部）') || hasPermission('团队工作周报（提交自己的）'); },
+            literature_library: function () { return hasPermission('资源中心（查看）'); },
+            dataset_library: function () { return hasPermission('资源中心（查看）'); },
+            meeting_management: function () { return getHomeRoleKind() !== 'visitor'; },
+            patent_management: function () { return hasPermission('成果管理（查看）'); },
+            paper_management: function () { return hasPermission('成果管理（查看）'); },
+            longitudinal_project: function () { return hasPermission('项目管理（查看）'); },
+            achievements: function () { return true; },
+            openai: function () { return hasPermission('智能工具（全部）'); },
+            chat: function () { return hasPermission('智能工具（全部）'); },
+            news_management: function () { return getHomeRoleKind() !== 'guest'; }
+        };
+        if (map[moduleId]) {
+            try { return !!map[moduleId](); } catch (e) { return true; }
+        }
+        return true;
+    }
+
+    function getHomePatentList() {
         try {
-            if (typeof paperData !== 'undefined' && Array.isArray(paperData)) return paperData.length;
+            if (typeof patentData !== 'undefined' && Array.isArray(patentData)) return patentData;
         } catch (e) {}
         try {
-            const raw = JSON.parse(localStorage.getItem('paperData') || '[]');
-            return Array.isArray(raw) ? raw.length : 0;
-        } catch (e2) { return 0; }
+            var raw = JSON.parse(localStorage.getItem('patentData') || '[]');
+            return Array.isArray(raw) ? raw : [];
+        } catch (e2) { return []; }
     }
+
+    function getHomePaperList() {
+        try {
+            if (typeof paperData !== 'undefined' && Array.isArray(paperData)) return paperData;
+        } catch (e) {}
+        try {
+            var raw = JSON.parse(localStorage.getItem('paperData') || '[]');
+            return Array.isArray(raw) ? raw : [];
+        } catch (e2) { return []; }
+    }
+
+    function getHomePatentCount() { return getHomePatentList().length; }
+    function getHomePaperCount() { return getHomePaperList().length; }
 
     function getHomeProjectStats() {
-        const lon = (typeof longitudinalData !== 'undefined' && Array.isArray(longitudinalData)) ? longitudinalData : [];
-        const hor = (typeof horizontalData !== 'undefined' && Array.isArray(horizontalData)) ? horizontalData : [];
-        const sch = (typeof schoolData !== 'undefined' && Array.isArray(schoolData)) ? schoolData : [];
-        const count = lon.length + hor.length + sch.length;
-        const funding = []
-            .concat(lon, hor, sch)
-            .reduce(function (sum, d) { return sum + (parseFloat(d && d.funding) || 0); }, 0);
-        return { count: count, funding: funding };
+        var lon = (typeof longitudinalData !== 'undefined' && Array.isArray(longitudinalData)) ? longitudinalData : [];
+        var hor = (typeof horizontalData !== 'undefined' && Array.isArray(horizontalData)) ? horizontalData : [];
+        var sch = (typeof schoolData !== 'undefined' && Array.isArray(schoolData)) ? schoolData : [];
+        var all = [].concat(lon, hor, sch);
+        var count = all.length;
+        var funding = all.reduce(function (sum, d) { return sum + (parseFloat(d && d.funding) || 0); }, 0);
+        var used = all.reduce(function (sum, d) {
+            return sum + (parseFloat(d && (d.usedFunding || d.spent || d.used)) || 0);
+        }, 0);
+        var active = all.filter(function (d) {
+            var st = String((d && (d.status || d.projectStatus)) || '');
+            return !/结题|完成|结束|closed|done/i.test(st);
+        }).length;
+        return { count: count, funding: funding, used: used, active: active || count, list: all };
     }
 
     function getHomeActiveMembers() {
-        const members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData)) ? teamMemberData : [];
-        const active = members.filter(function (m) {
+        var members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData)) ? teamMemberData : [];
+        var active = members.filter(function (m) {
             if (!m) return false;
             if (m.category === 'advisor') return true;
             return !(typeof isMemberGraduated === 'function' ? isMemberGraduated(m) : !!m.graduated);
         });
-        const graduated = members.filter(function (m) {
+        var graduated = members.filter(function (m) {
             return m && m.category !== 'advisor' && (typeof isMemberGraduated === 'function' ? isMemberGraduated(m) : !!m.graduated);
         });
-        return { active: active, graduatedCount: graduated.length, total: members.length };
+        return { active: active, graduated: graduated, graduatedCount: graduated.length, total: members.length, all: members };
+    }
+
+    function parseHomeDate(val) {
+        if (!val) return null;
+        var d = new Date(val);
+        if (!isNaN(d.getTime())) return d;
+        var m = String(val).match(/(\d{4})[-\/.年](\d{1,2})[-\/.月]?(\d{1,2})?/);
+        if (m) {
+            d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3] || 1));
+            if (!isNaN(d.getTime())) return d;
+        }
+        return null;
+    }
+
+    function countItemsInMonth(list, dateFields, year, month) {
+        var n = 0;
+        (list || []).forEach(function (item) {
+            if (!item) return;
+            for (var i = 0; i < dateFields.length; i++) {
+                var d = parseHomeDate(item[dateFields[i]]);
+                if (d && d.getFullYear() === year && d.getMonth() === month) { n++; return; }
+            }
+        });
+        return n;
+    }
+
+    function formatHomeDelta(curr, prev) {
+        var diff = (curr || 0) - (prev || 0);
+        if (diff > 0) return { text: '较上月 +' + diff, cls: 'delta' };
+        if (diff < 0) return { text: '较上月 ' + diff, cls: 'delta neg' };
+        return { text: '较上月持平', cls: 'delta flat' };
+    }
+
+    function getUnreadNoticeCount() {
+        try {
+            if (!currentUser || !Array.isArray(noticeData)) return 0;
+            return noticeData.filter(function (n) {
+                return n && typeof isNoticeActive === 'function' && isNoticeActive(n)
+                    && typeof isNoticeVisibleToUser === 'function' && isNoticeVisibleToUser(n, currentUser)
+                    && typeof hasUserReadNotice === 'function' && !hasUserReadNotice(n, currentUser);
+            }).length;
+        } catch (e) { return 0; }
+    }
+
+    function getWeeklySubmitRate() {
+        var members = getHomeActiveMembers().active.filter(function (m) { return m && m.category !== 'advisor'; });
+        if (!members.length) return { rate: 100, submitted: 0, total: 0 };
+        var now = new Date();
+        var day = now.getDay() || 7;
+        var monday = new Date(now);
+        monday.setDate(now.getDate() - day + 1);
+        monday.setHours(0, 0, 0, 0);
+        var reports = (typeof weeklyReportData !== 'undefined' && Array.isArray(weeklyReportData)) ? weeklyReportData : [];
+        var submittedNames = {};
+        reports.forEach(function (r) {
+            if (!r || !r.owner) return;
+            var t = parseHomeDate(r.submitTime || r.weekRange);
+            if (t && t >= monday) submittedNames[r.owner] = 1;
+        });
+        var submitted = members.filter(function (m) { return submittedNames[m.name]; }).length;
+        return { rate: Math.round((submitted / members.length) * 100), submitted: submitted, total: members.length };
     }
 
     function getHomeTodoTasks() {
-        const tasks = (typeof taskData !== 'undefined' && Array.isArray(taskData)) ? taskData : [];
-        const doneSet = { completed: 1, done: 1, finished: 1, '已完成': 1 };
+        var tasks = (typeof taskData !== 'undefined' && Array.isArray(taskData)) ? taskData : [];
+        var doneSet = { completed: 1, done: 1, finished: 1, '已完成': 1 };
         return tasks.filter(function (t) {
             if (!t) return false;
             if (doneSet[t.status]) return false;
-            // 负责人已毕业则不再出现在首页待办
             if (t.owner && typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData)) {
-                const m = teamMemberData.find(function (x) { return x && x.name === t.owner; });
+                var m = teamMemberData.find(function (x) { return x && x.name === t.owner; });
                 if (m && typeof isMemberGraduated === 'function' && isMemberGraduated(m)) return false;
             }
             if (!currentUser) return true;
             if (currentUser.role === 'admin' || currentUser.role === 'leader') return true;
             return t.owner === currentUser.realName || t.visibility === 'all' || !t.owner;
         }).sort(function (a, b) {
-            const rank = { high: 0, medium: 1, low: 2, urgent: 0 };
-            const ra = rank[a.priority] != null ? rank[a.priority] : 3;
-            const rb = rank[b.priority] != null ? rank[b.priority] : 3;
+            var rank = { high: 0, medium: 1, low: 2, urgent: 0 };
+            var ra = rank[a.priority] != null ? rank[a.priority] : 3;
+            var rb = rank[b.priority] != null ? rank[b.priority] : 3;
             if (ra !== rb) return ra - rb;
             return String(a.deadline || '').localeCompare(String(b.deadline || ''));
         });
     }
 
+    function getHomeUnifiedTodos() {
+        var items = [];
+        var canReview = typeof canReviewWeeklyReport === 'function' && canReviewWeeklyReport();
+        if (canReview) {
+            try {
+                (weeklyReportData || []).filter(function (r) { return r && r.status === 'pending'; }).forEach(function (r) {
+                    items.push({
+                        id: 'weekly-' + r.id,
+                        category: 'weekly',
+                        priority: 'high',
+                        title: (r.owner || '成员') + ' 的周报待审批',
+                        meta: '周报 · ' + (r.weekRange || r.submitTime || ''),
+                        deadline: '',
+                        source: '工作周报',
+                        publisher: r.owner || '',
+                        go: function () { showModule('weekly_report'); setTimeout(function () { if (typeof showWeeklyReportDetail === 'function') showWeeklyReportDetail(r.id); }, 80); },
+                        actions: [
+                            { label: '通过', cls: 'ok', run: function () { approveWeeklyReport(r.id); renderHomeDashboard(); } },
+                            { label: '驳回', cls: 'bad', run: function () { rejectWeeklyReport(r.id); renderHomeDashboard(); } }
+                        ]
+                    });
+                });
+            } catch (e1) {}
+        }
+        getHomeTodoTasks().forEach(function (t) {
+            var pri = (t.priority === 'high' || t.priority === 'urgent') ? 'high' : (t.priority === 'low' ? 'low' : 'medium');
+            items.push({
+                id: 'task-' + t.id,
+                category: 'task',
+                priority: pri,
+                title: t.title || '未命名任务',
+                meta: (t.owner || '未指定') + (t.deadline ? ' · 截止 ' + t.deadline : ''),
+                deadline: t.deadline || '',
+                source: '任务待办',
+                publisher: t.creator || t.owner || '',
+                go: function () { showModule('task_management'); },
+                actions: (typeof completeTask === 'function') ? [
+                    { label: '完成', cls: 'ok', run: function () { completeTask(t.id); renderHomeDashboard(); } }
+                ] : []
+            });
+        });
+        try {
+            var now = Date.now();
+            (meetingData || []).forEach(function (m) {
+                if (!m) return;
+                var start = parseHomeDate(m.startTime || m.date);
+                if (!start) return;
+                var diff = start.getTime() - now;
+                if (diff < -2 * 3600000 || diff > 7 * 86400000) return;
+                items.push({
+                    id: 'meeting-' + (m.id || m.title),
+                    category: 'meeting',
+                    priority: diff < 24 * 3600000 ? 'high' : 'medium',
+                    title: m.title || '会议通知',
+                    meta: '会议 · ' + (m.startTime || m.date || ''),
+                    deadline: m.startTime || m.date || '',
+                    source: '会议活动',
+                    publisher: m.organizer || '',
+                    go: function () { showModule('meeting_management'); },
+                    actions: []
+                });
+            });
+        } catch (e2) {}
+        items.sort(function (a, b) {
+            var rank = { high: 0, medium: 1, low: 2 };
+            var ra = rank[a.priority] != null ? rank[a.priority] : 3;
+            var rb = rank[b.priority] != null ? rank[b.priority] : 3;
+            if (ra !== rb) return ra - rb;
+            return String(a.deadline || '').localeCompare(String(b.deadline || ''));
+        });
+        return items;
+    }
+
     function getHomeFeedItems() {
-        const items = [];
+        var items = [];
         try {
             (noticeData || []).filter(function (n) {
                 return n && (!currentUser || isNoticeVisibleToUser(n, currentUser));
-            }).slice(0, 8).forEach(function (n) {
+            }).forEach(function (n) {
+                var unread = currentUser ? !hasUserReadNotice(n, currentUser) : true;
                 items.push({
                     kind: 'notice',
                     title: n.title || '通知',
-                    meta: (n.type === 'urgent' ? '紧急通知' : '通知') + ' · ' + (n.publishTime || ''),
+                    meta: (n.publisher || n.author || '系统') + ' · ' + (n.publishTime || ''),
                     time: n.publishTime || '',
+                    unread: unread,
+                    urgent: n.type === 'urgent' || !!n.pinned,
+                    tag: n.type === 'urgent' ? '紧急' : '通知',
                     go: function () { if (typeof openNoticeFromGlobal === 'function') openNoticeFromGlobal(n.id); else showModule('notice_publish'); }
                 });
             });
         } catch (e1) {}
         try {
+            var newsList = (typeof newsData !== 'undefined' && Array.isArray(newsData))
+                ? newsData
+                : ((typeof window !== 'undefined' && Array.isArray(window.newsData)) ? window.newsData : []);
+            newsList.filter(function (n) {
+                return n && (n.status === 'published' || !n.status);
+            }).slice(0, 12).forEach(function (n) {
+                items.push({
+                    kind: 'news',
+                    title: n.title || '新闻',
+                    meta: (n.author || '编辑') + ' · ' + (n.publishTime || n.date || ''),
+                    time: n.publishTime || n.date || '',
+                    unread: false,
+                    urgent: false,
+                    tag: '新闻',
+                    go: function () {
+                        showModule('news_management');
+                        setTimeout(function () {
+                            try { if (typeof showNewsDetail === 'function') showNewsDetail(n.id); } catch (e) {}
+                        }, 80);
+                    }
+                });
+            });
+        } catch (e2) {}
+        try {
             (meetingData || []).slice().sort(function (a, b) {
                 return String(b.startTime || b.date || '').localeCompare(String(a.startTime || a.date || ''));
-            }).slice(0, 4).forEach(function (m) {
+            }).slice(0, 6).forEach(function (m) {
                 items.push({
                     kind: 'meeting',
                     title: m.title || '组会',
                     meta: '组会 · ' + (m.startTime || m.date || ''),
                     time: m.startTime || m.date || '',
+                    unread: false,
+                    urgent: false,
+                    tag: '会议',
                     go: function () { showModule('meeting_management'); }
                 });
             });
-        } catch (e2) {}
+        } catch (e3) {}
         try {
             (weeklyReportData || []).slice().sort(function (a, b) {
                 return String(b.submitTime || b.weekRange || '').localeCompare(String(a.submitTime || a.weekRange || ''));
-            }).slice(0, 4).forEach(function (r) {
-                // 毕业生周报仍可留作历史，但首页动态优先展示在读提交
+            }).slice(0, 6).forEach(function (r) {
                 if (r.owner && typeof teamMemberData !== 'undefined') {
-                    const m = teamMemberData.find(function (x) { return x && x.name === r.owner; });
+                    var m = teamMemberData.find(function (x) { return x && x.name === r.owner; });
                     if (m && typeof isMemberGraduated === 'function' && isMemberGraduated(m)) return;
                 }
                 items.push({
-                    kind: 'weekly',
+                    kind: 'achievement',
                     title: (r.owner || '成员') + ' 提交周报',
                     meta: '周报 · ' + (r.weekRange || r.submitTime || ''),
                     time: r.submitTime || r.weekRange || '',
+                    unread: false,
+                    urgent: false,
+                    tag: '成果更新',
                     go: function () { showModule('weekly_report'); }
                 });
             });
-        } catch (e3) {}
-        return items.slice(0, 8);
+        } catch (e4) {}
+        items.sort(function (a, b) {
+            if (!!b.urgent !== !!a.urgent) return b.urgent ? 1 : -1;
+            if (!!b.unread !== !!a.unread) return b.unread ? 1 : -1;
+            return String(b.time || '').localeCompare(String(a.time || ''));
+        });
+        return items.slice(0, 20);
+    }
+
+    /** 统一聚合：模拟 /dashboard/overview，所有首页数字同源 */
+    function getHomeDashboardOverview() {
+        var now = new Date();
+        var y = now.getFullYear();
+        var m = now.getMonth();
+        var prevY = m === 0 ? y - 1 : y;
+        var prevM = m === 0 ? 11 : m - 1;
+        var patents = getHomePatentList();
+        var papers = getHomePaperList();
+        var projects = getHomeProjectStats();
+        var members = getHomeActiveMembers();
+        var todos = getHomeUnifiedTodos();
+        var taskTodos = todos.filter(function (t) { return t.category === 'task'; });
+        var urgentTodos = todos.filter(function (t) { return t.priority === 'high'; });
+        var patentCurr = countItemsInMonth(patents, ['applicationDate', 'createTime', 'createdAt', 'date'], y, m);
+        var patentPrev = countItemsInMonth(patents, ['applicationDate', 'createTime', 'createdAt', 'date'], prevY, prevM);
+        var paperCurr = countItemsInMonth(papers, ['publishDate', 'year', 'createTime', 'createdAt'], y, m);
+        var paperPrev = countItemsInMonth(papers, ['publishDate', 'year', 'createTime', 'createdAt'], prevY, prevM);
+        var weekly = getWeeklySubmitRate();
+        var unread = getUnreadNoticeCount();
+        var budgetRate = projects.funding > 0 ? Math.round((projects.used / projects.funding) * 100) : 0;
+        if (!projects.used && projects.funding) budgetRate = 0;
+        var overview = {
+            roleKind: getHomeRoleKind(),
+            patents: { total: patents.length, delta: formatHomeDelta(patentCurr, patentPrev), monthAdd: patentCurr },
+            papers: { total: papers.length, delta: formatHomeDelta(paperCurr, paperPrev), monthAdd: paperCurr },
+            projects: { total: projects.count, active: projects.active, budgetRate: budgetRate, funding: projects.funding, used: projects.used },
+            members: members,
+            todos: todos,
+            taskCount: taskTodos.length,
+            urgentTodoCount: urgentTodos.length,
+            unreadNotices: unread,
+            weekly: weekly,
+            feeds: getHomeFeedItems(),
+            sync: (typeof window.cloudSyncState !== 'undefined' && window.cloudSyncState) ? window.cloudSyncState : null
+        };
+        homeDashUi.lastOverview = overview;
+        return overview;
+    }
+    window.getHomeDashboardOverview = getHomeDashboardOverview;
+
+    function animateHomeStatValue(el, targetText) {
+        if (!el) return;
+        if (el._homeAnimTimer) { clearInterval(el._homeAnimTimer); el._homeAnimTimer = null; }
+        var num = parseFloat(String(targetText).replace(/[^\d.-]/g, ''));
+        if (isNaN(num) || /[万%]/.test(String(targetText)) || String(targetText) !== String(Math.round(num))) {
+            el.textContent = targetText;
+            return;
+        }
+        var start = parseInt(el.textContent, 10);
+        if (isNaN(start)) start = 0;
+        var end = Math.round(num);
+        if (start === end) { el.textContent = String(end); return; }
+        var steps = Math.min(20, Math.max(6, Math.abs(end - start)));
+        var i = 0;
+        el._homeAnimTimer = setInterval(function () {
+            i++;
+            el.textContent = String(Math.round(start + (end - start) * (i / steps)));
+            if (i >= steps) {
+                clearInterval(el._homeAnimTimer);
+                el._homeAnimTimer = null;
+                el.textContent = String(end);
+            }
+        }, 16);
+    }
+
+    function renderHomeRingChart(patentN, paperN, projectN) {
+        var svg = document.getElementById('homeRingSvg');
+        var legend = document.getElementById('homeRingLegend');
+        if (!svg || !legend) return;
+        var total = patentN + paperN + projectN;
+        var colors = ['#7c3aed', '#6366f1', '#a855f7'];
+        var parts = [
+            { key: 'patent', label: '专利', value: patentN, color: colors[0] },
+            { key: 'paper', label: '论文', value: paperN, color: colors[1] },
+            { key: 'project', label: '项目', value: projectN, color: colors[2] }
+        ];
+        if (!total) {
+            svg.innerHTML = '<circle cx="18" cy="18" r="14" fill="none" stroke="#ede9fe" stroke-width="4"></circle>' +
+                '<text x="18" y="19.5" text-anchor="middle" font-size="6" fill="#94a3b8">暂无</text>';
+            legend.innerHTML = '<div style="font-size:12px;color:#94a3b8;">暂无成果数据</div>';
+            return;
+        }
+        var r = 14, c = 2 * Math.PI * r, offset = 0;
+        var arcs = parts.map(function (p) {
+            var len = (p.value / total) * c;
+            var html = '<circle cx="18" cy="18" r="' + r + '" fill="none" stroke="' + p.color + '" stroke-width="4" ' +
+                'stroke-dasharray="' + len + ' ' + (c - len) + '" stroke-dashoffset="' + (-offset) + '" ' +
+                'transform="rotate(-90 18 18)" style="cursor:pointer" onclick="homeJumpStat(\'' + p.key + '\')"></circle>';
+            offset += len;
+            return html;
+        }).join('');
+        svg.innerHTML = arcs + '<text x="18" y="19.5" text-anchor="middle" font-size="7" font-weight="700" fill="#5b21b6">' + total + '</text>';
+        legend.innerHTML = parts.map(function (p) {
+            var pct = Math.round((p.value / total) * 100);
+            return '<button type="button" onclick="homeJumpStat(\'' + p.key + '\')"><span><span class="dot" style="background:' + p.color + '"></span>' +
+                p.label + ' ' + p.value + '</span><strong>' + pct + '%</strong></button>';
+        }).join('');
+    }
+
+    function homeJumpStat(key) {
+        if (key === 'patent') {
+            showModule('patent_management');
+            setTimeout(function () { try { if (typeof filterPatentMgmtByTag === 'function') filterPatentMgmtByTag('current_year'); } catch (e) {} }, 120);
+            return;
+        }
+        if (key === 'paper') {
+            showModule('paper_management');
+            setTimeout(function () { try { if (typeof filterPaperByTag === 'function') filterPaperByTag('current_year'); } catch (e) {} }, 120);
+            return;
+        }
+        if (key === 'project') { showModule('longitudinal_project'); return; }
+        if (key === 'funding') { showModule('achievements'); return; }
+        if (key === 'member') { showModule('member_archive'); return; }
+        if (key === 'task') { showModule('task_management'); return; }
+    }
+    window.homeJumpStat = homeJumpStat;
+
+    function getHomeQuickDefaults(roleKind) {
+        if (roleKind === 'student') {
+            return [
+                { module: 'task_management', ico: '任', t: '我的任务', badge: 'task' },
+                { module: 'weekly_report', ico: '报', t: '工作周报', badge: 'weekly' },
+                { module: 'literature_library', ico: '献', t: '文献资料' },
+                { module: 'dataset_library', ico: '数', t: '数据集' },
+                { module: 'openai', ico: '智', t: '智能工具' },
+                { module: 'patent_management', ico: '果', t: '我的成果' }
+            ];
+        }
+        if (roleKind === 'visitor') {
+            return [
+                { module: 'about', ico: '介', t: '团队介绍' },
+                { module: 'achievements', ico: '果', t: '最新成果' },
+                { module: 'news_management', ico: '闻', t: '新闻公告' },
+                { module: 'members', ico: '员', t: '团队成员' }
+            ];
+        }
+        return [
+            { module: 'member_archive', ico: '团', t: '团队成员' },
+            { module: 'task_management', ico: '任', t: '任务待办', badge: 'task' },
+            { module: 'notice_publish', ico: '通', t: '通知公告', badge: 'notice' },
+            { module: 'weekly_report', ico: '报', t: '工作周报', badge: 'weekly' },
+            { module: 'patent_management', ico: '果', t: '成果管理' },
+            { module: 'longitudinal_project', ico: '项', t: '项目管理' }
+        ];
+    }
+    window.getHomeQuickDefaults = getHomeQuickDefaults;
+
+    function loadHomeQuickPrefs(roleKind) {
+        try {
+            var raw = JSON.parse(localStorage.getItem(HOME_QUICK_PREF_KEY) || '{}');
+            if (raw && Array.isArray(raw[roleKind]) && raw[roleKind].length) return raw[roleKind];
+        } catch (e) {}
+        return getHomeQuickDefaults(roleKind);
+    }
+    window.loadHomeQuickPrefs = loadHomeQuickPrefs;
+
+    function saveHomeQuickPrefs(roleKind, list) {
+        try {
+            var raw = {};
+            try { raw = JSON.parse(localStorage.getItem(HOME_QUICK_PREF_KEY) || '{}') || {}; } catch (e0) { raw = {}; }
+            raw[roleKind] = list;
+            localStorage.setItem(HOME_QUICK_PREF_KEY, JSON.stringify(raw));
+        } catch (e) {}
+    }
+    window.saveHomeQuickPrefs = saveHomeQuickPrefs;
+
+    function renderHomeQuickNav(overview) {
+        var box = document.getElementById('homeQuickNav');
+        if (!box) return;
+        var roleKind = overview.roleKind || 'guest';
+        var items = loadHomeQuickPrefs(roleKind).filter(function (it) {
+            if (it.module === 'about' || it.module === 'members' || it.module === 'achievements') return true;
+            return homeCanAccessModule(it.module);
+        });
+        var badgeMap = {
+            task: overview.taskCount || 0,
+            notice: overview.unreadNotices || 0,
+            weekly: (overview.todos || []).filter(function (t) { return t.category === 'weekly'; }).length
+        };
+        box.innerHTML = '<span class="home-quick-label">快捷</span>' + items.map(function (it) {
+            var badge = it.badge && badgeMap[it.badge] ? '<span class="home-quick-badge">' + badgeMap[it.badge] + '</span>' : '';
+            return '<div class="home-quick-item" onclick="showModule(\'' + it.module + '\')">' + badge +
+                '<div class="ico">' + escHtml(it.ico || '入') + '</div><div class="t">' + escHtml(it.t) + '</div></div>';
+        }).join('');
+    }
+    window.renderHomeQuickNav = renderHomeQuickNav;
+
+    function renderHomeQuickLaunch(overview) {
+        var box = document.getElementById('homeQuickLaunch');
+        if (!box) return;
+        var kind = overview.roleKind;
+        if (kind === 'visitor' || kind === 'guest') {
+            box.innerHTML = '';
+            return;
+        }
+        var btns = [];
+        if (kind === 'mentor') {
+            btns.push({ label: '发布通知', go: "showModule('notice_publish')" });
+            btns.push({ label: '新建任务', go: "showModule('task_management')" });
+            btns.push({ label: '上传成果', go: "showModule('patent_management')" });
+        } else {
+            btns.push({ label: '提交周报', go: "showModule('weekly_report')" });
+            btns.push({ label: '查看任务', go: "showModule('task_management')" });
+            btns.push({ label: '上传成果', go: "homeCanAccessModule('patent_management') && showModule('patent_management')" });
+        }
+        box.innerHTML = btns.map(function (b) {
+            return '<button type="button" onclick="' + b.go + '">' + b.label + '</button>';
+        }).join('');
+    }
+
+    function dueMetaHtml(deadline) {
+        var d = parseHomeDate(deadline);
+        if (!d) return { text: '', cls: '' };
+        var hours = (d.getTime() - Date.now()) / 3600000;
+        if (hours < 0) return { text: '已逾期', cls: 'due-soon' };
+        if (hours <= 24) return { text: '距截止不足 24 小时', cls: 'due-soon' };
+        return { text: '', cls: '' };
+    }
+
+    function setHomeTab(group, value) {
+        if (group === 'todo') homeDashUi.todoTab = value;
+        if (group === 'feed') homeDashUi.feedTab = value;
+        if (group === 'member') homeDashUi.memberGroup = value;
+        renderHomeDashboard();
+    }
+    window.setHomeTab = setHomeTab;
+
+    function onHomeMemberSearch(val) {
+        homeDashUi.memberQuery = String(val || '');
+        renderHomeDashboardPanelsOnly();
+    }
+    window.onHomeMemberSearch = onHomeMemberSearch;
+
+    function renderHomeTabs(elId, tabs, active, group) {
+        var el = document.getElementById(elId);
+        if (!el) return;
+        el.innerHTML = tabs.map(function (t) {
+            return '<button type="button" class="home-tab' + (t.key === active ? ' active' : '') +
+                '" onclick="setHomeTab(\'' + group + '\',\'' + t.key + '\')">' + t.label + '</button>';
+        }).join('');
+    }
+
+    function appendHomeSyncLog(entry) {
+        try {
+            var logs = [];
+            try { logs = JSON.parse(localStorage.getItem(HOME_SYNC_LOG_KEY) || '[]') || []; } catch (e0) { logs = []; }
+            logs.unshift(entry);
+            localStorage.setItem(HOME_SYNC_LOG_KEY, JSON.stringify(logs.slice(0, 50)));
+        } catch (e) {}
+    }
+    window.appendHomeSyncLog = appendHomeSyncLog;
+
+    function updateHomeSyncChrome() {
+        var st = (typeof window.cloudSyncState !== 'undefined' && window.cloudSyncState) ? window.cloudSyncState : null;
+        var enabled = st ? !!st.enabled : (typeof cloudSyncEnabled !== 'undefined' && !!cloudSyncEnabled);
+        var syncing = !!homeDashUi.syncing;
+        var cls = 'is-warn';
+        var label = '同步';
+        var sub = enabled ? '点击同步' : '仅本机';
+        if (syncing) { cls = 'is-syncing'; label = '同步中'; sub = '拉取云端数据…'; }
+        else if (!enabled) { cls = ''; label = '本机'; sub = '未配置云端'; }
+        else if (st && st.lastOk === true) {
+            cls = 'is-ok';
+            label = '已同步';
+            var ago = st.lastAt ? Math.max(0, Math.round((Date.now() - st.lastAt) / 1000)) : null;
+            sub = ago != null ? (ago + 's 前 · ' + (st.lastApplied || 0) + ' 项') : ('写入 ' + (st.lastApplied || 0) + ' 项');
+        } else if (st && st.lastOk === false) {
+            cls = 'is-bad';
+            label = '同步失败';
+            sub = String(st.lastError || st.lastReason || '请重试').slice(0, 28);
+        }
+        var chip = document.getElementById('navSyncChip');
+        var chipText = document.getElementById('navSyncChipText');
+        if (chip) chip.className = 'nav-sync-chip ' + cls;
+        if (chipText) chipText.textContent = label;
+        var fab = document.getElementById('cloudSyncFab');
+        var fabLabel = document.getElementById('cloudSyncFabLabel');
+        var fabSub = document.getElementById('cloudSyncFabSub');
+        if (fab) {
+            fab.className = 'cloud-sync-fab ' + cls;
+            fab.title = enabled
+                ? ('上次同步：' + (st && st.lastAt ? new Date(st.lastAt).toLocaleString('zh-CN') : '尚未同步') + '；点击立即全量同步')
+                : '当前未配置云端，数据仅存本机';
+        }
+        if (fabLabel) fabLabel.textContent = label === '本机' ? '本机模式' : ('云端' + label);
+        if (fabSub) fabSub.textContent = sub;
+    }
+    window.updateHomeSyncChrome = updateHomeSyncChrome;
+
+    function renderHomeDashboardPanelsOnly() {
+        var overview = homeDashUi.lastOverview || getHomeDashboardOverview();
+        var todos = overview.todos || [];
+        var tab = homeDashUi.todoTab || 'all';
+        var filteredTodos = todos.filter(function (t) {
+            if (tab === 'all') return true;
+            return t.category === tab;
+        });
+        renderHomeTabs('homeTodoTabs', [
+            { key: 'all', label: '全部' },
+            { key: 'weekly', label: '待审批周报' },
+            { key: 'task', label: '待处理任务' },
+            { key: 'meeting', label: '会议通知' }
+        ], tab, 'todo');
+        var todoBox = document.getElementById('homeTodoList');
+        if (todoBox) {
+            if (!filteredTodos.length) {
+                todoBox.innerHTML = '<div class="home-empty">该分类暂无待办</div>';
+            } else {
+                todoBox.innerHTML = filteredTodos.slice(0, 8).map(function (t, idx) {
+                    var priText = t.priority === 'high' ? '紧急' : (t.priority === 'low' ? '低' : '普通');
+                    var due = dueMetaHtml(t.deadline);
+                    var actions = (t.actions || []).map(function (a, ai) {
+                        return '<button type="button" class="' + (a.cls || '') + '" data-todo="' + idx + '" data-act="' + ai + '">' + escHtml(a.label) + '</button>';
+                    }).join('');
+                    return '<div class="home-todo-item' + (t.priority === 'high' ? ' is-urgent' : '') + '" data-todo-idx="' + idx + '">' +
+                        '<span class="pri ' + t.priority + '">' + priText + '</span>' +
+                        '<div style="min-width:0;flex:1;">' +
+                        '<div class="title">' + escHtml(t.title) + '</div>' +
+                        '<div class="meta' + (due.cls ? ' ' + due.cls : '') + '">' + escHtml(t.source + (t.publisher ? ' · ' + t.publisher : '') + (t.meta ? ' · ' + t.meta : '') + (due.text ? ' · ' + due.text : '')) + '</div>' +
+                        (actions ? '<div class="home-todo-actions">' + actions + '</div>' : '') +
+                        '</div></div>';
+                }).join('');
+                todoBox.querySelectorAll('.home-todo-item').forEach(function (el) {
+                    var idx = Number(el.getAttribute('data-todo-idx'));
+                    el.addEventListener('click', function (ev) {
+                        if (ev.target && ev.target.closest && ev.target.closest('.home-todo-actions button')) return;
+                        try { filteredTodos[idx].go(); } catch (e) {}
+                    });
+                });
+                todoBox.querySelectorAll('.home-todo-actions button').forEach(function (btn) {
+                    btn.addEventListener('click', function (ev) {
+                        ev.stopPropagation();
+                        var ti = Number(btn.getAttribute('data-todo'));
+                        var ai = Number(btn.getAttribute('data-act'));
+                        try { filteredTodos[ti].actions[ai].run(); } catch (e) {}
+                    });
+                });
+            }
+        }
+
+        var feedTab = homeDashUi.feedTab || 'all';
+        var feeds = (overview.feeds || []).filter(function (f) {
+            if (feedTab === 'all') return true;
+            if (feedTab === 'notice') return f.kind === 'notice';
+            if (feedTab === 'news') return f.kind === 'news';
+            if (feedTab === 'achievement') return f.kind === 'achievement' || f.kind === 'weekly';
+            return true;
+        });
+        renderHomeTabs('homeFeedTabs', [
+            { key: 'all', label: '全部' },
+            { key: 'notice', label: '通知公告' },
+            { key: 'news', label: '新闻动态' },
+            { key: 'achievement', label: '成果更新' }
+        ], feedTab, 'feed');
+        var feedBox = document.getElementById('homeFeedList');
+        if (feedBox) {
+            if (!feeds.length) {
+                feedBox.innerHTML = '<div class="home-empty">暂无动态</div>';
+            } else {
+                feedBox.innerHTML = feeds.slice(0, 10).map(function (f, idx) {
+                    return '<div class="home-feed-item' + (f.unread ? '' : ' is-read') + (f.urgent ? ' is-urgent' : '') + '" data-feed-idx="' + idx + '">' +
+                        '<span class="home-feed-dot"></span>' +
+                        '<div style="min-width:0;flex:1;">' +
+                        '<div class="title"><span class="home-feed-tag">' + escHtml(f.tag || '') + '</span>' + escHtml(f.title) + '</div>' +
+                        '<div class="meta">' + escHtml(f.meta) + '</div>' +
+                        '</div></div>';
+                }).join('');
+                feedBox.querySelectorAll('.home-feed-item').forEach(function (el, idx) {
+                    el.onclick = function () { try { feeds[idx].go(); } catch (e) {} };
+                });
+            }
+        }
+
+        var memberGroup = homeDashUi.memberGroup || 'all';
+        var q = String(homeDashUi.memberQuery || '').trim().toLowerCase();
+        var pool = [];
+        if (memberGroup === 'graduated') pool = overview.members.graduated || [];
+        else if (memberGroup === 'advisor') pool = (overview.members.active || []).filter(function (m) { return m.category === 'advisor'; });
+        else if (memberGroup === 'phd') pool = (overview.members.active || []).filter(function (m) {
+            if (!m || m.category === 'advisor') return false;
+            return /博士|phd/i.test(String(m.title || '') + String(m.degree || '') + String(m.education || ''));
+        });
+        else if (memberGroup === 'master') pool = (overview.members.active || []).filter(function (m) {
+            if (!m || m.category === 'advisor') return false;
+            var blob = String(m.title || '') + String(m.degree || '') + String(m.education || '');
+            if (/博士|phd/i.test(blob) && !/硕士/.test(blob)) return false;
+            return /硕士|研究生|\d{4}/.test(blob) || !!m.category;
+        });
+        else pool = overview.members.active || [];
+        if (q) pool = pool.filter(function (m) { return String(m.name || '').toLowerCase().indexOf(q) >= 0; });
+        renderHomeTabs('homeMemberTabs', [
+            { key: 'all', label: '全部在读' },
+            { key: 'advisor', label: '导师' },
+            { key: 'phd', label: '博士生' },
+            { key: 'master', label: '硕士生' },
+            { key: 'graduated', label: '已毕业' }
+        ], memberGroup, 'member');
+        var memberBox = document.getElementById('homeMemberList');
+        if (memberBox) {
+            if (!pool.length) {
+                memberBox.innerHTML = '<div class="home-empty">暂无匹配成员</div>';
+            } else {
+                memberBox.innerHTML = pool.slice(0, 12).map(function (m) {
+                    var label = (typeof getMemberCategoryLabel === 'function')
+                        ? getMemberCategoryLabel(m.category)
+                        : (m.category === 'advisor' ? '导师' : (m.category + '级'));
+                    var research = m.research || m.direction || m.field || '';
+                    var projCount = 0;
+                    try {
+                        var ps = getHomeProjectStats().list || [];
+                        projCount = ps.filter(function (p) {
+                            var text = JSON.stringify(p || {});
+                            return m.name && text.indexOf(m.name) >= 0;
+                        }).length;
+                    } catch (eP) {}
+                    var badge = memberGroup === 'graduated'
+                        ? '<span class="badge off">已毕业</span>'
+                        : (m.category === 'advisor' ? '<span class="badge on">导师</span>' : '<span class="badge on">在读</span>');
+                    return '<div class="home-member-item" onclick="showModule(\'member_archive\'); setTimeout(function(){ if(typeof showMemberDetail===\'function\') showMemberDetail(' + m.id + '); }, 80);">' +
+                        renderHomeMemberAvatarHtml(m) +
+                        '<div style="min-width:0;">' +
+                        '<div class="name">' + escHtml(m.name || '') + '</div>' +
+                        '<div class="tag">' + escHtml(label) + (m.title ? ' · ' + escHtml(m.title) : '') +
+                        (research ? ' · ' + escHtml(String(research).slice(0, 18)) : '') +
+                        (projCount ? ' · 在研' + projCount : '') + '</div>' +
+                        '</div>' + badge + '</div>';
+                }).join('');
+            }
+        }
     }
 
     function renderHomeDashboard() {
         if (!document.getElementById('home')) return;
-
-        const user = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : null;
-        const hour = new Date().getHours();
-        const hello = hour < 12 ? '上午好' : (hour < 18 ? '下午好' : '晚上好');
-        const name = user ? (user.realName || user.studentId || '') : '';
-        const roleLabel = user
+        var overview = getHomeDashboardOverview();
+        var user = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : null;
+        var hour = new Date().getHours();
+        var hello = hour < 12 ? '上午好' : (hour < 18 ? '下午好' : '晚上好');
+        var name = user ? (user.realName || user.studentId || '') : '';
+        var roleLabel = user
             ? ((typeof ROLE_LABELS !== 'undefined' && ROLE_LABELS[user.role]) ? ROLE_LABELS[user.role] : (user.role || ''))
             : '';
-        const titleEl = document.getElementById('homeWelcomeTitle');
-        const subEl = document.getElementById('homeWelcomeSub');
+        var titleEl = document.getElementById('homeWelcomeTitle');
+        var subEl = document.getElementById('homeWelcomeSub');
         if (titleEl) titleEl.textContent = name ? (hello + '，' + name) : (hello + '，欢迎回来');
         if (subEl) {
-            subEl.textContent = name
-                ? ('身份：' + roleLabel + ' · 下方数字均来自各业务模块当前数据')
-                : '登录后可查看与您相关的待办、通知与团队研究动态';
+            if (overview.roleKind === 'student') subEl.textContent = '身份：' + roleLabel + ' · 聚焦个人待办、周报与科研工具';
+            else if (overview.roleKind === 'visitor') subEl.textContent = '访客视图 · 仅展示公开团队信息';
+            else subEl.textContent = name ? ('身份：' + roleLabel + ' · 团队数据大盘与待审批事项') : '登录后可查看与您相关的待办、通知与团队研究动态';
         }
 
-        const heroAv = document.getElementById('homeHeroAvatar');
+        var heroAv = document.getElementById('homeHeroAvatar');
         if (heroAv) {
-            const ch = String(name || '研').charAt(0);
-            let avUrl = '';
+            var ch = String(name || '研').charAt(0);
+            var avUrl = '';
             try {
                 if (typeof resolveMemberAvatarUrl === 'function') {
                     avUrl = resolveMemberAvatarUrl(user) || resolveMemberAvatarUrl({ name: name });
                 }
             } catch (eAv) {}
-            if (avUrl) {
-                heroAv.innerHTML = '<img src="' + String(avUrl).replace(/"/g, '&quot;') + '" alt="' + ch + '">';
-            } else {
-                heroAv.innerHTML = '';
-                heroAv.textContent = ch;
-            }
+            if (avUrl) heroAv.innerHTML = '<img src="' + String(avUrl).replace(/"/g, '&quot;') + '" alt="' + ch + '">';
+            else { heroAv.innerHTML = ''; heroAv.textContent = ch; }
         }
 
-        const today = new Date();
-        const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-        const memberInfo = getHomeActiveMembers();
-        const todos = getHomeTodoTasks();
-        const projects = getHomeProjectStats();
-        const meta = document.getElementById('homeHeroMeta');
+        var today = new Date();
+        var dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        var meta = document.getElementById('homeHeroMeta');
         if (meta) {
             meta.innerHTML =
                 '<span class="home-chip">今日 <strong>' + dateStr + '</strong></span>' +
-                '<span class="home-chip">在读 <strong>' + memberInfo.active.length + '</strong></span>' +
-                '<span class="home-chip">待办 <strong>' + todos.length + '</strong></span>' +
-                (memberInfo.graduatedCount ? '<span class="home-chip">已毕业 <strong>' + memberInfo.graduatedCount + '</strong></span>' : '');
+                '<span class="home-chip' + (overview.unreadNotices ? ' warn' : '') + '">未读通知 <strong>' + overview.unreadNotices + '</strong></span>' +
+                '<span class="home-chip' + (overview.taskCount ? ' warn' : '') + '">今日待办 <strong>' + overview.taskCount + '</strong></span>' +
+                '<span class="home-chip">本周周报 <strong>' + overview.weekly.rate + '%</strong></span>';
         }
 
-        const setText = function (id, val) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val;
-        };
-        setText('homeStatPatent', String(getHomePatentCount()));
-        setText('homeStatPaper', String(getHomePaperCount()));
-        setText('homeStatProject', String(projects.count));
-        const fundingWan = projects.funding >= 10000
-            ? (projects.funding / 10000).toFixed(1).replace(/\.0$/, '') + '万'
-            : (Math.round(projects.funding * 10) / 10);
-        setText('homeStatFunding', String(fundingWan));
-        setText('homeStatMember', String(memberInfo.active.length));
-        setText('homeStatMemberHint', '共 ' + memberInfo.total + ' 人 · 毕业 ' + memberInfo.graduatedCount);
-        setText('homeStatTask', String(todos.length));
+        renderHomeQuickLaunch(overview);
+        renderHomeRingChart(overview.patents.total, overview.papers.total, overview.projects.total);
 
-        const patentN = getHomePatentCount();
-        const paperN = getHomePaperCount();
-        const projectN = projects.count;
-        const maxOut = Math.max(patentN, paperN, projectN, 1);
-        const bars = document.getElementById('homeFocusBars');
-        if (bars) {
-            const row = function (label, val) {
-                const pct = Math.max(8, Math.round((val / maxOut) * 100));
-                return '<div class="home-focus-row"><span>' + label + '</span><div class="home-focus-track"><i style="width:' + pct + '%"></i></div><strong>' + val + '</strong></div>';
-            };
-            bars.innerHTML = row('专利', patentN) + row('论文', paperN) + row('项目', projectN);
-        }
+        var setHint = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+        animateHomeStatValue(document.getElementById('homeStatPatent'), String(overview.patents.total));
+        animateHomeStatValue(document.getElementById('homeStatPaper'), String(overview.papers.total));
+        animateHomeStatValue(document.getElementById('homeStatProject'), String(overview.projects.active));
+        setHint('homeStatPatentHint', overview.patents.delta.text + ' · 本年度筛选');
+        setHint('homeStatPaperHint', overview.papers.delta.text);
+        setHint('homeStatProjectHint', overview.projects.total + ' 项合计 · 预算使用率 ' + overview.projects.budgetRate + '%');
 
-        const syncBox = document.getElementById('homeSyncStatus');
-        if (syncBox) {
-            const st = (typeof window.cloudSyncState !== 'undefined' && window.cloudSyncState) ? window.cloudSyncState : null;
-            const enabled = st ? !!st.enabled : (typeof cloudSyncEnabled !== 'undefined' && !!cloudSyncEnabled);
-            const lastAt = st && st.lastAt ? new Date(st.lastAt) : null;
-            const agoSec = lastAt ? Math.max(0, Math.round((Date.now() - lastAt.getTime()) / 1000)) : null;
-            const timeStr = lastAt
-                ? (String(lastAt.getHours()).padStart(2, '0') + ':' + String(lastAt.getMinutes()).padStart(2, '0') + ':' + String(lastAt.getSeconds()).padStart(2, '0'))
-                : '尚未同步';
-            let statusText = '等待首次同步';
-            let statusCls = 'sync-warn';
-            if (!enabled) {
-                statusText = '仅本机（未配置云端）';
-                statusCls = 'sync-warn';
-            } else if (st && st.lastOk === true) {
-                statusText = '同步成功 · 写入 ' + (st.lastApplied || 0) + ' 项';
-                statusCls = 'sync-ok';
-            } else if (st && st.lastOk === false) {
-                statusText = st.lastReason === 'disabled' ? '云端未启用' : ('同步失败' + (st.lastError ? '：' + String(st.lastError).slice(0, 36) : ''));
-                statusCls = 'sync-bad';
+        var fundingEl = document.getElementById('homeStatFunding');
+        var fundingCard = document.querySelector('.home-stat[data-stat="funding"]');
+        var memberCard = document.querySelector('.home-stat[data-stat="member"]');
+        if (!canViewHomeSensitiveStats()) {
+            if (fundingCard) fundingCard.classList.add('is-hidden');
+            if (overview.roleKind === 'student' && memberCard) {
+                /* 学生仍可见成员概览，但经费隐藏 */
             }
-            const pollSec = st && st.pollMs ? Math.round(st.pollMs / 1000) : 15;
-            syncBox.innerHTML =
-                '<div class="sync-line"><span>通道</span><strong class="' + (enabled ? 'sync-ok' : 'sync-warn') + '">' + (enabled ? 'Supabase 云端' : '本机 localStorage') + '</strong></div>' +
-                '<div class="sync-line"><span>状态</span><strong class="' + statusCls + '">' + statusText + '</strong></div>' +
-                '<div class="sync-line"><span>上次</span><strong>' + timeStr + (agoSec != null ? ('（' + agoSec + 's 前）') : '') + '</strong></div>' +
-                '<div class="sync-line"><span>轮询</span><strong>每 ' + pollSec + ' 秒自动拉取</strong></div>';
+        } else if (fundingCard) fundingCard.classList.remove('is-hidden');
+
+        var fundingWan = overview.projects.funding;
+        var fundingText = (Math.round(fundingWan * 10) / 10) + '';
+        if (fundingEl) fundingEl.textContent = fundingText;
+        setHint('homeStatFundingHint', '总预算 ' + fundingText + ' 万 · 已用 ' + (Math.round(overview.projects.used * 10) / 10));
+
+        animateHomeStatValue(document.getElementById('homeStatMember'), String(overview.members.active.length));
+        setHint('homeStatMemberHint', overview.members.active.length + ' 人在读 · ' + overview.members.graduatedCount + ' 人已毕业');
+        animateHomeStatValue(document.getElementById('homeStatTask'), String(overview.taskCount));
+        setHint('homeStatTaskHint', overview.urgentTodoCount + ' 项紧急 · 含周报/会议');
+
+        if (overview.roleKind === 'visitor') {
+            ['patent', 'paper', 'project', 'funding', 'task'].forEach(function (k) {
+                var card = document.querySelector('.home-stat[data-stat="' + k + '"]');
+                if (card && (k === 'funding' || k === 'task')) card.classList.add('is-hidden');
+            });
         }
 
-        const foot = document.getElementById('homeFootNote');
+        renderHomeQuickNav(overview);
+        renderHomeDashboardPanelsOnly();
+        updateHomeSyncChrome();
+
+        var foot = document.getElementById('homeFootNote');
         if (foot) {
-            const st2 = (typeof window.cloudSyncState !== 'undefined' && window.cloudSyncState) ? window.cloudSyncState : null;
-            const syncHint = !st2 || !st2.enabled
-                ? '当前为仅本机数据'
-                : (st2.lastOk ? ('云端已同步 ' + (st2.lastApplied || 0) + ' 项') : '云端同步异常，显示本机缓存');
             foot.innerHTML =
-                '<span>在读 <strong>' + memberInfo.active.length + '</strong> · 待办 <strong>' + todos.length + '</strong> · 专利/论文 <strong>' + patentN + '/' + paperN + '</strong> · 项目 <strong>' + projectN + '</strong></span>' +
-                '<span>' + syncHint + ' · 点击指标进入对应模块核验</span>';
+                '<span>同源聚合 · 专利 <strong>' + overview.patents.total + '</strong> / 论文 <strong>' + overview.papers.total + '</strong> / 项目 <strong>' + overview.projects.total + '</strong> / 待办 <strong>' + overview.todos.length + '</strong></span>' +
+                '<span>本周周报提交率 <strong>' + overview.weekly.rate + '%</strong>（' + overview.weekly.submitted + '/' + overview.weekly.total + '）</span>';
         }
 
-        const todoBox = document.getElementById('homeTodoList');
-        if (todoBox) {
-            if (!todos.length) {
-                todoBox.innerHTML = '<div class="home-empty">暂无待办。任务模块新增后将自动出现在此（已毕业成员任务不展示）</div>';
-            } else {
-                todoBox.innerHTML = todos.slice(0, 6).map(function (t) {
-                    const pri = t.priority === 'high' || t.priority === 'urgent' ? 'high' : (t.priority === 'low' ? 'low' : 'medium');
-                    const priText = pri === 'high' ? '紧急' : (pri === 'low' ? '低' : '普通');
-                    return '<div class="home-todo-item" onclick="showModule(\'task_management\')">' +
-                        '<span class="pri ' + pri + '">' + priText + '</span>' +
-                        '<div style="min-width:0;flex:1;">' +
-                        '<div class="title">' + escHtml(t.title || '未命名任务') + '</div>' +
-                        '<div class="meta">' + escHtml((t.owner || '未指定') + (t.deadline ? ' · 截止 ' + t.deadline : '')) + '</div>' +
-                        '</div></div>';
-                }).join('');
-            }
-        }
-
-        const feedBox = document.getElementById('homeFeedList');
-        if (feedBox) {
-            const feeds = getHomeFeedItems();
-            if (!feeds.length) {
-                feedBox.innerHTML = '<div class="home-empty">暂无动态。通知、组会、周报更新后会汇总到这里</div>';
-            } else {
-                feedBox.innerHTML = feeds.map(function (f, idx) {
-                    return '<div class="home-feed-item" data-feed-idx="' + idx + '">' +
-                        '<span class="home-feed-dot"></span>' +
-                        '<div style="min-width:0;flex:1;">' +
-                        '<div class="title">' + escHtml(f.title) + '</div>' +
-                        '<div class="meta">' + escHtml(f.meta) + '</div>' +
-                        '</div></div>';
-                }).join('');
-                feedBox.querySelectorAll('.home-feed-item').forEach(function (el, idx) {
-                    el.onclick = function () {
-                        try { feeds[idx].go(); } catch (e) {}
-                    };
-                });
-            }
-        }
-
-        const memberBox = document.getElementById('homeMemberList');
-        if (memberBox) {
-            const list = memberInfo.active.slice(0, 8);
-            if (!list.length) {
-                memberBox.innerHTML = '<div class="home-empty">团队档案暂无在读成员</div>';
-            } else {
-                memberBox.innerHTML = list.map(function (m) {
-                    const label = (typeof getMemberCategoryLabel === 'function')
-                        ? getMemberCategoryLabel(m.category)
-                        : (m.category === 'advisor' ? '导师' : (m.category + '级'));
-                    const badge = m.category === 'advisor'
-                        ? '<span class="badge on">导师</span>'
-                        : '<span class="badge on">在读</span>';
-                    return '<div class="home-member-item" onclick="showModule(\'member_archive\'); setTimeout(function(){ if(typeof showMemberDetail===\'function\') showMemberDetail(' + m.id + '); }, 80);">' +
-                        renderHomeMemberAvatarHtml(m) +
-                        '<div style="min-width:0;">' +
-                        '<div class="name">' + escHtml(m.name || '') + '</div>' +
-                        '<div class="tag">' + escHtml(label) + (m.title ? ' · ' + escHtml(m.title) : '') + '</div>' +
-                        '</div>' + badge + '</div>';
-                }).join('');
-            }
-        }
-
-        try { if (typeof renderHomeNewsPanel === 'function') renderHomeNewsPanel(); } catch (eN) {}
         try { if (typeof updateHomeNoticeBanner === 'function') updateHomeNoticeBanner(); } catch (eB) {}
     }
 
@@ -24264,32 +24975,68 @@ ${ocrText}`
             alert('同步模块未就绪');
             return;
         }
-        try {
-            if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('正在从云端拉取…', false);
-        } catch (e0) {}
-        try {
-            await syncFromCloudAndRefresh({ silent: false });
-        } catch (e1) {
-            try { if (typeof markCloudSyncState === 'function') markCloudSyncState({ lastAt: Date.now(), lastOk: false, lastError: String(e1 && e1.message || e1), lastReason: 'error' }); } catch (e2) {}
+        if (homeDashUi.syncing) return;
+        homeDashUi.syncing = true;
+        updateHomeSyncChrome();
+        var lastErr = null;
+        var ok = false;
+        var applied = 0;
+        for (var attempt = 1; attempt <= 3; attempt++) {
+            try {
+                if (typeof showCloudSyncBanner === 'function') {
+                    showCloudSyncBanner(attempt === 1 ? '正在从云端拉取…' : ('同步重试 ' + attempt + '/3…'), false);
+                }
+                var result = await syncFromCloudAndRefresh({ silent: attempt > 1 });
+                applied = (result && (result.applied || result.count)) || (window.cloudSyncState && window.cloudSyncState.lastApplied) || 0;
+                ok = true;
+                break;
+            } catch (e1) {
+                lastErr = e1;
+                try {
+                    if (typeof markCloudSyncState === 'function') {
+                        markCloudSyncState({
+                            lastAt: Date.now(),
+                            lastOk: false,
+                            lastError: String(e1 && e1.message || e1),
+                            lastReason: 'error'
+                        });
+                    }
+                } catch (e2) {}
+                if (attempt < 3) await new Promise(function (r) { setTimeout(r, 600 * attempt); });
+            }
         }
-        try { renderHomeDashboard(); } catch (e3) {}
+        homeDashUi.syncing = false;
+        appendHomeSyncLog({
+            at: Date.now(),
+            ok: ok,
+            applied: applied,
+            error: ok ? '' : String(lastErr && lastErr.message || lastErr || 'unknown')
+        });
+        if (!ok) {
+            try {
+                if (typeof showCloudSyncBanner === 'function') {
+                    showCloudSyncBanner('同步失败（已重试 3 次）：' + String(lastErr && lastErr.message || lastErr || '').slice(0, 60), true);
+                }
+            } catch (e3) {}
+            try {
+                if (typeof recordOperationLog === 'function') {
+                    recordOperationLog('云端同步', '失败', '首页手动同步失败：' + String(lastErr && lastErr.message || lastErr || ''), {}, { success: false }, 0, String(lastErr || ''), 0);
+                }
+            } catch (e4) {}
+        } else {
+            try {
+                if (typeof recordOperationLog === 'function') {
+                    recordOperationLog('云端同步', '成功', '首页手动全量同步成功，写入约 ' + applied + ' 项', { applied: applied }, { success: true }, 1, '', 0);
+                }
+            } catch (e5) {}
+        }
+        try { renderHomeDashboard(); } catch (e6) {}
+        updateHomeSyncChrome();
     }
     window.manualHomeCloudSync = manualHomeCloudSync;
 
     function refreshHomeSyncClock() {
-        var home = document.getElementById('home');
-        if (!home || !home.classList.contains('active')) return;
-        var syncBox = document.getElementById('homeSyncStatus');
-        if (!syncBox) return;
-        var st = (typeof window.cloudSyncState !== 'undefined' && window.cloudSyncState) ? window.cloudSyncState : null;
-        if (!st || !st.lastAt) return;
-        var ago = Math.max(0, Math.round((Date.now() - st.lastAt) / 1000));
-        var strongs = syncBox.querySelectorAll('.sync-line strong');
-        if (strongs && strongs[2]) {
-            var d = new Date(st.lastAt);
-            var timeStr = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
-            strongs[2].textContent = timeStr + '（' + ago + 's 前）';
-        }
+        updateHomeSyncChrome();
     }
     setInterval(refreshHomeSyncClock, 1000);
 
@@ -30777,5 +31524,6 @@ ${ocrText}`
     <script src="js/shared-file-library.js?v=20260712-3000"></script>
     <script src="js/notice-enhance.js?v=20260712-3000"></script>
     <script src="js/competition-management.js?v=20260712-3000"></script>
+    <script src="js/home-dashboard-p3.js?v=20260713-p3"></script>
 </body>
 </html>
