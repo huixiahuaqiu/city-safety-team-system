@@ -1567,14 +1567,16 @@
                 return (Number(b.id) || 0) - (Number(a.id) || 0);
             }).slice(0, 5);
         if (!list.length) {
-            box.innerHTML = '<div style="padding:12px;color:#94a3b8;font-size:13px;">暂无已发布新闻</div>';
+            box.innerHTML = '<div class="home-empty">暂无已发布新闻</div>';
             return;
         }
         box.innerHTML = list.map(function (n, i) {
-            return '<div onclick="showNewsDetail(' + n.id + ')" style="padding:10px;' + (i < list.length - 1 ? 'border-bottom:1px solid #f0f0f0;' : '') + 'cursor:pointer;">' +
-                '<div style="font-size:14px;color:#333;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' +
-                (n.pinned ? '📌 ' : '') + esc(n.title) + '</div>' +
-                '<div style="font-size:12px;color:#666;">' + esc(n.publishTime || '') + '</div></div>';
+            return '<div class="home-feed-item" onclick="showNewsDetail(' + n.id + ')">' +
+                '<span class="home-feed-dot"></span>' +
+                '<div style="min-width:0;flex:1;">' +
+                '<div class="title">' + (n.pinned ? '置顶 · ' : '') + esc(n.title) + '</div>' +
+                '<div class="meta">' + esc(n.publishTime || '') + '</div>' +
+                '</div></div>';
         }).join('');
     }
 
