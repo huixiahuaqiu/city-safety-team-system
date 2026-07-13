@@ -20,6 +20,7 @@
     var createStep = 'pick';
     var createType = '';
     var pendingAttachments = [];
+    var pendingDetailImages = [];
     var editingDraftId = null;
     var resubmitFromId = null;
 
@@ -46,8 +47,8 @@
         leave: [{ role: 'leader', label: '组长初审' }, { role: 'admin', label: '导师终审' }],
         trip: [{ role: 'admin', label: '导师审批' }],
         equipment: [{ role: 'admin', label: '导师审批' }],
-        reimburse: [{ role: 'leader', label: '组长初审' }, { role: 'admin', label: '导师终审' }],
-        reimburse_large: [{ role: 'admin', label: '导师直接审批' }],
+        reimburse: [{ role: 'admin', label: '导师审批' }],
+        reimburse_large: [{ role: 'admin', label: '导师审批' }],
         stay: [{ role: 'leader', label: '组长初审' }, { role: 'admin', label: '导师终审' }],
         defense: [{ role: 'admin', label: '导师审批' }],
         other: [{ role: 'leader', label: '组长初审' }, { role: 'admin', label: '导师终审' }]
@@ -169,6 +170,11 @@
         Object.keys(DEFAULT_FLOWS).forEach(function (k) {
             if (!approvalFlowConfig[k]) approvalFlowConfig[k] = DEFAULT_FLOWS[k].slice();
         });
+        // 报销一律导师直审（覆盖历史「组长初审」配置）
+        var mentorOnly = [{ role: 'admin', label: '导师审批' }];
+        approvalFlowConfig.reimburse = mentorOnly.slice();
+        approvalFlowConfig.reimburse_large = mentorOnly.slice();
+        try { localStorage.setItem(FLOW_KEY, JSON.stringify(approvalFlowConfig)); } catch (ePersist) {}
         global.approvalFlowConfig = approvalFlowConfig;
         return approvalFlowConfig;
     }
@@ -194,10 +200,7 @@
         loadFlowConfig();
         var key = applyType || 'other';
         if (key === 'reimburse') {
-            var amt = parseFloat((formData && formData.amount) || 0) || 0;
-            if (amt >= REIMBURSE_LARGE && approvalFlowConfig.reimburse_large) {
-                return approvalFlowConfig.reimburse_large.slice();
-            }
+            return (approvalFlowConfig.reimburse || DEFAULT_FLOWS.reimburse).slice();
         }
         return (approvalFlowConfig[key] || DEFAULT_FLOWS.other).slice();
     }
@@ -966,16 +969,76 @@
     }
 
     /* ========== 表单 / 创建 ========== */
+    function readProjectPool(storageKey) {
+        var list = [];
+        try {
+            if (Array.isArray(global[storageKey]) && global[storageKey].length) list = global[storageKey];
+        } catch (e) {}
+        if (!list.length) {
+            try {
+                var raw = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                if (Array.isArray(raw)) list = raw;
+            } catch (e2) {}
+        }
+        return Array.isArray(list) ? list : [];
+    }
+
+    function projectDisplayName(p) {
+        if (!p) return '';
+        return String(p.name || p.title || p.projectName || p.project_name || p.projectTitle || '').trim();
+    }
+
+    function collectAllProjects() {
+        var groups = [
+            { key: 'longitudinalData', src: '纵向项目', prefix: 'lon-' },
+            { key: 'horizontalData', src: '横向项目', prefix: 'hor-' },
+            { key: 'schoolData', src: '校级项目', prefix: 'sch-' }
+        ];
+        var out = [];
+        var seen = {};
+        groups.forEach(function (g) {
+            readProjectPool(g.key).forEach(function (p) {
+                var name = projectDisplayName(p);
+                if (!name) return;
+                var id = g.prefix + String(p.id != null ? p.id : name);
+                if (seen[id]) return;
+                seen[id] = 1;
+                out.push({ id: id, name: name, src: g.src, status: p.status || '' });
+            });
+        });
+        return out;
+    }
+
     function projectOptionsHtml(selected) {
-        var pools = [];
-        try { if (Array.isArray(global.longitudinalData)) pools = pools.concat(global.longitudinalData.map(function (p) { return { id: p.id, name: p.name || p.title, src: '纵向' }; })); } catch (e) {}
-        try { if (Array.isArray(global.horizontalData)) pools = pools.concat(global.horizontalData.map(function (p) { return { id: 'h-' + p.id, name: p.name || p.title, src: '横向', rawId: p.id }; })); } catch (e2) {}
-        try { if (Array.isArray(global.schoolData)) pools = pools.concat(global.schoolData.map(function (p) { return { id: 's-' + p.id, name: p.name || p.title, src: '校级', rawId: p.id }; })); } catch (e3) {}
-        return '<option value="">不关联项目</option>' + pools.map(function (p) {
-            var val = String(p.id);
-            return '<option value="' + esc(val) + '" data-name="' + esc(p.name || '') + '"' + (String(selected) === val ? ' selected' : '') + '>' +
-                esc((p.src || '') + ' · ' + (p.name || '')) + '</option>';
-        }).join('');
+        var pools = collectAllProjects();
+        var bySrc = {};
+        pools.forEach(function (p) {
+            if (!bySrc[p.src]) bySrc[p.src] = [];
+            bySrc[p.src].push(p);
+        });
+        var html = '<option value="">不关联项目</option>';
+        html += '<option value="__custom__"' + (selected === '__custom__' ? ' selected' : '') + '>其他项目（手动填写）</option>';
+        Object.keys(bySrc).forEach(function (src) {
+            html += '<optgroup label="' + esc(src) + '（' + bySrc[src].length + '）">';
+            bySrc[src].forEach(function (p) {
+                var hint = p.status ? ' · ' + p.status : '';
+                html += '<option value="' + esc(p.id) + '" data-name="' + esc(p.name) + '"' +
+                    (String(selected) === String(p.id) ? ' selected' : '') + '>' +
+                    esc(p.name + hint) + '</option>';
+            });
+            html += '</optgroup>';
+        });
+        if (!pools.length) {
+            html += '<optgroup label="暂无台账项目"><option value="" disabled>请先在项目管理中录入，或选手动填写</option></optgroup>';
+        }
+        return html;
+    }
+
+    function onAppProjectChange() {
+        var sel = document.getElementById('af_project');
+        var wrap = document.getElementById('af_projectCustomWrap');
+        if (!sel || !wrap) return;
+        wrap.style.display = sel.value === '__custom__' ? '' : 'none';
     }
 
     function flowPreviewHtml(applyType, formData) {
@@ -1031,9 +1094,43 @@
         event.target.value = '';
     }
 
-    function removeApplicationAttach(i) {
-        pendingAttachments.splice(i, 1);
-        renderAttachList();
+    function handleDetailImageUpload(event) {
+        var files = event.target.files;
+        if (!files || !files.length) return;
+        Array.prototype.forEach.call(files, function (file) {
+            if (pendingDetailImages.length >= 8) { alert('明细图片最多 8 张'); return; }
+            if (!/^image\//.test(file.type) && !/\.(jpe?g|png|gif|webp)$/i.test(file.name)) {
+                alert(file.name + ' 不是图片，已跳过');
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) { alert(file.name + ' 超过 2MB，已跳过'); return; }
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                pendingDetailImages.push({ name: file.name, dataUrl: e.target.result, size: file.size });
+                renderDetailImageList();
+            };
+            reader.readAsDataURL(file);
+        });
+        event.target.value = '';
+    }
+
+    function removeDetailImage(i) {
+        pendingDetailImages.splice(i, 1);
+        renderDetailImageList();
+    }
+
+    function renderDetailImageList() {
+        var box = document.getElementById('af_detailImgList');
+        if (!box) return;
+        if (!pendingDetailImages.length) {
+            box.innerHTML = '<span style="font-size:12px;color:#94a3b8;">暂无明细图片</span>';
+            return;
+        }
+        box.innerHTML = pendingDetailImages.map(function (img, i) {
+            return '<div style="position:relative;width:88px;height:88px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;background:#f8fafc;">' +
+                '<img src="' + String(img.dataUrl).replace(/"/g, '&quot;') + '" alt="' + esc(img.name) + '" style="width:100%;height:100%;object-fit:cover;">' +
+                '<button type="button" onclick="removeDetailImage(' + i + ')" title="删除" style="position:absolute;top:2px;right:2px;width:22px;height:22px;border:none;border-radius:50%;background:rgba(15,23,42,.65);color:#fff;cursor:pointer;font-size:12px;line-height:22px;padding:0;">×</button></div>';
+        }).join('');
     }
 
     function showApplicationCreateModal() {
@@ -1041,6 +1138,7 @@
         createStep = 'pick';
         createType = '';
         pendingAttachments = [];
+        pendingDetailImages = [];
         editingDraftId = null;
         resubmitFromId = null;
         var titleEl = document.getElementById('applicationModalTitle');
@@ -1108,7 +1206,8 @@
                 '<div id="af_daysHint" style="font-size:12px;color:#7c3aed;margin-bottom:10px;"></div>' +
                 '<div class="form-group"><label>目的地 <span style="color:red;">*</span></label><input type="text" id="af_destination" value="' + esc(fd.destination || '') + '" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;"></div>' +
                 '<div class="form-group"><label>随行人员</label><input type="text" id="af_companions" value="' + esc(fd.companions || '') + '" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;"></div>' +
-                '<div class="form-group"><label>经费来源项目</label><select id="af_project" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;">' + projectOptionsHtml(fd.projectId) + '</select></div>';
+                '<div class="form-group"><label>经费来源项目</label><select id="af_project" onchange="onAppProjectChange()" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;">' + projectOptionsHtml(fd.projectId) + '</select></div>' +
+                '<div class="form-group" id="af_projectCustomWrap" style="display:' + (fd.projectId === '__custom__' || fd.customProject ? 'block' : 'none') + ';"><label>项目名称（手填）</label><input type="text" id="af_projectCustom" value="' + esc(fd.customProject || fd.projectName || '') + '" placeholder="输入项目全称" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;"></div>';
         }
         if (type === 'equipment') {
             return '<div class="form-group"><label>设备名称/编号 <span style="color:red;">*</span></label><input type="text" id="af_device" value="' + esc(fd.device || '') + '" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;"></div>' +
@@ -1121,9 +1220,19 @@
         }
         if (type === 'reimburse') {
             return '<div class="form-group"><label>报销金额（元） <span style="color:red;">*</span></label><input type="number" min="0" step="0.01" id="af_amount" value="' + esc(fd.amount || '') + '" onchange="refreshFlowPreview()" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;"></div>' +
-                '<div class="form-group"><label>关联项目</label><select id="af_project" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;">' + projectOptionsHtml(fd.projectId) + '</select></div>' +
-                '<div class="form-group"><label>报销明细 <span style="color:red;">*</span></label><textarea id="af_detail" rows="3" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;">' + esc(fd.detail || '') + '</textarea></div>' +
-                '<div style="font-size:12px;color:#d97706;margin-bottom:8px;">金额 ≥ ' + REIMBURSE_LARGE + ' 元走导师直接审批</div>';
+                '<div class="form-group"><label>关联项目</label>' +
+                '<select id="af_project" onchange="onAppProjectChange()" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;">' + projectOptionsHtml(fd.projectId) + '</select>' +
+                '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">含纵向 / 横向 / 校级台账项目，也可选手动填写</div></div>' +
+                '<div class="form-group" id="af_projectCustomWrap" style="display:' + (fd.projectId === '__custom__' || fd.customProject ? 'block' : 'none') + ';"><label>项目名称（手填） <span style="color:red;">*</span></label><input type="text" id="af_projectCustom" value="' + esc(fd.customProject || (fd.projectId === '__custom__' ? fd.projectName : '') || '') + '" placeholder="输入项目全称" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;"></div>' +
+                '<div class="form-group"><label>报销明细 <span style="color:red;">*</span></label>' +
+                '<textarea id="af_detail" rows="3" placeholder="文字说明费用明细..." style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;">' + esc(fd.detail || '') + '</textarea>' +
+                '<div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' +
+                '<label class="btn btn-secondary" style="padding:6px 12px;font-size:12px;cursor:pointer;margin:0;">上传明细图片' +
+                '<input type="file" id="af_detailImgInput" accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png" multiple style="display:none;" onchange="handleDetailImageUpload(event)">' +
+                '</label>' +
+                '<span style="font-size:12px;color:#94a3b8;">支持 JPG/PNG，最多 8 张，单张 ≤ 2MB</span></div>' +
+                '<div id="af_detailImgList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div></div>' +
+                '<div style="font-size:12px;color:#7c3aed;margin-bottom:8px;">审批流程：提交 → 导师审批（无需组长）</div>';
         }
         if (type === 'stay') {
             return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
@@ -1151,6 +1260,10 @@
         if (preset.reason) fd._reason = preset.reason;
         if (preset.title) fd.title = preset.title;
         pendingAttachments = Array.isArray(preset.attachments) ? preset.attachments.slice() : pendingAttachments;
+        pendingDetailImages = Array.isArray((preset.formData && preset.formData.detailImages) || preset.detailImages)
+            ? ((preset.formData && preset.formData.detailImages) || preset.detailImages).slice()
+            : (createType === 'reimburse' ? pendingDetailImages : []);
+        if (createType !== 'reimburse') pendingDetailImages = [];
         var body = document.getElementById('applicationModalBody');
         if (!body) return;
         body.innerHTML = autoUserFieldsHtml() +
@@ -1171,6 +1284,8 @@
             '</div></div>';
         setTimeout(function () {
             renderAttachList();
+            renderDetailImageList();
+            onAppProjectChange();
             validateAppTimeRange();
         }, 0);
     }
@@ -1202,6 +1317,24 @@
         box.innerHTML = flowPreviewHtml(createType, fd);
     }
 
+    function collectProjectFields(formData) {
+        var proj = document.getElementById('af_project');
+        if (!proj) return;
+        var val = String(proj.value || '');
+        if (!val) return;
+        if (val === '__custom__') {
+            formData.projectId = '__custom__';
+            formData.customProject = String((document.getElementById('af_projectCustom') || {}).value || '').trim();
+            formData.projectName = formData.customProject;
+        } else {
+            formData.projectId = val;
+            formData.projectName = proj.options[proj.selectedIndex]
+                ? (proj.options[proj.selectedIndex].getAttribute('data-name') || proj.options[proj.selectedIndex].textContent || '')
+                : '';
+            formData.customProject = '';
+        }
+    }
+
     function collectFormData() {
         var type = createType;
         var formData = {};
@@ -1225,11 +1358,7 @@
             formData.destination = String((document.getElementById('af_destination') || {}).value || '').trim();
             formData.companions = String((document.getElementById('af_companions') || {}).value || '').trim();
             formData.days = calcDays(startAt, endAt);
-            var proj = document.getElementById('af_project');
-            if (proj && proj.value) {
-                formData.projectId = proj.value;
-                formData.projectName = proj.options[proj.selectedIndex] ? proj.options[proj.selectedIndex].getAttribute('data-name') : '';
-            }
+            collectProjectFields(formData);
             title = '出差 · ' + (formData.destination || '');
         } else if (type === 'equipment') {
             formData.device = String((document.getElementById('af_device') || {}).value || '').trim();
@@ -1241,11 +1370,8 @@
         } else if (type === 'reimburse') {
             formData.amount = parseFloat((document.getElementById('af_amount') || {}).value || 0) || 0;
             formData.detail = String((document.getElementById('af_detail') || {}).value || '').trim();
-            var proj2 = document.getElementById('af_project');
-            if (proj2 && proj2.value) {
-                formData.projectId = proj2.value;
-                formData.projectName = proj2.options[proj2.selectedIndex] ? proj2.options[proj2.selectedIndex].getAttribute('data-name') : '';
-            }
+            formData.detailImages = pendingDetailImages.slice();
+            collectProjectFields(formData);
             title = '报销 ¥' + formData.amount;
         } else if (type === 'stay') {
             formData.startAt = startAt;
@@ -1280,7 +1406,14 @@
             if (!fd.device || !fd.startAt || !fd.endAt || !fd.purpose) { alert('请完整填写设备借用信息'); return false; }
             if (!fd.returnPromise) { alert('请勾选归还承诺'); return false; }
         } else if (t === 'reimburse') {
-            if (!fd.amount || !fd.detail) { alert('请填写报销金额与明细'); return false; }
+            if (!fd.amount || (!fd.detail && !(fd.detailImages && fd.detailImages.length))) {
+                alert('请填写报销金额，并填写明细文字或上传明细图片');
+                return false;
+            }
+            if (fd.projectId === '__custom__' && !fd.customProject) {
+                alert('请填写关联项目名称');
+                return false;
+            }
         } else if (t === 'stay') {
             if (!fd.startAt || !fd.endAt) { alert('请填写留校起止日期'); return false; }
         } else if (t === 'defense') {
@@ -1503,9 +1636,14 @@
                 device: '设备', purpose: '用途', amount: '金额(元)', detail: '报销明细',
                 projectName: '关联项目', defenseType: '答辩类型', thesisTitle: '题目', returnPromise: '归还承诺'
             };
-            if (k === 'projectId') return;
+            if (k === 'projectId' || k === 'customProject' || k === 'detailImages') return;
             rows.push([labelMap[k] || k, esc(String(fd[k]))]);
         });
+        if (fd.detailImages && fd.detailImages.length) {
+            rows.push(['明细图片', '<div style="display:flex;flex-wrap:wrap;gap:8px;">' + fd.detailImages.map(function (img) {
+                return '<a href="' + String(img.dataUrl || '#').replace(/"/g, '&quot;') + '" target="_blank" rel="noopener"><img src="' + String(img.dataUrl || '').replace(/"/g, '&quot;') + '" alt="' + esc(img.name || '明细') + '" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;"></a>';
+            }).join('') + '</div>']);
+        }
         rows.push(['事由', '<div style="white-space:pre-wrap;line-height:1.7;">' + esc(item.reason || '—') + '</div>']);
         if (item.attachments && item.attachments.length) {
             rows.push(['附件', item.attachments.map(function (a) {
@@ -1874,6 +2012,9 @@
     global.closeApplicationReviewModal = closeApplicationReviewModal;
     global.handleApplicationAttachUpload = handleApplicationAttachUpload;
     global.removeApplicationAttach = removeApplicationAttach;
+    global.handleDetailImageUpload = handleDetailImageUpload;
+    global.removeDetailImage = removeDetailImage;
+    global.onAppProjectChange = onAppProjectChange;
     global.validateAppTimeRange = validateAppTimeRange;
     global.refreshFlowPreview = refreshFlowPreview;
     global.toggleApplicationSelect = toggleApplicationSelect;
