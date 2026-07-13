@@ -1,5 +1,6 @@
 // Copy this file to config.local.js for machine-specific overrides (tokens, etc).
 // Public defaults live in config.js and are safe to commit.
+// Important: always Object.assign — never replace window.APP_CONFIG entirely.
 window.APP_CONFIG = Object.assign({}, window.APP_CONFIG || {}, {
     // Optional local overrides:
     // SUPABASE_URL: '',

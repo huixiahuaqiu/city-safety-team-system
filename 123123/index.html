@@ -3620,6 +3620,7 @@
         <div class="fab-menu" onclick="event.stopPropagation()">
             <button type="button" onclick="manualHomeCloudSync()">增量同步</button>
             <button type="button" onclick="manualHomeCloudSyncFull()">全量同步</button>
+            <button type="button" onclick="diagnoseCloudSync()">连通诊断</button>
             <button type="button" onclick="openHomeSyncLogPanel()">同步日志</button>
             <button type="button" onclick="runHomeConsistencyCheck(false)">一致性校验</button>
         </div>
@@ -8499,50 +8500,133 @@
         
         function supabaseRequest(method, table, data, options) {
             options = options || {};
-            return new Promise(function(resolve, reject) {
-                if (!SUPABASE_URL || !SUPABASE_KEY) {
-                    reject(new Error('Supabase 未配置：请检查 config.js / config.local.js'));
-                    return;
+            var maxRetry = options.retries != null ? Number(options.retries) : 2;
+            if (!isFinite(maxRetry) || maxRetry < 0) maxRetry = 0;
+
+            function formatSupabaseError(xhr) {
+                var status = xhr && xhr.status;
+                var body = (xhr && xhr.responseText) ? String(xhr.responseText).slice(0, 240) : '';
+                if (!status) {
+                    return '无法连接 Supabase（HTTP 0：网络中断、DNS 失败、扩展拦截或未走 http://localhost:8000）。请检查网络后在首页右下角执行「全量同步」。目标：' + SUPABASE_URL;
                 }
-                var xhr = new XMLHttpRequest();
-                var url = SUPABASE_URL + '/rest/v1/' + table;
-                if (method === 'GET' && data) {
-                    var params = [];
-                    if (data.select) params.push('select=' + encodeURIComponent(data.select));
-                    if (data.limit) params.push('limit=' + data.limit);
-                    if (data.order) params.push('order=' + encodeURIComponent(data.order));
-                    if (params.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + params.join('&');
-                }
-                if (options.onConflict) {
-                    url += (url.indexOf('?') >= 0 ? '&' : '?') + 'on_conflict=' + encodeURIComponent(options.onConflict);
-                }
-                xhr.open(method, url, true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.setRequestHeader('apikey', SUPABASE_KEY);
-                xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
-                var prefer = options.prefer || 'return=representation';
-                xhr.setRequestHeader('Prefer', prefer);
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState === 4) {
+                return 'HTTP ' + status + ': ' + body;
+            }
+
+            function isTransientSupabaseError(err) {
+                var msg = String(err && err.message || err || '');
+                return /HTTP 0|网络错误|超时|timeout|Failed to fetch|ERR_NETWORK|ERR_CONNECTION/i.test(msg);
+            }
+
+            function once() {
+                return new Promise(function(resolve, reject) {
+                    if (!SUPABASE_URL || !SUPABASE_KEY) {
+                        reject(new Error('Supabase 未配置：请检查 config.js / config.local.js'));
+                        return;
+                    }
+                    var xhr = new XMLHttpRequest();
+                    var url = SUPABASE_URL + '/rest/v1/' + table;
+                    if (method === 'GET' && data) {
+                        var params = [];
+                        if (data.select) params.push('select=' + encodeURIComponent(data.select));
+                        if (data.limit) params.push('limit=' + data.limit);
+                        if (data.order) params.push('order=' + encodeURIComponent(data.order));
+                        if (params.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + params.join('&');
+                    }
+                    if (options.onConflict) {
+                        url += (url.indexOf('?') >= 0 ? '&' : '?') + 'on_conflict=' + encodeURIComponent(options.onConflict);
+                    }
+                    var settled = false;
+                    function fail(err) {
+                        if (settled) return;
+                        settled = true;
+                        reject(err instanceof Error ? err : new Error(String(err || '未知错误')));
+                    }
+                    function ok(val) {
+                        if (settled) return;
+                        settled = true;
+                        resolve(val);
+                    }
+                    xhr.open(method, url, true);
+                    xhr.timeout = options.timeoutMs || 20000;
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.setRequestHeader('apikey', SUPABASE_KEY);
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + SUPABASE_KEY);
+                    var prefer = options.prefer || 'return=representation';
+                    xhr.setRequestHeader('Prefer', prefer);
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState !== 4) return;
                         if (xhr.status >= 200 && xhr.status < 300) {
                             try {
-                                resolve(xhr.responseText ? JSON.parse(xhr.responseText) : []);
-                            } catch(e) {
-                                resolve(xhr.responseText ? null : []);
+                                ok(xhr.responseText ? JSON.parse(xhr.responseText) : []);
+                            } catch (e) {
+                                ok(xhr.responseText ? null : []);
                             }
                         } else {
-                            reject(new Error('HTTP ' + xhr.status + ': ' + xhr.responseText));
+                            fail(new Error(formatSupabaseError(xhr)));
                         }
+                    };
+                    xhr.onerror = function() {
+                        fail(new Error(formatSupabaseError(xhr)));
+                    };
+                    xhr.ontimeout = function() {
+                        fail(new Error('连接 Supabase 超时（' + (options.timeoutMs || 20000) + 'ms）'));
+                    };
+                    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+                        xhr.send(JSON.stringify(data || {}));
+                    } else {
+                        xhr.send();
                     }
-                };
-                xhr.onerror = function() { reject(new Error('网络错误')); };
-                if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
-                    xhr.send(JSON.stringify(data || {}));
-                } else {
-                    xhr.send();
-                }
-            });
+                });
+            }
+
+            function run(left) {
+                return once().catch(function (err) {
+                    if (left > 0 && isTransientSupabaseError(err)) {
+                        var wait = 400 * (maxRetry - left + 1);
+                        return new Promise(function (r) { setTimeout(r, wait); }).then(function () {
+                            return run(left - 1);
+                        });
+                    }
+                    throw err;
+                });
+            }
+            return run(maxRetry);
         }
+
+        window.diagnoseCloudSync = async function diagnoseCloudSync() {
+            var result = {
+                url: SUPABASE_URL || '(空)',
+                keyPresent: !!(SUPABASE_KEY && SUPABASE_KEY.length > 8),
+                keyPrefix: SUPABASE_KEY ? String(SUPABASE_KEY).slice(0, 14) + '…' : '',
+                pageOrigin: location.origin,
+                ok: false,
+                detail: ''
+            };
+            if (!SUPABASE_URL || !SUPABASE_KEY) {
+                result.detail = '未配置 SUPABASE_URL / SUPABASE_KEY';
+                console.warn('[cloud-diagnose]', result);
+                return result;
+            }
+            try {
+                var rows = await supabaseRequest(
+                    'GET',
+                    'patents?select=id&limit=1',
+                    null,
+                    { retries: 1, timeoutMs: 12000, prefer: 'count=exact' }
+                );
+                result.ok = true;
+                result.detail = '连通正常，样例行数：' + (Array.isArray(rows) ? rows.length : 0);
+            } catch (e) {
+                result.detail = String(e && e.message || e);
+            }
+            console.info('[cloud-diagnose]', result);
+            try {
+                if (typeof showCloudSyncBanner === 'function') {
+                    showCloudSyncBanner(result.ok ? ('云端连通正常') : ('云端诊断失败：' + result.detail.slice(0, 80)), !result.ok);
+                }
+            } catch (e2) {}
+            return result;
+        };
 
         // ========== 全站云端同步（复用已有 patents 表，无需新建表） ==========
         // 同步记录标记：classification=__APP_SYNC__，patent_number=__SYNC_KV__{key}
