@@ -3653,6 +3653,9 @@
                 <div class="nav-item" onclick="showModule('weekly_report')">
                     <span>📅</span> 团队工作周报
                 </div>
+                <div class="nav-item" onclick="showModule('application_center')">
+                    <span>📝</span> 请假与申请
+                </div>
             </div>
             
             <!-- 项目管理大类 -->
@@ -6569,6 +6572,111 @@
                 </div>
             </div>
             
+            <!-- 请假与申请 -->
+            <div id="application_center" class="module" style="padding: 0;">
+                <div style="padding: 22px 24px 18px; background: linear-gradient(180deg, #ffffff 0%, #f8f9ff 100%); border-bottom: 1px solid #eef0f5;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <h1 style="font-size: 24px; font-weight: 700; color: #1f2937; margin: 0;">请假与申请</h1>
+                                <span id="appRoleBadge" style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:12px;font-weight:600;"></span>
+                            </div>
+                            <p style="font-size: 13px; color: #6b7280; margin: 6px 0 0;" id="appSubtitle">类型化申请 · 二级审批 · 业务联动 · 云端同步</p>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" id="appFlowCfgBtn" onclick="showApprovalFlowConfig()" style="padding: 10px 16px; font-size: 13px; display:none;">流程配置</button>
+                            <button class="btn btn-secondary" id="appExportBtn" onclick="exportApplicationRecords()" style="padding: 10px 16px; font-size: 13px; display:none;">导出记录</button>
+                            <button class="btn" id="appNewBtn" onclick="showApplicationCreateModal()" style="padding: 10px 20px; font-size: 13px;">新建申请</button>
+                        </div>
+                    </div>
+                    <div id="appTabBar" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 4px;"></div>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="appSearchInput" placeholder="搜索申请人 / 编号 / 事由..."
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; background:#fff;"
+                                oninput="if(typeof renderApplicationCenter==='function')renderApplicationCenter()">
+                        </div>
+                        <select id="appStatusFilter" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; min-width: 110px; background:#fff;" onchange="if(typeof onApplicationFilterChange==='function')onApplicationFilterChange()">
+                            <option value="">全部状态</option>
+                            <option value="draft">草稿</option>
+                            <option value="pending">待审批</option>
+                            <option value="reviewing">审批中</option>
+                            <option value="approved">已通过</option>
+                            <option value="rejected">已驳回</option>
+                            <option value="withdrawn">已撤回</option>
+                        </select>
+                        <select id="appCategoryFilter" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; min-width: 120px; background:#fff;" onchange="if(typeof renderApplicationCenter==='function')renderApplicationCenter()">
+                            <option value="">全部类型</option>
+                            <option value="leave">请假</option>
+                            <option value="trip">出差</option>
+                            <option value="equipment">设备借用</option>
+                            <option value="reimburse">经费报销</option>
+                            <option value="stay">假期留校</option>
+                            <option value="defense">开题/答辩</option>
+                            <option value="other">其他申请</option>
+                        </select>
+                        <input type="date" id="appDateFrom" title="提交日起" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 13px; background:#fff;" onchange="if(typeof renderApplicationCenter==='function')renderApplicationCenter()">
+                        <input type="date" id="appDateTo" title="提交日止" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 13px; background:#fff;" onchange="if(typeof renderApplicationCenter==='function')renderApplicationCenter()">
+                        <select id="appApplicantFilter" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; min-width: 120px; background:#fff; display:none;" onchange="if(typeof renderApplicationCenter==='function')renderApplicationCenter()">
+                            <option value="">全部申请人</option>
+                        </select>
+                    </div>
+                    <div id="appBatchBar" style="display:none; margin-top:12px; padding:10px 14px; background:#eef2ff; border-radius:10px; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <span id="appBatchCount" style="font-size:13px;color:#4338ca;font-weight:600;">已选 0 项</span>
+                        <button class="btn" style="padding:6px 12px;font-size:12px;background:#16a34a;" onclick="batchApproveApplications()">批量通过</button>
+                        <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="clearApplicationSelection()">取消选择</button>
+                    </div>
+                </div>
+                <div style="padding: 20px 24px 28px; background: #f5f7fa;">
+                    <div id="appStatCards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px;"></div>
+                    <div id="applicationEmptyState" style="display: none; text-align: center; padding: 64px 20px; background:#fff; border-radius:16px; border:1px dashed #d1d5db;">
+                        <div style="font-size: 42px; margin-bottom: 12px; opacity:.85;">📝</div>
+                        <h3 style="font-size: 18px; color: #111827; margin-bottom: 8px;">暂无申请</h3>
+                        <p style="font-size: 14px; color: #6b7280; margin-bottom: 18px;">选择类型模板提交后，可在此跟踪审批进度</p>
+                        <button class="btn" onclick="showApplicationCreateModal()">新建申请</button>
+                    </div>
+                    <div id="applicationList"></div>
+                </div>
+            </div>
+
+            <!-- 新建/查看/详情弹窗（宽屏左右分栏） -->
+            <div id="applicationModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.45); z-index: 1000; justify-content: center; align-items: center; padding: 16px;">
+                <div id="applicationModalPanel" style="background: #fff; border-radius: 16px; width: 100%; max-width: 920px; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(15,23,42,.18);">
+                    <div style="padding: 18px 22px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; position:sticky; top:0; background:#fff; z-index:1;">
+                        <div>
+                            <h3 id="applicationModalTitle" style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">新建申请</h3>
+                            <div id="applicationModalHint" style="font-size:12px;color:#6b7280;margin-top:4px;">选择类型并填写表单</div>
+                        </div>
+                        <button type="button" onclick="closeApplicationModal()" style="width: 32px; height: 32px; border: none; background: #f3f4f6; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                    </div>
+                    <div id="applicationModalBody" style="padding: 22px;"></div>
+                </div>
+            </div>
+
+            <!-- 审批/转审弹窗 -->
+            <div id="applicationReviewModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.45); z-index: 1001; justify-content: center; align-items: center; padding: 16px;">
+                <div style="background: #fff; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 20px 50px rgba(15,23,42,.18);">
+                    <div style="padding: 18px 22px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 id="applicationReviewTitle" style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">审批申请</h3>
+                        <button type="button" onclick="closeApplicationReviewModal()" style="width: 32px; height: 32px; border: none; background: #f3f4f6; border-radius: 50%; cursor: pointer; font-size: 16px;">×</button>
+                    </div>
+                    <div style="padding: 22px;">
+                        <div class="form-group" id="appTransferWrap" style="display:none;">
+                            <label>转审给 <span style="color:red;">*</span></label>
+                            <select id="appTransferTarget" style="width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px;"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>审批意见 <span id="appReviewCommentRequired" style="color:red;display:none;">*</span></label>
+                            <textarea id="appReviewComment" rows="4" placeholder="填写审批意见..." style="width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; resize: vertical;"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                            <button class="btn btn-secondary" type="button" onclick="closeApplicationReviewModal()">取消</button>
+                            <button class="btn" type="button" id="appReviewConfirmBtn" onclick="confirmApplicationReview()">确认</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 内部通知发布 -->
             <div id="notice_publish" class="module" style="padding: 0;">
                 <div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
@@ -8625,6 +8733,13 @@
                     showCloudSyncBanner(result.ok ? ('云端连通正常') : ('云端诊断失败：' + result.detail.slice(0, 80)), !result.ok);
                 }
             } catch (e2) {}
+            if (result.ok) {
+                try {
+                    if (typeof window.clearStaleCloudSyncAlerts === 'function') {
+                        window.clearStaleCloudSyncAlerts('diagnose-ok');
+                    }
+                } catch (e3) {}
+            }
             return result;
         };
 
@@ -8633,7 +8748,7 @@
         const CLOUD_SYNC_KEYS = new Set([
             'teamMemberData', 'memberGradeYears', 'accountData', 'permissionMatrix', 'passwordPolicy', 'loginLogData',
             'longitudinalData', 'horizontalData', 'schoolData',
-            'taskData', 'weeklyReportData', 'noticeData', 'newsData', 'meetingData',
+            'taskData', 'weeklyReportData', 'applicationData', 'approvalFlowConfig', 'noticeData', 'newsData', 'meetingData',
             'literatureData', 'datasetData', 'reportData', 'sharedFileData',
             'standardData', 'copyrightData', 'competitionData',
             'modelTrainingData', 'annotationTypes', 'annotationData',
@@ -8965,6 +9080,14 @@
             try { apply('schoolData', function(v){ schoolData = v; }); } catch(e){}
             try { apply('taskData', function(v){ taskData = v; }); } catch(e){}
             try { apply('weeklyReportData', function(v){ weeklyReportData = v; }); } catch(e){}
+            try { apply('applicationData', function(v){
+                if (typeof window.mergeIncomingApplicationData === 'function') window.applicationData = window.mergeIncomingApplicationData(v);
+                else window.applicationData = v;
+            }); } catch(e){}
+            try { apply('approvalFlowConfig', function(v){
+                if (typeof window.mergeIncomingApprovalFlowConfig === 'function') window.mergeIncomingApprovalFlowConfig(v);
+                else window.approvalFlowConfig = v;
+            }); } catch(e){}
             try { apply('noticeData', function(v){
                 if (typeof window.mergeIncomingNoticeData === 'function') noticeData = window.mergeIncomingNoticeData(v);
                 else noticeData = v;
@@ -9027,6 +9150,7 @@
             try { if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter(); } catch (e) {}
             try { if (typeof populateWeeklyReportOwnerSelects === 'function') populateWeeklyReportOwnerSelects(); } catch (e) {}
             try { if (typeof renderWeeklyReportList === 'function') renderWeeklyReportList(); } catch (e) {}
+            try { if (typeof renderApplicationCenter === 'function') renderApplicationCenter(); } catch (e) {}
             try { if (typeof renderModelTrainingList === 'function') renderModelTrainingList(); } catch (e) {}
             try { if (typeof renderAnnotationList === 'function') renderAnnotationList(); } catch (e) {}
             try { if (typeof updateAnnotationStats === 'function') updateAnnotationStats(); } catch (e) {}
@@ -9093,6 +9217,7 @@
             role_permission: '角色权限',
             task_management: '任务管理',
             weekly_report: '工作周报',
+            application_center: '请假与申请',
             longitudinal_project: '纵向项目',
             horizontal_project: '横向项目',
             school_project: '校级项目',
@@ -16374,6 +16499,13 @@ ${JSON.stringify(excelDataArray, null, 2)}
             const names = getRealTeamOwnerNames();
             if (!names.length) return ownerName || '';
             const clean = normalizeTeamMemberName(ownerName);
+            if (!clean) return ownerName || '';
+            // 系统角色 / 公告发布方不允许被强行改写成团队成员姓名
+            var reserved = {
+                '系统': 1, '系统管理员': 1, '团队管理员': 1, '未知用户': 1,
+                '管理员': 1, 'system': 1, 'System': 1, 'admin': 1
+            };
+            if (reserved[clean] || reserved[String(ownerName || '').trim()]) return clean || String(ownerName || '').trim();
             const renameMap = window.__teamMemberRenameMap || {};
             if (renameMap[clean] && names.includes(renameMap[clean])) return renameMap[clean];
             if (names.includes(clean)) return clean;
@@ -16385,6 +16517,17 @@ ${JSON.stringify(excelDataArray, null, 2)}
             if (!Array.isArray(list)) return false;
             let changed = false;
             list.forEach(function(item) {
+                // 系统自动告警：发布人必须保持「系统」
+                if (key === 'noticeData' && item && (
+                    String(item.title || '').indexOf('【系统告警】') === 0 ||
+                    String(item.title || '').indexOf('【系统通知】') === 0
+                )) {
+                    if (item.publisher !== '系统') {
+                        item.publisher = '系统';
+                        changed = true;
+                    }
+                    return;
+                }
                 fields.forEach(function(field) {
                     if (!item || !item[field]) return;
                     const next = replaceUnknownOwnerWithTeamMember(item[field]);
@@ -19522,6 +19665,10 @@ ${ocrText}`
         ['团队工作周报（查看全部）', true, true, false, false],
         ['团队工作周报（提交自己的）', true, true, true, false],
         ['团队工作周报（审核）', true, true, false, false],
+        ['请假与申请（提交自己的）', true, true, true, false],
+        ['请假与申请（本组审批）', true, true, false, false],
+        ['请假与申请（审批/查看全部）', true, false, false, false],
+        ['请假与申请（流程配置）', true, false, false, false],
         ['项目管理（查看）', true, true, true, false],
         ['项目管理（编辑）', true, false, false, false],
         ['成果管理（查看）', true, true, true, false],
@@ -20022,6 +20169,7 @@ ${ocrText}`
         const roleIndex = { admin: 1, leader: 2, student: 3, visitor: 4 }[currentUser.role];
         return perm[roleIndex] === true;
     }
+    window.hasPermission = hasPermission;
 
     function canEditTeamMembers() {
         return hasPermission('团队成员档案（编辑）');
@@ -20068,6 +20216,7 @@ ${ocrText}`
             'role_permission': hasPermission('角色权限管理'),
             'task_management': true,
             'weekly_report': hasPermission('团队工作周报（查看全部）') || hasPermission('团队工作周报（提交自己的）'),
+            'application_center': hasPermission('请假与申请（提交自己的）') || hasPermission('请假与申请（本组审批）') || hasPermission('请假与申请（审批/查看全部）'),
             'longitudinal_project': hasPermission('项目管理（查看）'),
             'horizontal_project': hasPermission('项目管理（查看）'),
             'school_project': hasPermission('项目管理（查看）'),
@@ -23593,6 +23742,7 @@ ${ocrText}`
             task_management: function () { return true; },
             notice_publish: function () { return true; },
             weekly_report: function () { return hasPermission('团队工作周报（查看全部）') || hasPermission('团队工作周报（提交自己的）'); },
+            application_center: function () { return hasPermission('请假与申请（提交自己的）') || hasPermission('请假与申请（本组审批）') || hasPermission('请假与申请（审批/查看全部）'); },
             literature_library: function () { return hasPermission('资源中心（查看）'); },
             dataset_library: function () { return hasPermission('资源中心（查看）'); },
             meeting_management: function () { return getHomeRoleKind() !== 'visitor'; },
@@ -23770,6 +23920,11 @@ ${ocrText}`
                 });
             } catch (e1) {}
         }
+        try {
+            if (typeof getApplicationHomeTodos === 'function') {
+                getApplicationHomeTodos().forEach(function (it) { items.push(it); });
+            }
+        } catch (eAppTodo) {}
         getHomeTodoTasks().forEach(function (t) {
             var pri = (t.priority === 'high' || t.priority === 'urgent') ? 'high' : (t.priority === 'low' ? 'low' : 'medium');
             items.push({
@@ -24029,10 +24184,10 @@ ${ocrText}`
             return [
                 { module: 'task_management', ico: '任', t: '我的任务', badge: 'task' },
                 { module: 'weekly_report', ico: '报', t: '工作周报', badge: 'weekly' },
+                { module: 'application_center', ico: '假', t: '请假申请' },
                 { module: 'literature_library', ico: '献', t: '文献资料' },
                 { module: 'dataset_library', ico: '数', t: '数据集' },
-                { module: 'openai', ico: '智', t: '智能工具' },
-                { module: 'patent_management', ico: '果', t: '我的成果' }
+                { module: 'openai', ico: '智', t: '智能工具' }
             ];
         }
         if (roleKind === 'visitor') {
@@ -24048,8 +24203,8 @@ ${ocrText}`
             { module: 'task_management', ico: '任', t: '任务待办', badge: 'task' },
             { module: 'notice_publish', ico: '通', t: '通知公告', badge: 'notice' },
             { module: 'weekly_report', ico: '报', t: '工作周报', badge: 'weekly' },
-            { module: 'patent_management', ico: '果', t: '成果管理' },
-            { module: 'longitudinal_project', ico: '项', t: '项目管理' }
+            { module: 'application_center', ico: '假', t: '请假审批' },
+            { module: 'patent_management', ico: '果', t: '成果管理' }
         ];
     }
     window.getHomeQuickDefaults = getHomeQuickDefaults;
@@ -26707,6 +26862,9 @@ ${ocrText}`
         if (moduleId === 'role_permission') renderPermissionMatrix();
         if (moduleId === 'task_management') { initTaskManagement(); }
         if (moduleId === 'weekly_report') { initWeeklyReport(); }
+        if (moduleId === 'application_center') {
+            try { if (typeof initApplicationCenter === 'function') initApplicationCenter(); } catch (eApp) {}
+        }
         if (moduleId === 'notice_publish') { initNoticePublish(); }
         if (moduleId === 'home') {
             try { if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter(); } catch (e) {}
@@ -30989,7 +31147,8 @@ ${ocrText}`
     <script src="js/shared-file-library.js?v=20260712-3000"></script>
     <script src="js/notice-enhance.js?v=20260712-3000"></script>
     <script src="js/competition-management.js?v=20260712-3000"></script>
-    <script src="js/home-dashboard-p3.js?v=20260713-p3"></script>
+    <script src="js/application-center.js?v=20260713-app2"></script>
+    <script src="js/home-dashboard-p3.js?v=20260713-p3c"></script>
     <script src="js/portal-public.js?v=20260713-portal11"></script>
 </body>
 </html>

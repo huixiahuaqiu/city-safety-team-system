@@ -122,7 +122,7 @@
         }
         var hot = {
             patentData: 1, paperData: 1, taskData: 1, noticeData: 1, newsData: 1,
-            weeklyReportData: 1, meetingData: 1, teamMemberData: 1,
+            weeklyReportData: 1, applicationData: 1, meetingData: 1, teamMemberData: 1,
             longitudinalData: 1, horizontalData: 1, schoolData: 1
         };
         if (ev.key && hot[ev.key]) {
@@ -136,6 +136,43 @@
     });
 
     /* ---------- 失败站内信 ---------- */
+    var SYNC_ALERT_TITLE = '【系统告警】云端同步失败';
+
+    function formatNoticeDateTime(d) {
+        var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+            ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    /** 同步恢复后自动失效旧告警，避免一直弹出历史 HTTP 0 通知 */
+    function clearStaleCloudSyncAlerts(reason) {
+        if (!Array.isArray(global.noticeData)) {
+            try { global.noticeData = JSON.parse(localStorage.getItem('noticeData') || '[]') || []; } catch (e) { return 0; }
+        }
+        var nowStr = formatNoticeDateTime(new Date());
+        var changed = 0;
+        (global.noticeData || []).forEach(function (n) {
+            if (!n || n.title !== SYNC_ALERT_TITLE) return;
+            var need = false;
+            if (n.pinned) { n.pinned = false; need = true; }
+            if (!n.endTime || new Date(String(n.endTime).replace(/-/g, '/')) > new Date()) {
+                n.endTime = nowStr;
+                need = true;
+            }
+            if (need) changed++;
+        });
+        if (changed && typeof global.saveNoticeData === 'function') {
+            try {
+                global.saveNoticeData({
+                    silent: true,
+                    log: { action: '系统告警', desc: '云端同步恢复，自动关闭历史告警', detail: { reason: String(reason || ''), count: changed } }
+                });
+            } catch (e2) {}
+        }
+        return changed;
+    }
+    global.clearStaleCloudSyncAlerts = clearStaleCloudSyncAlerts;
+
     function notifyHomeSyncFailure(errMsg) {
         var cooldown = 0;
         try { cooldown = Number(localStorage.getItem(SYNC_ALERT_COOLDOWN_KEY) || 0) || 0; } catch (e) {}
@@ -162,15 +199,17 @@
         if (!adminNames.length) adminNames = ['系统管理员'];
 
         var id = Date.now();
+        var start = new Date();
+        var end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // 2 小时后自动过期
         var notice = global.normalizeNoticeRecord({
             id: id,
-            title: '【系统告警】云端同步失败',
+            title: SYNC_ALERT_TITLE,
             type: 'urgent',
             content: '关键数据云端同步失败：' + String(errMsg || '未知错误') +
-                '。请检查网络与 Supabase 配置，并在首页右下角执行「全量同步」。时间：' + new Date().toLocaleString('zh-CN'),
-            startTime: new Date().toISOString().slice(0, 16).replace('T', ' '),
-            endTime: '',
-            publishTime: new Date().toLocaleString('zh-CN'),
+                '。请检查网络与 Supabase 配置，并在首页右下角执行「全量同步」。时间：' + start.toLocaleString('zh-CN'),
+            startTime: formatNoticeDateTime(start),
+            endTime: formatNoticeDateTime(end),
+            publishTime: start.toLocaleString('zh-CN'),
             publisher: '系统',
             audience: 'custom',
             audienceNames: adminNames,
@@ -178,6 +217,7 @@
             status: 'published',
             reads: []
         });
+        notice.publisher = '系统';
         // 避免重复刷屏：同标题未读告警 30 分钟内不重复
         var dup = (global.noticeData || []).some(function (n) {
             return n && n.title === notice.title && String(n.publishTime || '').slice(0, 10) === String(notice.publishTime).slice(0, 10);
@@ -194,7 +234,24 @@
             }
         } catch (e5) {}
     }
-    global.notifyHomeSyncFailure = notifyHomeSyncFailure;
+    function repairSystemNoticePublishers() {
+        if (!Array.isArray(global.noticeData)) {
+            try { global.noticeData = JSON.parse(localStorage.getItem('noticeData') || '[]') || []; } catch (e) { return 0; }
+        }
+        var changed = 0;
+        (global.noticeData || []).forEach(function (n) {
+            if (!n || String(n.title || '').indexOf('【系统告警】') !== 0) return;
+            if (n.publisher !== '系统') {
+                n.publisher = '系统';
+                changed++;
+            }
+        });
+        if (changed && typeof global.saveNoticeData === 'function') {
+            try { global.saveNoticeData({ silent: true, log: { action: '修正', desc: '系统告警发布人纠错为「系统」', detail: { count: changed } } }); } catch (e2) {}
+        }
+        return changed;
+    }
+    global.repairSystemNoticePublishers = repairSystemNoticePublishers;
 
     /* ---------- 快捷入口目录 / 自定义 ---------- */
     function quickCatalog() {
@@ -203,6 +260,7 @@
             { module: 'task_management', ico: '任', t: '任务待办', badge: 'task' },
             { module: 'notice_publish', ico: '通', t: '通知公告', badge: 'notice' },
             { module: 'weekly_report', ico: '报', t: '工作周报', badge: 'weekly' },
+            { module: 'application_center', ico: '假', t: '请假与申请', badge: 'app' },
             { module: 'patent_management', ico: '果', t: '成果管理', badge: '' },
             { module: 'paper_management', ico: '论', t: '论文成果', badge: '' },
             { module: 'longitudinal_project', ico: '项', t: '项目管理', badge: '' },
@@ -551,6 +609,7 @@
             } catch (eL) {}
         }
         if (!ok) notifyHomeSyncFailure(String(lastErr && lastErr.message || lastErr || '全量同步失败'));
+        else clearStaleCloudSyncAlerts('full-sync-ok');
         try {
             if (typeof global.recordOperationLog === 'function') {
                 global.recordOperationLog('云端同步', ok ? '全量成功' : '全量失败', ok ? ('全量同步写入 ' + applied + ' 项') : String(lastErr || ''), { applied: applied, skipped: skipped }, { success: !!ok }, ok ? 1 : 0, ok ? '' : String(lastErr || ''), 0);
@@ -577,6 +636,7 @@
             invalidateHomeOverviewCache('manual-sync');
             var st = global.cloudSyncState || {};
             if (st.lastOk === false) notifyHomeSyncFailure(st.lastError || '同步失败');
+            else if (st.lastOk === true) clearStaleCloudSyncAlerts('incremental-sync-ok');
             try {
                 var logs = JSON.parse(localStorage.getItem('homeCloudSyncLogs_v1') || '[]') || [];
                 if (logs[0]) {
@@ -643,6 +703,31 @@
         setTimeout(function () {
             try { enhanceQuickNav(); applyHomeLayoutPrefs(); } catch (e) {}
             try { runHomeConsistencyCheck(true); } catch (e2) {}
+            try { repairSystemNoticePublishers(); } catch (ePub) {}
+            try {
+                // 启动时清理已过期的同步失败置顶告警（如中午 HTTP 0 残留）
+                var st = global.cloudSyncState || {};
+                if (st.lastOk === true) clearStaleCloudSyncAlerts('boot-sync-ok');
+                else {
+                    var now = Date.now();
+                    var changed = 0;
+                    if (!Array.isArray(global.noticeData)) {
+                        try { global.noticeData = JSON.parse(localStorage.getItem('noticeData') || '[]') || []; } catch (eN) {}
+                    }
+                    (global.noticeData || []).forEach(function (n) {
+                        if (!n || n.title !== SYNC_ALERT_TITLE) return;
+                        var pub = Date.parse(String(n.publishTime || '').replace(/\//g, '-').replace(/-/g, '/'));
+                        if (pub && now - pub > 2 * 60 * 60 * 1000) {
+                            n.pinned = false;
+                            n.endTime = formatNoticeDateTime(new Date());
+                            changed++;
+                        }
+                    });
+                    if (changed && typeof global.saveNoticeData === 'function') {
+                        global.saveNoticeData({ silent: true });
+                    }
+                }
+            } catch (e3) {}
         }, 800);
         // 定期一致性巡检（30 分钟）
         setInterval(function () {
