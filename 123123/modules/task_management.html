@@ -1,0 +1,102 @@
+<div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">内部任务待办</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队内部任务、待办事项管理</p>
+                        </div>
+                        <button class="btn" onclick="showAddTaskModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>➕</span> 新增任务
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="taskSearchInput" placeholder="搜索任务名称..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                                oninput="renderTaskList()">
+                        </div>
+                        <select id="taskPriorityFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderTaskList()">
+                            <option value="">全部优先级</option>
+                            <option value="high">🔴 高优先级</option>
+                            <option value="medium">🟠 中优先级</option>
+                            <option value="low">🟢 低优先级</option>
+                        </select>
+                        <select id="taskStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderTaskList()">
+                            <option value="">全部状态</option>
+                            <option value="pending">待处理</option>
+                            <option value="progress">进行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="overdue">已逾期</option>
+                        </select>
+                        <select id="taskOwnerFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderTaskList()">
+                            <option value="">全部负责人</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="statPending">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">待处理任务</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📋</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="statTodayDue">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">今日到期</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏰</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #ff4d4f;" id="statOverdue">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已逾期</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff1f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⚠️</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="statWeekCompleted">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">本周已完成</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button class="task-status-btn active" onclick="setTaskStatusFilter('')">全部</button>
+                        <button class="task-status-btn" onclick="setTaskStatusFilter('pending')">待处理</button>
+                        <button class="task-status-btn" onclick="setTaskStatusFilter('progress')">进行中</button>
+                        <button class="task-status-btn" onclick="setTaskStatusFilter('completed')">已完成</button>
+                        <button class="task-status-btn" onclick="setTaskStatusFilter('overdue')">已逾期</button>
+                    </div>
+
+                    <div id="taskBatchToolbar" style="display: none; background: #fff; padding: 16px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <span style="font-size: 14px; color: #666; margin-right: 16px;">已选择 <span id="selectedTaskCount" style="color: #667eea; font-weight: bold;">0</span> 项</span>
+                        <button class="btn btn-secondary" onclick="batchCompleteTasks()" style="margin-right: 8px;">批量完成</button>
+                        <button class="btn btn-secondary" onclick="batchDeleteTasks()" style="margin-right: 8px;">批量删除</button>
+                        <button class="btn btn-secondary" onclick="clearTaskSelection()">取消选择</button>
+                    </div>
+
+                    <div id="taskListContainer">
+                        <div id="taskEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                            <div style="font-size: 64px; margin-bottom: 16px;">📝</div>
+                            <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无待办任务</h3>
+                            <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击下方按钮创建第一条任务</p>
+                            <button class="btn" onclick="showAddTaskModal()">➕ 新增任务</button>
+                        </div>
+                        <div id="taskList"></div>
+                        <div id="taskPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;"></div>
+                    </div>
+                </div>

@@ -1,0 +1,89 @@
+<div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📊 数据集资源库</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">AI 数据资产管理中心 · 标注 / 训练 / 项目全链路</p>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                            <div class="ds-view-toggle" id="dsViewToggle">
+                                <button type="button" class="ds-view-btn active" data-view="list" onclick="setDatasetView('list')">列表</button>
+                                <button type="button" class="ds-view-btn" data-view="card" onclick="setDatasetView('card')">卡片</button>
+                            </div>
+                            <button class="btn" id="dsLibraryUploadBtn" onclick="showAddDatasetModal()" style="padding: 10px 24px; font-size: 14px;">
+                                <span>📥</span> 上传数据集
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ds-stat-grid">
+                        <div class="ds-stat-card" data-filter="" onclick="setDsStatFilter('')"><div class="n" id="dsStatTotal">0</div><div class="l">总数据集数</div></div>
+                        <div class="ds-stat-card" data-filter="storage" onclick="setDsStatFilter('storage')"><div class="n" id="dsStatStorage">0</div><div class="l">总存储容量</div></div>
+                        <div class="ds-stat-card" data-filter="month" onclick="setDsStatFilter('month')"><div class="n" id="dsStatMonth">0</div><div class="l">本月新增</div></div>
+                        <div class="ds-stat-card" data-filter="labeled" onclick="setDsStatFilter('labeled')"><div class="n" id="dsStatLabeled">0</div><div class="l">标注数据集</div></div>
+                    </div>
+                    <input type="text" id="datasetSearchInput" placeholder="搜索名称 / 标签 / 简介 / 上传者..."
+                        style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                        oninput="onDatasetSearchInput()" list="datasetSearchSuggest">
+                    <datalist id="datasetSearchSuggest"></datalist>
+                    <div class="ds-filter-row">
+                        <select id="dsDataTypeFilter" onchange="onDatasetFilterChange()">
+                            <option value="">全部类型</option>
+                            <option value="image">图像数据</option>
+                            <option value="table">表格数据</option>
+                            <option value="text">文本数据</option>
+                            <option value="multimodal">多模态数据</option>
+                        </select>
+                        <select id="dsAnnoTypeFilter" onchange="onDatasetFilterChange()">
+                            <option value="">全部标注类型</option>
+                            <option value="detection">目标检测</option>
+                            <option value="segmentation">语义分割</option>
+                            <option value="classification">分类识别</option>
+                            <option value="none">无标注</option>
+                        </select>
+                        <select id="dsSort" onchange="onDatasetFilterChange()">
+                            <option value="time_desc">上传时间 ↓</option>
+                            <option value="time_asc">上传时间 ↑</option>
+                            <option value="size_desc">文件大小 ↓</option>
+                            <option value="size_asc">文件大小 ↑</option>
+                            <option value="dl_desc">下载量 ↓</option>
+                            <option value="samples_desc">记录数 ↓</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="toggleDsAdvancedFilter()">高级筛选 ▾</button>
+                    </div>
+                    <div id="dsAdvancedFilter" class="ds-advanced-filter" style="display:none;">
+                        <input type="date" id="dsDateFrom" onchange="onDatasetFilterChange()" title="上传起始">
+                        <input type="date" id="dsDateTo" onchange="onDatasetFilterChange()" title="上传截止">
+                        <input type="text" id="dsUploaderFilter" placeholder="上传者" oninput="onDatasetFilterChange()" style="width:120px;">
+                        <input type="text" id="dsFormatFilter" placeholder="格式如 CSV" oninput="onDatasetFilterChange()" style="width:100px;">
+                        <select id="dsPublicFilter" onchange="onDatasetFilterChange()">
+                            <option value="">公开/私有</option>
+                            <option value="1">全组共享</option>
+                            <option value="0">仅导师可见</option>
+                        </select>
+                    </div>
+                    <div class="ds-tag-bar" id="dsTagFilterBar"></div>
+                    <div class="ds-batch-bar" id="dsBatchBar">
+                        <span>已选 <b id="dsBatchCount">0</b> 项</span>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchDownloadDatasets()">批量下载</button>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchTagDatasets()">批量打标签</button>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchLinkDatasetProject()">批量关联项目</button>
+                        <button type="button" class="btn" style="padding:4px 10px;font-size:12px;background:#ef4444;" onclick="batchDeleteDatasets()">批量删除</button>
+                    </div>
+                </div>
+                <div style="padding: 24px; background: #f5f7fa; display:flex; gap:16px; align-items:flex-start;">
+                    <aside class="ds-group-side" id="dsGroupSide">
+                        <div class="ds-group-title">我的分组</div>
+                        <button type="button" class="ds-group-item active" data-group="" onclick="setDatasetGroup('')">全部数据集</button>
+                        <div id="dsGroupList"></div>
+                        <button type="button" class="ds-group-add" onclick="createDatasetGroup()">＋ 新建分组</button>
+                    </aside>
+                    <div style="flex:1; min-width:0;">
+                        <div id="datasetEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                            <div style="font-size: 64px; margin-bottom: 16px;">📊</div>
+                            <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无数据集</h3>
+                            <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击上方按钮上传数据集</p>
+                            <button class="btn" onclick="showAddDatasetModal()">📥 上传数据集</button>
+                        </div>
+                        <div id="datasetList"></div>
+                        <div id="datasetPagination" class="ds-pagination"></div>
+                    </div>
+                </div>

@@ -1,0 +1,76 @@
+<div style="padding: 22px 24px 18px; background: linear-gradient(180deg, #ffffff 0%, #f8f9ff 100%); border-bottom: 1px solid #eef0f5;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <h1 style="font-size: 24px; font-weight: 700; color: #1f2937; margin: 0;">团队工作周报</h1>
+                                <span id="wrCurrentWeekBadge" style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:12px;font-weight:600;"></span>
+                            </div>
+                            <p style="font-size: 13px; color: #6b7280; margin: 6px 0 0;">全员可见 · 提交后自动同步云端 · 导师/组长可审核</p>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" onclick="filterWeeklyReportByMine()" style="padding: 10px 16px; font-size: 13px;">我的周报</button>
+                            <button class="btn" id="wrSubmitBtn" onclick="showAddWeeklyReportModal()" style="padding: 10px 20px; font-size: 13px;">提交本周周报</button>
+                        </div>
+                    </div>
+
+                    <div id="wrMissingTip" style="display:none; margin-bottom:14px; padding:10px 14px; border-radius:10px; background:#fff7ed; border:1px solid #ffd8a8; color:#9a3412; font-size:13px;"></div>
+                    
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 220px;">
+                            <input type="text" id="weeklyReportSearchInput" placeholder="搜索提交人 / 工作内容 / 计划..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; background:#fff;"
+                                oninput="weeklyReportPage=1;renderWeeklyReportList()">
+                        </div>
+                        <select id="weeklyReportStatusFilter" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; min-width: 120px; background:#fff;" onchange="weeklyReportPage=1;renderWeeklyReportList()">
+                            <option value="">全部状态</option>
+                            <option value="pending">待审核</option>
+                            <option value="approved">已通过</option>
+                            <option value="rejected">已驳回</option>
+                        </select>
+                        <select id="weeklyReportOwnerFilter" style="padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; min-width: 120px; background:#fff;" onchange="weeklyReportPage=1;renderWeeklyReportList()">
+                            <option value="">全部成员</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding: 20px 24px 28px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px;">
+                        <div onclick="setWeeklyReportStatusFilter('pending')" style="background:#fff; padding:16px 18px; border-radius:14px; border:1px solid #eef0f5; cursor:pointer; transition:transform .15s, box-shadow .15s;" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(79,70,229,.08)'" onmouseleave="this.style.transform='';this.style.boxShadow='none'">
+                            <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">待审核</div>
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+                                <div style="font-size:28px;font-weight:700;color:#4f46e5;line-height:1;" id="wrStatPending">0</div>
+                                <div style="font-size:12px;color:#9ca3af;">点击筛选</div>
+                            </div>
+                        </div>
+                        <div onclick="setWeeklyReportStatusFilter('approved')" style="background:#fff; padding:16px 18px; border-radius:14px; border:1px solid #eef0f5; cursor:pointer; transition:transform .15s, box-shadow .15s;" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(34,197,94,.08)'" onmouseleave="this.style.transform='';this.style.boxShadow='none'">
+                            <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">已通过</div>
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+                                <div style="font-size:28px;font-weight:700;color:#16a34a;line-height:1;" id="wrStatApproved">0</div>
+                                <div style="font-size:12px;color:#9ca3af;">点击筛选</div>
+                            </div>
+                        </div>
+                        <div onclick="setWeeklyReportStatusFilter('rejected')" style="background:#fff; padding:16px 18px; border-radius:14px; border:1px solid #eef0f5; cursor:pointer; transition:transform .15s, box-shadow .15s;" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(239,68,68,.08)'" onmouseleave="this.style.transform='';this.style.boxShadow='none'">
+                            <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">已驳回</div>
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+                                <div style="font-size:28px;font-weight:700;color:#dc2626;line-height:1;" id="wrStatRejected">0</div>
+                                <div style="font-size:12px;color:#9ca3af;">点击筛选</div>
+                            </div>
+                        </div>
+                        <div onclick="setWeeklyReportStatusFilter('')" style="background:#fff; padding:16px 18px; border-radius:14px; border:1px solid #eef0f5; cursor:pointer; transition:transform .15s, box-shadow .15s;" onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(245,158,11,.08)'" onmouseleave="this.style.transform='';this.style.boxShadow='none'">
+                            <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">本周已提交</div>
+                            <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+                                <div style="font-size:28px;font-weight:700;color:#d97706;line-height:1;" id="wrStatSubmitted">0</div>
+                                <div style="font-size:12px;color:#9ca3af;" id="wrStatSubmittedHint">/ 0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="weeklyReportEmptyState" style="display: none; text-align: center; padding: 64px 20px; background:#fff; border-radius:16px; border:1px dashed #d1d5db;">
+                        <div style="font-size: 42px; margin-bottom: 12px; opacity:.85;">📝</div>
+                        <h3 style="font-size: 18px; color: #111827; margin-bottom: 8px;">暂无周报</h3>
+                        <p style="font-size: 14px; color: #6b7280; margin-bottom: 18px;">提交后全员可见，导师/组长可审核</p>
+                        <button class="btn" onclick="showAddWeeklyReportModal()">提交本周周报</button>
+                    </div>
+                    <div id="weeklyReportList"></div>
+                    <div id="weeklyReportPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 20px;"></div>
+                </div>

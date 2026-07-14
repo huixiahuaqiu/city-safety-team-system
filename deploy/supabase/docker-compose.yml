@@ -1,0 +1,32 @@
+# 内网自建 Supabase（精简）：仅 Postgres + 必要扩展，供现有 KV 同步使用。
+# 完整官方 stack 可参考 https://github.com/supabase/supabase/tree/master/docker
+# 本 compose 面向「数据不出内网」的最小可用库，不替代完整 Auth/Storage 全家桶。
+#
+# 用法：
+#   cd deploy/supabase
+#   cp .env.supabase.example .env   # 填写密码
+#   docker compose up -d
+#   psql 执行 sql/rls_app_sync.sql
+
+services:
+  db:
+    image: supabase/postgres:15.8.1.060
+    container_name: citysafe-supabase-db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - /data/pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # 可选：PostgREST，模拟 Supabase REST（需自行配 anon key / JWT）
+  # rest:
+  #   image: postgrest/postgrest:v12.2.3
+  #   ...

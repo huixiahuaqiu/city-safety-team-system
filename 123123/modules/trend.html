@@ -1,0 +1,66 @@
+<div class="card">
+                    <h2>📈 趋势分析</h2>
+                    <div class="card" style="background: #f3e5f5;">
+                        <h3>分析设置</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label>分析维度</label>
+                                <select class="form-control" id="analysisDimension">
+                                    <option>技术领域</option>
+                                    <option>申请年份</option>
+                                    <option>法律状态</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>图表类型</label>
+                                <select class="form-control" id="chartType">
+                                    <option>折线图</option>
+                                    <option>柱状图</option>
+                                    <option>饼图</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>时间范围</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="date" class="form-control" id="startDate">
+                                    <input type="date" class="form-control" id="endDate">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label>选择文献（可选）</label>
+                            <select class="form-control" id="patentSelect" multiple size="4">
+                                <option value="">全部文献</option>
+                                <!-- 文献选项将通过JavaScript动态生成 -->
+                            </select>
+                            <small style="color: #666; display: block; margin-top: 5px;">按住 Ctrl 键可选择多个文献，留空则分析所有文献</small>
+                        </div>
+                        <button class="btn" onclick="generateTrend()">📊 生成趋势图</button>
+                    </div>
+                    
+                    <div id="trendResult" style="margin-top: 20px; display: none;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                            <div class="stat-card">
+                                <div class="stat-number">500+</div>
+                                <div class="stat-label">总专利数</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">25%</div>
+                                <div class="stat-label">年增长率</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">85%</div>
+                                <div class="stat-label">授权率</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card" style="margin-top: 20px;">
+                            <h3>趋势分析报告</h3>
+                            <div id="analysisReport">
+                                <p>根据专利申请数据，人工智能领域的专利申请量呈现持续增长趋势，从2020年的120件增长到2024年的250件，增长率超过100%。新能源和生物医药领域也保持稳定增长，分别增长了137.5%和122.2%。新材料领域增长相对较慢，但也有显著提升。</p>
+                            </div>
+                        </div>
+                        
+                        <button class="btn" onclick="alert('分析报告已导出！')" style="margin-top: 20px;">📥 导出分析报告</button>
+                    </div>
+                </div>

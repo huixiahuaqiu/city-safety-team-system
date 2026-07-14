@@ -1,0 +1,92 @@
+<div style="padding:24px; background:#fff; border-bottom:1px solid #f0f0f0;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                        <div>
+                            <h1 style="font-size:24px; font-weight:700; color:#111827; margin:0;">模型训练台账</h1>
+                            <p style="font-size:14px; color:#6b7280; margin:6px 0 0;">本机与远程训练任务台账 · 支持 MLOps 自动上报同步</p>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" onclick="toggleMlopsPanel()" style="padding:10px 16px; font-size:13px;">MLOps 接入</button>
+                            <button class="btn btn-secondary" onclick="pullMlopsJobs(true)" style="padding:10px 16px; font-size:13px;">立即同步</button>
+                            <button class="btn" onclick="showAddModelModal()" style="padding:10px 20px; font-size:13px;">＋ 登记训练任务</button>
+                        </div>
+                    </div>
+                    <div id="mlopsPanel" style="display:none; margin-top:14px; padding:14px 16px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;">
+                        <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+                            <div style="flex:1; min-width:240px;">
+                                <div style="font-size:13px; font-weight:600; color:#111827; margin-bottom:6px;">自动 MLOps</div>
+                                <div style="font-size:12px; color:#6b7280; line-height:1.7;">
+                                    训练脚本向本机接口上报后，台账自动合并并推送云端。远程机器也可对可访问的本机地址 POST。
+                                </div>
+                                <div style="margin-top:8px; font-size:12px; color:#374151;">
+                                    上报地址：<code id="mlopsEndpointText" style="background:#fff;padding:2px 6px;border-radius:4px;">http://127.0.0.1:8000/api/mlops/report</code>
+                                    · Token：<code id="mlopsTokenHint" style="background:#fff;padding:2px 6px;border-radius:4px;">读取 config.local.js</code>
+                                </div>
+                                <div style="margin-top:6px; font-size:12px; color:#9ca3af;" id="mlopsSyncHint">尚未自动同步</div>
+                            </div>
+                            <div style="font-size:12px; color:#374151; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; max-width:420px; font-family:ui-monospace,Consolas,monospace; line-height:1.55; word-break:break-all;">
+                                python mlops_report.py --job-id exp-1 --name 裂缝检测 --status training --progress 40 --env local
+                            </div>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:#374151; cursor:pointer;">
+                            <input type="checkbox" id="mlopsAutoPoll" checked onchange="setMlopsAutoPoll(this.checked)">
+                            进入本页后每 8 秒自动拉取 MLOps 状态
+                        </label>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; margin-top:18px;">
+                        <div onclick="setModelTrainingStatusFilter(''); setModelTrainingEnvFilter('');" style="cursor:pointer; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#4f46e5; line-height:1;" id="mtStatTotal">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">全部任务</div>
+                        </div>
+                        <div onclick="setModelTrainingEnvFilter('local')" style="cursor:pointer; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#2563eb; line-height:1;" id="mtStatLocal">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">本机</div>
+                        </div>
+                        <div onclick="setModelTrainingEnvFilter('remote')" style="cursor:pointer; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#7c3aed; line-height:1;" id="mtStatRemote">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">远程</div>
+                        </div>
+                        <div onclick="setModelTrainingStatusFilter('training')" style="cursor:pointer; background:#fff7ed; border:1px solid #ffedd5; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#ea580c; line-height:1;" id="mtStatTraining">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">训练中</div>
+                        </div>
+                        <div onclick="setModelTrainingStatusFilter('completed')" style="cursor:pointer; background:#f0fdf4; border:1px solid #dcfce7; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#16a34a; line-height:1;" id="mtStatCompleted">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">已完成</div>
+                        </div>
+                        <div onclick="setModelTrainingStatusFilter('failed')" style="cursor:pointer; background:#fef2f2; border:1px solid #fecaca; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#dc2626; line-height:1;" id="mtStatFailed">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">失败</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+                        <input type="text" id="modelTrainingSearch" placeholder="搜索名称、服务器、任务号、负责人..." oninput="renderModelTrainingList()" style="flex:1; min-width:200px; padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px;">
+                        <select id="modelTrainingEnvFilter" onchange="renderModelTrainingList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部环境</option>
+                            <option value="local">本机</option>
+                            <option value="remote">远程</option>
+                        </select>
+                        <select id="modelTrainingTypeFilter" onchange="renderModelTrainingList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部架构</option>
+                            <option value="YOLOv8">YOLOv8 检测</option>
+                            <option value="Qwen3-VL">Qwen3-VL 多模态</option>
+                            <option value="ResNet">ResNet 分类</option>
+                            <option value="其他">其他</option>
+                        </select>
+                        <select id="modelTrainingStatusFilter" onchange="renderModelTrainingList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部状态</option>
+                            <option value="pending">待启动</option>
+                            <option value="training">训练中</option>
+                            <option value="completed">已完成</option>
+                            <option value="failed">失败</option>
+                        </select>
+                        <select id="modelTrainingOwnerFilter" onchange="renderModelTrainingList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部成员</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="padding:20px 24px 28px; background:#f8fafc;">
+                    <div id="modelTrainingList" style="display:flex; flex-direction:column; gap:12px;"></div>
+                    <div id="modelTrainingEmpty" style="display:none; text-align:center; padding:48px 16px; color:#9ca3af; background:#fff; border-radius:14px; border:1px dashed #e5e7eb;">
+                        暂无匹配的训练任务，可点击右上角登记本机或远程任务
+                    </div>
+                </div>

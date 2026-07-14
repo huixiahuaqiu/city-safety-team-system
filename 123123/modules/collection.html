@@ -1,0 +1,245 @@
+<div class="card">
+                    <h2>📥 专利文献收集</h2>
+                    <div class="tabs">
+                        <div class="tab active" onclick="showTab('batch')">批量导入</div>
+                        <div class="tab" onclick="showTab('search')">在线检索</div>
+                        <div class="tab" onclick="showTab('manual')">手动录入</div>
+                        <div class="tab" onclick="showTab('ai-process')">AI智能处理</div>
+                        <div class="tab" onclick="showTab('classification')">分类整理</div>
+                    </div>
+                    
+                    <div id="batch" class="tab-content active">
+                        <div class="upload-area">
+                            <input type="file" id="fileInput" multiple style="display: none;" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt">
+                            <div style="font-size: 48px; margin-bottom: 15px;">📁</div>
+                            <h3>点击或拖拽文件到此区域上传</h3>
+                            <p style="color: #666; margin-top: 10px;">支持 PDF、DOC、XLS 等格式文件</p>
+                            <div id="fileList" style="margin-top: 15px; text-align: left;"></div>
+                        </div>
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button class="btn" onclick="startImport()">开始导入</button>
+                        </div>
+                    </div>
+                    
+                    <div id="search" class="tab-content">
+                        <div class="form-group">
+                            <label>关键词</label>
+                            <input type="text" class="form-control" placeholder="请输入专利名称、申请人或关键词">
+                        </div>
+                        <div class="form-group">
+                            <label>申请日期范围</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="date" class="form-control">
+                                <span style="align-self: center;">至</span>
+                                <input type="date" class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>专利类型</label>
+                            <select class="form-control">
+                                <option>请选择专利类型</option>
+                                <option>发明专利</option>
+                                <option>实用新型</option>
+                                <option>外观设计</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="performSearch()">🔍 搜索</button>
+                        
+                        <div id="searchResults" style="margin-top: 30px; display: none;">
+                            <h3>搜索结果</h3>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>专利名称</th>
+                                        <th>专利号</th>
+                                        <th>申请人</th>
+                                        <th>申请日期</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>一种新型太阳能电池</td>
+                                        <td>ZL202310015678.X</td>
+                                        <td>科技公司A</td>
+                                        <td>2023-01-15</td>
+                                        <td><span class="tag tag-success">授权</span></td>
+                                        <td><button class="btn" style="padding: 6px 12px; font-size: 12px;">查看</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>智能机器人控制系统</td>
+                                        <td>ZL202310034567.1</td>
+                                        <td>机器人公司B</td>
+                                        <td>2023-03-10</td>
+                                        <td><span class="tag tag-warning">实质审查</span></td>
+                                        <td><button class="btn" style="padding: 6px 12px; font-size: 12px;">查看</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>风力发电设备优化</td>
+                                        <td>ZL202310052345.6</td>
+                                        <td>能源公司C</td>
+                                        <td>2023-05-20</td>
+                                        <td><span class="tag tag-primary">已授权</span></td>
+                                        <td><button class="btn" style="padding: 6px 12px; font-size: 12px;">查看</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div id="manual" class="tab-content">
+                        <div class="form-group">
+                            <label>专利名称 *</label>
+                            <input type="text" class="form-control" placeholder="请输入专利名称">
+                        </div>
+                        <div class="form-group">
+                            <label>申请人 *</label>
+                            <input type="text" class="form-control" placeholder="请输入申请人">
+                        </div>
+                        <div class="form-group">
+                            <label>申请日期 *</label>
+                            <input type="date" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>公开日期</label>
+                            <input type="date" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>摘要</label>
+                            <textarea class="form-control" rows="4" placeholder="请输入专利摘要"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>法律状态 *</label>
+                            <select class="form-control">
+                                <option>请选择法律状态</option>
+                                <option>申请</option>
+                                <option>受理</option>
+                                <option>初审</option>
+                                <option>公布</option>
+                                <option>实质审查</option>
+                                <option>授权</option>
+                                <option>届满</option>
+                                <option>无效</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="alert('专利信息录入成功！')">➕ 提交</button>
+                    </div>
+                    
+                    <div id="ai-process" class="tab-content">
+                        <div class="upload-area">
+                            <input type="file" id="aiFileInput" multiple style="display: none;" accept=".pdf,.doc,.docx,.txt">
+                            <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
+                            <h3>点击或拖拽文件到此区域上传</h3>
+                            <p style="color: #666; margin-top: 10px;">支持 PDF、DOC、TXT 等格式文件</p>
+                            <div id="aiFileList" style="margin-top: 15px; text-align: left;"></div>
+                        </div>
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button class="btn" onclick="startAnalysis()">🔍 开始分析</button>
+                        </div>
+                        
+                        <div id="analysisResult" style="margin-top: 30px; display: none;">
+                            <h3>分析结果</h3>
+                            <div class="result-card">
+                                <h4>专利摘要</h4>
+                                <p id="summaryResult">本专利涉及一种新型太阳能电池技术，通过优化材料结构和制造工艺，显著提高了能量转换效率，降低了生产成本，具有广阔的应用前景。</p>
+                            </div>
+                            <div class="result-card">
+                                <h4>关键技术点</h4>
+                                <div id="techPoints" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                    <span class="tag tag-primary">太阳能电池材料优化</span>
+                                    <span class="tag tag-primary">能量转换效率提升技术</span>
+                                    <span class="tag tag-primary">新型电极结构设计</span>
+                                    <span class="tag tag-primary">光捕获增强技术</span>
+                                </div>
+                            </div>
+                            <div class="result-card">
+                                <h4>创新点</h4>
+                                <div id="innovations" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                    <span class="tag tag-success">采用新型纳米材料提高光电转换效率</span>
+                                    <span class="tag tag-success">优化电池结构减少能量损失</span>
+                                    <span class="tag tag-success">开发低成本制造工艺</span>
+                                    <span class="tag tag-success">延长电池使用寿命</span>
+                                </div>
+                            </div>
+                            <div class="result-card">
+                                <h4>法律状态</h4>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <div>
+                                        <p><strong>状态：</strong><span id="legalStatus">已公开</span></p>
+                                        <p><strong>专利号：</strong><span id="patentNumber">CN123456789</span></p>
+                                    </div>
+                                    <button class="btn" onclick="saveAnalysisResult()">💾 保存结果</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="classification" class="tab-content">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>分类管理</h3>
+                            <div>
+                                <button class="btn" onclick="addCategory()" style="margin-right: 10px;">➕ 添加主分类</button>
+                                <button class="btn" onclick="autoClassify()">🤖 自动分类</button>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 20px;">
+                            <div style="flex: 1;">
+                                <h4>分类体系</h4>
+                                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                                    <input type="text" id="newCategoryName" placeholder="输入新分类名称" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                    <button class="btn" onclick="addNewCategory()" style="padding: 8px 15px;">➕ 添加分类</button>
+                                </div>
+                                <div class="category-tree" style="border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; background: #f8f9fa;">
+                                    <!-- 分类树将通过JavaScript动态生成 -->
+                                </div>
+                                <p style="margin-top: 10px; font-size: 12px; color: #666;">提示：点击分类名称旁边的删除按钮可以删除分类</p>
+                            </div>
+                            <div style="flex: 2;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>专利列表</h3>
+                    <button class="btn btn-danger" onclick="deleteAllPatents()">🗑️ 一键全部删除</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>专利名称</th>
+                            <th>专利号</th>
+                            <th>分类</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patentTableBody">
+                        <tr>
+                            <td>一种新型太阳能电池</td>
+                            <td>ZL202310015678.X</td>
+                            <td>能源技术 > 太阳能</td>
+                            <td>
+                                <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="alert('编辑功能待实现')">编辑</button>
+                                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; margin-left: 5px;" onclick="deletePatent(this)">删除</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>智能机器人控制系统</td>
+                            <td>ZL202310034567.1</td>
+                            <td>人工智能 > 机器学习</td>
+                            <td>
+                                <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="alert('编辑功能待实现')">编辑</button>
+                                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; margin-left: 5px;" onclick="deletePatent(this)">删除</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>风力发电设备优化</td>
+                            <td>ZL202310052345.6</td>
+                            <td>能源技术 > 风能</td>
+                            <td>
+                                <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="alert('编辑功能待实现')">编辑</button>
+                                <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; margin-left: 5px;" onclick="deletePatent(this)">删除</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>

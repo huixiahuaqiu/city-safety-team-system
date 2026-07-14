@@ -1,0 +1,158 @@
+<div class="card">
+                    <h2>📊 Excel处理</h2>
+                    
+                    <!-- 上传 Excel 文件区域 -->
+                    <div class="card" style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); margin-bottom: 20px; border: 2px dashed #8A2BE2;">
+                        <h3 style="color: #8A2BE2; margin-bottom: 15px;">📁 上传 Excel 文件</h3>
+                        <div class="upload-area" id="dropZone" onclick="document.getElementById('excelFileInput').click()" 
+                             style="cursor: pointer; padding: 40px 20px; text-align: center; transition: all 0.3s; border: 2px dashed #8A2BE2; border-radius: 12px; background: #f3e5f5;"
+                             ondragover="handleDragOver(event)" 
+                             ondragleave="handleDragLeave(event)" 
+                             ondrop="handleDrop(event)">
+                            <input type="file" id="excelFileInput" multiple accept=".xlsx,.xls" style="display: none;" onchange="handleExcelFileUpload(event)">
+                            <span style="font-size: 64px; display: block; margin-bottom: 10px;">📊</span>
+                            <p style="margin: 10px 0; font-size: 16px; color: #555;">点击或拖拽文件到此处上传</p>
+                            <p style="color: #888; font-size: 14px;">支持 .xlsx 和 .xls 格式，可多选文件</p>
+                        </div>
+                        <div id="excelFileList" style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; display: none;">
+                            <h4 style="margin-bottom: 10px; color: #8A2BE2;">✅ 已上传的文件：</h4>
+                            <ul id="excelFileListItems" style="margin-top: 10px; list-style: none; padding: 0;"></ul>
+                        </div>
+                    </div>
+                    
+                    <!-- 自然语言命令输入框 -->
+                    <div class="card" style="background: #f8f9fa; margin-bottom: 20px; border-left: 4px solid #8A2BE2;">
+                        <h3 style="color: #8A2BE2; margin-bottom: 15px;">💬 输入您的数据处理需求</h3>
+                        <div style="display: flex; gap: 10px; align-items: flex-start;">
+                            <div style="flex: 1; position: relative;">
+                                <textarea id="naturalLanguageInput" class="form-control" rows="3" 
+                                          placeholder="请输入您想要的数据处理需求，例如：&#10;- 生成销售数据的月度趋势图&#10;- 按部门统计总成本并生成饼图&#10;- 对比各季度的收入变化&#10;- 找出销售额前 10 的产品并生成柱状图"
+                                          oninput="handleInputFocus()"
+                                          onblur="handleInputBlur()"></textarea>
+                                <div id="autocompleteSuggestions" 
+                                     style="position: absolute; bottom: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: none; max-height: 200px; overflow-y: auto; z-index: 1000;">
+                                </div>
+                            </div>
+                            <button class="btn" onclick="submitToAI()" style="align-self: stretch; padding: 0 30px; font-size: 16px;">
+                                🚀 发送
+                            </button>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <span style="font-size: 13px; color: #666;">💡 快速指令：</span>
+                            <button class="btn" style="padding: 5px 12px; font-size: 13px; margin: 0;" onclick="insertQuickCommand('生成数据的趋势分析图')">📈 趋势分析</button>
+                            <button class="btn" style="padding: 5px 12px; font-size: 13px; margin: 0;" onclick="insertQuickCommand('生成数据的对比柱状图')">⚖️ 对比分析</button>
+                            <button class="btn" style="padding: 5px 12px; font-size: 13px; margin: 0;" onclick="insertQuickCommand('生成数据的分布饼图')">🥧 分布分析</button>
+                            <button class="btn" style="padding: 5px 12px; font-size: 13px; margin: 0;" onclick="insertQuickCommand('分析数据的相关性并生成散点图')">🔗 相关性分析</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 操作按钮 -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <button class="btn" onclick="mergeExcelFiles()">🔄 合并 Excel</button>
+                        <button class="btn btn-success" onclick="submitToAI()">🤖 AI 智能处理</button>
+                        <button class="btn btn-secondary" onclick="clearExcelFiles()">🗑️ 清空文件</button>
+                    </div>
+                    
+                    <!-- 数据类型选择 -->
+                    <div id="dataTypeSection" class="card" style="margin-bottom: 20px; display: none;">
+                        <h3>数据类型选择</h3>
+                        <div id="dataTypeButtons" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+                        </div>
+                    </div>
+                    
+                    <!-- 数据表格展示 -->
+                    <div id="dataTableSection" class="card" style="margin-bottom: 20px; display: none;">
+                        <h3 id="tableTitle">数据表格</h3>
+                        <div id="dataTableContainer" style="overflow-x: auto;">
+                        </div>
+                    </div>
+                    
+                    <!-- 图表显示区域 -->
+                    <div id="chartsSection" class="card" style="margin-bottom: 20px; display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">生成的图表</h3>
+                            <button class="btn btn-secondary" onclick="closeAllCharts()" style="padding: 8px 16px; font-size: 13px;">🗑️ 关闭所有图表</button>
+                        </div>
+                        <div style="position: relative;">
+                            <button id="scrollLeftBtn" onclick="scrollCharts('left')" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 100; background: rgba(138, 43, 226, 0.9); color: white; border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; font-size: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.3); display: none; transition: all 0.3s;" onmouseover="this.style.background='#8A2BE2'" onmouseout="this.style.background='rgba(138, 43, 226, 0.9)'">◀</button>
+                            
+                            <div id="chartsContainerWrapper" style="overflow-x: auto; overflow-y: hidden; white-space: nowrap; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #8A2BE2 #f0f0f0;">
+                                <div id="chartsContainer" style="display: inline-flex; gap: 20px; padding: 10px 5px;">
+                                </div>
+                            </div>
+                            
+                            <button id="scrollRightBtn" onclick="scrollCharts('right')" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 100; background: rgba(138, 43, 226, 0.9); color: white; border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; font-size: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.3); display: none; transition: all 0.3s;" onmouseover="this.style.background='#8A2BE2'" onmouseout="this.style.background='rgba(138, 43, 226, 0.9)'">▶</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 智能指令面板 -->
+                    <div id="smartInstructionPanel" class="card" style="margin-bottom: 20px; display: none;">
+                        <h3>💡 智能指令分析系统</h3>
+                        
+                        <div class="form-group">
+                            <label>指令模板选择</label>
+                            <select id="instructionTemplate" class="form-control" onchange="loadInstructionTemplate()">
+                                <option value="">-- 选择预设指令模板 --</option>
+                                <option value="data_cleaning">🧹 数据清洗</option>
+                                <option value="data_analysis">📊 数据分析</option>
+                                <option value="data_filter">🔍 数据筛选</option>
+                                <option value="data_sort">📈 数据排序</option>
+                                <option value="data_group">📋 数据分组汇总</option>
+                                <option value="data_compare">⚖️ 数据对比</option>
+                                <option value="data_trend">📉 趋势分析</option>
+                                <option value="data_anomaly">⚠️ 异常检测</option>
+                                <option value="custom">✏️ 自定义指令</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>分析规则配置</label>
+                            <div id="analysisRules" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <p style="color: #666; margin: 0;">请先选择指令模板，系统将自动加载相应的分析规则</p>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>具体指令</label>
+                            <textarea id="smartInstruction" class="form-control" rows="4" placeholder="请输入您的具体指令，例如：&#10;- 找出销售额大于 10000 的记录&#10;- 按部门统计总成本&#10;- 计算每个月的环比增长率&#10;- 标记出异常值并分析原因"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>输出要求</label>
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <label style="display: flex; align-items: center; gap: 5px;">
+                                    <input type="checkbox" id="outputSummary" checked> 摘要总结
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px;">
+                                    <input type="checkbox" id="outputData" checked> 处理后的数据
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px;">
+                                    <input type="checkbox" id="outputChart"> 生成图表
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px;">
+                                    <input type="checkbox" id="outputExcel"> 导出 Excel
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button class="btn" onclick="executeSmartInstruction()">🚀 执行指令</button>
+                            <button class="btn" onclick="validateInstruction()">✅ 验证指令</button>
+                            <button class="btn btn-secondary" onclick="saveInstructionTemplate()">💾 保存模板</button>
+                            <button class="btn btn-secondary" onclick="hideSmartInstructionPanel()">❌ 关闭</button>
+                        </div>
+                        
+                        <div id="instructionStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+                    </div>
+                    
+                    <!-- 合并结果 -->
+                    <div class="card">
+                        <h3>合并结果</h3>
+                        <div id="mergeResult" style="padding: 15px; background: white; border-radius: 8px; min-height: 100px;">
+                            <p style="color: #666;">点击"合并Excel"按钮查看合并结果</p>
+                        </div>
+                        <button class="btn" onclick="downloadMergedExcel()" style="margin-top: 15px; display: none;" id="downloadMergeBtn">
+                            💾 下载合并文件
+                        </button>
+                    </div>
+                </div>

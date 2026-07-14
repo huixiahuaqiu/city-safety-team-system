@@ -1,0 +1,250 @@
+<div class="card">
+                    <h2>🔐 账号权限设置</h2>
+
+                    <!-- 子标签页 -->
+                    <div class="tab-nav" id="accountTabNav">
+                        <button class="tab-btn active" onclick="switchAccountTab('accountList', this)">账号管理</button>
+                        <button class="tab-btn" onclick="switchAccountTab('accountRegister', this)">账号注册</button>
+                        <button class="tab-btn" onclick="switchAccountTab('accountImport', this)">账号导入</button>
+                        <button class="tab-btn" onclick="switchAccountTab('passwordManage', this)">密码管理</button>
+                        <button class="tab-btn" onclick="switchAccountTab('loginSecurity', this)">登录安全</button>
+                    </div>
+
+                    <!-- 标签页1: 账号管理 -->
+                    <div id="accountTab_accountList" class="account-tab-content">
+                        <div class="account-toolbar">
+                            <div class="toolbar-left">
+                                <input type="text" id="accountSearchInput" placeholder="搜索用户名/姓名..." style="padding:8px 12px; border:1px solid #ddd; border-radius:6px; width:220px; font-size:13px;" oninput="filterAccountTable()">
+                                <select id="accountRoleFilter" style="padding:8px 12px; border:1px solid #ddd; border-radius:6px; font-size:13px;" onchange="filterAccountTable()">
+                                    <option value="">全部角色</option>
+                                    <option value="admin">超级管理员</option>
+                                    <option value="leader">小组组长</option>
+                                    <option value="student">研究生</option>
+                                    <option value="visitor">访客</option>
+                                </select>
+                                <select id="accountStatusFilter" style="padding:8px 12px; border:1px solid #ddd; border-radius:6px; font-size:13px;" onchange="filterAccountTable()">
+                                    <option value="">全部状态</option>
+                                    <option value="active">已启用</option>
+                                    <option value="disabled">已禁用</option>
+                                </select>
+                            </div>
+                            <div class="toolbar-right">
+                                <button class="btn btn-secondary" data-perm="account-create" onclick="purgeAccountsNotInTeam()" title="删除未在团队成员档案中的正式账号，访客保留">清理非团队账号</button>
+                                <button class="btn btn-secondary" data-perm="account-create" onclick="showOpenTeamAccountModal()" title="为尚未开通登录账号的团队成员开通">从团队开通</button>
+                                <button class="btn" data-perm="account-create" onclick="showAddVisitorAccountModal()">+ 新建访客</button>
+                                <button class="btn btn-secondary" onclick="exportAccounts()">📥 导出</button>
+                            </div>
+                        </div>
+                        <div style="margin:0 0 12px;padding:10px 14px;background:#f0f5ff;border:1px solid #adc6ff;border-radius:8px;font-size:13px;color:#1d39c4;line-height:1.6;">
+                            <strong>全局联动：</strong>正式成员账号与「团队成员档案」一一对应（同名重复会自动合并，非团队正式账号会自动清理）。访客为唯一例外，可独立新建。姓名/年级/毕业状态以团队管理为准。
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="table" id="accountTable">
+                                <thead>
+                                    <tr>
+                                        <th>用户名</th>
+                                        <th>姓名</th>
+                                        <th>角色</th>
+                                        <th>年级</th>
+                                        <th>毕业</th>
+                                        <th>所属小组</th>
+                                        <th>邮箱</th>
+                                        <th>状态</th>
+                                        <th>最后登录</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accountTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div id="accountPagination" style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:16px; font-size:13px; color:#666;"></div>
+                    </div>
+
+                    <!-- 标签页2: 账号注册 -->
+                    <div id="accountTab_accountRegister" class="account-tab-content" style="display:none;">
+                        <div style="max-width:600px;">
+                            <h3 style="margin-bottom:16px;">注册新账号</h3>
+                            <div class="form-group">
+                                <label>用户名 <span style="color:red;">*</span></label>
+                                <input type="text" id="regUsername" placeholder="3-20位字母数字下划线" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+                            <div class="form-group">
+                                <label>姓名 <span style="color:red;">*</span></label>
+                                <input type="text" id="regRealName" placeholder="真实姓名" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+                            <div class="form-group">
+                                <label>角色 <span style="color:red;">*</span></label>
+                                <select id="regRole" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;" onchange="onRegRoleChange()">
+                                    <option value="visitor">访客/临时账号（可独立创建）</option>
+                                    <option value="student">研究生（须已在团队成员档案中）</option>
+                                    <option value="leader">小组组长（须已在团队成员档案中）</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom:12px;padding:10px 12px;background:#fff7e6;border:1px solid #ffd591;border-radius:8px;font-size:12px;color:#ad6800;line-height:1.5;">
+                                提示：正式成员请先在「团队成员档案」维护，再在此开通账号；访客可直接注册，无需进入团队管理。
+                            </div>
+                            <div class="form-group" id="regGroupField">
+                                <label>所属小组</label>
+                                <select id="regGroup" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                                    <option value="">请选择小组</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>邮箱</label>
+                                <input type="text" id="regEmail" placeholder="选填" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+                            <div class="form-group">
+                                <label>初始密码 <span style="color:red;">*</span></label>
+                                <input type="password" id="regPassword" placeholder="至少8位，含大小写字母和数字" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;" oninput="checkPasswordStrength(this.value, 'regPwdStrength')">
+                                <div class="password-strength-bar"><div class="fill" id="regPwdStrengthBar"></div></div>
+                                <div class="password-strength-text" id="regPwdStrength"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>确认密码 <span style="color:red;">*</span></label>
+                                <input type="password" id="regPasswordConfirm" placeholder="再次输入密码" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+                            <button class="btn" onclick="handleAccountRegister()" style="margin-top:10px;">注册账号</button>
+                        </div>
+                    </div>
+
+                    <!-- 标签页3: 账号导入 -->
+                    <div id="accountTab_accountImport" class="account-tab-content" style="display:none;">
+                        <div style="max-width:800px;">
+                            <h3 style="margin-bottom:16px;">批量导入账号</h3>
+                            <div style="background:#f5f5f5; padding:16px; border-radius:8px; margin-bottom:16px;">
+                                <h4 style="margin-bottom:8px;">📋 导入文件格式说明</h4>
+                                <p style="font-size:13px; color:#666; margin-bottom:8px;">支持 <strong>CSV</strong> 和 <strong>Excel (.xlsx/.xls)</strong> 文件，第一行为表头。</p>
+                                <div style="background:#e8e8e8; padding:12px; border-radius:4px; font-size:12px; margin-bottom:8px;">
+                                    <strong>字段顺序（共8列）：</strong><br>
+                                    学号(必填), 姓名(必填), 角色(必填), 所属小组, 年级, 研究方向, 手机号, 邮箱
+                                </div>
+                                <div style="background:#e8e8e8; padding:12px; border-radius:4px; font-size:12px; margin-bottom:8px;">
+                                    <strong>角色可选值：</strong> admin(超级管理员), leader(小组组长), student(研究生), visitor(访客)
+                                </div>
+                                <div style="background:#e8e8e8; padding:12px; border-radius:4px; font-size:12px;">
+                                    <strong>示例数据：</strong><br>
+                                    2025001,张三,student,第一小组,2025级,深度学习,13800001001,zhangsan@university.edu.cn<br>
+                                    2025002,李四,student,第二小组,2025级,计算机视觉,13800001002,lisi@university.edu.cn
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:12px;margin-bottom:16px;">
+                                <button class="btn btn-secondary" onclick="downloadImportTemplate()">📥 下载导入模板</button>
+                                <button class="btn btn-secondary" onclick="document.getElementById('accountImportFile').click()">📁 选择文件</button>
+                                <input type="file" id="accountImportFile" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleImportFileSelect()">
+                            </div>
+                            <div class="form-group" style="margin-bottom:16px;">
+                                <label>统一初始密码 <span style="color:red;">*</span></label>
+                                <input type="password" id="accountImportPassword" placeholder="为所有导入账号设置初始密码（默认：123456）" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+                            <div id="importPreviewArea" style="display:none;">
+                                <h4 style="margin-bottom:12px;">🔍 导入预览（前10条）</h4>
+                                <div style="background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+                                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                        <thead>
+                                            <tr style="background:#f5f5f5;">
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">学号</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">姓名</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">角色</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">小组</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">年级</th>
+                                                <th style="padding:8px;text-align:left;border-bottom:1px solid #ddd;">状态</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="importPreviewTable"></tbody>
+                                    </table>
+                                </div>
+                                <div style="display:flex;gap:12px;">
+                                    <button class="btn" onclick="confirmAccountImport()">✅ 确认导入</button>
+                                    <button class="btn btn-secondary" onclick="clearImportPreview()">❌ 取消</button>
+                                </div>
+                            </div>
+                            <div id="accountImportResult" style="margin-top:16px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- 标签页4: 密码管理 -->
+                    <div id="accountTab_passwordManage" class="account-tab-content" style="display:none;">
+                        <div style="max-width:600px;">
+                            <h3 style="margin-bottom:16px;">修改密码</h3>
+                            <div class="form-group">
+                                <label>当前密码</label>
+                                <input type="password" id="pwdOld" placeholder="请输入当前密码" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+                            <div class="form-group">
+                                <label>新密码</label>
+                                <input type="password" id="pwdNew" placeholder="至少8位，含大小写字母和数字" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;" oninput="checkPasswordStrength(this.value, 'newPwdStrength')">
+                                <div class="password-strength-bar"><div class="fill" id="newPwdStrengthBar"></div></div>
+                                <div class="password-strength-text" id="newPwdStrength"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>确认新密码</label>
+                                <input type="password" id="pwdNewConfirm" placeholder="再次输入新密码" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+                            <button class="btn" onclick="handleChangePassword()" style="margin-top:10px;">修改密码</button>
+
+                            <hr style="margin:30px 0; border:none; border-top:1px solid #eee;">
+
+                            <h3 style="margin-bottom:16px;">重置其他用户密码</h3>
+                            <p style="font-size:13px; color:#888; margin-bottom:12px;">超级管理员可以重置任意用户密码</p>
+                            <div class="form-group">
+                                <label>选择用户</label>
+                                <select id="resetPwdUser" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                                    <option value="">请选择用户</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>新密码</label>
+                                <input type="password" id="resetPwdNew" placeholder="新密码" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            </div>
+                            <button class="btn btn-secondary" onclick="handleResetPassword()">重置密码</button>
+                        </div>
+                    </div>
+
+                    <!-- 标签页5: 登录安全 -->
+                    <div id="accountTab_loginSecurity" class="account-tab-content" style="display:none;">
+                        <div style="max-width:700px;">
+                            <h3 style="margin-bottom:16px;">登录安全设置</h3>
+
+                            <div class="card" style="background:#fafafa; margin-bottom:20px;">
+                                <h4>登录失败锁定策略</h4>
+                                <p style="font-size:13px; color:#666; margin:8px 0;">连续登录失败达到指定次数后，账号将被临时锁定</p>
+                                <div style="display:flex; gap:12px; align-items:center; margin-top:12px;">
+                                    <label style="font-size:13px;">最大失败次数：</label>
+                                    <input type="number" id="securityMaxAttempts" min="3" max="20" value="5" style="width:80px; padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
+                                    <label style="font-size:13px; margin-left:12px;">锁定时长（分钟）：</label>
+                                    <input type="number" id="securityLockDuration" min="5" max="120" value="30" style="width:80px; padding:6px 10px; border:1px solid #ddd; border-radius:6px;">
+                                    <button class="btn" onclick="saveSecuritySettings()" style="margin-left:12px;">保存</button>
+                                </div>
+                            </div>
+
+                            <div class="card" style="background:#fafafa; margin-bottom:20px;">
+                                <h4>密码强度要求</h4>
+                                <p style="font-size:13px; color:#666; margin:8px 0;">设置密码最低复杂度要求</p>
+                                <div style="margin-top:12px;">
+                                    <label style="font-size:13px; display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                        <input type="checkbox" id="pwdRequireUpper" checked> 必须包含大写字母
+                                    </label>
+                                    <label style="font-size:13px; display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                        <input type="checkbox" id="pwdRequireLower" checked> 必须包含小写字母
+                                    </label>
+                                    <label style="font-size:13px; display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                        <input type="checkbox" id="pwdRequireDigit" checked> 必须包含数字
+                                    </label>
+                                    <label style="font-size:13px; display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                        <input type="checkbox" id="pwdRequireSpecial"> 必须包含特殊字符 (!@#$%^&*)
+                                    </label>
+                                    <label style="font-size:13px; display:flex; align-items:center; gap:8px;">
+                                        最低密码长度：
+                                        <input type="number" id="pwdMinLength" min="6" max="20" value="8" style="width:60px; padding:4px 8px; border:1px solid #ddd; border-radius:6px;">
+                                    </label>
+                                </div>
+                                <button class="btn" onclick="savePasswordPolicy()" style="margin-top:12px;">保存策略</button>
+                            </div>
+
+                            <div class="card" style="background:#fafafa;">
+                                <h4>当前账号安全状态</h4>
+                                <div id="currentAccountSecurityStatus" style="margin-top:12px; font-size:13px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>

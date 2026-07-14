@@ -1,0 +1,132 @@
+<div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; gap: 12px; flex-wrap: wrap;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0; display:flex; align-items:center; gap:10px;">
+                                📰 新闻动态管理
+                                <span id="newsPendingBadge" style="display:none;align-items:center;padding:2px 10px;border-radius:999px;background:#e6f7ff;color:#1890ff;font-size:12px;font-weight:700;"></span>
+                            </h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队内容运营中心 · 审核发布 · 首页联动 · 已读统计</p>
+                        </div>
+                        <button class="btn" id="newsPublishBtn" onclick="showAddNewsModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>➕</span> 发布新闻
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="newsSearchInput" placeholder="搜索标题 / 摘要 / 作者 / 标签..."
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                                oninput="onNewsSearchInput()">
+                        </div>
+                        <select id="newsStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="onNewsStatusFilterChange()">
+                            <option value="">全部状态</option>
+                            <option value="published">已发布</option>
+                            <option value="draft">草稿</option>
+                            <option value="draft_group">草稿+待审</option>
+                            <option value="pending">待审核</option>
+                            <option value="scheduled">定时</option>
+                            <option value="withdrawn">已撤回</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" style="padding:8px 14px;font-size:13px;" onclick="toggleNewsAdvancedFilter()">高级筛选</button>
+                    </div>
+                    <div id="newsAdvancedFilter" style="display:none;gap:12px;flex-wrap:wrap;margin-top:12px;align-items:center;">
+                        <select id="newsCategoryFilter" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="onNewsFilterChange()">
+                            <option value="">全部分类</option>
+                            <option value="团队动态">团队动态</option>
+                            <option value="项目进展">项目进展</option>
+                            <option value="学术交流">学术交流</option>
+                            <option value="成果发布">成果发布</option>
+                            <option value="政策资讯">政策资讯</option>
+                        </select>
+                        <select id="newsAuthorFilter" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="onNewsFilterChange()">
+                            <option value="">全部作者</option>
+                        </select>
+                        <select id="newsTimeFilter" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="onNewsFilterChange()">
+                            <option value="">全部时间</option>
+                            <option value="7">近7天</option>
+                            <option value="30">近30天</option>
+                            <option value="90">近90天</option>
+                        </select>
+                        <select id="newsPinnedFilter" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;" onchange="onNewsFilterChange()">
+                            <option value="">置顶不限</option>
+                            <option value="1">仅置顶</option>
+                            <option value="0">未置顶</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px;">
+                        <div id="newsStatCardTotal" class="news-stat-card" onclick="setNewsStatFilter('')" style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                                <div>
+                                    <div style="font-size:28px;font-weight:bold;color:#667eea;" id="newsStatTotal">0</div>
+                                    <div style="font-size:13px;color:#888;margin-top:4px;">总新闻数</div>
+                                </div>
+                                <div style="width:48px;height:48px;background:#e8ebfa;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;">📰</div>
+                            </div>
+                        </div>
+                        <div id="newsStatCardPublished" class="news-stat-card" onclick="setNewsStatFilter('published')" style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                                <div>
+                                    <div style="font-size:28px;font-weight:bold;color:#52c41a;" id="newsStatPublished">0</div>
+                                    <div style="font-size:13px;color:#888;margin-top:4px;">已发布</div>
+                                </div>
+                                <div style="width:48px;height:48px;background:#f6ffed;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;">✅</div>
+                            </div>
+                        </div>
+                        <div id="newsStatCardDraft" class="news-stat-card" onclick="setNewsStatFilter('draft_group')" style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                                <div>
+                                    <div style="font-size:28px;font-weight:bold;color:#faad14;" id="newsStatDraft">0</div>
+                                    <div style="font-size:13px;color:#888;margin-top:4px;">草稿 / 待审</div>
+                                </div>
+                                <div style="width:48px;height:48px;background:#fff7e6;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;">📝</div>
+                            </div>
+                        </div>
+                        <div id="newsStatCardViews" class="news-stat-card" onclick="setNewsStatFilter('views')" style="background:#fff;padding:20px;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                                <div>
+                                    <div style="font-size:28px;font-weight:bold;color:#722ed1;" id="newsStatViews">0</div>
+                                    <div style="font-size:13px;color:#888;margin-top:4px;">总浏览量（点按浏览排序）</div>
+                                </div>
+                                <div style="width:48px;height:48px;background:#f3e8ff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;">👁️</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="newsBatchBar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;">
+                        <span style="font-size:13px;color:#6b21a8;">已选 <strong id="newsBatchCount">0</strong> 条</span>
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('publish')">批量发布</button>
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('withdraw')">批量撤回</button>
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('pin')">批量置顶</button>
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('category')">批量改分类</button>
+                        <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="batchNewsAction('delete')">批量删除</button>
+                    </div>
+
+                    <div style="background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;">
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #fafafa;">
+                                        <th style="padding: 14px 12px; width:36px;"><input type="checkbox" onchange="toggleSelectAllNews(this.checked)" title="全选当前筛选"></th>
+                                        <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">标题</th>
+                                        <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">分类</th>
+                                        <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">作者</th>
+                                        <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">发布时间</th>
+                                        <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">状态</th>
+                                        <th style="padding: 14px 16px; text-align: left; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">数据</th>
+                                        <th style="padding: 14px 16px; text-align: right; font-size: 14px; font-weight: 600; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="newsTable"></tbody>
+                            </table>
+                        </div>
+                        <div id="newsEmpty" style="padding: 60px 20px; text-align: center; display: none;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+                            <div style="font-size: 16px; color: #888; margin-bottom: 8px;">暂无新闻</div>
+                            <div style="font-size: 14px; color: #bbb; margin-bottom: 16px;">点击上方按钮发布第一条新闻</div>
+                            <button class="btn" onclick="showAddNewsModal()">发布第一条新闻</button>
+                        </div>
+                        <div id="newsPager" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid #f0f0f0;"></div>
+                    </div>
+                </div>

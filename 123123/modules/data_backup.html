@@ -1,0 +1,60 @@
+<div class="card">
+                    <h2>💾 数据备份管理</h2>
+                    <p>系统数据备份、恢复管理</p>
+                </div>
+                
+                <div class="action-bar" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="handleFullBackup()" id="fullBackupBtn">
+                        <span>📥</span> 一键全量备份
+                    </button>
+                    <button class="btn btn-secondary" onclick="handleDbBackup()" id="dbBackupBtn">
+                        <span>📊</span> 仅备份数据库
+                    </button>
+                    <button class="btn btn-warning" onclick="openAutoBackupConfig()">
+                        <span>⚙️</span> 自动备份设置
+                    </button>
+                    <button class="btn" style="background:linear-gradient(135deg,#0891b2,#0e7490);" onclick="exportAllDataToFile()">
+                        <span>⬇️</span> 导出为文件
+                    </button>
+                    <button class="btn" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);" onclick="document.getElementById('importDataFileInput').click()">
+                        <span>⬆️</span> 从文件恢复
+                    </button>
+                    <input type="file" id="importDataFileInput" accept="application/json,.json" style="display:none;" onchange="importAllDataFromFile(event)">
+                </div>
+                <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#075985;line-height:1.6;">
+                    「导出为文件」会把本机全部业务数据打包成 JSON 下载（<strong>不含 API 密钥等敏感项</strong>），可用于备份或换机迁移；「从文件恢复」会用备份覆盖当前数据并刷新页面，操作前建议先导出一份当前数据。
+                </div>
+
+                <div class="card" style="overflow-x: auto;">
+                    <table class="data-table" style="width: 100%; min-width: 900px;">
+                        <thead>
+                            <tr>
+                                <th style="width: 220px;">备份名称</th>
+                                <th style="width: 120px;">备份类型</th>
+                                <th style="width: 100px;">备份方式</th>
+                                <th style="width: 120px;">文件大小</th>
+                                <th style="width: 100px;">状态</th>
+                                <th style="width: 100px;">操作人</th>
+                                <th style="width: 180px;">备份时间</th>
+                                <th style="width: 240px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backupTableBody">
+                        </tbody>
+                    </table>
+                    
+                    <div id="backupEmpty" style="text-align: center; padding: 60px 20px; color: #999; display: none;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
+                        <p>暂无备份记录</p>
+                        <p style="font-size: 12px; margin-top: 8px;">点击上方按钮创建首次备份</p>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 16px;">
+                        <span style="font-size: 13px; color: #666;">共 <span id="backupTotal">0</span> 条记录</span>
+                        <div class="pagination">
+                            <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="prevBackupPage()" id="backupPrevBtn" disabled>上一页</button>
+                            <span style="padding: 0 12px; font-size: 13px;" id="backupPageInfo">1 / 1</span>
+                            <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 12px;" onclick="nextBackupPage()" id="backupNextBtn" disabled>下一页</button>
+                        </div>
+                    </div>
+                </div>

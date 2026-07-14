@@ -1,0 +1,184 @@
+<div class="card">
+                    <h2>⚙️ 系统基础配置</h2>
+                    <p>系统基础参数、配置管理，修改后实时生效</p>
+                </div>
+
+                <div class="card" style="padding: 0;">
+                    <div class="config-tabs">
+                        <button class="tab-btn active" onclick="switchConfigTab('system', this)">📋 系统基本信息</button>
+                        <button class="tab-btn" onclick="switchConfigTab('user', this)">🔐 用户与安全</button>
+                        <button class="tab-btn" onclick="switchConfigTab('business', this)">📊 业务规则</button>
+                        <button class="tab-btn" onclick="switchConfigTab('file', this)">📁 文件上传</button>
+                        <button class="tab-btn" onclick="switchConfigTab('notice', this)">🔔 通知提醒</button>
+                        <button class="tab-btn" onclick="switchConfigTab('backup', this)">💾 备份与运维</button>
+                    </div>
+
+                    <div class="config-content">
+                        <!-- 系统基本信息 -->
+                        <div id="tab_system" class="tab-content active">
+                            <div class="config-form">
+                                <div class="form-group">
+                                    <label>系统名称</label>
+                                    <input type="text" id="cfg_system.name" class="form-control" placeholder="请输入系统名称">
+                                    <span class="config-desc">页面标题、登录页标题、首页顶部分别读取此配置</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>页脚版权信息</label>
+                                    <input type="text" id="cfg_system.copyright" class="form-control" placeholder="请输入版权信息">
+                                </div>
+                                <div class="form-group">
+                                    <label>登录页公告</label>
+                                    <textarea id="cfg_system.loginNotice" class="form-control" rows="3" placeholder="登录页面显示的公告信息"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>开放用户注册</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="cfg_system.enableRegister">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 用户与安全 -->
+                        <div id="tab_user" class="tab-content">
+                            <div class="config-form">
+                                <div class="form-group">
+                                    <label>新账号默认初始密码</label>
+                                    <input type="text" id="cfg_user.defaultPassword" class="form-control" placeholder="请输入默认密码">
+                                    <span class="config-desc">新建账号时自动使用此密码</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>密码连续错误锁定次数</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="number" id="cfg_user.passwordErrorLockCount" class="form-control" min="1" max="20" value="5" style="width: 120px;">
+                                        <span style="color: #666;">次</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>账号锁定时长</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="number" id="cfg_user.lockTime" class="form-control" min="1" max="1440" value="30" style="width: 120px;">
+                                        <span style="color: #666;">分钟</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>登录会话超时时间</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="number" id="cfg_user.sessionTimeout" class="form-control" min="30" max="10080" value="1440" style="width: 150px;">
+                                        <span style="color: #666;">分钟</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>异地登录提醒</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="cfg_user.loginRemind">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 业务规则 -->
+                        <div id="tab_business" class="tab-content">
+                            <div class="config-form">
+                                <div class="form-group">
+                                    <label>周报每周提交截止时间</label>
+                                    <input type="time" id="cfg_business.weeklyDeadline" class="form-control" value="22:00">
+                                </div>
+                                <div class="form-group">
+                                    <label>周报逾期提醒</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="cfg_business.weeklyRemind">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label>任务到期提醒</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="cfg_business.taskExpireRemind">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label>学生毕业自动归档</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="cfg_business.autoGraduateArchive">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label>操作日志保留天数</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="number" id="cfg_business.logKeepDays" class="form-control" min="7" max="365" value="90" style="width: 120px;">
+                                        <span style="color: #666;">天</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 文件上传 -->
+                        <div id="tab_file" class="tab-content">
+                            <div class="config-form">
+                                <div class="form-group">
+                                    <label>单文件最大大小</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="number" id="cfg_file.maxSize" class="form-control" min="1" max="500" value="10" style="width: 120px;">
+                                        <span style="color: #666;">MB</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>允许上传文件类型</label>
+                                    <input type="text" id="cfg_file.allowTypes" class="form-control" placeholder="多个类型用英文逗号分隔">
+                                    <span class="config-desc">如：jpg,png,pdf,doc,docx,xls,xlsx,zip</span>
+                                </div>
+                                <div class="form-group">
+                                    <label>默认头像地址</label>
+                                    <input type="text" id="cfg_file.defaultAvatar" class="form-control" placeholder="请输入默认头像路径">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 通知提醒 -->
+                        <div id="tab_notice" class="tab-content">
+                            <div class="config-form">
+                                <div class="form-group">
+                                    <label>站内信全局开关</label>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="cfg_notice.siteMessage">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label>周报提醒发送时间</label>
+                                    <input type="time" id="cfg_notice.weeklyRemindTime" class="form-control" value="18:00">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 备份与运维 -->
+                        <div id="tab_backup" class="tab-content">
+                            <div class="config-form">
+                                <div class="form-group">
+                                    <label>自动备份保留份数</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="number" id="cfg_backup.keepCount" class="form-control" min="3" max="50" value="10" style="width: 120px;">
+                                        <span style="color: #666;">份</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>磁盘空间告警阈值</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="number" id="cfg_backup.warnDiskThreshold" class="form-control" min="50" max="99" value="80" style="width: 120px;">
+                                        <span style="color: #666;">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="config-action-bar">
+                        <button class="btn btn-secondary" onclick="resetCurrentConfig()">↺ 重置当前分组</button>
+                        <button class="btn btn-primary" onclick="saveCurrentConfig()">💾 保存配置</button>
+                    </div>
+                </div>

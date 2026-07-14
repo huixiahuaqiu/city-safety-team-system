@@ -1,0 +1,174 @@
+<div style="padding: 20px;">
+                    <h2 style="margin-bottom: 20px; color: #333;">©️ 软著管理</h2>
+                    
+                    <!-- 顶部操作栏 -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" onclick="showAddCopyrightModal()"> 新增</button>
+                            <button class="btn btn-danger" onclick="batchDeleteCopyrights()">🗑️ 删除</button>
+                            <button class="btn btn-secondary" onclick="exportCopyrights()">📤 导出</button>
+                            <button class="btn btn-secondary" onclick="importCopyrights()">📥 导入</button>
+                            <button class="btn btn-secondary" onclick="viewCopyrightStats()">📊 统计</button>
+                            <button class="btn btn-secondary" onclick="batchAuditCopyrights()">✅ 批量审核</button>
+                        </div>
+                        <button class="btn" style="background: #17a2b8;" onclick="toggleMoreFilters()">️ 更多条件</button>
+                    </div>
+                    
+                    <!-- 快捷筛选标签 -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;" id="copyrightFilterTags">
+                        <span class="filter-tag active" onclick="filterByTag('all', this)">全部(<span id="countAll">0</span>)</span>
+                        <span class="filter-tag" onclick="filterByTag('current_year', this)">当年登记(<span id="countCurrentYear">0</span>)</span>
+                        <span class="filter-tag" onclick="filterByTag('reviewing', this)">审核中(<span id="countReviewing">0</span>)</span>
+                        <span class="filter-tag" onclick="filterByTag('approved', this)">已通过(<span id="countApproved">0</span>)</span>
+                        <span class="filter-tag" onclick="filterByTag('rejected', this)">已驳回(<span id="countRejected">0</span>)</span>
+                    </div>
+                    
+                    <!-- 查询条件区 -->
+                    <div style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" id="filterPanel">
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">软著名称</label>
+                                <input type="text" id="filterName" class="form-control" placeholder="请输入软著名称">
+                            </div>
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">登记号</label>
+                                <input type="text" id="filterRegNumber" class="form-control" placeholder="请输入登记号">
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">申请人</label>
+                                <input type="text" id="filterApplicant" class="form-control" placeholder="请输入申请人">
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">所属年度</label>
+                                <select id="filterYear" class="form-control">
+                                    <option value="">全部</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">状态</label>
+                                <select id="filterStatus" class="form-control">
+                                    <option value="">全部</option>
+                                    <option value="审核中">审核中</option>
+                                    <option value="已通过">已通过</option>
+                                    <option value="已驳回">已驳回</option>
+                                </select>
+                            </div>
+                            <button class="btn" onclick="applyFilters()" style="height: 38px;">🔍 快捷查询</button>
+                            <button class="btn btn-secondary" onclick="resetFilters()" style="height: 38px;">🔄 重置</button>
+                        </div>
+                        
+                        <!-- 更多查询条件 -->
+                        <div id="moreFilters" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">分类</label>
+                                    <select id="filterCategory" class="form-control">
+                                        <option value="">全部</option>
+                                        <option value="系统软件">系统软件</option>
+                                        <option value="应用软件">应用软件</option>
+                                        <option value="嵌入式软件">嵌入式软件</option>
+                                        <option value="工业软件">工业软件</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">所属单位</label>
+                                    <input type="text" id="filterUnit" class="form-control" placeholder="请输入所属单位">
+                                </div>
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">登记日期范围</label>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <input type="date" id="filterDateFrom" class="form-control" style="flex: 1;">
+                                        <span>至</span>
+                                        <input type="date" id="filterDateTo" class="form-control" style="flex: 1;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 数据表格 -->
+                    <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
+                        <table class="table" style="margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
+                                    <th onclick="sortTable('year')" style="cursor: pointer;">所属年度 ⇅</th>
+                                    <th onclick="sortTable('regNumber')" style="cursor: pointer;">登记号 ⇅</th>
+                                    <th onclick="sortTable('name')" style="cursor: pointer;">软著名称 ⇅</th>
+                                    <th onclick="sortTable('category')" style="cursor: pointer;">分类 ⇅</th>
+                                    <th onclick="sortTable('applicant')" style="cursor: pointer;">申请人 ⇅</th>
+                                    <th onclick="sortTable('unit')" style="cursor: pointer;">所属单位 ⇅</th>
+                                    <th onclick="sortTable('regDate')" style="cursor: pointer;">登记日期 ⇅</th>
+                                    <th onclick="sortTable('status')" style="cursor: pointer;">状态 ⇅</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="copyrightTableBody">
+                                <!-- 数据将通过JavaScript动态生成 -->
+                            </tbody>
+                        </table>
+                        <div style="padding: 15px; text-align: center; color: #666; border-top: 1px solid #eee;" id="emptyMessage">
+                            暂无数据
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 新增/编辑软著弹窗 -->
+                <div id="copyrightModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                    <div style="background: #fff; padding: 30px; border-radius: 12px; width: 600px; max-height: 80vh; overflow-y: auto;">
+                        <h3 style="margin-bottom: 20px; color: #333;" id="modalTitle">新增软著</h3>
+                        <div class="form-group">
+                            <label>软著名称 *</label>
+                            <input type="text" id="copyrightName" class="form-control" placeholder="请输入软著名称">
+                        </div>
+                        <div class="form-group">
+                            <label>登记号 *</label>
+                            <input type="text" id="copyrightRegNumber" class="form-control" placeholder="如：2026SR001234">
+                        </div>
+                        <div class="form-group">
+                            <label>申请人 *</label>
+                            <input type="text" id="copyrightApplicant" class="form-control" placeholder="请输入申请人">
+                        </div>
+                        <div class="form-group">
+                            <label>所属单位 *</label>
+                            <input type="text" id="copyrightUnit" class="form-control" placeholder="请输入所属单位">
+                        </div>
+                        <div class="form-group">
+                            <label>分类 *</label>
+                            <select id="copyrightCategory" class="form-control">
+                                <option value="">请选择分类</option>
+                                <option value="系统软件">系统软件</option>
+                                <option value="应用软件">应用软件</option>
+                                <option value="嵌入式软件">嵌入式软件</option>
+                                <option value="工业软件">工业软件</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>登记日期 *</label>
+                            <input type="date" id="copyrightRegDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>状态</label>
+                            <select id="copyrightStatus" class="form-control">
+                                <option value="审核中">审核中</option>
+                                <option value="已通过">已通过</option>
+                                <option value="已驳回">已驳回</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>上传附件</label>
+                            <input type="file" id="copyrightFile" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>备注</label>
+                            <textarea id="copyrightRemark" class="form-control" rows="3" placeholder="请输入备注信息"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="closeCopyrightModal()">取消</button>
+                            <button class="btn" onclick="saveCopyright()">保存</button>
+                        </div>
+                    </div>
+                </div>

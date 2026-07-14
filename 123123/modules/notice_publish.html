@@ -1,0 +1,102 @@
+<div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">内部通知发布</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">全员云端同步 · 已读回执 · 导师可查看谁看了 / 谁没看</p>
+                        </div>
+                        <button class="btn" id="noticePublishBtn" onclick="showAddNoticeModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>📝</span> 发布通知
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="noticeSearchInput" placeholder="搜索通知标题..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                                oninput="renderNoticeList()">
+                        </div>
+                        <select id="noticeTypeFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderNoticeList()">
+                            <option value="">全部类型</option>
+                            <option value="notice">通知</option>
+                            <option value="announcement">公告</option>
+                            <option value="meeting">会议通知</option>
+                            <option value="urgent">紧急通知</option>
+                        </select>
+                        <select id="noticeStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="noticeStatFilter=this.value; noticePage=1; renderNoticeList()">
+                            <option value="">全部状态</option>
+                            <option value="active">进行中</option>
+                            <option value="urgent">紧急</option>
+                            <option value="unread">我的未读</option>
+                            <option value="expired">已过期</option>
+                            <option value="draft">草稿</option>
+                            <option value="scheduled">定时待发</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px;" class="notice-stat-grid">
+                        <div class="notice-stat-card" data-filter="" onclick="setNoticeStatFilter('')">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="noticeStatTotal">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">总通知数</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📋</div>
+                            </div>
+                        </div>
+                        <div class="notice-stat-card" data-filter="active" onclick="setNoticeStatFilter('active')">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="noticeStatActive">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">进行中</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏰</div>
+                            </div>
+                        </div>
+                        <div class="notice-stat-card" data-filter="urgent" onclick="setNoticeStatFilter('urgent')">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #ff4d4f;" id="noticeStatUrgent">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">紧急通知</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff1f0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🚨</div>
+                            </div>
+                        </div>
+                        <div class="notice-stat-card" data-filter="unread" onclick="setNoticeStatFilter('unread')">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #2563eb;" id="noticeStatUnread">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">我的未读</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #eff6ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🔵</div>
+                            </div>
+                        </div>
+                        <div class="notice-stat-card" data-filter="expired" onclick="setNoticeStatFilter('expired')">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="noticeStatExpired">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已过期</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="noticeEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📢</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无通知</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击下方按钮发布第一条通知</p>
+                        <button class="btn" onclick="showAddNoticeModal()">📝 发布通知</button>
+                    </div>
+                    <div id="noticeBatchBar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+                        <span style="font-size:13px;color:#555;">已选 <strong id="noticeBatchCount">0</strong> 条</span>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchPinNotices(true)">批量置顶</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchPinNotices(false)">取消置顶</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchWithdrawNotices()">批量过期</button>
+                        <button type="button" class="btn" style="padding:6px 12px;font-size:12px;background:#ef4444;" onclick="batchDeleteNotices()">批量删除</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="clearNoticeSelection()">清空选择</button>
+                    </div>
+                    <div id="noticeList"></div>
+                    <div id="noticePagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;"></div>
+                </div>

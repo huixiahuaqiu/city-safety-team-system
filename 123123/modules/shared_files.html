@@ -1,0 +1,107 @@
+<div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #7c3aed; margin: 0;">📤 团队共享文件库</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队共享文件管理与协作</p>
+                        </div>
+                        <button class="btn" onclick="showAddFileModal()" style="padding: 10px 24px; font-size: 14px;" id="uploadFileBtn">
+                            <span>📥</span> 上传文件
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <button class="file-type-btn active" onclick="filterFilesByType('all', this)">全部 <span class="type-count" id="countAll">0</span></button>
+                            <button class="file-type-btn" onclick="filterFilesByType('document', this)">📄 文档 <span class="type-count" id="countDocument">0</span></button>
+                            <button class="file-type-btn" onclick="filterFilesByType('dataset', this)">📊 数据集 <span class="type-count" id="countDataset">0</span></button>
+                            <button class="file-type-btn" onclick="filterFilesByType('code', this)">💻 代码 <span class="type-count" id="countCode">0</span></button>
+                            <button class="file-type-btn" onclick="filterFilesByType('report', this)">📋 报告 <span class="type-count" id="countReport">0</span></button>
+                            <button class="file-type-btn" onclick="filterFilesByType('other', this)">📁 其他 <span class="type-count" id="countOther">0</span></button>
+                            <button class="file-type-btn" id="sharedRecycleBtn" onclick="toggleSharedRecycleBin(this)" style="color:#b45309;">🗑️ 回收站 <span class="type-count" id="countRecycle">0</span></button>
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="fileSearchInput" placeholder="🔍 搜索文件名..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; transition: all 0.2s;"
+                                oninput="handleFileSearch()"
+                                onfocus="this.style.borderColor='#7c3aed';this.style.boxShadow='0 0 0 3px rgba(124,58,237,0.1)'"
+                                onblur="this.style.borderColor='#ddd';this.style.boxShadow='none'">
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select id="fileSortSelect" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; cursor: pointer;" onchange="currentFilePage=1;selectedFileIds=[];renderFileList()">
+                                <option value="time_desc">⬇️ 最新上传</option>
+                                <option value="time_asc">⬆️ 最早上传</option>
+                                <option value="size_desc">⬇️ 大小降序</option>
+                                <option value="size_asc">⬆️ 大小升序</option>
+                                <option value="name_asc">⬆️ 名称A-Z</option>
+                                <option value="name_desc">⬇️ 名称Z-A</option>
+                            </select>
+                            <div style="display: flex; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                                <button id="viewCardBtn" onclick="switchFileView('card')" style="padding: 8px 12px; border: none; background: #7c3aed; color: #fff; cursor: pointer; font-size: 14px;">▦</button>
+                                <button id="viewListBtn" onclick="switchFileView('list')" style="padding: 8px 12px; border: none; background: #fff; color: #666; cursor: pointer; font-size: 14px; border-left: 1px solid #ddd;">☰</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div id="batchActionBar" style="display:none;background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04);align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#333;">
+                                <input type="checkbox" id="selectAllFiles" onchange="toggleSelectAllFiles(this)" style="width:18px;height:18px;accent-color:#7c3aed;cursor:pointer;">
+                                <span>全选</span>
+                            </label>
+                            <span style="font-size:13px;color:#666;">已选择 <strong id="selectedCount" style="color:#7c3aed;">0</strong> 个文件</span>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button onclick="batchDeleteFiles()" class="btn btn-danger" style="padding:8px 16px;font-size:13px;">🗑️ 批量删除</button>
+                            <button onclick="clearFileSelection()" style="padding:8px 16px;border:1px solid #ddd;background:#fff;color:#666;border-radius:8px;cursor:pointer;font-size:13px;">取消选择</button>
+                        </div>
+                    </div>
+
+                    <div id="storageStats" style="background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                        <div style="display: flex; gap: 32px;">
+                            <div>
+                                <div style="font-size: 12px; color: #888; margin-bottom: 4px;">已用存储空间</div>
+                                <div style="font-size: 20px; font-weight: bold; color: #7c3aed;" id="usedStorage">0 MB</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #888; margin-bottom: 4px;">剩余空间</div>
+                                <div style="font-size: 20px; font-weight: bold; color: #4caf50;" id="remainingStorage">0 MB</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #888; margin-bottom: 4px;">总文件数</div>
+                                <div style="font-size: 20px; font-weight: bold; color: #333;" id="totalFilesCount">0</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #888; margin-bottom: 4px;">今日上传</div>
+                                <div style="font-size: 20px; font-weight: bold; color: #ffa726;" id="todayUploadCount">0</div>
+                            </div>
+                        </div>
+                        <div style="width: 240px;">
+                            <div style="font-size: 12px; color: #888; margin-bottom: 8px; text-align: right;">存储空间使用</div>
+                            <div style="height: 10px; background: #f0f0f0; border-radius: 5px; overflow: hidden;">
+                                <div id="storageProgress" style="height: 100%; background: linear-gradient(90deg, #7c3aed, #a78bfa); border-radius: 5px; width: 0%; transition: width 0.5s ease;"></div>
+                            </div>
+                            <div style="font-size: 12px; color: #888; margin-top: 6px; text-align: right;" id="storagePercent">0%</div>
+                        </div>
+                    </div>
+
+                    <div id="fileEmptyState" style="display: none; text-align: center; padding: 80px 20px;">
+                        <div style="font-size: 80px; margin-bottom: 20px; opacity: 0.6;">📂</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无共享文件</h3>
+                        <p style="font-size: 14px; color: #999; margin-bottom: 24px;">点击右上角按钮上传第一个文件，开始团队协作</p>
+                        <button class="btn" onclick="showAddFileModal()" style="padding: 12px 32px; font-size: 14px;">📥 上传文件</button>
+                    </div>
+                    <div id="sharedFileList"></div>
+                    <div id="filePagination" style="display:none;margin-top:20px;background:#fff;border-radius:12px;padding:16px 24px;box-shadow:0 1px 3px rgba(0,0,0,0.04);justify-content:space-between;align-items:center;">
+                        <div style="font-size:13px;color:#666;">
+                            共 <strong id="fileTotalCount" style="color:#7c3aed;">0</strong> 个文件，第 <span id="fileCurrentPage">1</span>/<span id="fileTotalPages">1</span> 页
+                        </div>
+                        <div style="display:flex;gap:6px;">
+                            <button onclick="goToFilePage(1)" style="padding:6px 12px;border:1px solid #ddd;background:#fff;color:#666;border-radius:6px;cursor:pointer;font-size:13px;">首页</button>
+                            <button onclick="goToFilePage(currentFilePage - 1)" style="padding:6px 12px;border:1px solid #ddd;background:#fff;color:#666;border-radius:6px;cursor:pointer;font-size:13px;">上一页</button>
+                            <div id="filePageNumbers" style="display:flex;gap:4px;"></div>
+                            <button onclick="goToFilePage(currentFilePage + 1)" style="padding:6px 12px;border:1px solid #ddd;background:#fff;color:#666;border-radius:6px;cursor:pointer;font-size:13px;">下一页</button>
+                            <button onclick="goToFileLastPage()" id="fileLastPageBtn" style="padding:6px 12px;border:1px solid #ddd;background:#fff;color:#666;border-radius:6px;cursor:pointer;font-size:13px;">末页</button>
+                        </div>
+                    </div>
+                </div>

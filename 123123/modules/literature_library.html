@@ -1,0 +1,87 @@
+<div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📚 文献资料库</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">快速入库 → 高效检索 → 对比分析 → 周报 / 项目 / 文件库联动</p>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-secondary" onclick="goLiteratureCompareWithSelection()" style="padding: 10px 16px; font-size: 13px;">🔬 去对比分析</button>
+                            <button type="button" class="btn btn-secondary" onclick="showModule('document_analysis')" style="padding: 10px 16px; font-size: 13px;">📄 文档解析入库</button>
+                            <button type="button" class="btn" id="litLibraryAddBtn" onclick="showLibraryLiteratureModal()" style="padding: 10px 24px; font-size: 14px;">
+                                <span>📥</span> 添加文献
+                            </button>
+                        </div>
+                    </div>
+                    <div class="lit-stat-grid">
+                        <div class="lit-stat-card" data-filter="" onclick="setLitStatFilter('')"><div class="n" id="litStatTotal">0</div><div class="l">总文献数</div></div>
+                        <div class="lit-stat-card" data-filter="year" onclick="setLitStatFilter('year')"><div class="n" id="litStatYear">0</div><div class="l">本年新增</div></div>
+                        <div class="lit-stat-card" data-filter="core" onclick="setLitStatFilter('core')"><div class="n" id="litStatCore">0</div><div class="l">核心文献</div></div>
+                        <div class="lit-stat-card" data-filter="fav" onclick="setLitStatFilter('fav')"><div class="n" id="litStatFav">0</div><div class="l">我的收藏</div></div>
+                    </div>
+                    <input type="text" id="literatureSearchInput" placeholder="搜索标题 / 作者 / DOI / 摘要 / 标签..."
+                        style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                        oninput="renderLiteratureList()">
+                    <div class="lit-filter-row">
+                        <select id="litLibTypeFilter" onchange="setLitTypeFilter(this.value)">
+                            <option value="">全部类型</option>
+                            <option value="journal">期刊论文</option>
+                            <option value="conference">会议论文</option>
+                            <option value="thesis">学位论文</option>
+                            <option value="review">综述</option>
+                            <option value="report">技术报告</option>
+                            <option value="other">其他</option>
+                        </select>
+                        <input type="number" id="litLibYearFrom" placeholder="起始年" style="width:90px;" onchange="onLitLibraryFilterChange()">
+                        <span style="color:#999;">—</span>
+                        <input type="number" id="litLibYearTo" placeholder="截止年" style="width:90px;" onchange="onLitLibraryFilterChange()">
+                        <select id="litLibSort" onchange="onLitLibraryFilterChange()">
+                            <option value="year_desc">按发表年份</option>
+                            <option value="cite_desc">按引用量</option>
+                            <option value="upload_desc">按上传时间</option>
+                            <option value="dl_desc">按下载量</option>
+                        </select>
+                        <label style="font-size:12px;color:#666;display:flex;align-items:center;gap:4px;">
+                            <input type="checkbox" onchange="toggleSelectAllLit(this.checked)"> 全选当前筛选
+                        </label>
+                        <button type="button" id="litAdvFilterBtn" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="toggleLitAdvFilter()">高级筛选</button>
+                    </div>
+                    <div class="lit-adv-panel" id="litAdvFilterPanel">
+                        <input type="text" id="litLibAuthorFilter" placeholder="作者 / 期刊关键词" style="min-width:160px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;" oninput="onLitAdvFilterChange()">
+                        <select id="litLibHasPdf" onchange="onLitAdvFilterChange()" style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;">
+                            <option value="">PDF 不限</option>
+                            <option value="1">有 PDF</option>
+                            <option value="0">无 PDF</option>
+                        </select>
+                        <select id="litLibReadFilter" onchange="onLitAdvFilterChange()" style="padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;">
+                            <option value="">阅读状态不限</option>
+                            <option value="unread">未读</option>
+                            <option value="reading">在读</option>
+                            <option value="read">已读</option>
+                        </select>
+                    </div>
+                    <div class="lit-tag-bar" id="litTagFilterBar"></div>
+                    <div class="lit-tag-bar" id="litGroupFilterBar" style="margin-top:6px;"></div>
+                    <div class="lit-link-bar">
+                        <button type="button" class="btn btn-secondary" onclick="showLibraryLiteratureModal('pdf')">上传 PDF</button>
+                        <button type="button" class="btn btn-secondary" onclick="importFromSharedPdfHint()">从共享文件库导入 PDF</button>
+                        <button type="button" class="btn btn-secondary" onclick="showLibraryLiteratureModal('doi')">DOI 快速导入</button>
+                        <button type="button" class="btn btn-secondary" onclick="showLibraryLiteratureModal('bib')">BibTeX 导入</button>
+                    </div>
+                </div>
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div class="lit-batch-bar" id="litBatchBar">
+                        <span>已选 <strong id="litBatchCount">0</strong> 篇</span>
+                        <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="batchAddLibraryLitToCompare()">批量加入对比</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchTagLibraryLiterature()">批量打标签</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchMoveLibraryLitToGroup()">批量移入分组</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchDownloadLibraryLiterature()">批量下载</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchDeleteLibraryLiterature()">批量删除</button>
+                    </div>
+                    <div id="literatureEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📚</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无文献资料</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">支持手动添加、DOI 导入、BibTeX 导入，并可联动对比 / 周报 / 文件库</p>
+                        <button class="btn" onclick="showLibraryLiteratureModal()">📥 添加文献</button>
+                    </div>
+                    <div id="literatureList"></div>
+                </div>

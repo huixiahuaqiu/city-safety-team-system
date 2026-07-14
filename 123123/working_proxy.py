@@ -6,12 +6,14 @@ import json
 import logging
 import os
 import secrets
+import shutil
+import subprocess
 import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(BASE_DIR, '.env')
@@ -25,14 +27,6 @@ AUDIT_LOG_PATH = os.path.join(BASE_DIR, 'logs', 'server_audit.log')
 ANNOTATION_BLOB_MARK = '__APP_SYNC_BLOB__'
 ANNOTATION_BLOB_PREFIX = '__SYNC_BLOB__anno_'
 
-# 共享文件可选对象存储（S3 / MinIO 兼容）
-SHARED_STORAGE_BACKEND = (os.environ.get('SHARED_STORAGE_BACKEND') or 'local').strip().lower()
-MINIO_ENDPOINT = (os.environ.get('MINIO_ENDPOINT') or '').strip().rstrip('/')
-MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', '')
-MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', '')
-MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'team-shared')
-MINIO_SECURE = (os.environ.get('MINIO_SECURE') or 'false').strip().lower() in ('1', 'true', 'yes')
-MINIO_REGION = os.environ.get('MINIO_REGION', 'us-east-1')
 _minio_client = None
 _minio_init_tried = False
 
@@ -55,12 +49,28 @@ def load_env_file(path):
 
 load_env_file(ENV_PATH)
 
+# 共享文件可选对象存储（S3 / MinIO 兼容）——须在 load_env_file 之后读取
+SHARED_STORAGE_BACKEND = (os.environ.get('SHARED_STORAGE_BACKEND') or 'local').strip().lower()
+MINIO_ENDPOINT = (os.environ.get('MINIO_ENDPOINT') or '').strip().rstrip('/')
+MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', '')
+MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', '')
+MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'team-shared')
+MINIO_SECURE = (os.environ.get('MINIO_SECURE') or 'false').strip().lower() in ('1', 'true', 'yes')
+MINIO_REGION = os.environ.get('MINIO_REGION', 'us-east-1')
+
 MLOPS_TOKEN = os.environ.get('MLOPS_TOKEN', '')
 ANNOTATION_UPLOAD_TOKEN = os.environ.get('ANNOTATION_UPLOAD_TOKEN', '')
 MAX_UPLOAD_BYTES = int(os.environ.get('MAX_UPLOAD_BYTES', str(200 * 1024 * 1024)))
 MAX_DATASET_BYTES = int(os.environ.get('MAX_DATASET_BYTES', str(10 * 1024 * 1024 * 1024)))
 DATASET_CHUNK_SIZE = int(os.environ.get('DATASET_CHUNK_SIZE', str(2 * 1024 * 1024)))
 DATASET_UPLOAD_TOKEN = os.environ.get('DATASET_UPLOAD_TOKEN', '') or os.environ.get('ANNOTATION_UPLOAD_TOKEN', '')
+# 生产网络加固：监听地址与 CORS 来源，默认值保持本地开发行为不变。
+# 生产 .env 建议设 BIND_HOST=127.0.0.1（只允许 Nginx 反代）与 CORS_ALLOW_ORIGIN=https://你的域名。
+BIND_HOST = os.environ.get('BIND_HOST', '0.0.0.0')
+CORS_ALLOW_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN', '*')
+MINIO_PRESIGN_EXPIRE = int(os.environ.get('MINIO_PRESIGN_EXPIRE', '600'))
+MINIO_PUBLIC_UPLOAD_PREFIX = (os.environ.get('MINIO_PUBLIC_UPLOAD_PREFIX') or '').strip().rstrip('/')
+MINIO_PRESIGN_MAX_BYTES = int(os.environ.get('MINIO_PRESIGN_MAX_BYTES', str(MAX_DATASET_BYTES)))
 ALLOWED_UPLOAD_EXTENSIONS = {
     ext.strip().lower()
     for ext in os.environ.get(
@@ -77,6 +87,18 @@ DATASET_ALLOWED_EXTENSIONS = {
     ).split(',')
     if ext.strip()
 }
+
+# ClamAV 可选病毒扫描：本地开发默认关闭（CLAMAV_SCAN=0），生产可按 deploy/scripts/clamav-setup-notes.md 启用。
+CLAMAV_SCAN = (os.environ.get('CLAMAV_SCAN') or '0').strip().lower() in ('1', 'true', 'yes')
+CLAMSCAN_BIN = (os.environ.get('CLAMSCAN_BIN') or 'clamdscan').strip()
+
+DANGEROUS_UPLOAD_EXTENSIONS = {
+    '.html', '.htm', '.svg', '.js', '.exe', '.sh', '.php', '.bat', '.cmd',
+}
+IMAGE_PDF_SAFE_EXTENSIONS = {
+    '.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif', '.pdf',
+}
+_HTML_SCRIPT_SNIFF_PREFIXES = (b'<html', b'<script', b'<?php')
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
@@ -338,6 +360,69 @@ def audit_event(event, **fields):
     logger.info('AUDIT %s', json.dumps(payload, ensure_ascii=False, sort_keys=True))
 
 
+def sniff_allowed_upload(content, filename):
+    """Magic-byte / content sniffing secondary gate; allow-list remains primary."""
+    ext = os.path.splitext(str(filename or '').lower())[1]
+    if ext in DANGEROUS_UPLOAD_EXTENSIONS:
+        raise ValueError('dangerous file extension not allowed: %s' % ext)
+    head = (content or b'')[:512].lstrip().lower()
+    if ext in IMAGE_PDF_SAFE_EXTENSIONS:
+        for prefix in _HTML_SCRIPT_SNIFF_PREFIXES:
+            if head.startswith(prefix):
+                raise ValueError('content looks like HTML/script but claimed as image/pdf-safe type')
+
+
+def scan_file_clamav(path):
+    """Run ClamAV on disk file. Returns (ok, detail); skipped when CLAMAV_SCAN=0."""
+    if not CLAMAV_SCAN:
+        return True, 'skipped'
+    if not os.path.isfile(path):
+        return False, 'file not found'
+    if not shutil.which(CLAMSCAN_BIN):
+        return False, 'scanner not found: %s' % CLAMSCAN_BIN
+    try:
+        proc = subprocess.run(
+            [CLAMSCAN_BIN, '--no-summary', path],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if proc.returncode == 0:
+            return True, 'clean'
+        if proc.returncode == 1:
+            detail = (proc.stdout or proc.stderr or 'infected').strip()
+            return False, detail or 'infected'
+        detail = (proc.stderr or proc.stdout or 'scan error').strip()
+        return False, detail or 'scan error'
+    except subprocess.TimeoutExpired:
+        return False, 'scan timeout'
+    except Exception as e:
+        return False, str(e)
+
+
+def _quarantine_file(path):
+    """Rename suspicious file aside; best-effort."""
+    qpath = path + '.quarantine'
+    try:
+        os.replace(path, qpath)
+    except OSError:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    return qpath
+
+
+def enforce_clamav_scan(path, context=''):
+    """Scan local file; quarantine and raise ValueError on failure."""
+    ok, detail = scan_file_clamav(path)
+    if ok:
+        return detail
+    qpath = _quarantine_file(path)
+    audit_event('clamav_quarantine', path=path, quarantine=qpath, detail=detail, context=context)
+    raise ValueError('malware scan failed: %s' % detail)
+
+
 def check_token(handler):
     if not MLOPS_TOKEN:
         return False
@@ -579,6 +664,10 @@ def complete_dataset_upload(payload):
                 pass
             raise ValueError('md5 mismatch')
 
+    with open(final_path, 'rb') as _sniff_f:
+        sniff_allowed_upload(_sniff_f.read(512), file_name)
+    enforce_clamav_scan(final_path, context='dataset_complete')
+
     inspect = inspect_dataset_file(final_path, file_name)
     file_meta = {
         'fileId': file_id,
@@ -807,6 +896,7 @@ def save_shared_upload(file_name, file_type, remark, content, original_name=''):
     allow = DATASET_ALLOWED_EXTENSIONS | ALLOWED_UPLOAD_EXTENSIONS | {'.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.zip', '.pdf'}
     if ext and ext not in allow:
         raise ValueError('file extension not allowed: %s' % ext)
+    sniff_allowed_upload(content, original_name or file_name)
     file_id = 'sf_' + secrets.token_hex(8)
     date_path = datetime.now().strftime('%Y%m')
     safe_name = ''.join(c for c in (file_name or 'file') if c not in '\\/:*?"<>|')[:120] or 'file'
@@ -853,6 +943,7 @@ def save_shared_upload(file_name, file_type, remark, content, original_name=''):
             f.write(content)
         meta['path'] = full
         meta['savedAs'] = os.path.relpath(full, SHARED_FILE_UPLOAD_ROOT).replace('\\', '/')
+        enforce_clamav_scan(full, context='shared_upload')
     reg = _shared_registry_load()
     reg['files'][file_id] = meta
     _shared_registry_save(reg)
@@ -865,6 +956,8 @@ def get_shared_file_meta(file_id, allow_deleted=False):
     meta = reg['files'].get(file_id)
     if not meta:
         raise FileNotFoundError('shared file not found')
+    if meta.get('pendingConfirm'):
+        raise FileNotFoundError('shared file not confirmed')
     if meta.get('deletedAt') and not allow_deleted:
         raise FileNotFoundError('shared file deleted')
     path = meta.get('path') or ''
@@ -957,6 +1050,126 @@ def _get_minio_client():
         return None
 
 
+def _shared_allow_extensions():
+    return DATASET_ALLOWED_EXTENSIONS | ALLOWED_UPLOAD_EXTENSIONS | {
+        '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.zip', '.pdf',
+    }
+
+
+def _rewrite_presign_url(url):
+    """把内网 MinIO 地址改写成经 Nginx /minio-upload/ 的对外前缀。"""
+    if not MINIO_PUBLIC_UPLOAD_PREFIX or not url:
+        return url
+    try:
+        parsed = urllib.parse.urlparse(url)
+        path = parsed.path or ''
+        return '%s%s%s' % (
+            MINIO_PUBLIC_UPLOAD_PREFIX,
+            path if path.startswith('/') else '/' + path,
+            ('?' + parsed.query) if parsed.query else '',
+        )
+    except Exception:
+        return url
+
+
+def create_shared_presign(file_name, file_type, remark, size, content_type='', original_name=''):
+    """签发 MinIO PUT 预签名；文件体不经网关。未启用 minio 时抛错，前端可回退 multipart。"""
+    size = int(size or 0)
+    if size <= 0:
+        raise ValueError('size required')
+    if size > MINIO_PRESIGN_MAX_BYTES:
+        raise ValueError('file too large: max %s bytes' % MINIO_PRESIGN_MAX_BYTES)
+    client = _get_minio_client()
+    if not client:
+        raise RuntimeError('presign requires SHARED_STORAGE_BACKEND=minio and working credentials')
+    name = original_name or file_name or 'file'
+    ext = os.path.splitext(str(name).lower())[1]
+    if ext and ext not in _shared_allow_extensions():
+        raise ValueError('file extension not allowed: %s' % ext)
+    file_id = 'sf_' + secrets.token_hex(8)
+    date_path = datetime.now().strftime('%Y%m')
+    safe_name = ''.join(c for c in (file_name or 'file') if c not in '\\/:*?"<>|')[:120] or 'file'
+    stored = file_id + (ext or '.bin')
+    object_key = 'shared/%s/%s' % (date_path, stored)
+    expire = max(60, min(MINIO_PRESIGN_EXPIRE, 3600))
+    ctype = (content_type or 'application/octet-stream').strip() or 'application/octet-stream'
+    upload_url = client.presigned_put_object(
+        MINIO_BUCKET,
+        object_key,
+        expires=timedelta(seconds=expire),
+    )
+    upload_url = _rewrite_presign_url(upload_url)
+    meta = {
+        'fileId': file_id,
+        'fileName': safe_name,
+        'originalName': name,
+        'fileType': file_type or 'other',
+        'remark': remark or '',
+        'size': size,
+        'md5': '',
+        'createdAt': _now_iso(),
+        'deleted': False,
+        'storage': 'minio',
+        'objectKey': object_key,
+        'bucket': MINIO_BUCKET,
+        'path': '',
+        'savedAs': object_key,
+        'pendingConfirm': True,
+        'contentType': ctype,
+        'presignExpiresAt': (datetime.now(timezone.utc) + timedelta(seconds=expire)).astimezone().strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    reg = _shared_registry_load()
+    reg['files'][file_id] = meta
+    _shared_registry_save(reg)
+    return {
+        'fileId': file_id,
+        'objectKey': object_key,
+        'bucket': MINIO_BUCKET,
+        'uploadUrl': upload_url,
+        'expiresIn': expire,
+        'headers': {'Content-Type': ctype},
+        'method': 'PUT',
+    }
+
+
+def confirm_shared_presign(file_id, md5='', size=None):
+    """直传完成后确认：校验对象存在并写入注册表。"""
+    file_id = _safe_dataset_id(file_id)
+    reg = _shared_registry_load()
+    meta = reg['files'].get(file_id)
+    if not meta:
+        raise FileNotFoundError('shared file not found')
+    if not meta.get('pendingConfirm'):
+        return meta
+    client = _get_minio_client()
+    if not client:
+        raise RuntimeError('minio unavailable')
+    object_key = meta.get('objectKey') or ''
+    if not object_key:
+        raise ValueError('missing objectKey')
+    try:
+        stat = client.stat_object(MINIO_BUCKET, object_key)
+    except Exception as e:
+        raise FileNotFoundError('object not uploaded yet: %s' % e)
+    actual_size = int(getattr(stat, 'size', 0) or 0)
+    expected = int(meta.get('size') or 0)
+    if expected and actual_size and actual_size > MINIO_PRESIGN_MAX_BYTES:
+        raise ValueError('uploaded object too large')
+    meta['size'] = actual_size or expected
+    if md5:
+        meta['md5'] = str(md5).strip().lower()
+    meta['pendingConfirm'] = False
+    meta['confirmedAt'] = _now_iso()
+    if size is not None:
+        try:
+            meta['reportedSize'] = int(size)
+        except Exception:
+            pass
+    reg['files'][file_id] = meta
+    _shared_registry_save(reg)
+    return meta
+
+
 def parse_multipart(handler, post_data):
     """极简 multipart 解析：返回 {fields, file_name, file_content, content_type}。"""
     ctype = handler.headers.get('Content-Type') or ''
@@ -1044,6 +1257,7 @@ def save_annotation_file(task_id, rel_path, content):
     ext = os.path.splitext(str(rel_path).lower())[1]
     if ext not in ALLOWED_UPLOAD_EXTENSIONS:
         raise ValueError('file extension not allowed: %s' % ext)
+    sniff_allowed_upload(content, rel_path)
     if len(content) > MAX_UPLOAD_BYTES:
         raise ValueError('file too large: %s bytes' % len(content))
     task_dir = safe_annotation_task_dir(task_id)
@@ -1221,7 +1435,9 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
         logger.info("%s - %s", self.client_address[0], format % args)
 
     def _cors(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Origin', CORS_ALLOW_ORIGIN)
+        if CORS_ALLOW_ORIGIN != '*':
+            self.send_header('Vary', 'Origin')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header(
             'Access-Control-Allow-Headers',
@@ -1277,6 +1493,54 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self._json(200, {'ok': True, 'fileId': meta['fileId'], 'savedAs': meta['savedAs'], 'size': meta['size'], 'md5': meta['md5'], 'storage': meta.get('storage')})
             except Exception as e:
                 audit_event('shared_upload_failed', ip=self.client_address[0], error=str(e))
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        # MinIO 预签名直传（增量接口；未启用 minio 时返回错误，前端可回退 multipart）
+        if path.startswith('/api/shared-file/presign'):
+            if not check_dataset_token(self):
+                audit_event('shared_presign_denied', ip=self.client_address[0], reason='invalid_token')
+                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                return
+            try:
+                payload = json.loads((post_data or b'{}').decode('utf-8') or '{}')
+                result = create_shared_presign(
+                    payload.get('fileName') or payload.get('name') or 'file',
+                    payload.get('fileType') or 'other',
+                    payload.get('remark') or '',
+                    payload.get('size') or 0,
+                    content_type=payload.get('contentType') or payload.get('type') or '',
+                    original_name=payload.get('originalName') or payload.get('fileName') or '',
+                )
+                audit_event('shared_presign_ok', ip=self.client_address[0], fileId=result.get('fileId'), bytes=payload.get('size'))
+                self._json(200, {'ok': True, **result})
+            except Exception as e:
+                audit_event('shared_presign_failed', ip=self.client_address[0], error=str(e))
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/shared-file/confirm'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                return
+            try:
+                payload = json.loads((post_data or b'{}').decode('utf-8') or '{}')
+                meta = confirm_shared_presign(
+                    payload.get('fileId') or '',
+                    md5=payload.get('md5') or '',
+                    size=payload.get('size'),
+                )
+                audit_event('shared_confirm_ok', ip=self.client_address[0], fileId=meta.get('fileId'), bytes=meta.get('size'))
+                self._json(200, {
+                    'ok': True,
+                    'fileId': meta['fileId'],
+                    'savedAs': meta.get('savedAs'),
+                    'size': meta.get('size'),
+                    'md5': meta.get('md5'),
+                    'storage': meta.get('storage'),
+                })
+            except Exception as e:
+                audit_event('shared_confirm_failed', ip=self.client_address[0], error=str(e))
                 self._json(400, {'ok': False, 'error': str(e)})
             return
 
@@ -1510,6 +1774,35 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
         path = parsed.path
         qs = urllib.parse.parse_qs(parsed.query)
 
+        if path == '/api/health' or path.startswith('/api/health'):
+            minio_ready = False
+            if SHARED_STORAGE_BACKEND == 'minio':
+                try:
+                    minio_ready = bool(_get_minio_client())
+                except Exception:
+                    minio_ready = False
+            clamav_ready = False
+            if CLAMAV_SCAN:
+                clamav_ready = bool(shutil.which(CLAMSCAN_BIN))
+            self._json(200, {
+                'ok': True,
+                'service': 'citysafe-gateway',
+                'time': _now_iso(),
+                'bindHost': BIND_HOST,
+                'storageBackend': SHARED_STORAGE_BACKEND,
+                'minioReady': minio_ready,
+                'presignEnabled': SHARED_STORAGE_BACKEND == 'minio' and minio_ready,
+                'clamavEnabled': CLAMAV_SCAN,
+                'clamavReady': clamav_ready,
+                'clamscanBin': CLAMSCAN_BIN if CLAMAV_SCAN else None,
+                'checks': {
+                    'dataset': True,
+                    'sharedFile': True,
+                    'mlops': True,
+                },
+            })
+            return
+
         if path.startswith('/api/dataset/health'):
             self._json(200, {
                 'ok': True,
@@ -1522,13 +1815,15 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             return
 
         if path.startswith('/api/shared-file/health'):
+            minio_ready = bool(_get_minio_client()) if SHARED_STORAGE_BACKEND == 'minio' else False
             self._json(200, {
                 'ok': True,
                 'service': 'shared-file',
                 'tokenRequired': bool(DATASET_UPLOAD_TOKEN),
                 'maxBytes': MAX_UPLOAD_BYTES,
                 'storageBackend': SHARED_STORAGE_BACKEND,
-                'minioReady': bool(_get_minio_client()) if SHARED_STORAGE_BACKEND == 'minio' else False,
+                'minioReady': minio_ready,
+                'presignEnabled': SHARED_STORAGE_BACKEND == 'minio' and minio_ready,
                 'time': _now_iso(),
             })
             return
@@ -1753,9 +2048,9 @@ def run_server(port=8000):
         os.makedirs(os.path.join(DATASET_UPLOAD_ROOT, 'files'), exist_ok=True)
         os.makedirs(SHARED_FILE_UPLOAD_ROOT, exist_ok=True)
         os.makedirs(os.path.join(SHARED_FILE_UPLOAD_ROOT, 'files'), exist_ok=True)
-        server_address = ('', port)
+        server_address = (BIND_HOST, port)
         httpd = ThreadingHTTPServer(server_address, WorkingProxyHandler)
-        logger.info('server running at http://localhost:%s', port)
+        logger.info('server running at http://%s:%s', BIND_HOST or '0.0.0.0', port)
         logger.info('api proxy: http://localhost:%s/api/aliyun', port)
         logger.info('baidu ocr: POST http://localhost:%s/api/baidu-ocr', port)
         logger.info('mlops report: POST http://localhost:%s/api/mlops/report', port)

@@ -1,0 +1,174 @@
+<div style="padding: 20px;">
+                    <h2 style="margin-bottom: 20px; color: #333;">📑 标准专著管理</h2>
+                    
+                    <!-- 顶部操作栏 -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" onclick="showAddStandardModal()"> 新增</button>
+                            <button class="btn btn-danger" onclick="batchDeleteStandards()">️ 删除</button>
+                            <button class="btn btn-secondary" onclick="exportStandards()"> 导出</button>
+                            <button class="btn btn-secondary" onclick="importStandards()">📥 导入</button>
+                            <button class="btn btn-secondary" onclick="viewStandardStats()">📊 统计</button>
+                            <button class="btn btn-secondary" onclick="batchAuditStandards()">✅ 批量审核</button>
+                        </div>
+                        <button class="btn" style="background: #17a2b8;" onclick="toggleStandardMoreFilters()">️ 更多条件</button>
+                    </div>
+                    
+                    <!-- 快捷筛选标签 -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;" id="standardFilterTags">
+                        <span class="filter-tag active" onclick="filterStandardByTag('all', this)">全部(<span id="standardCountAll">0</span>)</span>
+                        <span class="filter-tag" onclick="filterStandardByTag('current_year', this)">当年发布(<span id="standardCountCurrentYear">0</span>)</span>
+                        <span class="filter-tag" onclick="filterStandardByTag('reviewing', this)">审核中(<span id="standardCountReviewing">0</span>)</span>
+                        <span class="filter-tag" onclick="filterStandardByTag('approved', this)">已通过(<span id="standardCountApproved">0</span>)</span>
+                        <span class="filter-tag" onclick="filterStandardByTag('rejected', this)">已驳回(<span id="standardCountRejected">0</span>)</span>
+                    </div>
+                    
+                    <!-- 查询条件区 -->
+                    <div style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" id="standardFilterPanel">
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">标准/专著名称</label>
+                                <input type="text" id="standardFilterName" class="form-control" placeholder="请输入名称">
+                            </div>
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">标准编号/ISBN</label>
+                                <input type="text" id="standardFilterNumber" class="form-control" placeholder="请输入编号">
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">起草人/作者</label>
+                                <input type="text" id="standardFilterAuthor" class="form-control" placeholder="请输入">
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">所属年度</label>
+                                <select id="standardFilterYear" class="form-control">
+                                    <option value="">全部</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">状态</label>
+                                <select id="standardFilterStatus" class="form-control">
+                                    <option value="">全部</option>
+                                    <option value="审核中">审核中</option>
+                                    <option value="已通过">已通过</option>
+                                    <option value="已驳回">已驳回</option>
+                                </select>
+                            </div>
+                            <button class="btn" onclick="applyStandardFilters()" style="height: 38px;">🔍 快捷查询</button>
+                            <button class="btn btn-secondary" onclick="resetStandardFilters()" style="height: 38px;"> 重置</button>
+                        </div>
+                        
+                        <!-- 更多查询条件 -->
+                        <div id="standardMoreFilters" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">类型</label>
+                                    <select id="standardFilterType" class="form-control">
+                                        <option value="">全部</option>
+                                        <option value="地方标准">地方标准</option>
+                                        <option value="学术专著">学术专著</option>
+                                        <option value="团体标准">团体标准</option>
+                                        <option value="行业标准">行业标准</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">所属单位</label>
+                                    <input type="text" id="standardFilterUnit" class="form-control" placeholder="请输入所属单位">
+                                </div>
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">发布日期范围</label>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <input type="date" id="standardFilterDateFrom" class="form-control" style="flex: 1;">
+                                        <span>至</span>
+                                        <input type="date" id="standardFilterDateTo" class="form-control" style="flex: 1;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 数据表格 -->
+                    <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
+                        <table class="table" style="margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="standardSelectAll" onchange="toggleStandardSelectAll(this)"></th>
+                                    <th onclick="sortStandardTable('year')" style="cursor: pointer;">所属年度 ⇅</th>
+                                    <th onclick="sortStandardTable('standardNumber')" style="cursor: pointer;">标准编号/ISBN ⇅</th>
+                                    <th onclick="sortStandardTable('name')" style="cursor: pointer;">名称 </th>
+                                    <th onclick="sortStandardTable('type')" style="cursor: pointer;">类型 </th>
+                                    <th onclick="sortStandardTable('author')" style="cursor: pointer;">起草人/作者 </th>
+                                    <th onclick="sortStandardTable('unit')" style="cursor: pointer;">所属单位 </th>
+                                    <th onclick="sortStandardTable('publishDate')" style="cursor: pointer;">发布日期 </th>
+                                    <th onclick="sortStandardTable('status')" style="cursor: pointer;">状态 </th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="standardTableBody">
+                                <!-- 数据将通过JavaScript动态生成 -->
+                            </tbody>
+                        </table>
+                        <div style="padding: 15px; text-align: center; color: #666; border-top: 1px solid #eee;" id="standardEmptyMessage">
+                            暂无数据
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 新增/编辑标准专著弹窗 -->
+                <div id="standardModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                    <div style="background: #fff; padding: 30px; border-radius: 12px; width: 600px; max-height: 80vh; overflow-y: auto;">
+                        <h3 style="margin-bottom: 20px; color: #333;" id="standardModalTitle">新增标准/专著</h3>
+                        <div class="form-group">
+                            <label>名称 *</label>
+                            <input type="text" id="standardName" class="form-control" placeholder="请输入名称">
+                        </div>
+                        <div class="form-group">
+                            <label>标准编号/ISBN *</label>
+                            <input type="text" id="standardNumber" class="form-control" placeholder="如：DB50/T 123-2026">
+                        </div>
+                        <div class="form-group">
+                            <label>起草人/作者 *</label>
+                            <input type="text" id="standardAuthor" class="form-control" placeholder="请输入">
+                        </div>
+                        <div class="form-group">
+                            <label>所属单位 *</label>
+                            <input type="text" id="standardUnit" class="form-control" placeholder="请输入所属单位">
+                        </div>
+                        <div class="form-group">
+                            <label>类型 *</label>
+                            <select id="standardType" class="form-control">
+                                <option value="">请选择类型</option>
+                                <option value="地方标准">地方标准</option>
+                                <option value="学术专著">学术专著</option>
+                                <option value="团体标准">团体标准</option>
+                                <option value="行业标准">行业标准</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>发布日期 *</label>
+                            <input type="date" id="standardPublishDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>状态</label>
+                            <select id="standardStatus" class="form-control">
+                                <option value="审核中">审核中</option>
+                                <option value="已通过">已通过</option>
+                                <option value="已驳回">已驳回</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>上传附件</label>
+                            <input type="file" id="standardFile" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>备注</label>
+                            <textarea id="standardRemark" class="form-control" rows="3" placeholder="请输入备注信息"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="closeStandardModal()">取消</button>
+                            <button class="btn" onclick="saveStandard()">保存</button>
+                        </div>
+                    </div>
+                </div>

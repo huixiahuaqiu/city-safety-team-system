@@ -1,0 +1,25 @@
+[Unit]
+Description=MinIO Object Storage (intranet only)
+Documentation=https://min.io/docs/minio/linux/index.html
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=minio-user
+Group=minio-user
+EnvironmentFile=-/etc/default/minio
+ExecStart=/usr/local/bin/minio server /data/minio --address 127.0.0.1:9000 --console-address 127.0.0.1:9001
+Restart=always
+RestartSec=3
+LimitNOFILE=1048576
+TasksMax=infinity
+TimeoutStopSec=60
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/data/minio
+
+[Install]
+WantedBy=multi-user.target

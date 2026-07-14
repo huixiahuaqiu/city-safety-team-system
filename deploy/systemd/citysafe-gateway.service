@@ -1,0 +1,39 @@
+[Unit]
+Description=City Safety Team System Gateway (working_proxy)
+Documentation=file:///opt/citysafe/current/../deploy/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=appsvc
+Group=appsvc
+WorkingDirectory=/opt/citysafe/current
+EnvironmentFile=-/opt/citysafe/.env
+Environment=CITYSAFE_NO_BROWSER=1
+ExecStart=/opt/citysafe/venv/bin/python start_web.py
+Restart=always
+RestartSec=3
+TimeoutStopSec=30
+
+# 生产建议 .env 中 BIND_HOST=127.0.0.1，仅允许 Nginx 反代
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/data/uploads /opt/citysafe/current/logs /opt/citysafe/current /data/backups
+ProtectKernelTunables=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+LimitNOFILE=1048576
+LimitNPROC=4096
+
+# 崩溃时留下核心转储可选：关闭更安全
+# DumpCore=false
+
+[Install]
+WantedBy=multi-user.target

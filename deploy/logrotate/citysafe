@@ -1,0 +1,27 @@
+# 安装：sudo cp deploy/logrotate/citysafe /etc/logrotate.d/citysafe
+
+/opt/citysafe/current/logs/*.log
+/data/uploads/**/logs/*.log {
+    daily
+    rotate 180
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    dateext
+    maxsize 200M
+}
+
+/var/log/nginx/citysafe.*.log {
+    daily
+    rotate 180
+    compress
+    delaycompress
+    missingok
+    notifempty
+    sharedscripts
+    postrotate
+        [ -f /var/run/nginx.pid ] && kill -USR1 "$(cat /var/run/nginx.pid)" || true
+    endscript
+}

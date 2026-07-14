@@ -1,0 +1,75 @@
+<div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">会议活动管理</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">团队会议、活动安排与管理</p>
+                        </div>
+                        <button class="btn" onclick="showAddMeetingModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>📅</span> 新建会议
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" id="meetingSearchInput" placeholder="搜索会议主题..." 
+                                style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                                oninput="renderMeetingList()">
+                        </div>
+                        <select id="meetingStatusFilter" style="padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 120px;" onchange="renderMeetingList()">
+                            <option value="">全部状态</option>
+                            <option value="upcoming">即将开始</option>
+                            <option value="ongoing">进行中</option>
+                            <option value="completed">已结束</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="meetingStatTotal">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">总会议数</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #e8ebfa; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📅</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #faad14;" id="meetingStatUpcoming">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">即将开始</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #fff7e6; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">⏰</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #1890ff;" id="meetingStatOngoing">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">进行中</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #e6f7ff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🔄</div>
+                            </div>
+                        </div>
+                        <div style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 28px; font-weight: bold; color: #52c41a;" id="meetingStatCompleted">0</div>
+                                    <div style="font-size: 13px; color: #888; margin-top: 4px;">已结束</div>
+                                </div>
+                                <div style="width: 48px; height: 48px; background: #f6ffed; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">✅</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="meetingEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">🏢</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无会议安排</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击下方按钮创建新会议</p>
+                        <button class="btn" onclick="showAddMeetingModal()">📅 新建会议</button>
+                    </div>
+                    <div id="meetingList"></div>
+                    <div id="meetingPagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 24px;"></div>
+                </div>

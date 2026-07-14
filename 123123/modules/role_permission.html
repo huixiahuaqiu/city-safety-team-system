@@ -1,0 +1,45 @@
+<div class="card">
+                    <h2> 角色权限管理</h2>
+
+                    <!-- 角色说明 -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
+                        <div style="background:#ffebee; border-radius:10px; padding:16px; border-left:4px solid #c62828;">
+                            <div style="font-weight:700; color:#c62828; margin-bottom:6px;">👑 超级管理员</div>
+                            <div style="font-size:13px; color:#555;">导师主账号，系统最高权限。可新建/删除所有账号、配置角色、导出全组数据、查看所有学生周报任务。</div>
+                        </div>
+                        <div style="background:#e3f2fd; border-radius:10px; padding:16px; border-left:4px solid #1565c0;">
+                            <div style="font-weight:700; color:#1565c0; margin-bottom:6px;"> 小组组长</div>
+                            <div style="font-size:13px; color:#555;">大师兄/大师姐。仅管理本组学生账号，下发本组任务、审核本组周报，看不到其他小组数据，不能新建账号。</div>
+                        </div>
+                        <div style="background:#e8f5e9; border-radius:10px; padding:16px; border-left:4px solid #2e7d32;">
+                            <div style="font-weight:700; color:#2e7d32; margin-bottom:6px;">📚 研究生</div>
+                            <div style="font-size:13px; color:#555;">硕博学生。仅能操作自己的数据：查看个人档案、提交周报、接收分配给自己的科研任务，看不到其他同学档案/周报。</div>
+                        </div>
+                        <div style="background:#fff3e0; border-radius:10px; padding:16px; border-left:4px solid #e65100;">
+                            <div style="font-weight:700; color:#e65100; margin-bottom:6px;">👁️ 访客</div>
+                            <div style="font-size:13px; color:#555;">外校交流生/实习生。只读账号，只能看课题组公开信息，无任务提交、周报填写权限，导师可随时禁用。</div>
+                        </div>
+                    </div>
+
+                    <!-- 权限矩阵 -->
+                    <h3 style="margin-bottom:12px;">权限矩阵配置</h3>
+                    <p style="font-size:13px; color:#888; margin-bottom:12px;">勾选表示该角色拥有对应权限，修改后点击保存生效</p>
+                    <div style="overflow-x:auto;">
+                        <table class="permission-matrix" id="permissionMatrix">
+                            <thead>
+                                <tr>
+                                    <th style="width:220px;">功能模块</th>
+                                    <th> 超级管理员</th>
+                                    <th>🎓 小组组长</th>
+                                    <th>📚 研究生</th>
+                                    <th>👁️ 访客</th>
+                                </tr>
+                            </thead>
+                            <tbody id="permissionMatrixBody"></tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top:16px; display:flex; gap:12px;">
+                        <button class="btn" onclick="savePermissionMatrix()">💾 保存权限配置</button>
+                        <button class="btn btn-secondary" onclick="resetPermissionMatrix()">↩️ 恢复默认</button>
+                    </div>
+                </div>

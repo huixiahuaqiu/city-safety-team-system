@@ -1,0 +1,48 @@
+<div style="padding:24px;background:#fff;border-bottom:1px solid #f0f0f0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+                        <div>
+                            <h1 style="font-size:24px;font-weight:bold;color:#333;margin:0;">🏅 竞赛成果管理</h1>
+                            <p style="font-size:14px;color:#888;margin-top:4px;">赛事获奖台账 · 审核归档 · 一键生成新闻喜报</p>
+                        </div>
+                        <button class="btn" id="competitionAddBtn" onclick="showAddCompetitionModal()" style="padding:10px 24px;font-size:14px;">➕ 登记成果</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px;">
+                        <div class="lit-stat-card" style="cursor:pointer;" onclick="setCompetitionStatFilter('')"><div class="n" id="cmpStatTotal">0</div><div class="l">全部成果</div></div>
+                        <div class="lit-stat-card" style="cursor:pointer;" onclick="setCompetitionStatFilter('year')"><div class="n" id="cmpStatYear">0</div><div class="l">当年获奖</div></div>
+                        <div class="lit-stat-card" style="cursor:pointer;" onclick="setCompetitionStatFilter('national')"><div class="n" id="cmpStatNational">0</div><div class="l">国家级</div></div>
+                        <div class="lit-stat-card" style="cursor:pointer;" onclick="setCompetitionStatFilter('approved')"><div class="n" id="cmpStatApproved">0</div><div class="l">已通过</div></div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <input type="text" id="competitionSearchInput" placeholder="搜索赛事 / 项目 / 成员 / 奖项..."
+                            style="flex:1;min-width:200px;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;"
+                            oninput="renderCompetitionList()">
+                        <select id="competitionLevelFilter" onchange="renderCompetitionList()" style="padding:10px 12px;border:1px solid #ddd;border-radius:8px;">
+                            <option value="">全部级别</option>
+                            <option value="国际级">国际级</option>
+                            <option value="国家级">国家级</option>
+                            <option value="省部级">省部级</option>
+                            <option value="市级">市级</option>
+                            <option value="校级">校级</option>
+                        </select>
+                        <select id="competitionStatusFilter" onchange="renderCompetitionList()" style="padding:10px 12px;border:1px solid #ddd;border-radius:8px;">
+                            <option value="">全部状态</option>
+                            <option value="审核中">审核中</option>
+                            <option value="已通过">已通过</option>
+                            <option value="已驳回">已驳回</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="padding:24px;background:#f5f7fa;">
+                    <div id="competitionBatchBar" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+                        <span>已选 <strong id="competitionBatchCount">0</strong> 条</span>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchAuditCompetitions('已通过')">批量通过</button>
+                        <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="batchDeleteCompetitions()">批量删除</button>
+                    </div>
+                    <div id="competitionEmptyState" style="display:none;text-align:center;padding:60px 20px;">
+                        <div style="font-size:64px;margin-bottom:16px;">🏅</div>
+                        <h3 style="font-size:18px;color:#333;margin-bottom:8px;">暂无竞赛成果</h3>
+                        <p style="font-size:14px;color:#888;margin-bottom:20px;">登记获奖信息后可一键生成新闻喜报</p>
+                        <button class="btn" onclick="showAddCompetitionModal()">➕ 登记成果</button>
+                    </div>
+                    <div id="competitionList"></div>
+                </div>

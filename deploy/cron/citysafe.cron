@@ -1,0 +1,14 @@
+# /etc/cron.d/citysafe
+# 安装：sudo cp deploy/cron/citysafe.cron /etc/cron.d/citysafe && sudo chmod 644 /etc/cron.d/citysafe
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# 健康探测：每 5 分钟
+*/5 * * * * appsvc /opt/citysafe/bin/healthcheck.sh >/dev/null 2>&1
+
+# 磁盘告警：每 10 分钟
+*/10 * * * * appsvc /opt/citysafe/bin/disk_alert.sh >/dev/null 2>&1
+
+# 备份：每小时（注册表等）；大文件镜像按 backup.sh 内开关
+0 * * * * appsvc /opt/citysafe/bin/backup.sh >> /opt/citysafe/current/logs/backup.log 2>&1

@@ -1,0 +1,103 @@
+<div style="padding: 20px;">
+                    <h2 style="margin-bottom: 20px; color: #333;"> 团队成员档案</h2>
+                    
+                    <!-- 顶部操作栏 -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" data-perm="member-edit" onclick="showAddMemberModal()"> 新增</button>
+                            <button class="btn btn-secondary" data-perm="member-export" onclick="exportMembers()"> 导出</button>
+                            <button class="btn btn-secondary" data-perm="member-edit" onclick="importMembers()"> 导入</button>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="memberSearchInput" class="form-control" placeholder="搜索成员姓名..." style="width: 200px;" oninput="searchMembers(this.value)">
+                        </div>
+                    </div>
+                    
+                    <!-- 左侧导航 + 右侧内容 -->
+                    <div style="display: flex; gap: 20px;">
+                        <!-- 左侧导航 -->
+                        <div style="width: 160px; flex-shrink: 0;">
+                            <div id="memberNavList" style="background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <!-- 由 renderMemberNav() 动态渲染 -->
+                            </div>
+                            <button type="button" id="addMemberGradeBtn" onclick="promptAddMemberGrade()" data-perm="member-edit"
+                                style="width:100%;margin-top:10px;padding:10px 12px;border:1px dashed #667eea;border-radius:8px;background:#f8faff;color:#667eea;font-size:13px;font-weight:600;cursor:pointer;">
+                                ＋ 增加年级
+                            </button>
+                        </div>
+                        
+                        <!-- 右侧内容 -->
+                        <div style="flex: 1;">
+                            <div id="memberCategoryAll">
+                                <!-- 由 renderMemberAllSections() 动态渲染 -->
+                            </div>
+                            <div id="memberCategorySingle" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 成员详情弹窗 -->
+                <div id="memberDetailModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+                    <div style="background: #fff; padding: 40px; border-radius: 16px; width: 600px; max-height: 80vh; overflow-y: auto; position: relative;">
+                        <span style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999;" onclick="closeMemberDetailModal()">&times;</span>
+                        <div id="memberDetailContent"></div>
+                    </div>
+                </div>
+                
+                <!-- 新增/编辑成员弹窗 -->
+                <div id="memberEditModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;">
+                    <div style="background: #fff; padding: 30px; border-radius: 12px; width: 600px; max-height: 80vh; overflow-y: auto;">
+                        <h3 style="margin-bottom: 20px; color: #333;" id="memberEditModalTitle">新增成员</h3>
+                        <div class="form-group">
+                            <label>姓名 *</label>
+                            <input type="text" id="memberName" class="form-control" placeholder="请输入姓名">
+                        </div>
+                        <div class="form-group">
+                            <label>分类 *</label>
+                            <select id="memberCategory" class="form-control" onchange="onMemberCategoryChange()"></select>
+                        </div>
+                        <div class="form-group" id="memberGraduatedWrap">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+                                <input type="checkbox" id="memberGraduated" style="width:16px;height:16px;">
+                                已毕业（毕业生将不再接收通知推送）
+                            </label>
+                            <div style="font-size:12px;color:#888;margin-top:4px;">勾选后：通知/催读/全员消息均不再发送给该成员</div>
+                        </div>
+                        <div class="form-group">
+                            <label>职称/身份 *</label>
+                            <input type="text" id="memberTitle" class="form-control" placeholder="如：教授/2024级硕士研究生">
+                        </div>
+                        <div class="form-group">
+                            <label>研究方向</label>
+                            <input type="text" id="memberResearch" class="form-control" placeholder="请输入研究方向">
+                        </div>
+                        <div class="form-group">
+                            <label>教育背景</label>
+                            <input type="text" id="memberEducation" class="form-control" placeholder="请输入教育背景">
+                        </div>
+                        <div class="form-group">
+                            <label>联系电话</label>
+                            <input type="text" id="memberPhone" class="form-control" placeholder="请输入联系电话">
+                        </div>
+                        <div class="form-group">
+                            <label>电子邮箱</label>
+                            <input type="email" id="memberEmail" class="form-control" placeholder="请输入电子邮箱">
+                        </div>
+                        <div class="form-group">
+                            <label>主持项目</label>
+                            <input type="text" id="memberProjects" class="form-control" placeholder="请输入主持项目">
+                        </div>
+                        <div class="form-group">
+                            <label>获奖情况</label>
+                            <input type="text" id="memberAwards" class="form-control" placeholder="请输入获奖情况">
+                        </div>
+                        <div class="form-group">
+                            <label>个人简介</label>
+                            <textarea id="memberBio" class="form-control" rows="4" placeholder="请输入个人简介"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="closeMemberEditModal()">取消</button>
+                            <button class="btn" onclick="saveMember()">保存</button>
+                        </div>
+                    </div>
+                </div>

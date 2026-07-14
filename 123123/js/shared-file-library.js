@@ -122,6 +122,46 @@
     async function uploadToServer(file, meta) {
         var caps = await probeSharedServer();
         if (!caps || !caps.ok) return null;
+
+        // GB 级 / 大文件：优先预签名直传 MinIO（网关不碰文件体）；失败则回退 multipart
+        var PRESIGN_THRESHOLD = 8 * 1024 * 1024; // 8MB
+        if (caps.presignEnabled && file && file.size >= PRESIGN_THRESHOLD) {
+            try {
+                var preResp = await fetch('/api/shared-file/presign', {
+                    method: 'POST',
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({
+                        fileName: meta.fileName || file.name,
+                        originalName: file.name,
+                        fileType: meta.fileType || 'other',
+                        remark: meta.remark || '',
+                        size: file.size,
+                        contentType: file.type || 'application/octet-stream'
+                    })
+                });
+                var pre = await preResp.json().catch(function () { return {}; });
+                if (preResp.ok && pre.ok && pre.uploadUrl) {
+                    var putHeaders = Object.assign({}, pre.headers || {});
+                    var putResp = await fetch(pre.uploadUrl, {
+                        method: pre.method || 'PUT',
+                        headers: putHeaders,
+                        body: file
+                    });
+                    if (!putResp.ok) throw new Error('直传对象存储失败 HTTP ' + putResp.status);
+                    var confResp = await fetch('/api/shared-file/confirm', {
+                        method: 'POST',
+                        headers: authHeaders({ 'Content-Type': 'application/json' }),
+                        body: JSON.stringify({ fileId: pre.fileId, size: file.size })
+                    });
+                    var conf = await confResp.json().catch(function () { return {}; });
+                    if (!confResp.ok || !conf.ok) throw new Error((conf && conf.error) || '直传确认失败');
+                    return conf;
+                }
+            } catch (e) {
+                console.warn('[shared-file] presign fallback to multipart', e);
+            }
+        }
+
         var fd = new FormData();
         fd.append('file', file);
         fd.append('fileName', meta.fileName || file.name);

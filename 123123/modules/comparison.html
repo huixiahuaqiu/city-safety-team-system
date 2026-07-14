@@ -1,0 +1,95 @@
+<div class="card">
+                    <h2>⚖️ 对比分析</h2>
+                    <div class="card" style="background: #f3e5f5;">
+                        <h3>对比设置</h3>
+                        <div class="form-group">
+                            <label>选择要对比的专利</label>
+                            <select class="form-control" multiple size="4">
+                                <option>一种新型太阳能电池</option>
+                                <option>智能机器人控制系统</option>
+                                <option>风力发电设备优化</option>
+                                <option>新型医药组合物</option>
+                            </select>
+                            <small style="color: #666;">按住 Ctrl 键可选择多个专利</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>选择对比维度</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="dim1" checked>
+                                    <label for="dim1">专利名称</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="dim2" checked>
+                                    <label for="dim2">申请人</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="dim3" checked>
+                                    <label for="dim3">申请日期</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="dim4">
+                                    <label for="dim4">技术方案</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="dim5">
+                                    <label for="dim5">权利要求</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="dim6">
+                                    <label for="dim6">同族专利</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="dim7" checked>
+                                    <label for="dim7">法律状态</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="btn" onclick="startComparison()">⚖️ 开始对比</button>
+                    </div>
+                    
+                    <div id="comparisonResult" style="margin-top: 20px; display: none;">
+                        <h3>对比结果</h3>
+                        <div style="overflow-x: auto;">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>对比维度</th>
+                                        <th>一种新型太阳能电池</th>
+                                        <th>智能机器人控制系统</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>专利名称</strong></td>
+                                        <td>一种新型太阳能电池</td>
+                                        <td>智能机器人控制系统</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>申请人</strong></td>
+                                        <td>科技公司A</td>
+                                        <td>机器人公司B</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>申请日期</strong></td>
+                                        <td>2023-01-15</td>
+                                        <td>2023-03-10</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>技术方案</strong></td>
+                                        <td>采用新型纳米材料，优化电池结构</td>
+                                        <td>基于深度学习的环境感知，实时路径规划</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>法律状态</strong></td>
+                                        <td><span class="tag tag-success">已公开</span></td>
+                                        <td><span class="tag tag-warning">审查中</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn" onclick="exportComparisonResult()" style="margin-top: 15px;">📥 导出对比结果</button>
+                    </div>
+                </div>

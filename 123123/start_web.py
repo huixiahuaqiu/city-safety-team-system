@@ -16,6 +16,8 @@ from working_proxy import run_server
 
 PORT = 8000
 URL = f"http://localhost:{PORT}"
+# 生产 systemd 设 CITYSAFE_NO_BROWSER=1，避免无头服务器弹浏览器
+NO_BROWSER = (os.environ.get('CITYSAFE_NO_BROWSER') or '').strip().lower() in ('1', 'true', 'yes')
 
 
 def is_port_in_use(port: int) -> bool:
@@ -38,7 +40,8 @@ def open_browser_when_ready(url: str, port: int, timeout: float = 8.0) -> None:
 def main() -> None:
     if is_port_in_use(PORT):
         print(f"端口 {PORT} 已被占用，直接打开已有服务: {URL}")
-        webbrowser.open(URL)
+        if not NO_BROWSER:
+            webbrowser.open(URL)
         return
 
     print("=" * 50)
@@ -47,11 +50,12 @@ def main() -> None:
     print("按 Ctrl+C 可停止服务")
     print("=" * 50)
 
-    threading.Thread(
-        target=open_browser_when_ready,
-        args=(URL, PORT),
-        daemon=True,
-    ).start()
+    if not NO_BROWSER:
+        threading.Thread(
+            target=open_browser_when_ready,
+            args=(URL, PORT),
+            daemon=True,
+        ).start()
 
     run_server(PORT)
 

@@ -1,0 +1,51 @@
+<div style="padding:24px; background:#fff; border-bottom:1px solid #f0f0f0;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                        <div>
+                            <h1 style="font-size:24px; font-weight:700; color:#111827; margin:0;">AI 数据标注</h1>
+                            <p style="font-size:14px; color:#6b7280; margin:6px 0 0;">服务结构损伤诊断与城市安全监测 · 标注完成后可对接模型训练台账</p>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" onclick="showAnnotationTypeModal()" style="padding:10px 16px; font-size:13px;">管理标注类型</button>
+                            <button class="btn" onclick="showAddAnnotationModal()" style="padding:10px 20px; font-size:13px;">＋ 新建标注任务</button>
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:18px;">
+                        <div onclick="setAnnotationStatusFilter('')" style="cursor:pointer; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#4f46e5; line-height:1;" id="annoStatTotal">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">标注任务</div>
+                        </div>
+                        <div onclick="setAnnotationStatusFilter('annotating')" style="cursor:pointer; background:#fff7ed; border:1px solid #ffedd5; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#ea580c; line-height:1;" id="annoStatAnnotating">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">标注中</div>
+                        </div>
+                        <div onclick="setAnnotationStatusFilter('ready')" style="cursor:pointer; background:#f0fdf4; border:1px solid #dcfce7; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#16a34a; line-height:1;" id="annoStatReady">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">可训练</div>
+                        </div>
+                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px 16px;">
+                            <div style="font-size:26px; font-weight:700; color:#2563eb; line-height:1;" id="annoStatDone">0</div>
+                            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">已标注样本</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;">
+                        <input type="text" id="annotationSearch" placeholder="搜索任务、数据集、负责人、场景..." oninput="renderAnnotationList()" style="flex:1; min-width:200px; padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px;">
+                        <select id="annotationTypeFilter" onchange="renderAnnotationList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部类型</option>
+                        </select>
+                        <select id="annotationStatusFilter" onchange="renderAnnotationList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部状态</option>
+                            <option value="annotating">标注中</option>
+                            <option value="review">待审核</option>
+                            <option value="ready">可训练</option>
+                        </select>
+                        <select id="annotationOwnerFilter" onchange="renderAnnotationList()" style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px; background:#fff;">
+                            <option value="">全部成员</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="padding:20px 24px 28px; background:#f8fafc;">
+                    <div id="annotationList" style="display:flex; flex-direction:column; gap:12px;"></div>
+                    <div id="annotationEmpty" style="display:none; text-align:center; padding:48px 16px; color:#9ca3af; background:#fff; border-radius:14px; border:1px dashed #e5e7eb;">
+                        暂无匹配的标注任务，可点击右上角新建
+                    </div>
+                </div>

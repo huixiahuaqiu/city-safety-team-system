@@ -1,0 +1,114 @@
+<div class="card" style="padding:20px 22px;">
+                    <div class="doc-hero">
+                        <div style="position:relative;z-index:1;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+                            <div>
+                                <div style="font-size:12px;color:#6366f1;font-weight:700;margin-bottom:6px;">上传 / 批量导入 → 解析+OCR → 大模型联析 → 文档问答</div>
+                                <h2 style="margin:0 0 6px;font-size:22px;color:#111827;">文档智能解析</h2>
+                                <div style="font-size:13px;color:#4b5563;line-height:1.6;max-width:680px;">支持单文件、目录内多选，以及一键导入整个文件夹；扫描 PDF 自动 OCR；可调用百炼大模型联析，并在右侧窗口基于文档内容问答。</div>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <span id="docStatusPill" class="doc-status-pill">待上传</span>
+                                <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="clearDocumentAnalysis()">清空</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="doc-layout">
+                        <aside class="doc-left">
+                            <div class="doc-upload-row doc-upload-row-3">
+                                <div id="docUploadZone" class="doc-upload-zone">
+                                    <div class="doc-upload-ico">📄</div>
+                                    <div class="doc-upload-title">上传文件</div>
+                                    <div class="doc-upload-desc">单文件/多选<br>≤30MB</div>
+                                </div>
+                                <div id="docMultiZone" class="doc-upload-zone folder">
+                                    <div class="doc-upload-ico">📑</div>
+                                    <div class="doc-upload-title">多选文件</div>
+                                    <div class="doc-upload-desc">进入目录后<br>Ctrl+A 全选</div>
+                                </div>
+                                <div id="docFolderZone" class="doc-upload-zone folder whole">
+                                    <div class="doc-upload-ico">📁</div>
+                                    <div class="doc-upload-title">整个文件夹</div>
+                                    <div class="doc-upload-desc">一键导入全目录<br>也可拖拽到此</div>
+                                </div>
+                            </div>
+                            <input type="file" id="documentUploadInput" accept=".pdf,.docx,.txt,.md,application/pdf,text/plain" multiple style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1">
+                            <input type="file" id="documentFolderInput" multiple style="position:fixed;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1">
+                            <div id="documentInfo" style="display:none;margin-top:12px;"></div>
+                            <div id="docScanReport" style="display:none;margin-top:10px;"></div>
+                            <div id="docLibraryList" class="doc-lib"></div>
+                            <div class="doc-tips">
+                                <div><strong>解析引擎</strong>：PDF.js · Mammoth · 纯文本 · 百度 OCR</div>
+                                <div><strong>整个文件夹</strong>：点「整个文件夹」选中目录后点上传；系统可能不列出文件名，属正常。也可把文件夹拖到该框</div>
+                                <div><strong>多选文件</strong>：想先看到文件时用「多选文件」进入目录后 Ctrl+A</div>
+                            </div>
+                        </aside>
+
+                        <section class="doc-right">
+                            <div id="documentAnalysisResult" class="doc-result-shell"></div>
+                            <div class="doc-actions">
+                                <button class="btn" id="docBtnSummary" disabled onclick="extractDocumentSummary()">提取摘要</button>
+                                <button class="btn" id="docBtnKeys" disabled onclick="extractDocumentKeyPoints()">提取关键点</button>
+                                <button class="btn" id="docBtnStruct" disabled onclick="extractDocumentStructure()">分析结构</button>
+                                <button class="btn" id="docBtnAi" disabled style="background:linear-gradient(135deg,#7c3aed,#4f46e5);" onclick="aiEnhanceDocument()">✨ AI 增强摘要</button>
+                                <button class="btn" id="docBtnAiAll" disabled style="background:linear-gradient(135deg,#db2777,#7c3aed);" onclick="aiAnalyzeCorpus()">🧠 文件夹联析</button>
+                                <button class="btn" id="docBtnOcr" disabled style="background:linear-gradient(135deg,#0f766e,#0ea5e9);" onclick="ocrCurrentPdf(true)">🔍 OCR 识别</button>
+                                <button class="btn btn-secondary" id="docBtnLit" disabled onclick="pushDocToLiteratureCompare()">入库文献对比</button>
+                                <button class="btn btn-secondary" id="docBtnWeekly" disabled onclick="insertDocToWeeklyReport()">插入周报</button>
+                                <button class="btn btn-secondary" id="docBtnShare" disabled onclick="saveDocResultToShared()">保存共享文件</button>
+                            </div>
+                        </section>
+
+                        <aside class="doc-chat">
+                            <div class="doc-chat-head">
+                                <div>
+                                    <div class="doc-chat-title">文档问答</div>
+                                    <div class="doc-chat-sub" id="docChatContextHint">上传文档后，可基于当前/全部文档向大模型提问</div>
+                                </div>
+                                <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="clearDocChat()">清空对话</button>
+                            </div>
+                            <div id="docChatStream" class="doc-chat-stream"></div>
+                            <div class="doc-chat-suggest">
+                                <button type="button" onclick="askDocChatPreset('请用中文概括当前文档的核心要点')">概括要点</button>
+                                <button type="button" onclick="askDocChatPreset('这份材料里有哪些强制条款或关键指标？')">关键指标</button>
+                                <button type="button" onclick="askDocChatPreset('对比文件夹内文档的异同与可借鉴点')">对比异同</button>
+                            </div>
+                            <div class="doc-chat-input-row">
+                                <textarea id="docChatInput" placeholder="基于已解析文档提问，例如：加固适用范围是什么？" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDocChatMessage();}"></textarea>
+                                <button class="doc-chat-send" id="docChatSendBtn" onclick="sendDocChatMessage()" disabled>发送</button>
+                            </div>
+                            <div class="doc-ai-ports">
+                                <div class="doc-ai-ports-head">
+                                    <div class="doc-ai-ports-title">外部大模型入口</div>
+                                    <div class="doc-ai-ports-sub">新标签页打开</div>
+                                </div>
+                                <div class="doc-ai-ports-grid">
+                                    <a class="doc-ai-port deepseek" href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer" title="DeepSeek">
+                                        <span class="mark">DS</span>
+                                        <span class="meta"><span class="name">DeepSeek</span><span class="desc">深度求索对话</span></span>
+                                    </a>
+                                    <a class="doc-ai-port doubao" href="https://www.doubao.com/chat/" target="_blank" rel="noopener noreferrer" title="豆包">
+                                        <span class="mark">豆</span>
+                                        <span class="meta"><span class="name">豆包</span><span class="desc">字节跳动助手</span></span>
+                                    </a>
+                                    <a class="doc-ai-port kimi" href="https://www.kimi.com/zh/" target="_blank" rel="noopener noreferrer" title="Kimi">
+                                        <span class="mark">K</span>
+                                        <span class="meta"><span class="name">Kimi</span><span class="desc">月之暗面长文</span></span>
+                                    </a>
+                                    <a class="doc-ai-port qwen" href="https://chat.qwen.ai/" target="_blank" rel="noopener noreferrer" title="通义千问">
+                                        <span class="mark">Q</span>
+                                        <span class="meta"><span class="name">通义千问</span><span class="desc">Qwen Chat</span></span>
+                                    </a>
+                                    <a class="doc-ai-port gemini" href="https://gemini.google.com/app" target="_blank" rel="noopener noreferrer" title="Google Gemini">
+                                        <span class="mark">G</span>
+                                        <span class="meta"><span class="name">Gemini</span><span class="desc">Google 对话</span></span>
+                                    </a>
+                                    <a class="doc-ai-port gemini-app" href="https://gemini.google.com/app/7182162052e679f5?utm_source=app_launcher&utm_medium=owned&utm_campaign=base_all" target="_blank" rel="noopener noreferrer" title="Gemini 工作区">
+                                        <span class="mark">Gw</span>
+                                        <span class="meta"><span class="name">Gemini 工作区</span><span class="desc">指定会话入口</span></span>
+                                    </a>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>

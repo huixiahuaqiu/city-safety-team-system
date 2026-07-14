@@ -1,0 +1,64 @@
+<div class="card" style="padding:22px 24px;">
+                    <div class="openai-hero">
+                        <div style="position:relative;z-index:1;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+                            <div>
+                                <div style="font-size:12px;opacity:0.85;margin-bottom:6px;">阿里云百炼 · 团队 AI 入口</div>
+                                <h2 style="margin:0 0 8px;font-size:24px;">OpenAI 入口</h2>
+                                <div style="font-size:13px;line-height:1.6;opacity:0.92;max-width:560px;">在此配置百炼密钥与模型参数。智能对话问答会自动读取这里的密钥；密钥只保存在本机浏览器，不上传云端。</div>
+                            </div>
+                            <div class="openai-status-pill" id="openaiHeroStatus">密钥未配置</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:minmax(280px,0.95fr) minmax(0,1.2fr);gap:16px;align-items:stretch;">
+                        <div>
+                            <div class="openai-panel">
+                                <h3 style="margin:0 0 12px;font-size:16px;color:#4c1d95;">API 密钥</h3>
+                                <div class="form-group" style="margin-bottom:12px;">
+                                    <label>阿里云百炼 API 密钥</label>
+                                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                        <input type="password" id="openaiApiKey" class="form-control" placeholder="sk-..." value="" style="flex:1;min-width:180px;">
+                                        <button class="btn" onclick="saveApiKey()">保存</button>
+                                        <button class="btn btn-secondary" onclick="testApiKey()">测试</button>
+                                    </div>
+                                    <small id="apiKeyDisplay" style="color:#6b7280;display:block;margin-top:8px;"></small>
+                                </div>
+                                <div id="apiKeyStatus" style="margin-top:10px;padding:10px 12px;border-radius:12px;display:none;"></div>
+                            </div>
+
+                            <div class="openai-panel">
+                                <h3 style="margin:0 0 12px;font-size:16px;color:#4c1d95;">模型参数</h3>
+                                <div class="form-group">
+                                    <label>选择模型</label>
+                                    <select id="openaiModel" class="form-control">
+                                        <option value="qwen-plus" selected>通义千问 Plus（推荐）</option>
+                                        <option value="qwen3.6-plus">通义千问 3.6 Plus</option>
+                                        <option value="qwen-turbo">通义千问 Turbo（快速）</option>
+                                        <option value="qwen-max">通义千问 Max（最强）</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>温度 <span id="openaiTempLabel">0.7</span></label>
+                                    <input type="range" id="openaiTemperature" min="0" max="2" step="0.1" value="0.7" class="form-control" oninput="document.getElementById('openaiTempLabel').textContent=this.value">
+                                    <small style="color:#6b7280;display:block;margin-top:5px;">值越高越发散，值越低越稳定</small>
+                                </div>
+                                <div class="form-group" style="margin-bottom:0;">
+                                    <label>最大 tokens</label>
+                                    <input type="number" id="openaiMaxTokens" class="form-control" value="1000" min="1" max="4096">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="team-chat-shell" style="min-height:560px;display:flex;flex-direction:column;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 16px 8px;">
+                                <strong style="font-size:14px;color:#111827;">模型直连对话</strong>
+                                <button class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="clearOpenAIChat()">清空</button>
+                            </div>
+                            <div class="team-chat-stream" id="openaiChatContainer" style="flex:1;max-height:none;"></div>
+                            <div style="display:flex;gap:10px;align-items:flex-end;padding:14px 16px 16px;border-top:1px solid #f3e8ff;background:rgba(255,255,255,0.75);backdrop-filter:blur(8px);">
+                                <textarea id="openaiChatInput" rows="2" class="form-control" placeholder="直接向大模型提问（不走全局检索）..." style="flex:1;padding:12px 14px;border:1px solid #e9d5ff;border-radius:14px;resize:vertical;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendOpenAIMessage();}"></textarea>
+                                <button class="btn team-chat-send" onclick="sendOpenAIMessage()" style="padding:12px 18px;background:linear-gradient(135deg,#7c3aed,#4f46e5);">发送</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>

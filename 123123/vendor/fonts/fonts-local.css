@@ -1,0 +1,10 @@
+:root {
+  --font-sans: "Outfit", "Segoe UI", system-ui, sans-serif;
+  --font-serif: "Noto Serif SC", "Songti SC", serif;
+}
+body, .font-sans {
+  font-family: var(--font-sans);
+}
+.font-serif, .brand-serif {
+  font-family: var(--font-serif);
+}

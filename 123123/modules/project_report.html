@@ -1,0 +1,56 @@
+<div style="padding: 24px; background: #fff; border-bottom: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
+                        <div>
+                            <h1 style="font-size: 24px; font-weight: bold; color: #333; margin: 0;">📄 项目报告归档</h1>
+                            <p style="font-size: 14px; color: #888; margin-top: 4px;">结题材料 · 进展报告 · 项目档案联动</p>
+                        </div>
+                        <button class="btn" id="rpLibraryUploadBtn" onclick="showAddReportModal()" style="padding: 10px 24px; font-size: 14px;">
+                            <span>📥</span> 上传报告
+                        </button>
+                    </div>
+                    <div class="rp-stat-grid">
+                        <div class="rp-stat-card" data-filter="" onclick="setRpStatFilter('')"><div class="n" id="rpStatTotal">0</div><div class="l">报告总数</div></div>
+                        <div class="rp-stat-card" data-filter="year" onclick="setRpStatFilter('year')"><div class="n" id="rpStatYear">0</div><div class="l">本年新增</div></div>
+                        <div class="rp-stat-card" data-filter="project" onclick="setRpStatFilter('project')"><div class="n" id="rpStatProject">0</div><div class="l">已关联项目</div></div>
+                        <div class="rp-stat-card" data-filter="fav" onclick="setRpStatFilter('fav')"><div class="n" id="rpStatFav">0</div><div class="l">我的收藏</div></div>
+                    </div>
+                    <input type="text" id="reportSearchInput" placeholder="搜索报告名称 / 描述 / 上传者 / 标签..."
+                        style="width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;"
+                        oninput="onReportSearchInput()">
+                    <div class="rp-filter-row">
+                        <select id="rpTypeFilter" onchange="onReportFilterChange()">
+                            <option value="">全部类型</option>
+                            <option value="项目报告">项目报告</option>
+                            <option value="可行性报告">可行性报告</option>
+                            <option value="安全报告">安全报告</option>
+                            <option value="年度报告">年度报告</option>
+                            <option value="结题报告">结题报告</option>
+                            <option value="其他">其他</option>
+                        </select>
+                        <select id="rpSort" onchange="onReportFilterChange()">
+                            <option value="date_desc">日期 ↓</option>
+                            <option value="date_asc">日期 ↑</option>
+                            <option value="name_asc">名称 A-Z</option>
+                            <option value="dl_desc">下载量 ↓</option>
+                        </select>
+                        <input type="date" id="rpDateFrom" onchange="onReportFilterChange()" title="起始日期">
+                        <input type="date" id="rpDateTo" onchange="onReportFilterChange()" title="截止日期">
+                    </div>
+                    <div class="rp-tag-bar" id="rpTagFilterBar"></div>
+                    <div class="rp-batch-bar" id="rpBatchBar">
+                        <span>已选 <b id="rpBatchCount">0</b> 项</span>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchLinkReportProject()">批量关联项目</button>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="batchTagReports()">批量打标签</button>
+                        <button type="button" class="btn" style="padding:4px 10px;font-size:12px;background:#ef4444;" onclick="batchDeleteReports()">批量删除</button>
+                    </div>
+                </div>
+                <div style="padding: 24px; background: #f5f7fa;">
+                    <div id="reportEmptyState" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div style="font-size: 64px; margin-bottom: 16px;">📄</div>
+                        <h3 style="font-size: 18px; color: #333; margin-bottom: 8px;">暂无项目报告</h3>
+                        <p style="font-size: 14px; color: #888; margin-bottom: 20px;">点击上方按钮上传报告</p>
+                        <button class="btn" onclick="showAddReportModal()">📥 上传报告</button>
+                    </div>
+                    <div id="reportList"></div>
+                    <div id="reportPagination" class="rp-pagination"></div>
+                </div>

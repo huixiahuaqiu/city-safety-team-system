@@ -1,0 +1,63 @@
+<div class="card" style="padding:20px 22px;">
+                    <div class="lit-hero">
+                        <div style="position:relative;z-index:1;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+                            <div>
+                                <div style="font-size:12px;color:#6366f1;font-weight:700;margin-bottom:6px;">入库 → 对比 → AI 综述 → 导出复用</div>
+                                <h2 style="margin:0 0 6px;font-size:22px;color:#111827;">文献对比分析</h2>
+                                <div style="font-size:13px;color:#4b5563;line-height:1.6;max-width:640px;">面向算法选型、组会汇报与论文相关工作。勾选即实时刷新；支持表格高亮、可视化、AI 综述、时间线，并可插入周报 / 保存到共享文件库。</div>
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                                <span id="litSelectedBadge" class="lit-badge">0 篇已选</span>
+                                <div class="lit-dropdown">
+                                    <button class="btn btn-success" style="padding:8px 12px;font-size:13px;" onclick="showAddLiteratureModal()">+ 添加文献</button>
+                                    <button class="btn" style="padding:8px 12px;font-size:13px;background:#0d9488;" onclick="showLibraryLiteratureModal('pdf')" title="上传 PDF，自动识别后可手改再入库">📕 上传 PDF</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="document.getElementById('literatureCsvInput').click()">导入 CSV</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="document.getElementById('literatureBibInput').click()">导入 BibTeX</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="syncFromLiteratureLibrary()">同步文献库</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;" onclick="exportLiteratureCsv()">导出 CSV</button>
+                                    <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;color:#dc2626;" onclick="batchDeleteSelectedLiterature()">批量删除</button>
+                                    <button class="btn" style="padding:8px 12px;font-size:13px;background:linear-gradient(135deg,#7c3aed,#4f46e5);" onclick="aiCompareSelectedLiterature(true)">✨ AI 综述</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="file" id="literatureCsvInput" accept=".csv,text/csv" style="display:none;" onchange="importLiteratureCsv(event)">
+                    <input type="file" id="literatureBibInput" accept=".bib,text/plain" style="display:none;" onchange="importLiteratureBibtex(event)">
+
+                    <div class="lit-layout">
+                        <aside class="lit-left">
+                            <div class="lit-left-head">
+                                <strong>文献库 <span id="literatureCount" style="font-weight:500;color:#9ca3af;font-size:12px;"></span></strong>
+                            </div>
+                            <input type="text" id="literatureSearch" class="form-control" placeholder="搜索标题 / 作者 / 关键词 / DOI" style="margin-bottom:10px;" oninput="renderLiteratureCompareList()">
+                            <div id="litTagChips" class="lit-chips"></div>
+                            <div class="lit-filters">
+                                <select id="litFieldFilter" class="form-control" onchange="onLitFilterChange()"><option value="">全部领域</option></select>
+                                <select id="litSortKey" class="form-control" onchange="onLitFilterChange()">
+                                    <option value="year_desc">年份 ↓</option>
+                                    <option value="year_asc">年份 ↑</option>
+                                    <option value="map_desc">mAP ↓</option>
+                                    <option value="fps_desc">FPS ↓</option>
+                                    <option value="title">标题</option>
+                                </select>
+                                <input type="number" id="litYearFrom" class="form-control" placeholder="年起" onchange="renderLiteratureCompareList()" min="1990" max="2030">
+                                <input type="number" id="litYearTo" class="form-control" placeholder="年止" onchange="renderLiteratureCompareList()" min="1990" max="2030">
+                            </div>
+                            <div id="literatureCompareList" class="lit-list"></div>
+                            <div id="litSelectionBar" class="lit-selection-bar"></div>
+                        </aside>
+
+                        <section class="lit-right">
+                            <div class="lit-tabs">
+                                <button type="button" class="lit-tab active" id="litTab_table" onclick="switchLitTab('table')">表格对比</button>
+                                <button type="button" class="lit-tab" id="litTab_chart" onclick="switchLitTab('chart')">可视化</button>
+                                <button type="button" class="lit-tab" id="litTab_ai" onclick="switchLitTab('ai')">AI 综述</button>
+                                <button type="button" class="lit-tab" id="litTab_timeline" onclick="switchLitTab('timeline')">技术时间线</button>
+                            </div>
+                            <div id="litPane_table" class="lit-pane"></div>
+                            <div id="litPane_chart" class="lit-pane" style="display:none;"></div>
+                            <div id="litPane_ai" class="lit-pane" style="display:none;"></div>
+                            <div id="litPane_timeline" class="lit-pane" style="display:none;"></div>
+                        </section>
+                    </div>
+                </div>

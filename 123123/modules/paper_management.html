@@ -1,0 +1,174 @@
+<div style="padding: 20px;">
+                    <h2 style="margin-bottom: 20px; color: #333;">📄 论文成果管理</h2>
+                    
+                    <!-- 顶部操作栏 -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" onclick="showAddPaperModal()"> 新增</button>
+                            <button class="btn btn-danger" onclick="batchDeletePapers()">️ 删除</button>
+                            <button class="btn btn-secondary" onclick="exportPapers()"> 导出</button>
+                            <button class="btn btn-secondary" onclick="importPapers()">📥 导入</button>
+                            <button class="btn btn-secondary" onclick="viewPaperStats()">📊 统计</button>
+                            <button class="btn btn-secondary" onclick="batchAuditPapers()">✅ 批量审核</button>
+                        </div>
+                        <button class="btn" style="background: #17a2b8;" onclick="togglePaperMoreFilters()">️ 更多条件</button>
+                    </div>
+                    
+                    <!-- 快捷筛选标签 -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;" id="paperFilterTags">
+                        <span class="filter-tag active" onclick="filterPaperByTag('all', this)">全部(<span id="paperCountAll">0</span>)</span>
+                        <span class="filter-tag" onclick="filterPaperByTag('current_year', this)">当年发表(<span id="paperCountCurrentYear">0</span>)</span>
+                        <span class="filter-tag" onclick="filterPaperByTag('reviewing', this)">审核中(<span id="paperCountReviewing">0</span>)</span>
+                        <span class="filter-tag" onclick="filterPaperByTag('approved', this)">已通过(<span id="paperCountApproved">0</span>)</span>
+                        <span class="filter-tag" onclick="filterPaperByTag('rejected', this)">已驳回(<span id="paperCountRejected">0</span>)</span>
+                    </div>
+                    
+                    <!-- 查询条件区 -->
+                    <div style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" id="paperFilterPanel">
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">论文标题</label>
+                                <input type="text" id="paperFilterTitle" class="form-control" placeholder="请输入论文标题">
+                            </div>
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">作者</label>
+                                <input type="text" id="paperFilterAuthor" class="form-control" placeholder="请输入作者">
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">期刊名称</label>
+                                <input type="text" id="paperFilterJournal" class="form-control" placeholder="请输入期刊名称">
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">所属年度</label>
+                                <select id="paperFilterYear" class="form-control">
+                                    <option value="">全部</option>
+                                    <option value="2026">2026</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2024">2024</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">状态</label>
+                                <select id="paperFilterStatus" class="form-control">
+                                    <option value="">全部</option>
+                                    <option value="审核中">审核中</option>
+                                    <option value="已通过">已通过</option>
+                                    <option value="已驳回">已驳回</option>
+                                </select>
+                            </div>
+                            <button class="btn" onclick="applyPaperFilters()" style="height: 38px;">🔍 快捷查询</button>
+                            <button class="btn btn-secondary" onclick="resetPaperFilters()" style="height: 38px;">🔄 重置</button>
+                        </div>
+                        
+                        <!-- 更多查询条件 -->
+                        <div id="paperMoreFilters" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">收录类型</label>
+                                    <select id="paperFilterIndex" class="form-control">
+                                        <option value="">全部</option>
+                                        <option value="SCI">SCI</option>
+                                        <option value="EI">EI</option>
+                                        <option value="CSSCI">CSSCI</option>
+                                        <option value="中文核心">中文核心</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">所属单位</label>
+                                    <input type="text" id="paperFilterUnit" class="form-control" placeholder="请输入所属单位">
+                                </div>
+                                <div style="flex: 1; min-width: 150px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">发表日期范围</label>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <input type="date" id="paperFilterDateFrom" class="form-control" style="flex: 1;">
+                                        <span>至</span>
+                                        <input type="date" id="paperFilterDateTo" class="form-control" style="flex: 1;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 数据表格 -->
+                    <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
+                        <table class="table" style="margin: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="paperSelectAll" onchange="togglePaperSelectAll(this)"></th>
+                                    <th onclick="sortPaperTable('year')" style="cursor: pointer;">所属年度 ⇅</th>
+                                    <th onclick="sortPaperTable('title')" style="cursor: pointer;">论文标题 ⇅</th>
+                                    <th onclick="sortPaperTable('author')" style="cursor: pointer;">作者 </th>
+                                    <th onclick="sortPaperTable('journal')" style="cursor: pointer;">期刊名称 ⇅</th>
+                                    <th onclick="sortPaperTable('index')" style="cursor: pointer;">收录类型 ⇅</th>
+                                    <th onclick="sortPaperTable('unit')" style="cursor: pointer;">所属单位 </th>
+                                    <th onclick="sortPaperTable('publishDate')" style="cursor: pointer;">发表日期 ⇅</th>
+                                    <th onclick="sortPaperTable('status')" style="cursor: pointer;">状态 </th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paperTableBody">
+                                <!-- 数据将通过JavaScript动态生成 -->
+                            </tbody>
+                        </table>
+                        <div style="padding: 15px; text-align: center; color: #666; border-top: 1px solid #eee;" id="paperEmptyMessage">
+                            暂无数据
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 新增/编辑论文弹窗 -->
+                <div id="paperModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                    <div style="background: #fff; padding: 30px; border-radius: 12px; width: 600px; max-height: 80vh; overflow-y: auto;">
+                        <h3 style="margin-bottom: 20px; color: #333;" id="paperModalTitle">新增论文</h3>
+                        <div class="form-group">
+                            <label>论文标题 *</label>
+                            <input type="text" id="paperTitle" class="form-control" placeholder="请输入论文标题">
+                        </div>
+                        <div class="form-group">
+                            <label>作者 *</label>
+                            <input type="text" id="paperAuthor" class="form-control" placeholder="请输入作者">
+                        </div>
+                        <div class="form-group">
+                            <label>期刊名称 *</label>
+                            <input type="text" id="paperJournal" class="form-control" placeholder="请输入期刊名称">
+                        </div>
+                        <div class="form-group">
+                            <label>所属单位 *</label>
+                            <input type="text" id="paperUnit" class="form-control" placeholder="请输入所属单位">
+                        </div>
+                        <div class="form-group">
+                            <label>收录类型 *</label>
+                            <select id="paperIndex" class="form-control">
+                                <option value="">请选择收录类型</option>
+                                <option value="SCI">SCI</option>
+                                <option value="EI">EI</option>
+                                <option value="CSSCI">CSSCI</option>
+                                <option value="中文核心">中文核心</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>发表日期 *</label>
+                            <input type="date" id="paperPublishDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>状态</label>
+                            <select id="paperStatus" class="form-control">
+                                <option value="审核中">审核中</option>
+                                <option value="已通过">已通过</option>
+                                <option value="已驳回">已驳回</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>上传附件</label>
+                            <input type="file" id="paperFile" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>备注</label>
+                            <textarea id="paperRemark" class="form-control" rows="3" placeholder="请输入备注信息"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="closePaperModal()">取消</button>
+                            <button class="btn" onclick="savePaper()">保存</button>
+                        </div>
+                    </div>
+                </div>
