@@ -711,9 +711,11 @@
             'task_management': true,
             'weekly_report': hasPermission('团队工作周报（查看全部）') || hasPermission('团队工作周报（提交自己的）'),
             'application_center': hasPermission('请假与申请（提交自己的）') || hasPermission('请假与申请（本组审批）') || hasPermission('请假与申请（审批/查看全部）'),
+            'my_projects': hasPermission('项目管理（查看）'),
             'longitudinal_project': hasPermission('项目管理（查看）'),
             'horizontal_project': hasPermission('项目管理（查看）'),
             'school_project': hasPermission('项目管理（查看）'),
+            'my_achievements': hasPermission('成果管理（查看）'),
             'patent_management': hasPermission('成果管理（查看）'),
             'paper_management': hasPermission('成果管理（查看）'),
             'standard_management': hasPermission('成果管理（查看）'),
@@ -4248,8 +4250,10 @@
             literature_library: function () { return hasPermission('资源中心（查看）'); },
             dataset_library: function () { return hasPermission('资源中心（查看）'); },
             meeting_management: function () { return getHomeRoleKind() !== 'visitor'; },
+            my_achievements: function () { return hasPermission('成果管理（查看）'); },
             patent_management: function () { return hasPermission('成果管理（查看）'); },
             paper_management: function () { return hasPermission('成果管理（查看）'); },
+            my_projects: function () { return hasPermission('项目管理（查看）'); },
             longitudinal_project: function () { return hasPermission('项目管理（查看）'); },
             achievements: function () { return true; },
             openai: function () { return hasPermission('智能工具（全部）'); },
@@ -4684,16 +4688,16 @@
 
     function homeJumpStat(key) {
         if (key === 'patent') {
-            showModule('patent_management');
-            setTimeout(function () { try { if (typeof filterPatentMgmtByTag === 'function') filterPatentMgmtByTag('current_year'); } catch (e) {} }, 120);
+            showModule('my_achievements');
+            setTimeout(function () { try { if (typeof achSetFilter === 'function') achSetFilter('type', '专利'); } catch (e) {} }, 120);
             return;
         }
         if (key === 'paper') {
-            showModule('paper_management');
-            setTimeout(function () { try { if (typeof filterPaperByTag === 'function') filterPaperByTag('current_year'); } catch (e) {} }, 120);
+            showModule('my_achievements');
+            setTimeout(function () { try { if (typeof achSetFilter === 'function') achSetFilter('type', '论文'); } catch (e) {} }, 120);
             return;
         }
-        if (key === 'project') { showModule('longitudinal_project'); return; }
+        if (key === 'project') { showModule('my_projects'); return; }
         if (key === 'funding') { showModule('achievements'); return; }
         if (key === 'member') { showModule('member_archive'); return; }
         if (key === 'task') { showModule('task_management'); return; }

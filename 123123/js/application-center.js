@@ -932,6 +932,7 @@
         activeStat = '';
         selectedIds = {};
         renderApplicationCenter();
+        try { if (typeof global.initHolidayLeave === 'function') global.initHolidayLeave(); } catch (eHl) {}
     }
 
     function setApplicationTab(tab) {

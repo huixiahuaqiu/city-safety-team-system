@@ -1,0 +1,136 @@
+<div class="ach-root">
+  <div class="ach-subnav">
+    <a href="javascript:void(0)" class="ach-subnav-item active" onclick="achSetSubNav(this,'all')">所有成果</a>
+    <a href="javascript:void(0)" class="ach-subnav-item" onclick="achSetSubNav(this,'push')">所内推送</a>
+    <a href="javascript:void(0)" class="ach-subnav-item" onclick="achSetSubNav(this,'verify')">自助核验</a>
+  </div>
+
+  <div class="ach-body">
+    <aside class="ach-side" id="achSide">
+      <div class="ach-side-sec">
+        <div class="ach-side-title">成果类型</div>
+        <a href="javascript:void(0)" class="ach-side-a active" data-ach-type="" onclick="achSetFilter('type','',this)">全部<span class="ach-badge" id="achCntAll">0</span></a>
+        <a href="javascript:void(0)" class="ach-side-a" data-ach-type="论文" onclick="achSetFilter('type','论文',this)">论文<span class="ach-badge" id="achCnt论文">0</span></a>
+        <a href="javascript:void(0)" class="ach-side-a" data-ach-type="著作" onclick="achSetFilter('type','著作',this)">著作<span class="ach-badge" id="achCnt著作">0</span></a>
+        <a href="javascript:void(0)" class="ach-side-a" data-ach-type="决策咨询报告" onclick="achSetFilter('type','决策咨询报告',this)">决策咨询报告<span class="ach-badge" id="achCnt决策咨询报告">0</span></a>
+        <a href="javascript:void(0)" class="ach-side-a" data-ach-type="专利" onclick="achSetFilter('type','专利',this)">专利<span class="ach-badge" id="achCnt专利">0</span></a>
+        <a href="javascript:void(0)" class="ach-side-a" data-ach-type="获奖" onclick="achSetFilter('type','获奖',this)">获奖<span class="ach-badge" id="achCnt获奖">0</span></a>
+        <a href="javascript:void(0)" class="ach-side-a" data-ach-type="标准" onclick="achSetFilter('type','标准',this)">标准<span class="ach-badge" id="achCnt标准">0</span></a>
+      </div>
+      <div class="ach-side-sec">
+        <div class="ach-side-title">年度分布 <span class="ach-side-plus" onclick="achToggleYears()">+</span></div>
+        <div id="achYearList"></div>
+      </div>
+      <div class="ach-side-sec">
+        <div class="ach-side-title">参与形式</div>
+        <a href="javascript:void(0)" class="ach-side-a" data-ach-role="主持" onclick="achSetFilter('role','主持',this)">主持<span class="ach-badge" id="achCntHost">0</span></a>
+        <a href="javascript:void(0)" class="ach-side-a" data-ach-role="参与" onclick="achSetFilter('role','参与',this)">参与<span class="ach-badge" id="achCntJoin">0</span></a>
+      </div>
+      <div class="ach-side-foot">
+        <a href="javascript:void(0)" class="ach-side-clear" onclick="achResetFilters()">清除筛选</a>
+        <a href="javascript:void(0)" class="ach-side-clear" onclick="achSeedDemo(true);alert('已生成示例成果，请点击名称查看');">示例成果</a>
+      </div>
+    </aside>
+
+    <section class="ach-main">
+      <div class="ach-panel">
+        <div class="ach-panel-hd">
+          <span class="ach-panel-title">成果列表</span>
+          <div class="ach-panel-tools">
+            <button type="button" class="ach-btn-sm ach-btn-add" onclick="achShowAddHint()">＋ 新增</button>
+            <button type="button" class="ach-btn-sm" onclick="achExportCsv()">导出</button>
+            <button type="button" class="ach-btn-sm" onclick="achRender()">刷新</button>
+          </div>
+        </div>
+        <div class="ach-table-scroll">
+          <table class="ach-table">
+            <thead id="achTableHead"></thead>
+            <tbody id="achTableBody"></tbody>
+          </table>
+        </div>
+        <div id="achEmpty" class="ach-empty" style="display:none;">暂无成果数据</div>
+        <div class="ach-pager" id="achPager"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="achViewModal" class="ach-mask" style="display:none;" onclick="if(event.target===this)achCloseView()">
+  <div class="ach-dlg">
+    <div class="ach-dlg-hd">
+      <span>成果查看</span>
+      <button type="button" class="ach-dlg-x" onclick="achCloseView()">×</button>
+    </div>
+    <div class="ach-dlg-tabs">
+      <div class="ach-dlg-tabs-l" id="achTabs"></div>
+      <a href="javascript:void(0)" class="ach-audit-link" onclick="achShowAuditLog()">审核记录</a>
+    </div>
+    <div class="ach-dlg-bd" id="achTabBody"></div>
+    <div class="ach-dlg-ft">
+      <button type="button" class="ach-btn-primary" onclick="achCloseView()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.ach-root{
+  --ach-blue:#1e7ad6;--ach-blue-d:#1668b8;--ach-blue-l:#e8f3fc;--ach-cream:#fff8e6;
+  font-family:"Microsoft YaHei","PingFang SC",SimSun,sans-serif;color:#333;background:#f0f2f5;min-height:100%;font-size:13px;
+}
+.ach-subnav{display:flex;align-items:center;background:#e9f2fb;border-bottom:1px solid #c5d8ec;padding:0 12px;height:36px;}
+.ach-subnav-item{display:inline-block;padding:0 16px;height:36px;line-height:36px;color:#335;text-decoration:none;border-bottom:2px solid transparent;}
+.ach-subnav-item.active{color:var(--ach-blue);font-weight:600;border-bottom-color:var(--ach-blue);background:#fff;}
+.ach-body{display:flex;min-height:calc(100vh - 160px);}
+.ach-side{width:200px;flex-shrink:0;background:#fff;border-right:1px solid #e0e0e0;padding:8px 0 16px;overflow:auto;}
+.ach-side-sec{padding:6px 0 4px;}
+.ach-side-title{padding:6px 14px 4px;font-size:13px;font-weight:700;color:#222;display:flex;justify-content:space-between;}
+.ach-side-plus{color:var(--ach-blue);cursor:pointer;font-weight:700;}
+.ach-side-a{display:flex;align-items:center;justify-content:space-between;padding:5px 14px 5px 28px;color:#444;text-decoration:none;border-left:3px solid transparent;}
+.ach-side-a:hover{background:#f5f9fd;color:var(--ach-blue);}
+.ach-side-a.active{background:var(--ach-blue-l);color:var(--ach-blue);border-left-color:var(--ach-blue);font-weight:600;}
+.ach-badge{display:inline-block;min-width:22px;height:18px;line-height:18px;text-align:center;padding:0 5px;background:#5ba3e8;color:#fff;border-radius:2px;font-size:12px;}
+.ach-side-foot{padding:12px 14px;display:flex;gap:12px;border-top:1px solid #f0f0f0;margin-top:8px;}
+.ach-side-clear{color:var(--ach-blue);text-decoration:none;font-size:12px;}
+.ach-main{flex:1;min-width:0;padding:10px 12px 16px;}
+.ach-panel{background:#fff;border:1px solid #e0e0e0;}
+.ach-panel-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #e8e8e8;background:#fafafa;}
+.ach-panel-title{font-size:14px;font-weight:700;}
+.ach-panel-tools{display:flex;gap:8px;}
+.ach-btn-sm{height:26px;padding:0 12px;border:1px solid #c5d8ec;background:#fff;color:var(--ach-blue);font-size:12px;cursor:pointer;border-radius:2px;}
+.ach-btn-add{background:#52c41a;border-color:#52c41a;color:#fff;}
+.ach-table-scroll{overflow:auto;}
+.ach-table{width:100%;border-collapse:collapse;table-layout:fixed;}
+.ach-table th{background:#f5f7fa;color:#555;font-weight:600;font-size:12px;padding:8px;border-bottom:1px solid #e0e0e0;text-align:left;white-space:nowrap;}
+.ach-table td{padding:8px;border-bottom:1px solid #f0f0f0;font-size:12px;vertical-align:middle;word-break:break-all;}
+.ach-table tbody tr:nth-child(even) td{background:#fafafa;}
+.ach-table tbody tr:hover td{background:#eef6ff;}
+.ach-a{color:var(--ach-blue);text-decoration:none;cursor:pointer;}
+.ach-a:hover{text-decoration:underline;}
+.ach-empty{padding:48px;text-align:center;color:#999;}
+.ach-pager{padding:8px 12px;border-top:1px solid #eee;display:flex;justify-content:flex-end;align-items:center;gap:8px;font-size:12px;color:#666;}
+.ach-pager button{height:24px;padding:0 8px;border:1px solid #d9d9d9;background:#fff;cursor:pointer;font-size:12px;}
+.ach-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.ach-dlg{background:#fff;width:min(1080px,96vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 28px rgba(0,0,0,.28);border:1px solid #bbb;}
+.ach-dlg-hd{background:var(--ach-blue);color:#fff;height:40px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:600;}
+.ach-dlg-x{border:none;background:transparent;color:#fff;font-size:22px;cursor:pointer;}
+.ach-dlg-tabs{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e0e0e0;background:#f7f9fc;min-height:38px;padding-right:8px;}
+.ach-dlg-tabs-l{display:flex;overflow-x:auto;flex:1;}
+.ach-tab{display:inline-block;padding:10px 14px;color:#555;text-decoration:none;font-size:13px;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.ach-tab.active{color:var(--ach-blue);font-weight:600;border-bottom-color:var(--ach-blue);background:#fff;}
+.ach-audit-link{color:var(--ach-blue);text-decoration:none;font-size:12px;padding:0 12px;}
+.ach-dlg-bd{padding:14px 16px;overflow:auto;flex:1;}
+.ach-dlg-ft{padding:10px;border-top:1px solid #e8e8e8;display:flex;justify-content:center;background:#fafafa;}
+.ach-btn-primary{min-width:88px;height:32px;border:none;background:var(--ach-blue);color:#fff;font-size:13px;cursor:pointer;border-radius:2px;}
+.ach-sec{margin-bottom:16px;}
+.ach-sec-h{color:var(--ach-blue);font-size:13px;font-weight:700;margin:0 0 8px;padding-left:8px;border-left:3px solid var(--ach-blue);}
+.ach-info-table{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #d0d0d0;}
+.ach-info-table td{border:1px solid #d0d0d0;padding:7px 10px;font-size:12px;vertical-align:middle;}
+.ach-info-table td.lab{width:14%;background:var(--ach-cream);color:#555;text-align:right;white-space:nowrap;}
+.ach-info-table td.val{width:36%;background:#fff;word-break:break-all;}
+.ach-grid{width:100%;border-collapse:collapse;}
+.ach-grid th,.ach-grid td{border:1px solid #e0e0e0;padding:7px 8px;font-size:12px;text-align:left;}
+.ach-grid th{background:#f5f7fa;color:#666;}
+.ach-null{padding:28px;text-align:center;color:#999;}
+.ach-bar{background:#f5f5f5;padding:8px 12px;font-weight:600;margin-bottom:10px;border:1px solid #e8e8e8;}
+@media (max-width:900px){.ach-body{flex-direction:column;}.ach-side{width:100%;max-height:240px;}}
+</style>

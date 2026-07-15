@@ -52,6 +52,7 @@
                     </div>
                 </div>
                 <div style="padding: 20px 24px 28px; background: #f5f7fa;">
+                    <div id="holidayLeaveSection"></div>
                     <div id="appStatCards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px;"></div>
                     <div id="applicationEmptyState" style="display: none; text-align: center; padding: 64px 20px; background:#fff; border-radius:16px; border:1px dashed #d1d5db;">
                         <div style="font-size: 42px; margin-bottom: 12px; opacity:.85;">📝</div>
@@ -61,3 +62,71 @@
                     </div>
                     <div id="applicationList"></div>
                 </div>
+
+<!-- 发布假期填报 -->
+<div id="hlPublishModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:5200;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)hlClosePublishModal()">
+  <div style="background:#fff;width:min(520px,96vw);border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.2);">
+    <div style="padding:14px 18px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+      <strong>发布假期填报</strong>
+      <button type="button" onclick="hlClosePublishModal()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#9ca3af;">×</button>
+    </div>
+    <div style="padding:16px 18px;">
+      <p id="hlPubHint" style="font-size:13px;color:#6b7280;margin:0 0 12px;"></p>
+      <label style="display:block;font-size:13px;color:#374151;margin-bottom:6px;">假期名称 *</label>
+      <input id="hlPubTitle" placeholder="例如：端午假期离校统计" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:12px;box-sizing:border-box;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label style="display:block;font-size:13px;color:#374151;margin-bottom:6px;">假期开始</label>
+          <input id="hlPubStart" type="date" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;color:#374151;margin-bottom:6px;">假期结束</label>
+          <input id="hlPubEnd" type="date" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;box-sizing:border-box;">
+        </div>
+      </div>
+      <label style="display:block;font-size:13px;color:#374151;margin:12px 0 6px;">填写截止日</label>
+      <input id="hlPubDeadline" type="date" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;box-sizing:border-box;">
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px;">
+      <button type="button" class="btn btn-secondary" onclick="hlClosePublishModal()">取消</button>
+      <button type="button" class="btn" onclick="hlConfirmPublish()">发布并载入名单</button>
+    </div>
+  </div>
+</div>
+
+<!-- 填报/统计表 -->
+<div id="hlViewModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:5210;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)hlCloseView()">
+  <div style="background:#fff;width:min(960px,96vw);max-height:92vh;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.2);">
+    <div style="padding:14px 18px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+      <strong id="hlViewTitle">假期填报</strong>
+      <button type="button" onclick="hlCloseView()" style="border:none;background:none;font-size:22px;cursor:pointer;color:#9ca3af;">×</button>
+    </div>
+    <div id="hlViewBody" style="padding:14px 18px;overflow:auto;flex:1;"></div>
+    <div id="hlViewFt" style="padding:12px 18px;border-top:1px solid #e5e7eb;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;background:#fafafa;"></div>
+  </div>
+</div>
+
+<style>
+.hl-wrap{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px 18px 18px;margin-bottom:18px;}
+.hl-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.hl-hd-title{font-size:16px;font-weight:700;color:#111827;}
+.hl-hd-sub{font-size:12px;color:#6b7280;margin-top:4px;}
+.hl-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}
+.hl-card{text-align:left;border:1px solid #e5e7eb;border-radius:14px;padding:16px;background:#fff;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.hl-card:hover{border-color:#86efac;box-shadow:0 4px 14px rgba(5,150,105,.12);}
+.hl-card-ico{width:36px;height:36px;border-radius:10px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;margin-bottom:10px;font-size:15px;}
+.hl-card-title{font-size:14px;font-weight:700;color:#111827;}
+.hl-card-sub{font-size:12px;color:#94a3b8;margin-top:4px;line-height:1.4;}
+.hl-empty{padding:20px;color:#6b7280;font-size:13px;background:#f8fafc;border-radius:12px;border:1px dashed #d1d5db;}
+.hl-meta{font-size:12px;color:#6b7280;margin-bottom:12px;line-height:1.6;}
+.hl-table-wrap{overflow:auto;border:1px solid #d1d5db;}
+.hl-table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
+.hl-table th,.hl-table td{border:1px solid #d1d5db;padding:8px 10px;text-align:center;vertical-align:middle;}
+.hl-table-title{background:#f8fafc;font-size:15px;font-weight:700;padding:10px !important;}
+.hl-table thead tr:last-child th{background:#f3f4f6;font-weight:600;color:#374151;}
+.hl-grade{background:#fafafa;font-weight:600;writing-mode:horizontal-tb;}
+.hl-inp{width:100%;padding:6px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;box-sizing:border-box;text-align:center;}
+.hl-mine td{background:#ecfdf5;}
+.hl-me{display:inline-block;padding:1px 6px;border-radius:999px;background:#059669;color:#fff;font-size:11px;margin-left:4px;}
+.hl-tip{font-size:12px;color:#059669;margin:10px 0 0;}
+</style>

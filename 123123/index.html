@@ -209,6 +209,9 @@
                 <span class="submenu-toggle">▼</span>
             </div>
             <div class="submenu">
+                <div class="nav-item" onclick="showModule('my_projects')">
+                    <span>📁</span> 我的项目
+                </div>
                 <div class="nav-item" onclick="showModule('longitudinal_project')">
                     <span>📋</span> 纵向项目
                 </div>
@@ -226,6 +229,9 @@
                 <span class="submenu-toggle">▼</span>
             </div>
             <div class="submenu">
+                <div class="nav-item" onclick="showModule('my_achievements')">
+                    <span>🏆</span> 我的成果
+                </div>
                 <div class="nav-item" onclick="showModule('patent_management')">
                     <span>📋</span> 专利台账管理
                 </div>
@@ -416,6 +422,7 @@
             <div id="collection" class="module" data-lazy="1" data-loaded="0"><!-- lazy: modules/collection.html --></div>
             
             <!-- 专利台账管理 -->
+            <div id="my_achievements" class="module" data-lazy="1" data-loaded="0" style="padding:0;"><!-- lazy: modules/my_achievements.html --></div>
             <div id="patent_management" class="module" data-lazy="1" data-loaded="0"><!-- lazy: modules/patent_management.html --></div>
             
             <!-- 论文成果管理 -->
@@ -431,6 +438,7 @@
             <div id="software_copyright" class="module" data-lazy="1" data-loaded="0"><!-- lazy: modules/software_copyright.html --></div>
             
             <!-- 纵向项目 -->
+            <div id="my_projects" class="module" data-lazy="1" data-loaded="0" style="padding:0;"><!-- lazy: modules/my_projects.html --></div>
             <div id="longitudinal_project" class="module" data-lazy="1" data-loaded="0"><!-- lazy: modules/longitudinal_project.html --></div>
             
             <!-- 横向项目 -->
@@ -1106,10 +1114,12 @@
     
     <script src="config.js"></script>
     <script src="config.local.js"></script>
-    <script src="js/module-loader.js?v=20260714-ml3"></script>
-    <script src="js/app-core.js?v=20260714-core4"></script>
+    <script src="js/module-loader.js?v=20260715-ach1"></script>
+    <script src="js/app-core.js?v=20260715-grad1"></script>
     <script src="js/excel-tools.js?v=20260714-excel1"></script>
-    <script src="js/achievements-modules.js?v=20260715-grade-desc"></script>
+    <script src="js/achievements-modules.js?v=20260715-grad1"></script>
+    <script src="js/my-projects.js?v=20260715-fixmodal"></script>
+    <script src="js/my-achievements.js?v=20260715-ach1"></script>
     
     <!-- 文献管理模块 -->
     <div id="literature" class="module">
@@ -1327,7 +1337,7 @@
     <script src="js/app-legacy-a.js?v=20260714-core2"></script>
 
     <!-- ==================== 账号体系 JavaScript（按规范重写） ==================== -->
-    <script src="js/app-legacy-b.js?v=20260714-session4"></script>
+    <script src="js/app-legacy-b.js?v=20260715-mp1"></script>
     <script src="js/literature-compare.js?v=20260712-3000"></script>
     <script src="js/document-analysis.js?v=20260714-doc1"></script>
     <script src="js/news-management.js?v=20260712-3000"></script>
@@ -1337,8 +1347,9 @@
     <script src="js/shared-file-library.js?v=20260714-presign1"></script>
     <script src="js/notice-enhance.js?v=20260714-ne1"></script>
     <script src="js/competition-management.js?v=20260712-3000"></script>
-    <script src="js/application-center.js?v=20260713-app3"></script>
-    <script src="js/home-dashboard-p3.js?v=20260713-p3c"></script>
+    <script src="js/application-center.js?v=20260715-hl1"></script>
+    <script src="js/holiday-leave.js?v=20260715-grad1"></script>
+    <script src="js/home-dashboard-p3.js?v=20260715-mp1"></script>
     <script src="js/portal-public.js?v=20260714-portal12"></script>
 </body>
 </html>

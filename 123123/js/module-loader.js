@@ -15,7 +15,7 @@
     try {
       var html = prefetchCache[id];
       if (!html) {
-        var res = await fetch('modules/' + encodeURIComponent(id) + '.html', { credentials: 'same-origin' });
+        var res = await fetch('modules/' + encodeURIComponent(id) + '.html?v=20260715-ach1', { credentials: 'same-origin' });
         if (!res.ok) {
           console.warn('[loadModuleHtml] fetch failed', id, res.status);
           return false;
@@ -36,7 +36,7 @@
     if (!id || prefetchCache[id]) return;
     var el = document.getElementById(id);
     if (!el || el.getAttribute('data-lazy') !== '1' || el.getAttribute('data-loaded') === '1') return;
-    fetch('modules/' + encodeURIComponent(id) + '.html', { credentials: 'same-origin' })
+    fetch('modules/' + encodeURIComponent(id) + '.html?v=20260715-ach1', { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (html) { if (html) prefetchCache[id] = html; })
       .catch(function () {});
@@ -61,4 +61,13 @@
 
   window.loadModuleHtml = loadModuleHtml;
   window.prefetchModuleHtml = prefetchModuleHtml;
+  window.__moduleHtmlCache = prefetchCache;
+  window.forceReloadModuleHtml = function (id) {
+    delete prefetchCache[id];
+    var el = document.getElementById(id);
+    if (!el) return Promise.resolve(false);
+    el.setAttribute('data-loaded', '0');
+    el.innerHTML = '<!-- lazy reload -->';
+    return loadModuleHtml(id);
+  };
 })();

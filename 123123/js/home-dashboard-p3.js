@@ -263,7 +263,7 @@
             { module: 'application_center', ico: '假', t: '请假与申请', badge: 'app' },
             { module: 'patent_management', ico: '果', t: '成果管理', badge: '' },
             { module: 'paper_management', ico: '论', t: '论文成果', badge: '' },
-            { module: 'longitudinal_project', ico: '项', t: '项目管理', badge: '' },
+            { module: 'my_projects', ico: '项', t: '项目管理', badge: '' },
             { module: 'literature_library', ico: '献', t: '文献资料', badge: '' },
             { module: 'dataset_library', ico: '数', t: '数据集', badge: '' },
             { module: 'meeting_management', ico: '会', t: '组会管理', badge: '' },

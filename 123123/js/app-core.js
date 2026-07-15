@@ -151,14 +151,14 @@
         // 同步记录标记：classification=__APP_SYNC__，patent_number=__SYNC_KV__{key}
         const CLOUD_SYNC_KEYS = new Set([
             'teamMemberData', 'memberGradeYears', 'accountData', 'permissionMatrix', 'passwordPolicy', 'loginLogData',
-            'longitudinalData', 'horizontalData', 'schoolData',
-            'taskData', 'weeklyReportData', 'applicationData', 'approvalFlowConfig', 'noticeData', 'newsData', 'meetingData',
+            'longitudinalData', 'horizontalData', 'schoolData', 'researchProjectExtra',
+            'taskData', 'weeklyReportData', 'applicationData', 'approvalFlowConfig', 'holidayLeaveCampaigns', 'noticeData', 'newsData', 'meetingData',
             'literatureData', 'datasetData', 'reportData', 'sharedFileData',
             'standardData', 'copyrightData', 'competitionData',
             'modelTrainingData', 'annotationTypes', 'annotationData',
             'knowledgeData', 'compareLiteratureData',
             'systemConfigData', 'operationLogData',
-            'patentData', 'patentMgmtData', 'paperData', 'categoryData', 'memberData',
+            'patentData', 'patentMgmtData', 'paperData', 'categoryData', 'memberData', 'researchAchievementExtra',
             'portalContentConfig_v1', 'portalFeedbackData_v1',
             'literatureCompareDimTemplate', 'literatureCompareNamedDimTemplates',
             'customInstructionTemplates', 'devlogEntries',
@@ -494,6 +494,10 @@
                 if (typeof window.mergeIncomingApprovalFlowConfig === 'function') window.mergeIncomingApprovalFlowConfig(v);
                 else window.approvalFlowConfig = v;
             }); } catch(e){}
+            try { apply('holidayLeaveCampaigns', function(v){
+                if (typeof window.mergeIncomingHolidayLeaveCampaigns === 'function') window.mergeIncomingHolidayLeaveCampaigns(v);
+                else window.holidayLeaveCampaigns = v;
+            }); } catch(e){}
             try { apply('noticeData', function(v){
                 if (typeof window.mergeIncomingNoticeData === 'function') noticeData = window.mergeIncomingNoticeData(v);
                 else noticeData = v;
@@ -819,6 +823,10 @@
             } else if (moduleId === 'member_archive') {
                 try {
                     if (typeof ensureMemberGradeYears === 'function') ensureMemberGradeYears();
+                    if (typeof ensureGraduatedFlagsFromEnrollment === 'function') {
+                        var _g = ensureGraduatedFlagsFromEnrollment();
+                        if (_g > 0 && typeof saveTeamMemberData === 'function') saveTeamMemberData();
+                    }
                     if (typeof renderMemberNav === 'function') renderMemberNav();
                     if (typeof renderMemberAllSections === 'function') renderMemberAllSections();
                     if (typeof fillMemberCategorySelect === 'function') fillMemberCategorySelect();
@@ -836,6 +844,10 @@
                 initOperationLogModule();
             } else if (moduleId === 'system_config') {
                 initSystemConfigModule();
+            } else if (moduleId === 'my_projects') {
+                try { if (typeof initMyProjects === 'function') initMyProjects(); } catch (eMp) {}
+            } else if (moduleId === 'my_achievements') {
+                try { if (typeof initMyAchievements === 'function') initMyAchievements(); } catch (eAch) {}
             }
         }
 

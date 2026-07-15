@@ -1,0 +1,366 @@
+<div class="kx-root">
+  <!-- 二级功能条（对齐科研创新服务平台） -->
+  <div class="kx-subnav">
+    <a href="javascript:void(0)" class="kx-subnav-item active" onclick="mpSetSubNav(this,'立项')">立项项目</a>
+    <a href="javascript:void(0)" class="kx-subnav-item" onclick="mpSetSubNav(this,'变更')">项目变更</a>
+    <a href="javascript:void(0)" class="kx-subnav-item" onclick="mpSetSubNav(this,'中检')">项目中检</a>
+    <a href="javascript:void(0)" class="kx-subnav-item" onclick="mpSetSubNav(this,'结项')">项目结项</a>
+    <a href="javascript:void(0)" class="kx-subnav-item" onclick="mpSetSubNav(this,'合同变更')">合同变更</a>
+    <a href="javascript:void(0)" class="kx-subnav-item" onclick="mpSetSubNav(this,'延期')">延期合同</a>
+  </div>
+
+  <div class="kx-body">
+    <!-- 左侧筛选树 -->
+    <aside class="kx-side" id="mpSide">
+      <div class="kx-side-sec">
+        <div class="kx-side-title">项目性质</div>
+        <a href="javascript:void(0)" class="kx-side-a" data-mp-nature="纵向" onclick="mpSetFilter('nature','纵向',this)">纵向<span class="kx-badge" id="mpCntNature纵">0</span></a>
+        <a href="javascript:void(0)" class="kx-side-a" data-mp-nature="横向" onclick="mpSetFilter('nature','横向',this)">横向<span class="kx-badge" id="mpCntNature横">0</span></a>
+        <a href="javascript:void(0)" class="kx-side-a" data-mp-nature="校级" onclick="mpSetFilter('nature','校级',this)">校级<span class="kx-badge" id="mpCntNature校">0</span></a>
+      </div>
+      <div class="kx-side-sec">
+        <div class="kx-side-title">参与形式</div>
+        <a href="javascript:void(0)" class="kx-side-a" data-mp-role="主持" onclick="mpSetFilter('role','主持',this)">主持<span class="kx-badge" id="mpCntRoleHost">0</span></a>
+        <a href="javascript:void(0)" class="kx-side-a" data-mp-role="参与" onclick="mpSetFilter('role','参与',this)">参与<span class="kx-badge" id="mpCntRoleJoin">0</span></a>
+      </div>
+      <div class="kx-side-sec">
+        <div class="kx-side-title">项目状态</div>
+        <a href="javascript:void(0)" class="kx-side-a" data-mp-life="进行" onclick="mpSetFilter('life','进行',this)">进行<span class="kx-badge" id="mpCntLifeRun">0</span></a>
+        <a href="javascript:void(0)" class="kx-side-a" data-mp-life="完成" onclick="mpSetFilter('life','完成',this)">完成<span class="kx-badge" id="mpCntLifeDone">0</span></a>
+        <a href="javascript:void(0)" class="kx-side-a" data-mp-life="结题" onclick="mpSetFilter('life','结题',this)">结题<span class="kx-badge" id="mpCntLifeClose">0</span></a>
+      </div>
+      <div class="kx-side-sec">
+        <div class="kx-side-title">年度分布 <span class="kx-side-plus" title="展开/收起" onclick="mpToggleYears()">+</span></div>
+        <div id="mpYearList"></div>
+      </div>
+      <div class="kx-side-foot">
+        <a href="javascript:void(0)" class="kx-side-clear" onclick="mpResetFilters()">清除筛选</a>
+        <a href="javascript:void(0)" class="kx-side-clear" onclick="mpShowAddModal()">＋ 新增</a>
+        <a href="javascript:void(0)" class="kx-side-clear" onclick="mpSeedDemoProject(true);alert('已生成示例项目，请点击项目名称查看');">示例项目</a>
+      </div>
+    </aside>
+
+    <!-- 右侧列表 -->
+    <section class="kx-main">
+      <div class="kx-panel">
+        <div class="kx-panel-hd">
+          <span class="kx-panel-title">项目列表</span>
+          <div class="kx-panel-tools">
+            <button type="button" class="kx-btn-sm" onclick="mpRender()">刷新</button>
+            <button type="button" class="kx-icon-btn" title="导出" onclick="mpExportCsv()">✎</button>
+          </div>
+        </div>
+        <div class="kx-table-scroll">
+          <table class="kx-table">
+            <thead>
+              <tr>
+                <th>项目编号 <i class="kx-sort"></i></th>
+                <th>项目名称 <i class="kx-sort"></i></th>
+                <th>负责人姓名 <i class="kx-sort"></i></th>
+                <th>批准经费(万元) <i class="kx-sort"></i></th>
+                <th>立项日期 <i class="kx-sort"></i></th>
+                <th>所属单位 <i class="kx-sort"></i></th>
+                <th>审核状态 <i class="kx-sort"></i></th>
+                <th style="min-width:280px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="mpTableBody"></tbody>
+          </table>
+        </div>
+        <div id="mpEmpty" class="kx-empty" style="display:none;">暂无项目数据</div>
+        <div class="kx-pager" id="mpPager"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- 隐藏上传控件：多文件 / 整文件夹 -->
+<input type="file" id="mpFileInput" multiple accept="*/*" style="display:none">
+<input type="file" id="mpFolderInput" webkitdirectory directory multiple style="display:none">
+<input type="file" id="mpTaskBookInput" accept=".pdf,.doc,.docx,.zip,image/*" style="display:none">
+<input type="file" id="mpAgreeInput" accept=".pdf,.doc,.docx,.zip,image/*" style="display:none">
+
+<!-- 项目查看弹窗 -->
+<div id="mpViewModal" class="kx-mask" style="display:none;" onclick="if(event.target===this)mpCloseView()">
+  <div class="kx-dlg">
+    <div class="kx-dlg-hd">
+      <span>项目查看</span>
+      <button type="button" class="kx-dlg-x" onclick="mpCloseView()">×</button>
+    </div>
+    <div class="kx-dlg-tabs">
+      <div class="kx-dlg-tabs-l" id="mpTabs">
+        <a href="javascript:void(0)" class="kx-tab active" data-tab="info" onclick="mpSwitchTab('info',this)">项目信息</a>
+        <a href="javascript:void(0)" class="kx-tab" data-tab="members" onclick="mpSwitchTab('members',this)">项目成员</a>
+        <a href="javascript:void(0)" class="kx-tab" data-tab="budget" onclick="mpSwitchTab('budget',this)">项目预算</a>
+        <a href="javascript:void(0)" class="kx-tab" data-tab="fundcard" onclick="mpSwitchTab('fundcard',this)">经费卡</a>
+        <a href="javascript:void(0)" class="kx-tab" data-tab="income" onclick="mpSwitchTab('income',this)">经费到账</a>
+        <a href="javascript:void(0)" class="kx-tab" data-tab="expense" onclick="mpSwitchTab('expense',this)">经费报销</a>
+        <a href="javascript:void(0)" class="kx-tab" data-tab="outsource" onclick="mpSwitchTab('outsource',this)">经费外拨</a>
+        <a href="javascript:void(0)" class="kx-tab" data-tab="docs" onclick="mpSwitchTab('docs',this)">项目文档</a>
+        <a href="javascript:void(0)" class="kx-tab" data-tab="outcomes" onclick="mpSwitchTab('outcomes',this)">衍生成果</a>
+        <a href="javascript:void(0)" class="kx-tab" data-tab="process" onclick="mpSwitchTab('process',this)">执行过程</a>
+      </div>
+      <a href="javascript:void(0)" class="kx-audit-link" onclick="mpShowAuditLog()">审核记录</a>
+    </div>
+    <div class="kx-dlg-bd" id="mpTabBody"></div>
+    <div class="kx-dlg-ft">
+      <button type="button" class="kx-btn-primary" onclick="mpCloseView()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新增/编辑（系统内维护，截图无此窗，保留入口） -->
+<div id="mpEditModal" class="kx-mask" style="display:none;" onclick="if(event.target===this)mpCloseEdit()">
+  <div class="kx-dlg kx-dlg-sm">
+    <div class="kx-dlg-hd">
+      <span id="mpEditTitle">新增项目</span>
+      <button type="button" class="kx-dlg-x" onclick="mpCloseEdit()">×</button>
+    </div>
+    <div class="kx-dlg-bd">
+      <table class="kx-form-table">
+        <tr>
+          <td class="lab">项目性质 *</td><td><select id="mpNature"><option value="纵向">纵向</option><option value="横向">横向</option><option value="校级">校级</option></select></td>
+          <td class="lab">参与形式 *</td><td><select id="mpRole"><option value="主持">主持</option><option value="参与">参与</option></select></td>
+        </tr>
+        <tr>
+          <td class="lab">项目编号 *</td><td><input id="mpNumber"></td>
+          <td class="lab">项目名称 *</td><td><input id="mpName"></td>
+        </tr>
+        <tr>
+          <td class="lab">负责人 *</td><td><input id="mpLeader"></td>
+          <td class="lab">所属单位 *</td><td><input id="mpUnit"></td>
+        </tr>
+        <tr>
+          <td class="lab">项目级别</td><td><input id="mpLevel"></td>
+          <td class="lab">项目状态</td><td><select id="mpLife"><option>进行</option><option>完成</option><option>结题</option></select></td>
+        </tr>
+        <tr>
+          <td class="lab">立项日期 *</td><td><input id="mpStartDate" type="date"></td>
+          <td class="lab">计划结项日期</td><td><input id="mpEndDate" type="date"></td>
+        </tr>
+        <tr>
+          <td class="lab">批准经费(万元) *</td><td><input id="mpFunding" type="number" step="0.01"></td>
+          <td class="lab">外拨经费(万元)</td><td><input id="mpOutFunding" type="number" step="0.01" value="0"></td>
+        </tr>
+        <tr>
+          <td class="lab">配套经费(万元)</td><td><input id="mpMatchFunding" type="number" step="0.01" value="0"></td>
+          <td class="lab">审核状态</td><td><select id="mpAudit"><option>学校通过</option><option>审核中</option><option>已通过</option><option>已驳回</option></select></td>
+        </tr>
+        <tr>
+          <td class="lab">项目来源单位</td><td><input id="mpSourceOrg"></td>
+          <td class="lab">合作单位</td><td><input id="mpPartner" value="无"></td>
+        </tr>
+        <tr>
+          <td class="lab">备注</td><td colspan="3"><textarea id="mpRemark" rows="2"></textarea></td>
+        </tr>
+      </table>
+    </div>
+    <div class="kx-dlg-ft">
+      <button type="button" class="kx-btn-ghost" onclick="mpCloseEdit()">取消</button>
+      <button type="button" class="kx-btn-primary" onclick="mpSave()">保存</button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ===== 科研创新服务平台 · 我的项目（像素级对齐） ===== */
+.kx-root{
+  --kx-blue:#1e7ad6;
+  --kx-blue-d:#1668b8;
+  --kx-blue-l:#e8f3fc;
+  --kx-cream:#fff8e6;
+  --kx-border:#d9d9d9;
+  --kx-text:#333;
+  --kx-muted:#666;
+  font-family:"Microsoft YaHei","PingFang SC",SimSun,sans-serif;
+  color:var(--kx-text);
+  background:#f0f2f5;
+  min-height:100%;
+  font-size:13px;
+}
+.kx-subnav{
+  display:flex;align-items:center;gap:0;
+  background:#e9f2fb;border-bottom:1px solid #c5d8ec;
+  padding:0 12px;height:36px;
+}
+.kx-subnav-item{
+  display:inline-block;padding:0 16px;height:36px;line-height:36px;
+  color:#335;text-decoration:none;font-size:13px;border-bottom:2px solid transparent;
+}
+.kx-subnav-item:hover{color:var(--kx-blue);}
+.kx-subnav-item.active{color:var(--kx-blue);font-weight:600;border-bottom-color:var(--kx-blue);background:#fff;}
+
+.kx-body{display:flex;align-items:stretch;min-height:calc(100vh - 160px);}
+.kx-side{
+  width:200px;flex-shrink:0;background:#fff;border-right:1px solid #e0e0e0;
+  padding:8px 0 16px;overflow:auto;
+}
+.kx-side-sec{padding:6px 0 4px;}
+.kx-side-title{
+  padding:6px 14px 4px;font-size:13px;font-weight:700;color:#222;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.kx-side-plus{color:var(--kx-blue);cursor:pointer;font-weight:700;font-size:14px;padding:0 4px;}
+.kx-side-a{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:5px 14px 5px 28px;color:#444;text-decoration:none;font-size:13px;
+  border-left:3px solid transparent;
+}
+.kx-side-a:hover{background:#f5f9fd;color:var(--kx-blue);}
+.kx-side-a.active{background:var(--kx-blue-l);color:var(--kx-blue);border-left-color:var(--kx-blue);font-weight:600;}
+.kx-badge{
+  display:inline-block;min-width:22px;height:18px;line-height:18px;text-align:center;
+  padding:0 5px;background:#5ba3e8;color:#fff;border-radius:2px;font-size:12px;font-weight:400;
+}
+.kx-side-a.active .kx-badge{background:var(--kx-blue);}
+.kx-side-foot{padding:12px 14px;display:flex;gap:12px;border-top:1px solid #f0f0f0;margin-top:8px;}
+.kx-side-clear{color:var(--kx-blue);text-decoration:none;font-size:12px;}
+
+.kx-main{flex:1;min-width:0;padding:10px 12px 16px;}
+.kx-panel{background:#fff;border:1px solid #e0e0e0;}
+.kx-panel-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-bottom:1px solid #e8e8e8;background:#fafafa;
+}
+.kx-panel-title{font-size:14px;font-weight:700;color:#222;}
+.kx-panel-tools{display:flex;align-items:center;gap:8px;}
+.kx-btn-sm{
+  height:26px;padding:0 12px;border:1px solid #c5d8ec;background:#fff;
+  color:var(--kx-blue);font-size:12px;cursor:pointer;border-radius:2px;
+}
+.kx-btn-sm:hover{background:var(--kx-blue-l);}
+.kx-icon-btn{
+  width:26px;height:26px;border:1px solid #d9d9d9;background:#fff;
+  cursor:pointer;border-radius:2px;color:#666;line-height:1;
+}
+
+.kx-table-scroll{overflow:auto;}
+.kx-table{width:100%;border-collapse:collapse;table-layout:fixed;}
+.kx-table th{
+  background:#f5f7fa;color:#555;font-weight:600;font-size:12px;
+  padding:8px 8px;border-bottom:1px solid #e0e0e0;text-align:left;white-space:nowrap;
+}
+.kx-table td{
+  padding:8px;border-bottom:1px solid #f0f0f0;font-size:12px;color:#333;
+  vertical-align:middle;word-break:break-all;
+}
+.kx-table tbody tr:nth-child(even) td{background:#fafafa;}
+.kx-table tbody tr:hover td{background:#eef6ff;}
+.kx-sort::after{content:"⇅";font-size:10px;color:#bbb;margin-left:2px;}
+.kx-a{color:var(--kx-blue);text-decoration:none;cursor:pointer;}
+.kx-a:hover{text-decoration:underline;}
+.kx-ops{white-space:nowrap;line-height:1.7;}
+.kx-ops .kx-a{margin-right:6px;font-size:12px;}
+.kx-empty{padding:48px;text-align:center;color:#999;}
+.kx-pager{
+  padding:8px 12px;border-top:1px solid #eee;display:flex;justify-content:flex-end;
+  align-items:center;gap:8px;font-size:12px;color:#666;
+}
+.kx-pager button{
+  height:24px;padding:0 8px;border:1px solid #d9d9d9;background:#fff;cursor:pointer;font-size:12px;
+}
+.kx-pager button:disabled{opacity:.45;cursor:not-allowed;}
+
+/* 弹窗 */
+.kx-mask{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20000;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.kx-dlg{
+  background:#fff;width:min(1080px,96vw);max-height:90vh;
+  display:flex;flex-direction:column;box-shadow:0 8px 28px rgba(0,0,0,.28);
+  border:1px solid #bbb;
+}
+.kx-dlg-sm{width:min(820px,96vw);}
+.kx-dlg-hd{
+  background:var(--kx-blue);color:#fff;height:40px;padding:0 14px;
+  display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:600;
+}
+.kx-dlg-x{
+  border:none;background:transparent;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:0 4px;
+}
+.kx-dlg-tabs{
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #e0e0e0;background:#f7f9fc;padding:0 8px 0 0;min-height:38px;
+}
+.kx-dlg-tabs-l{display:flex;overflow-x:auto;flex:1;}
+.kx-tab{
+  display:inline-block;padding:10px 12px;color:#555;text-decoration:none;font-size:13px;
+  white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.kx-tab:hover{color:var(--kx-blue);}
+.kx-tab.active{color:var(--kx-blue);font-weight:600;border-bottom-color:var(--kx-blue);background:#fff;}
+.kx-audit-link{color:var(--kx-blue);text-decoration:none;font-size:12px;padding:0 12px;white-space:nowrap;}
+.kx-dlg-bd{padding:14px 16px;overflow:auto;flex:1;background:#fff;}
+.kx-dlg-ft{
+  padding:10px;border-top:1px solid #e8e8e8;display:flex;justify-content:center;gap:10px;background:#fafafa;
+}
+.kx-btn-primary{
+  min-width:88px;height:32px;padding:0 18px;border:none;background:var(--kx-blue);
+  color:#fff;font-size:13px;cursor:pointer;border-radius:2px;
+}
+.kx-btn-primary:hover{background:var(--kx-blue-d);}
+.kx-btn-ghost{
+  min-width:88px;height:32px;padding:0 18px;border:1px solid #d9d9d9;background:#fff;
+  color:#666;font-size:13px;cursor:pointer;border-radius:2px;
+}
+
+/* 信息表：米黄标签 + 白值（截图核心样式） */
+.kx-sec{margin-bottom:16px;}
+.kx-sec-h{
+  color:var(--kx-blue);font-size:13px;font-weight:700;margin:0 0 8px;
+  padding-left:8px;border-left:3px solid var(--kx-blue);line-height:1.2;
+}
+.kx-info-table{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #d0d0d0;}
+.kx-info-table td{
+  border:1px solid #d0d0d0;padding:7px 10px;font-size:12px;vertical-align:middle;line-height:1.45;
+}
+.kx-info-table td.lab{
+  width:14%;background:var(--kx-cream);color:#555;text-align:right;white-space:nowrap;
+}
+.kx-info-table td.val{width:36%;background:#fff;color:#222;word-break:break-all;}
+.kx-info-table td.lab-wide{width:14%;background:var(--kx-cream);text-align:right;}
+.kx-info-table td.val-wide{background:#fff;}
+
+.kx-sum{
+  width:100%;border-collapse:collapse;margin-bottom:12px;background:var(--kx-cream);
+  border:1px solid #f0e0b8;
+}
+.kx-sum td{padding:8px 12px;font-size:12px;border:1px solid #f0e0b8;}
+.kx-sum .k{color:#888;margin-right:6px;}
+.kx-sum .v{color:#222;font-weight:600;}
+
+.kx-grid{width:100%;border-collapse:collapse;}
+.kx-grid th,.kx-grid td{border:1px solid #e0e0e0;padding:7px 8px;font-size:12px;text-align:left;}
+.kx-grid th{background:#f5f7fa;color:#666;font-weight:600;}
+.kx-grid td{background:#fff;}
+.kx-null{padding:28px;text-align:center;color:#999;font-size:13px;}
+
+.kx-form-table{width:100%;border-collapse:collapse;}
+.kx-form-table td{padding:6px;font-size:12px;}
+.kx-form-table td.lab{width:110px;text-align:right;color:#666;white-space:nowrap;background:var(--kx-cream);border:1px solid #e8e0c8;}
+.kx-form-table input,.kx-form-table select,.kx-form-table textarea{
+  width:100%;height:28px;border:1px solid #d9d9d9;padding:0 8px;box-sizing:border-box;font-size:12px;
+}
+.kx-form-table textarea{height:auto;padding:6px 8px;}
+
+.kx-file-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.kx-file-ico{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:2px;background:#c4b5fd;color:#fff;
+  font-size:10px;font-weight:700;flex-shrink:0;line-height:1;
+}
+.kx-file-ico.pdf{background:#a78bfa;}
+.kx-upload-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.kx-upload-bar .kx-btn-sm{height:28px;}
+.kx-upload-status{font-size:12px;color:#666;min-height:18px;}
+.kx-upload-status.busy{color:var(--kx-blue);}
+.kx-upload-status.ok{color:#16a34a;}
+.kx-upload-status.err{color:#dc2626;}
+.kx-file-actions{display:inline-flex;gap:6px;margin-left:8px;}
+.kx-file-actions .kx-a{font-size:12px;}
+@media (max-width:900px){
+  .kx-body{flex-direction:column;}
+  .kx-side{width:100%;border-right:none;border-bottom:1px solid #e0e0e0;max-height:240px;}
+}
+</style>

@@ -1048,6 +1048,10 @@
             // 从个人信息库导入三位导师，并同步到云端
             importProfileLibraryAdvisors(true);
             ensureMemberGradeYears();
+            var gradFixed = ensureGraduatedFlagsFromEnrollment();
+            if (gradFixed > 0) {
+                try { saveTeamMemberData(); } catch (eSave) {}
+            }
             renderMemberNav();
             renderMemberAllSections();
             fillMemberCategorySelect();
@@ -1230,11 +1234,16 @@
                 + '</div>'
                 + '<div style="background:#f8f9fa;padding:16px;border-radius:0 0 8px 8px;display:flex;flex-wrap:wrap;gap:12px;" id="memberGridAdvisor"></div></div>';
             years.forEach(function(y) {
+                var gradeDone = isEnrollmentYearGraduated(y);
                 html += '<div class="member-category-section" data-category="' + y + '" style="margin-bottom:24px;">'
-                    + '<div style="background:' + getMemberGradeGradient(y) + ';color:#fff;padding:12px 20px;border-radius:8px 8px 0 0;font-size:16px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;">'
-                    + '<span>' + y + '级</span>'
+                    + '<div style="background:' + getMemberGradeGradient(y) + ';color:#fff;padding:12px 20px;border-radius:8px 8px 0 0;font-size:16px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">'
+                    + '<span>' + y + '级' + (gradeDone ? ' · 已毕业' : '') + '</span>'
+                    + '<span style="display:flex;gap:8px;flex-wrap:wrap;">'
+                    + (gradeDone
+                        ? ''
+                        : '<button type="button" onclick="markGradeAsGraduated(\'' + y + '\')" style="background:rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.45);color:#fff;padding:4px 12px;border-radius:6px;font-size:13px;cursor:pointer;">标记整级已毕业</button>')
                     + '<button type="button" onclick="showAddMemberModal(\'' + y + '\')" style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.45);color:#fff;padding:4px 12px;border-radius:6px;font-size:13px;cursor:pointer;">＋ 增加人员</button>'
-                    + '</div>'
+                    + '</span></div>'
                     + '<div style="background:#f8f9fa;padding:16px;border-radius:0 0 8px 8px;display:flex;flex-wrap:wrap;gap:12px;" id="memberGrid' + y + '"></div></div>';
             });
             host.innerHTML = html;
@@ -1264,9 +1273,56 @@
             }
         }
 
+        function isEnrollmentYearGraduated(year) {
+            if (!isMemberYearCategory(year)) return false;
+            var y = Number(year);
+            if (!isFinite(y)) return false;
+            // 硕士默认学制 3 年：入学年 Y → 毕业年 Y+3 的 6 月起视为已毕业
+            var now = new Date();
+            var cy = now.getFullYear();
+            var cm = now.getMonth() + 1;
+            var gradYear = y + 3;
+            if (cy > gradYear) return true;
+            if (cy === gradYear && cm >= 6) return true;
+            return false;
+        }
+
         function isMemberGraduated(member) {
             if (!member || member.category === 'advisor') return false;
-            return !!member.graduated;
+            if (member.graduated === true || member.graduated === 'true' || member.graduated === 1) return true;
+            return isEnrollmentYearGraduated(member.category);
+        }
+
+        /** 按学制把应毕业年级的成员统一打上 graduated（持久化，供云端/通知使用） */
+        function ensureGraduatedFlagsFromEnrollment() {
+            var changed = 0;
+            (Array.isArray(teamMemberData) ? teamMemberData : []).forEach(function (m) {
+                if (!m || m.category === 'advisor') return;
+                if (isEnrollmentYearGraduated(m.category) && !m.graduated) {
+                    m.graduated = true;
+                    changed++;
+                }
+            });
+            return changed;
+        }
+
+        function markGradeAsGraduated(year) {
+            year = String(year || '');
+            if (!isMemberYearCategory(year)) return;
+            if (!confirm('确认将「' + year + '级」全部标记为已毕业？\n毕业后不再接收通知，卡片显示「已毕业」。')) return;
+            var n = 0;
+            teamMemberData.forEach(function (m) {
+                if (m && String(m.category) === year) {
+                    if (!m.graduated) n++;
+                    m.graduated = true;
+                }
+            });
+            saveTeamMemberData();
+            renderMemberNav();
+            renderMemberAllSections();
+            renderTeamMembers();
+            try { if (typeof renderMembersPortal === 'function') renderMembersPortal(); } catch (e) {}
+            alert(n ? ('已将 ' + n + ' 人标记为已毕业') : '该年级成员已是「已毕业」状态');
         }
 
         function isAccountGraduated(account) {
@@ -1314,7 +1370,13 @@
                 copy.name = normalizeTeamMemberName(copy.name);
                 copy.category = normalizeMemberCategory(copy.category, copy.title);
                 copy.title = String(copy.title || '').trim() || (copy.category === 'advisor' ? '导师' : copy.category + '级硕士研究生');
-                copy.graduated = copy.category === 'advisor' ? false : !!copy.graduated;
+                if (copy.category === 'advisor') {
+                    copy.graduated = false;
+                } else if (isEnrollmentYearGraduated(copy.category)) {
+                    copy.graduated = true;
+                } else {
+                    copy.graduated = !!copy.graduated;
+                }
                 if (!copy.id) copy.id = nextId++;
                 return copy;
             }).filter(function(m) {
@@ -2184,6 +2246,18 @@
         window.closeMemberDetailModal = closeMemberDetailModal;
         window.closeMemberEditModal = closeMemberEditModal;
         window.saveMember = saveMember;
+        window.isMemberGraduated = isMemberGraduated;
+        window.isEnrollmentYearGraduated = isEnrollmentYearGraduated;
+        window.markGradeAsGraduated = markGradeAsGraduated;
+        window.ensureGraduatedFlagsFromEnrollment = ensureGraduatedFlagsFromEnrollment;
+        window.getMemberGradeYears = getMemberGradeYears;
+        window.getMemberCategoryLabel = getMemberCategoryLabel;
+        window.saveTeamMemberData = saveTeamMemberData;
+        window.renderMemberAllSections = renderMemberAllSections;
+        window.renderMemberNav = renderMemberNav;
+        window.renderTeamMembers = renderTeamMembers;
+        window.fillMemberCategorySelect = fillMemberCategorySelect;
+        window.ensureMemberGradeYears = ensureMemberGradeYears;
         // 编辑弹窗挂到 body，避免在隐藏的 member_archive 内无法显示
         (function hoistMemberModals() {
             ['memberEditModal', 'memberDetailModal'].forEach(function (id) {
