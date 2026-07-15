@@ -99,6 +99,11 @@ temp/
 123123/.env
 123123/.env.local
 
+# ---- MinIO Windows 二进制（超过 GitHub 100MB 限制，本机 Docker 部署即可）----
+tools/minio/*.exe
+tools/minio/minio.exe
+tools/minio/mc.exe
+
 # ---- 巨型 HTML 瘦身备份（勿提交）----
 123123/index.html.bak*
 123123/_verify_*.py

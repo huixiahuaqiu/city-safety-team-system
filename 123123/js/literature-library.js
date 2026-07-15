@@ -1203,10 +1203,11 @@
 
     /** 从 PDF 前几页提取文献元数据，供手改 */
     async function extractPdfLiteratureMeta(file) {
+        if (typeof global.ensureVendor === 'function') await global.ensureVendor('pdfjs');
         var pdfjs = global.pdfjsLib || global.pdfjs;
         if (!pdfjs) return null;
         if (pdfjs.GlobalWorkerOptions) {
-            pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
+            pdfjs.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
         }
         var buf = await file.arrayBuffer();
         var pdf = await pdfjs.getDocument({ data: buf }).promise;

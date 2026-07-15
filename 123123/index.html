@@ -4,15 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>城市安全数智创新团队文献管理系统</title>
-    <!-- SheetJS 库用于 Excel 文件处理 -->
-    <script src="vendor/xlsx/xlsx.full.min.js"></script>
-    <!-- ECharts 图表库 -->
+    <!-- 首屏仅保留 Tailwind + ECharts；xlsx/pdf/mammoth/cropper/wangEditor 见 js/vendor-lazy.js -->
     <script src="vendor/echarts/echarts.min.js"></script>
-    <!-- PDF.js 库用于 PDF 文件解析 -->
-    <script src="vendor/pdfjs/pdf.min.js"></script>
-    <!-- Mammoth 用于浏览器端解析 Word(docx)，避免静态站点依赖后端接口 -->
-    <script src="vendor/mammoth/mammoth.browser.min.js"></script>
-    <!-- Tailwind CSS -->
     <script src="vendor/tailwind/tailwindcss.js"></script>
     <script>
         tailwind.config = {
@@ -22,16 +15,10 @@
             }
         }
     </script>
-    <!-- wangEditor 富文本编辑器 -->
-    <link href="vendor/wangeditor/style.css" rel="stylesheet">
-    <script src="vendor/wangeditor/index.min.js"></script>
-    <!-- Cropper.js 图片裁剪 -->
-    <link href="vendor/cropperjs/cropper.css" rel="stylesheet">
-    <script src="vendor/cropperjs/cropper.min.js"></script>
-    <!-- Outfit + Noto Serif SC：登录页品牌字体 -->
-        <link href="vendor/fonts/fonts-local.css" rel="stylesheet">
-<link rel="stylesheet" href="css/app-shell.css?v=20260714-shell1">
+    <link href="vendor/fonts/fonts-local.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/app-shell.css?v=20260714-shell2">
     <link rel="stylesheet" href="css/portal-public.css?v=20260713-portal11">
+    <script src="js/vendor-lazy.js?v=20260714-vl2"></script>
 </head>
 <body>
     <!-- 登录页 -->
@@ -1119,8 +1106,10 @@
     
     <script src="config.js"></script>
     <script src="config.local.js"></script>
-    <script src="js/module-loader.js?v=20260714-ml2"></script>
-    <script src="js/app-core.js?v=20260714-core1"></script>
+    <script src="js/module-loader.js?v=20260714-ml3"></script>
+    <script src="js/app-core.js?v=20260714-core4"></script>
+    <script src="js/excel-tools.js?v=20260714-excel1"></script>
+    <script src="js/achievements-modules.js?v=20260715-grade-desc"></script>
     
     <!-- 文献管理模块 -->
     <div id="literature" class="module">
@@ -1335,21 +1324,21 @@
         </div>
     </div>
     
-    <script src="js/app-legacy-a.js?v=20260714-core1"></script>
+    <script src="js/app-legacy-a.js?v=20260714-core2"></script>
 
     <!-- ==================== 账号体系 JavaScript（按规范重写） ==================== -->
-    <script src="js/app-legacy-b.js?v=20260714-core1"></script>
+    <script src="js/app-legacy-b.js?v=20260714-session4"></script>
     <script src="js/literature-compare.js?v=20260712-3000"></script>
-    <script src="js/document-analysis.js?v=20260711-2006"></script>
+    <script src="js/document-analysis.js?v=20260714-doc1"></script>
     <script src="js/news-management.js?v=20260712-3000"></script>
-    <script src="js/literature-library.js?v=20260711-2900"></script>
-    <script src="js/dataset-library.js?v=20260711-2700"></script>
+    <script src="js/literature-library.js?v=20260714-lit1"></script>
+    <script src="js/dataset-library.js?v=20260714-folder4"></script>
     <script src="js/project-report.js?v=20260711-2800"></script>
     <script src="js/shared-file-library.js?v=20260714-presign1"></script>
-    <script src="js/notice-enhance.js?v=20260712-3000"></script>
+    <script src="js/notice-enhance.js?v=20260714-ne1"></script>
     <script src="js/competition-management.js?v=20260712-3000"></script>
     <script src="js/application-center.js?v=20260713-app3"></script>
     <script src="js/home-dashboard-p3.js?v=20260713-p3c"></script>
-    <script src="js/portal-public.js?v=20260713-portal11"></script>
+    <script src="js/portal-public.js?v=20260714-portal12"></script>
 </body>
 </html>

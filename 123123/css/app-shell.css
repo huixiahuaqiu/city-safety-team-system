@@ -62,8 +62,7 @@
         }
 
         .top-nav,
-        .app-shell,
-        .login-overlay {
+        .app-shell {
             position: relative;
             z-index: 1;
         }

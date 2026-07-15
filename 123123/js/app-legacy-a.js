@@ -451,6 +451,12 @@
         const prevWindowOnload = window.onload;
         window.onload = function() {
             if (prevWindowOnload) prevWindowOnload();
+            // 必须先恢复登录会话，再跑团队/云端联动，否则会重写账号 ID 导致刷新掉线
+            try {
+                if (typeof initAccountSystem === 'function') initAccountSystem();
+            } catch (eAccInit) {
+                console.warn('initAccountSystem failed', eAccInit);
+            }
             initCopyrightData();
             initTeamMemberData();
             initLongitudinalData();
@@ -460,11 +466,5 @@
             initPaperData();
             initStandardData();
             try { if (typeof initCompetitionManagement === 'function') initCompetitionManagement(); } catch (eCmp0) {}
-            // initAccountSystem 在第二个 script 标签中定义，延迟调用
-            setTimeout(() => {
-                if (typeof initAccountSystem === 'function') {
-                    initAccountSystem();
-                }
-            }, 100);
         };
     

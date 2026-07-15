@@ -8,7 +8,8 @@
 
     var DS_PAGE_SIZE = 12;
     var DS_BLOB_MAX = 80 * 1024 * 1024;
-    var DS_CHUNK_SIZE = 2 * 1024 * 1024;
+    var DS_CHUNK_SIZE = 8 * 1024 * 1024;
+    var DS_CHUNK_RETRIES = 5;
     var DS_TAG_PRESETS = ['监测数据', '灾害识别', '交通预测', '城市安全', '目标检测', '语义分割', '结构监测'];
     var DS_CUSTOM_TAGS_KEY = 'datasetCustomTags';
     var DS_FAV_KEY = 'datasetFavorites';
@@ -54,7 +55,14 @@
 
     var pendingDsFile = null;
     var pendingParse = null;
-    var uploadCtrl = { paused: false, cancelled: false, progress: 0 };
+    var uploadCtrl = {
+        paused: false,
+        cancelled: false,
+        progress: 0,
+        abortController: null,
+        modalId: '',
+        statusText: null
+    };
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -423,12 +431,112 @@
     function ensureJSZip() {
         return new Promise(function (resolve, reject) {
             if (global.JSZip) return resolve(global.JSZip);
+            function finish() {
+                if (global.JSZip) resolve(global.JSZip);
+                else reject(new Error('JSZip 加载失败'));
+            }
+            if (typeof global.ensureVendor === 'function') {
+                global.ensureVendor('jszip').then(finish).catch(function () {
+                    var s = document.createElement('script');
+                    s.src = 'vendor/jszip/jszip.min.js';
+                    s.onload = finish;
+                    s.onerror = function () { reject(new Error('JSZip 加载失败')); };
+                    document.head.appendChild(s);
+                });
+                return;
+            }
             var s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
-            s.onload = function () { resolve(global.JSZip); };
+            s.src = 'vendor/jszip/jszip.min.js';
+            s.onload = finish;
             s.onerror = function () { reject(new Error('JSZip 加载失败')); };
             document.head.appendChild(s);
         });
+    }
+
+    function readDirectoryEntries(reader) {
+        return new Promise(function (resolve, reject) {
+            var all = [];
+            (function readBatch() {
+                reader.readEntries(function (entries) {
+                    if (!entries.length) return resolve(all);
+                    all = all.concat(entries);
+                    readBatch();
+                }, reject);
+            })();
+        });
+    }
+
+    function entryToFile(fileEntry) {
+        return new Promise(function (resolve, reject) {
+            fileEntry.file(resolve, reject);
+        });
+    }
+
+    async function collectFilesFromDirectoryEntry(dirEntry, basePath, out) {
+        var reader = dirEntry.createReader();
+        var entries = await readDirectoryEntries(reader);
+        for (var i = 0; i < entries.length; i++) {
+            var ent = entries[i];
+            var next = (basePath ? basePath + '/' : '') + ent.name;
+            if (ent.isDirectory) {
+                await collectFilesFromDirectoryEntry(ent, next, out);
+            } else if (ent.isFile) {
+                var file = await entryToFile(ent);
+                out.push({ path: next, file: file });
+            }
+        }
+    }
+
+    function collectFilesFromFileList(fileList) {
+        var out = [];
+        for (var i = 0; i < fileList.length; i++) {
+            var f = fileList[i];
+            var rel = f.webkitRelativePath || f.name;
+            if (!rel || /(?:^|\/)\./.test(rel)) continue; // skip hidden
+            out.push({ path: rel.replace(/\\/g, '/'), file: f });
+        }
+        return out;
+    }
+
+    async function packFolderEntriesToZip(entries, folderName, onProgress) {
+        if (!entries.length) throw new Error('文件夹为空，没有可上传的文件');
+        var totalBytes = entries.reduce(function (s, e) { return s + (e.file.size || 0); }, 0);
+        if (totalBytes <= 0) throw new Error('文件夹内文件总大小为 0，无法上传');
+        if (totalBytes > 10 * 1024 * 1024 * 1024) throw new Error('文件夹过大（超过 10GB），请先打包压缩后再上传');
+        if (totalBytes > 800 * 1024 * 1024) {
+            var ok = confirm('文件夹约 ' + formatBytes(totalBytes) + '，将在浏览器内打包为 ZIP，可能较慢且占用内存。是否继续？');
+            if (!ok) throw new Error('已取消文件夹打包');
+        }
+        var JSZip = await ensureJSZip();
+        var zip = new JSZip();
+        var root = String(folderName || 'dataset').replace(/[\\/:*?"<>|]/g, '_');
+        var done = 0;
+        for (var i = 0; i < entries.length; i++) {
+            var item = entries[i];
+            var rel = String(item.path || item.file.name).replace(/\\/g, '/');
+            // webkitRelativePath 已含根目录名；拖拽目录则用 basePath
+            if (rel.indexOf('/') < 0) rel = root + '/' + rel;
+            zip.file(rel, item.file);
+            done += item.file.size || 0;
+            if (onProgress) onProgress(done, totalBytes, i + 1, entries.length);
+        }
+        if (onProgress) onProgress(totalBytes, totalBytes, entries.length, entries.length);
+        var blob = await zip.generateAsync(
+            { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 1 } },
+            function (meta) {
+                if (onProgress && meta && meta.percent != null) {
+                    onProgress(totalBytes, totalBytes, entries.length, entries.length, meta.percent);
+                }
+            }
+        );
+        var zipName = root + '.zip';
+        return new File([blob], zipName, { type: 'application/zip', lastModified: Date.now() });
+    }
+
+    async function packDroppedDirectory(dirEntry, onProgress) {
+        var entries = [];
+        await collectFilesFromDirectoryEntry(dirEntry, dirEntry.name, entries);
+        return packFolderEntriesToZip(entries, dirEntry.name, onProgress);
     }
 
     async function parseZipDatasetClient(file) {
@@ -552,7 +660,7 @@
     }
 
     async function autoParseDatasetFile(file) {
-        var ext = (file.name.split('.').pop() || '').toLowerCase();
+        var ext = datasetFileExtension(file.name);
         var result = {
             format: ext.toUpperCase() || 'UNKNOWN',
             size: formatBytes(file.size),
@@ -1144,7 +1252,14 @@
         }
         pendingDsFile = null;
         pendingParse = null;
-        uploadCtrl = { paused: false, cancelled: false, progress: 0 };
+        uploadCtrl = {
+            paused: false,
+            cancelled: false,
+            progress: 0,
+            abortController: null,
+            modalId: '',
+            statusText: null
+        };
 
         var modalId = 'dsModal_' + Date.now();
         var modal = document.createElement('div');
@@ -1165,20 +1280,25 @@
             '<div class="ds-modal-hd"><h3>上传数据集</h3><button type="button" class="ds-modal-x" onclick="closeDatasetModal(\'' + modalId + '\')">×</button></div>' +
             '<div class="ds-modal-bd">' +
             '<div class="ds-sec-title">① 文件上传区</div>' +
-            '<div id="' + modalId + '_drop" class="ds-drop" onclick="document.getElementById(\'' + modalId + '_file\').click()" ' +
+            '<div id="' + modalId + '_drop" class="ds-drop" ' +
             'ondragover="event.preventDefault();this.classList.add(\'drag\')" ondragleave="this.classList.remove(\'drag\')" ' +
             'ondrop="event.preventDefault();this.classList.remove(\'drag\');handleDatasetDrop(event,\'' + modalId + '\')">' +
             '<div style="font-size:40px;margin-bottom:8px;">☁️</div>' +
-            '<div style="font-weight:600;margin-bottom:4px;">拖拽文件到此处，或点击选择</div>' +
-            '<div style="font-size:12px;color:#888;">支持 CSV、JSON、图像数据集 ZIP 包，单文件最大 10GB；大文件支持分片与断点续传</div></div>' +
+            '<div style="font-weight:600;margin-bottom:4px;">拖拽文件/文件夹到此处</div>' +
+            '<div style="font-size:12px;color:#888;margin-bottom:12px;">支持 CSV、JSON、ZIP；也可直接选文件夹（自动打包为 ZIP 后分片上传，最大 10GB）</div>' +
+            '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">' +
+            '<button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="event.stopPropagation();document.getElementById(\'' + modalId + '_file\').click()">选择文件</button>' +
+            '<button type="button" class="btn" style="padding:6px 14px;font-size:13px;" onclick="event.stopPropagation();document.getElementById(\'' + modalId + '_folder\').click()">选择文件夹</button>' +
+            '</div></div>' +
             '<input type="file" id="' + modalId + '_file" accept=".csv,.tsv,.json,.xml,.zip,.jpg,.jpeg,.png,.xlsx,.xls" style="display:none" onchange="handleDatasetFileSelect(this,\'' + modalId + '\')">' +
+            '<input type="file" id="' + modalId + '_folder" webkitdirectory directory multiple style="display:none" onchange="handleDatasetFolderSelect(this,\'' + modalId + '\')">' +
             '<div id="' + modalId + '_preview" style="display:none;margin-top:10px;"></div>' +
             '<div id="' + modalId + '_progress" class="ds-progress-wrap" style="display:none;">' +
             '<div class="ds-progress-bar"><div id="' + modalId + '_bar" class="ds-progress-inner"></div></div>' +
             '<div id="' + modalId + '_progText" class="ds-progress-text">准备上传…</div>' +
             '<div class="ds-progress-acts">' +
             '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="pauseDatasetUpload()">暂停</button>' +
-            '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="resumeDatasetUpload()">继续</button>' +
+            '<button type="button" class="btn" style="padding:4px 10px;font-size:12px;" onclick="resumeDatasetUpload()">继续</button>' +
             '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="cancelDatasetUpload(\'' + modalId + '\')">取消</button>' +
             '</div></div>' +
             '<div class="ds-sec-title">② 基础信息区</div>' +
@@ -1213,22 +1333,132 @@
         document.body.appendChild(modal);
     }
 
+    function abortServerUpload(uploadId, extra) {
+        if (!uploadId && !(extra && extra.purgeAll)) return Promise.resolve();
+        var body = Object.assign({ uploadId: uploadId || '' }, extra || {});
+        return fetch('/api/dataset/abort', {
+            method: 'POST',
+            headers: getDatasetAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(body),
+            keepalive: true
+        }).catch(function () { /* ignore */ });
+    }
+
     function closeDatasetModal(modalId) {
         uploadCtrl.cancelled = true;
+        if (uploadCtrl.abortController) {
+            try { uploadCtrl.abortController.abort('cancelled'); } catch (e) { /* ignore */ }
+        }
+        if (uploadCtrl.uploadId) {
+            abortServerUpload(uploadCtrl.uploadId);
+            uploadCtrl.uploadId = '';
+        }
         pendingDsFile = null;
         var m = document.getElementById(modalId);
         if (m) m.remove();
     }
 
+    function cancelDatasetUpload(modalId) {
+        uploadCtrl.cancelled = true;
+        uploadCtrl.paused = false;
+        if (uploadCtrl.abortController) {
+            try { uploadCtrl.abortController.abort('cancelled'); } catch (e) { /* ignore */ }
+        }
+        if (uploadCtrl.uploadId) {
+            abortServerUpload(uploadCtrl.uploadId);
+            uploadCtrl.uploadId = '';
+        }
+        var wrap = document.getElementById(modalId + '_progress');
+        if (wrap) wrap.style.display = 'none';
+        var btn = document.getElementById(modalId + '_submit');
+        if (btn) { btn.disabled = false; btn.textContent = '开始上传'; }
+        setUploadStatus('已取消，临时分片已清理', '#b91c1c');
+    }
+
+    function setFolderPackProgress(modalId, msg) {
+        var note = document.getElementById(modalId + '_parseNote');
+        if (note) {
+            note.textContent = msg || '';
+            note.style.color = '#7c3aed';
+        }
+        var text = document.getElementById(modalId + '_progText');
+        var wrap = document.getElementById(modalId + '_progress');
+        if (wrap) wrap.style.display = 'block';
+        if (text) text.textContent = msg || '打包中…';
+    }
+
+    async function handleDatasetFolderSelect(input, modalId) {
+        var list = input && input.files;
+        if (!list || !list.length) return;
+        try {
+            setFolderPackProgress(modalId, '正在读取文件夹…');
+            var entries = collectFilesFromFileList(list);
+            var rootName = (entries[0] && entries[0].path.split('/')[0]) || 'dataset';
+            var zipFile = await packFolderEntriesToZip(entries, rootName, function (done, total, idx, count, pct) {
+                if (pct != null) {
+                    setFolderPackProgress(modalId, '正在压缩文件夹… ' + Math.round(pct) + '%');
+                } else {
+                    setFolderPackProgress(modalId, '正在收集文件 ' + idx + '/' + count + '（' + formatBytes(done) + '）');
+                }
+            });
+            await onDatasetFileChosen(zipFile, modalId);
+        } catch (e) {
+            alert('文件夹处理失败：' + (e && e.message ? e.message : e));
+            clearPendingDatasetFile(modalId);
+        } finally {
+            try { input.value = ''; } catch (e2) { /* ignore */ }
+        }
+    }
+
     function handleDatasetFileSelect(input, modalId) {
         var file = input && input.files && input.files[0];
         if (!file) return;
+        // 某些浏览器把文件夹当成 size=0 的伪文件
+        if (!file.size && !datasetFileExtension(file.name)) {
+            alert('检测到可能是文件夹。请点击「选择文件夹」，或先打成 ZIP 再上传');
+            try { input.value = ''; } catch (e) { /* ignore */ }
+            return;
+        }
         onDatasetFileChosen(file, modalId);
     }
 
-    function handleDatasetDrop(event, modalId) {
+    async function handleDatasetDrop(event, modalId) {
+        var items = event.dataTransfer && event.dataTransfer.items;
+        if (items && items.length) {
+            var dirEntry = null;
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                if (item.kind !== 'file') continue;
+                var entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+                if (entry && entry.isDirectory) {
+                    dirEntry = entry;
+                    break;
+                }
+            }
+            if (dirEntry) {
+                try {
+                    setFolderPackProgress(modalId, '正在读取文件夹「' + dirEntry.name + '」…');
+                    var zipFile = await packDroppedDirectory(dirEntry, function (done, total, idx, count, pct) {
+                        if (pct != null) {
+                            setFolderPackProgress(modalId, '正在压缩文件夹… ' + Math.round(pct) + '%');
+                        } else {
+                            setFolderPackProgress(modalId, '正在收集文件 ' + idx + '/' + count + '（' + formatBytes(done) + '）');
+                        }
+                    });
+                    await onDatasetFileChosen(zipFile, modalId);
+                } catch (e) {
+                    alert('文件夹处理失败：' + (e && e.message ? e.message : e));
+                    clearPendingDatasetFile(modalId);
+                }
+                return;
+            }
+        }
         var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
         if (!file) return;
+        if (!file.size && !datasetFileExtension(file.name)) {
+            alert('拖入的好像是空项或文件夹。请用「选择文件夹」按钮，或拖入已打好的 ZIP');
+            return;
+        }
         var input = document.getElementById(modalId + '_file');
         if (input) {
             try {
@@ -1240,9 +1470,23 @@
         onDatasetFileChosen(file, modalId);
     }
 
+    function datasetFileExtension(fileName) {
+        var m = String(fileName || '').match(/\.([^.]+)$/);
+        return m ? m[1].toLowerCase() : '';
+    }
+
     async function onDatasetFileChosen(file, modalId) {
+        if (!file || !file.size) {
+            alert('所选文件为空（0 字节），请选择有效的数据集文件');
+            return;
+        }
         if (file.size > 10 * 1024 * 1024 * 1024) {
             alert('单文件最大 10GB');
+            return;
+        }
+        var pickExt = datasetFileExtension(file.name);
+        if (!pickExt) {
+            alert('文件缺少扩展名。请选择 .csv / .json / .zip / .xlsx 等支持的数据集文件');
             return;
         }
         pendingDsFile = file;
@@ -1295,11 +1539,17 @@
         pendingParse = null;
         var input = document.getElementById(modalId + '_file');
         if (input) input.value = '';
+        var folderInput = document.getElementById(modalId + '_folder');
+        if (folderInput) folderInput.value = '';
         var preview = document.getElementById(modalId + '_preview');
         if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
         var drop = document.getElementById(modalId + '_drop');
         if (drop) drop.classList.remove('has-file');
+        var wrap = document.getElementById(modalId + '_progress');
+        if (wrap) wrap.style.display = 'none';
         ['dsFormat', 'dsSamples', 'dsSize'].forEach(function (id) { setVal(id, ''); });
+        var note = document.getElementById(modalId + '_parseNote');
+        if (note) { note.textContent = ''; note.style.color = '#888'; }
     }
 
     async function reParseDatasetFile(modalId) {
@@ -1308,14 +1558,31 @@
         applyParseToForm(pendingParse, modalId);
     }
 
-    function pauseDatasetUpload() { uploadCtrl.paused = true; }
-    function resumeDatasetUpload() { uploadCtrl.paused = false; }
-    function cancelDatasetUpload(modalId) {
-        uploadCtrl.cancelled = true;
-        var wrap = document.getElementById(modalId + '_progress');
-        if (wrap) wrap.style.display = 'none';
-        var btn = document.getElementById(modalId + '_submit');
-        if (btn) { btn.disabled = false; btn.textContent = '开始上传'; }
+    function setUploadStatus(msg, color) {
+        var el = uploadCtrl.statusText || (uploadCtrl.modalId
+            ? document.getElementById(uploadCtrl.modalId + '_progText')
+            : null);
+        if (el) {
+            el.textContent = msg;
+            if (color) el.style.color = color;
+        }
+    }
+
+    function pauseDatasetUpload() {
+        uploadCtrl.paused = true;
+        if (uploadCtrl.abortController) {
+            try { uploadCtrl.abortController.abort('paused'); } catch (e) { /* ignore */ }
+        }
+        setUploadStatus('已暂停 · 点击「继续」恢复上传', '#b45309');
+    }
+
+    function resumeDatasetUpload() {
+        if (uploadCtrl.cancelled) {
+            setUploadStatus('已取消，请重新点击「开始上传」', '#b91c1c');
+            return;
+        }
+        uploadCtrl.paused = false;
+        setUploadStatus('正在继续上传…', '#7c3aed');
     }
 
     function waitWhilePaused() {
@@ -1329,11 +1596,20 @@
     }
 
     async function runChunkedUpload(file, modalId, datasetId) {
-        uploadCtrl = { paused: false, cancelled: false, progress: 0 };
+        uploadCtrl = {
+            paused: false,
+            cancelled: false,
+            progress: 0,
+            abortController: null,
+            modalId: modalId,
+            statusText: document.getElementById(modalId + '_progText'),
+            uploadId: ''
+        };
         var wrap = document.getElementById(modalId + '_progress');
         var bar = document.getElementById(modalId + '_bar');
         var text = document.getElementById(modalId + '_progText');
         if (wrap) wrap.style.display = 'block';
+        if (text) text.style.color = '';
 
         var caps = await probeDatasetServer();
         if (caps && caps.ok) {
@@ -1354,6 +1630,83 @@
                 ' · ' + formatBytes(speed) + '/s · 剩余约 ' + Math.max(1, Math.round(remain)) + 's' +
                 (extra ? (' · ' + extra) : '');
         }
+    }
+
+    function sleepMs(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    function friendlyUploadError(err) {
+        var msg = (err && err.message) ? String(err.message) : String(err || '未知错误');
+        if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
+            return '网络中断，未完成的分片已清理。请重新点击「开始上传」';
+        }
+        return msg;
+    }
+
+    async function fetchChunkWithRetry(url, options, attemptHint) {
+        var lastErr = null;
+        var attempt = 0;
+        while (attempt < DS_CHUNK_RETRIES) {
+            if (uploadCtrl.cancelled) throw new Error('已取消上传');
+            var canGo = await waitWhilePaused();
+            if (!canGo) throw new Error('已取消上传');
+
+            attempt += 1;
+            var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+            uploadCtrl.abortController = controller;
+            var timedOut = false;
+            var timer = setTimeout(function () {
+                timedOut = true;
+                if (controller) {
+                    try { controller.abort('timeout'); } catch (e) { /* ignore */ }
+                }
+            }, 90000);
+
+            try {
+                var opts = Object.assign({}, options);
+                if (controller) opts.signal = controller.signal;
+                var resp = await fetch(url, opts);
+                clearTimeout(timer);
+                uploadCtrl.abortController = null;
+                var data = await resp.json().catch(function () { return {}; });
+                if (!resp.ok || data.ok === false) {
+                    var serverErr = (data && data.error) || ('HTTP ' + resp.status);
+                    if (resp.status >= 400 && resp.status < 500 && resp.status !== 408 && resp.status !== 429) {
+                        throw new Error(serverErr);
+                    }
+                    lastErr = new Error(serverErr);
+                } else {
+                    return data;
+                }
+            } catch (e) {
+                clearTimeout(timer);
+                uploadCtrl.abortController = null;
+                var msg = (e && e.message) ? String(e.message) : String(e || '');
+                var aborted = (e && e.name === 'AbortError') || /abort/i.test(msg);
+                if (uploadCtrl.cancelled) throw new Error('已取消上传');
+                // 暂停导致的中止：不计失败次数，等继续后再传同一片
+                if (aborted && uploadCtrl.paused) {
+                    attempt -= 1;
+                    await waitWhilePaused();
+                    continue;
+                }
+                if (aborted && timedOut) {
+                    lastErr = new Error('分片上传超时，正在重试');
+                } else {
+                    lastErr = e;
+                }
+                if (/已取消/.test(msg)) throw e;
+            }
+
+            if (attempt < DS_CHUNK_RETRIES) {
+                if (typeof attemptHint === 'function') {
+                    attemptHint(attempt, DS_CHUNK_RETRIES, lastErr);
+                }
+                await sleepMs(400 * attempt * attempt);
+            }
+        }
+        throw lastErr || new Error('分片上传失败');
     }
 
     async function runServerChunkedUpload(file, modalId, datasetId, text, bar) {
@@ -1386,67 +1739,69 @@
         }
 
         var uploadId = initData.uploadId;
-        var chunkSize = Number(initData.chunkSize) || DS_CHUNK_SIZE;
-        var totalChunks = Math.ceil(file.size / chunkSize);
-        var doneSet = {};
-        (initData.uploadedChunks || []).forEach(function (i) { doneSet[i] = true; });
-        var startAt = Date.now();
-        var uploadedBytes = (initData.uploadedChunks || []).length * chunkSize;
-        if (uploadedBytes > file.size) uploadedBytes = file.size;
+        uploadCtrl.uploadId = uploadId;
+        try {
+            var chunkSize = Number(initData.chunkSize) || DS_CHUNK_SIZE;
+            var totalChunks = Math.ceil(file.size / chunkSize);
+            var startAt = Date.now();
+            var uploadedBytes = 0;
 
-        for (var i = 0; i < totalChunks; i++) {
-            if (uploadCtrl.cancelled) throw new Error('已取消上传');
-            var ok = await waitWhilePaused();
-            if (!ok) throw new Error('已取消上传');
-            if (doneSet[i]) {
-                uploadedBytes = Math.min(file.size, (i + 1) * chunkSize);
-                updateUploadProgress(bar, text, uploadedBytes, file.size, startAt, '断点续传');
-                continue;
+            for (var i = 0; i < totalChunks; i++) {
+                if (uploadCtrl.cancelled) throw new Error('已取消上传');
+                var ok = await waitWhilePaused();
+                if (!ok) throw new Error('已取消上传');
+                var begin = i * chunkSize;
+                var end = Math.min(begin + chunkSize, file.size);
+                var slice = file.slice(begin, end);
+                var buf = await slice.arrayBuffer();
+                await fetchChunkWithRetry('/api/dataset/chunk', {
+                    method: 'POST',
+                    headers: getDatasetAuthHeaders({
+                        'X-Upload-Id': uploadId,
+                        'X-Chunk-Index': String(i),
+                        'X-Chunk-Total': String(totalChunks),
+                        'Content-Type': 'application/octet-stream'
+                    }),
+                    body: buf
+                }, function (attempt, maxAttempts) {
+                    if (text) {
+                        text.style.color = '#b45309';
+                        text.textContent = '分片 ' + (i + 1) + '/' + totalChunks + ' 网络抖动，重试 ' + attempt + '/' + maxAttempts + '…';
+                    }
+                });
+                if (text) text.style.color = '';
+                uploadedBytes = end;
+                updateUploadProgress(bar, text, uploadedBytes, file.size, startAt, '服务端分片');
             }
-            var begin = i * chunkSize;
-            var end = Math.min(begin + chunkSize, file.size);
-            var slice = file.slice(begin, end);
-            var buf = await slice.arrayBuffer();
-            var resp = await fetch('/api/dataset/chunk', {
-                method: 'POST',
-                headers: getDatasetAuthHeaders({
-                    'X-Upload-Id': uploadId,
-                    'X-Chunk-Index': String(i),
-                    'X-Chunk-Total': String(totalChunks),
-                    'Content-Type': 'application/octet-stream'
-                }),
-                body: buf
-            });
-            var data = await resp.json().catch(function () { return {}; });
-            if (!resp.ok || data.ok === false) throw new Error((data && data.error) || ('分片 ' + i + ' 上传失败'));
-            doneSet[i] = true;
-            uploadedBytes = end;
-            updateUploadProgress(bar, text, uploadedBytes, file.size, startAt, '服务端分片');
-        }
 
-        if (text) text.textContent = '合并校验中…';
-        var completeResp = await fetch('/api/dataset/complete', {
-            method: 'POST',
-            headers: getDatasetAuthHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify({
-                uploadId: uploadId,
-                fileName: file.name,
-                size: file.size,
-                md5: md5,
-                fileId: 'dsf_' + datasetId
-            })
-        });
-        var completeData = await completeResp.json();
-        if (!completeResp.ok || !completeData.ok) throw new Error((completeData && completeData.error) || '合并失败');
-        if (bar) bar.style.width = '100%';
-        if (text) text.textContent = '服务端入库完成，正在解析…';
-        return {
-            storedLocally: false,
-            storedServer: true,
-            serverFileId: completeData.fileId,
-            md5: completeData.md5 || md5,
-            inspect: completeData.inspect || null
-        };
+            if (text) text.textContent = '合并校验中…';
+            var completeData = await fetchChunkWithRetry('/api/dataset/complete', {
+                method: 'POST',
+                headers: getDatasetAuthHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({
+                    uploadId: uploadId,
+                    fileName: file.name,
+                    size: file.size,
+                    md5: md5,
+                    fileId: 'dsf_' + datasetId
+                })
+            });
+            uploadCtrl.uploadId = '';
+            if (bar) bar.style.width = '100%';
+            if (text) text.textContent = '服务端入库完成，正在解析…';
+            return {
+                storedLocally: false,
+                storedServer: true,
+                serverFileId: completeData.fileId,
+                md5: completeData.md5 || md5,
+                inspect: completeData.inspect || null
+            };
+        } catch (e) {
+            // 未成功：删除临时分片，不留存
+            await abortServerUpload(uploadId);
+            uploadCtrl.uploadId = '';
+            throw e;
+        }
     }
 
     async function runLocalChunkedUpload(file, modalId, datasetId, text, bar) {
@@ -1500,6 +1855,14 @@
         var name = String((document.getElementById('dsName') || {}).value || '').trim();
         if (!name) { alert('请输入数据集名称'); return; }
         if (!pendingDsFile) { alert('请先选择数据集文件'); return; }
+        if (!pendingDsFile.size) {
+            alert('所选文件为空（0 字节），无法上传');
+            return;
+        }
+        if (!datasetFileExtension(pendingDsFile.name)) {
+            alert('文件缺少扩展名，无法上传');
+            return;
+        }
 
         var btn = document.getElementById(modalId + '_submit');
         if (btn) { btn.disabled = true; btn.textContent = '上传中…'; }
@@ -1612,7 +1975,7 @@
             alert(asNewVersion ? '已更新为新版本并入库' : '上传成功！');
             showDatasetDetail(newId);
         } catch (e) {
-            alert('上传失败：' + (e && e.message ? e.message : e));
+            alert('上传失败：' + friendlyUploadError(e));
             if (btn) { btn.disabled = false; btn.textContent = '重试上传'; }
         }
     }
@@ -2160,6 +2523,7 @@
         batchLinkDatasetProject: batchLinkDatasetProject,
         batchDownloadDatasets: batchDownloadDatasets,
         handleDatasetFileSelect: handleDatasetFileSelect,
+        handleDatasetFolderSelect: handleDatasetFolderSelect,
         handleDatasetDrop: handleDatasetDrop,
         clearPendingDatasetFile: clearPendingDatasetFile,
         reParseDatasetFile: reParseDatasetFile,

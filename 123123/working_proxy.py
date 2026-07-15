@@ -62,7 +62,7 @@ MLOPS_TOKEN = os.environ.get('MLOPS_TOKEN', '')
 ANNOTATION_UPLOAD_TOKEN = os.environ.get('ANNOTATION_UPLOAD_TOKEN', '')
 MAX_UPLOAD_BYTES = int(os.environ.get('MAX_UPLOAD_BYTES', str(200 * 1024 * 1024)))
 MAX_DATASET_BYTES = int(os.environ.get('MAX_DATASET_BYTES', str(10 * 1024 * 1024 * 1024)))
-DATASET_CHUNK_SIZE = int(os.environ.get('DATASET_CHUNK_SIZE', str(2 * 1024 * 1024)))
+DATASET_CHUNK_SIZE = int(os.environ.get('DATASET_CHUNK_SIZE', str(8 * 1024 * 1024)))
 DATASET_UPLOAD_TOKEN = os.environ.get('DATASET_UPLOAD_TOKEN', '') or os.environ.get('ANNOTATION_UPLOAD_TOKEN', '')
 # 生产网络加固：监听地址与 CORS 来源，默认值保持本地开发行为不变。
 # 生产 .env 建议设 BIND_HOST=127.0.0.1（只允许 Nginx 反代）与 CORS_ALLOW_ORIGIN=https://你的域名。
@@ -486,7 +486,18 @@ def _dataset_registry_save(data):
     tmp = DATASET_META_PATH + '.tmp'
     with open(tmp, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
     os.replace(tmp, DATASET_META_PATH)
+
+
+def _dataset_registry_update(mutator):
+    """线程安全地读改写数据集登记簿。"""
+    with _store_lock:
+        reg = _dataset_registry_load()
+        result = mutator(reg)
+        _dataset_registry_save(reg)
+        return result
 
 
 def _dataset_upload_dir(upload_id):
@@ -521,18 +532,109 @@ def find_dataset_file_by_md5(md5):
     return None
 
 
+def _remove_dataset_upload_dir(upload_id):
+    up_dir = _dataset_upload_dir(upload_id)
+    if not os.path.isdir(up_dir):
+        return 0
+    removed = 0
+    for name in os.listdir(up_dir):
+        path = os.path.join(up_dir, name)
+        try:
+            if os.path.isfile(path):
+                removed += os.path.getsize(path)
+            os.remove(path)
+        except OSError:
+            try:
+                import shutil
+                shutil.rmtree(path, ignore_errors=True)
+            except Exception:
+                pass
+    try:
+        os.rmdir(up_dir)
+    except OSError:
+        pass
+    return removed
+
+
+def abort_dataset_upload(upload_id):
+    """取消未完成上传并删除临时分片（成功入库的文件不动）。"""
+    uid = _safe_dataset_id(upload_id)
+    if not uid:
+        raise ValueError('uploadId required')
+    bytes_removed = _remove_dataset_upload_dir(uid)
+
+    def _mutate(reg):
+        existed = uid in (reg.get('uploads') or {})
+        reg.setdefault('uploads', {}).pop(uid, None)
+        return existed
+
+    existed = _dataset_registry_update(_mutate)
+    return {
+        'ok': True,
+        'uploadId': uid,
+        'removed': existed or bytes_removed > 0,
+        'bytesRemoved': bytes_removed,
+    }
+
+
+def purge_incomplete_dataset_uploads(md5=None, size=None):
+    """清理未完成会话。md5/size 给定时只清匹配项，否则清全部未完成。"""
+    md5 = str(md5 or '').strip().lower()
+    size_i = int(size) if size not in (None, '') else None
+    reg = _dataset_registry_load()
+    targets = []
+    for uid, umeta in list((reg.get('uploads') or {}).items()):
+        if not isinstance(umeta, dict):
+            targets.append(uid)
+            continue
+        if md5 and str(umeta.get('md5') or '').lower() != md5:
+            continue
+        if size_i is not None and int(umeta.get('size') or 0) != size_i:
+            continue
+        targets.append(uid)
+
+    # 磁盘上有、登记簿没有的孤儿目录也清掉
+    tmp_root = os.path.join(DATASET_UPLOAD_ROOT, '_tmp')
+    if os.path.isdir(tmp_root):
+        for name in os.listdir(tmp_root):
+            if name not in targets:
+                if md5:
+                    # 指定 md5 时不误删无关孤儿
+                    continue
+                targets.append(name)
+
+    purged = []
+    total_bytes = 0
+    for uid in targets:
+        try:
+            total_bytes += _remove_dataset_upload_dir(uid)
+            purged.append(uid)
+        except Exception:
+            pass
+
+    def _mutate(reg2):
+        for uid in purged:
+            reg2.setdefault('uploads', {}).pop(uid, None)
+        return len(purged)
+
+    _dataset_registry_update(_mutate)
+    return {'ok': True, 'purged': purged, 'count': len(purged), 'bytesRemoved': total_bytes}
+
+
 def init_dataset_upload(payload):
     file_name = str(payload.get('fileName') or payload.get('name') or 'dataset.bin')
     size = int(payload.get('size') or 0)
     md5 = str(payload.get('md5') or '').strip().lower()
     chunk_size = int(payload.get('chunkSize') or DATASET_CHUNK_SIZE)
     if size <= 0:
-        raise ValueError('size required')
+        raise ValueError('文件大小无效（不能为 0），请选择有效文件')
     if size > MAX_DATASET_BYTES:
-        raise ValueError('file too large: max %s bytes' % MAX_DATASET_BYTES)
+        raise ValueError('文件过大：最大允许 %s 字节' % MAX_DATASET_BYTES)
     ext = os.path.splitext(file_name.lower())[1]
-    if ext and ext not in DATASET_ALLOWED_EXTENSIONS:
-        raise ValueError('file extension not allowed: %s' % ext)
+    if not ext:
+        raise ValueError('文件缺少扩展名，请使用 .csv / .json / .zip 等格式')
+    if ext not in DATASET_ALLOWED_EXTENSIONS:
+        raise ValueError('不支持的文件扩展名：%s' % ext)
 
     existing = find_dataset_file_by_md5(md5) if md5 else None
     if existing:
@@ -548,33 +650,33 @@ def init_dataset_upload(payload):
             'chunkSize': chunk_size,
         }
 
+    # 未成功上传不留存：同文件旧的未完成分片先清掉，再开新会话
+    if md5:
+        purge_incomplete_dataset_uploads(md5=md5, size=size)
+
     upload_id = _safe_dataset_id(payload.get('uploadId') or ('up_' + secrets.token_hex(8)))
     up_dir = _dataset_upload_dir(upload_id)
     os.makedirs(up_dir, exist_ok=True)
-    received = []
-    for name in os.listdir(up_dir):
-        if name.startswith('chunk_') and name.endswith('.part'):
-            try:
-                received.append(int(name[6:-5]))
-            except ValueError:
-                pass
-    received.sort()
-    reg = _dataset_registry_load()
-    reg['uploads'][upload_id] = {
-        'uploadId': upload_id,
-        'fileName': file_name,
-        'size': size,
-        'md5': md5,
-        'chunkSize': chunk_size,
-        'createdAt': _now_iso(),
-        'received': received,
-    }
-    _dataset_registry_save(reg)
+
+    def _mutate(reg):
+        reg['uploads'][upload_id] = {
+            'uploadId': upload_id,
+            'fileName': file_name,
+            'size': size,
+            'md5': md5,
+            'chunkSize': chunk_size,
+            'createdAt': _now_iso(),
+            'updatedAt': _now_iso(),
+            'received': [],
+        }
+        return None
+
+    _dataset_registry_update(_mutate)
     return {
         'uploadId': upload_id,
         'exists': False,
         'instant': False,
-        'uploadedChunks': received,
+        'uploadedChunks': [],
         'chunkSize': chunk_size,
         'size': size,
         'md5': md5,
@@ -584,28 +686,40 @@ def init_dataset_upload(payload):
 def save_dataset_chunk(upload_id, index, content, total_chunks=None):
     index = int(index)
     if index < 0:
-        raise ValueError('invalid chunk index')
+        raise ValueError('分片序号无效')
     if len(content) > DATASET_CHUNK_SIZE * 2:
-        raise ValueError('chunk too large')
+        raise ValueError('分片过大')
     up_dir = _dataset_upload_dir(upload_id)
     os.makedirs(up_dir, exist_ok=True)
     part_path = os.path.join(up_dir, 'chunk_%d.part' % index)
-    with open(part_path, 'wb') as f:
+    tmp_path = part_path + '.tmp'
+    with open(tmp_path, 'wb') as f:
         f.write(content)
-    reg = _dataset_registry_load()
-    meta = reg['uploads'].get(upload_id) or {
-        'uploadId': upload_id,
-        'received': [],
-        'createdAt': _now_iso(),
-    }
-    received = set(meta.get('received') or [])
-    received.add(index)
-    meta['received'] = sorted(received)
-    if total_chunks is not None:
-        meta['totalChunks'] = int(total_chunks)
-    reg['uploads'][upload_id] = meta
-    _dataset_registry_save(reg)
-    return {'ok': True, 'index': index, 'received': len(meta['received']), 'bytes': len(content)}
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp_path, part_path)
+
+    def _mutate(reg):
+        meta = reg['uploads'].get(upload_id) or {
+            'uploadId': upload_id,
+            'received': [],
+            'createdAt': _now_iso(),
+        }
+        received = set(meta.get('received') or [])
+        received.add(index)
+        meta['received'] = sorted(received)
+        if total_chunks is not None:
+            meta['totalChunks'] = int(total_chunks)
+        meta['updatedAt'] = _now_iso()
+        reg['uploads'][upload_id] = meta
+        return {
+            'ok': True,
+            'index': index,
+            'received': len(meta['received']),
+            'bytes': len(content),
+        }
+
+    return _dataset_registry_update(_mutate)
 
 
 def complete_dataset_upload(payload):
@@ -1076,12 +1190,12 @@ def create_shared_presign(file_name, file_type, remark, size, content_type='', o
     """签发 MinIO PUT 预签名；文件体不经网关。未启用 minio 时抛错，前端可回退 multipart。"""
     size = int(size or 0)
     if size <= 0:
-        raise ValueError('size required')
+        raise ValueError('文件大小无效（不能为 0）')
     if size > MINIO_PRESIGN_MAX_BYTES:
-        raise ValueError('file too large: max %s bytes' % MINIO_PRESIGN_MAX_BYTES)
+        raise ValueError('文件过大：最大允许 %s 字节' % MINIO_PRESIGN_MAX_BYTES)
     client = _get_minio_client()
     if not client:
-        raise RuntimeError('presign requires SHARED_STORAGE_BACKEND=minio and working credentials')
+        raise RuntimeError('对象存储未就绪：请检查 MinIO 配置')
     name = original_name or file_name or 'file'
     ext = os.path.splitext(str(name).lower())[1]
     if ext and ext not in _shared_allow_extensions():
@@ -1441,7 +1555,8 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header(
             'Access-Control-Allow-Headers',
-            'Content-Type, Authorization, X-MLOps-Token, X-Upload-Token, X-Task-Id, X-Rel-Path'
+            'Content-Type, Authorization, X-MLOps-Token, X-Upload-Token, X-Task-Id, X-Rel-Path, '
+            'X-Upload-Id, X-Chunk-Index, X-Chunk-Total, X-Dataset-Token'
         )
 
     def _json(self, code, obj):
@@ -1624,6 +1739,27 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self._json(200, info)
             except Exception as e:
                 audit_event('dataset_complete_failed', ip=self.client_address[0], error=str(e))
+                self._json(400, {'ok': False, 'error': str(e)})
+            return
+
+        if path.startswith('/api/dataset/abort'):
+            if not check_dataset_token(self):
+                self._json(401, {'ok': False, 'error': 'invalid dataset token'})
+                return
+            try:
+                payload = json.loads((post_data or b'{}').decode('utf-8') or '{}')
+                upload_id = payload.get('uploadId') or self.headers.get('X-Upload-Id') or ''
+                if payload.get('purgeAll'):
+                    info = purge_incomplete_dataset_uploads(
+                        md5=payload.get('md5') or None,
+                        size=payload.get('size') if payload.get('size') not in (None, '') else None,
+                    )
+                else:
+                    info = abort_dataset_upload(upload_id)
+                audit_event('dataset_abort_ok', ip=self.client_address[0], uploadId=upload_id or 'purge', bytes=info.get('bytesRemoved'))
+                self._json(200, info)
+            except Exception as e:
+                audit_event('dataset_abort_failed', ip=self.client_address[0], error=str(e))
                 self._json(400, {'ok': False, 'error': str(e)})
             return
 

@@ -47,48 +47,67 @@
         destroyNoticeEditor();
         var tb = document.getElementById('noticeEditorToolbar');
         var body = document.getElementById('noticeEditorBody');
-        if (!tb || !body || typeof global.wangEditor === 'undefined') {
+        function fallbackTextarea() {
             var ta = document.getElementById('noticeContent');
             if (ta) {
                 ta.style.display = 'block';
                 ta.rows = 6;
                 if (html) ta.value = String(html).replace(/<[^>]+>/g, '');
             }
+        }
+        if (!tb || !body) {
+            fallbackTextarea();
             return;
         }
-        var ta = document.getElementById('noticeContent');
-        if (ta) ta.style.display = 'none';
-        try {
-            noticeEditor = global.wangEditor.createEditor({
-                selector: '#noticeEditorBody',
-                html: sanitizeHtml(html || ''),
-                config: {
-                    placeholder: '请输入通知内容…',
-                    MENU_CONF: {
-                        uploadImage: {
-                            customUpload: function (file, insertFn) {
-                                var reader = new FileReader();
-                                reader.onload = function (e) { insertFn(e.target.result); };
-                                reader.readAsDataURL(file);
+        function boot() {
+            if (typeof global.wangEditor === 'undefined') {
+                fallbackTextarea();
+                return;
+            }
+            var ta = document.getElementById('noticeContent');
+            if (ta) ta.style.display = 'none';
+            try {
+                noticeEditor = global.wangEditor.createEditor({
+                    selector: '#noticeEditorBody',
+                    html: sanitizeHtml(html || ''),
+                    config: {
+                        placeholder: '请输入通知内容…',
+                        MENU_CONF: {
+                            uploadImage: {
+                                customUpload: function (file, insertFn) {
+                                    var reader = new FileReader();
+                                    reader.onload = function (e) { insertFn(e.target.result); };
+                                    reader.readAsDataURL(file);
+                                }
                             }
                         }
+                    },
+                    mode: 'default'
+                });
+                global.wangEditor.createToolbar({
+                    editor: noticeEditor,
+                    selector: '#noticeEditorToolbar',
+                    config: {
+                        toolbarKeys: [
+                            'headerSelect', 'bold', 'italic', 'underline', 'color', '|',
+                            'bulletedList', 'numberedList', 'blockquote', '|',
+                            'insertLink', 'uploadImage', '|', 'undo', 'redo'
+                        ]
                     }
-                },
-                mode: 'default'
-            });
-            global.wangEditor.createToolbar({
-                editor: noticeEditor,
-                selector: '#noticeEditorToolbar',
-                config: {
-                    toolbarKeys: [
-                        'headerSelect', 'bold', 'italic', 'underline', 'color', '|',
-                        'bulletedList', 'numberedList', 'blockquote', '|',
-                        'insertLink', 'uploadImage', '|', 'undo', 'redo'
-                    ]
-                }
-            });
-        } catch (e) {
-            console.error('notice editor init', e);
+                });
+            } catch (e) {
+                console.error('notice editor init', e);
+                fallbackTextarea();
+            }
+        }
+        if (typeof global.wangEditor !== 'undefined') {
+            boot();
+            return;
+        }
+        if (typeof global.ensureVendor === 'function') {
+            global.ensureVendor('wangeditor').then(boot).catch(function () { fallbackTextarea(); });
+        } else {
+            fallbackTextarea();
         }
     }
 

@@ -69,6 +69,22 @@ bash /opt/citysafe/bin/rollback.sh                 # 上一版
 bash /opt/citysafe/bin/rollback.sh 2026-07-14_013000
 ```
 
+## 本机 Docker 预演 MinIO（Windows）
+
+数据目录：`D:\Docker\data\minio`。密钥模板：`deploy/minio/.env.local.example`（复制为 `.env.local`，已 gitignore）。
+
+```powershell
+docker compose -f deploy/minio/docker-compose.yml --env-file deploy/minio/.env.local up -d
+# 初始化桶/业务账号后写入 123123/.env：
+#   SHARED_STORAGE_BACKEND=minio
+#   MINIO_ENDPOINT=127.0.0.1:9000
+#   MINIO_ACCESS_KEY / MINIO_SECRET_KEY = APP_*
+python 123123/start_web.py
+curl http://127.0.0.1:8000/api/health   # 期望 minioReady/presignEnabled=true
+```
+
+控制台：http://127.0.0.1:9001 ；API：http://127.0.0.1:9000。浏览器直传 ≥8MB 共享文件会走预签名 PUT。
+
 ## 与现有功能的关系
 
 - 本地 `python start_web.py`：默认仍监听 `0.0.0.0:8000`，CORS `*`，行为不变。

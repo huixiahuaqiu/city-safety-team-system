@@ -46,11 +46,12 @@
     const ACCOUNTS_PER_PAGE = 10;
 
     function initAccountSystem() {
-        // 登录前先拉云端账号与权限，保证全局一致
-        var start = function() {
-            accountData = JSON.parse(localStorage.getItem('accountData') || 'null');
+        // 先本地恢复登录态，再后台拉云端——避免「刷新必掉线」
+        var start = function(fromCloud) {
+            try {
+                accountData = JSON.parse(localStorage.getItem('accountData') || 'null');
+            } catch (eAcc) { accountData = null; }
 
-            // 仅保证访客演示账号存在；正式成员一律由团队档案全局联动生成，不再灌入演示学生账号
             const defaults = [
                 { id: 5, studentId: 'visitor01', realName: '访客', role: 'visitor', group: '', grade: '', research: '', phone: '', email: 'visitor@example.com', mustChangePwd: true, firstLogin: true, fromTeam: false }
             ];
@@ -71,14 +72,19 @@
             });
             if (migrateDemoAccountNames()) changed = true;
             if (changed) saveAccountData();
-            // 若本地已有团队成员数据，立即联动清理账号
+
+            // 先恢复会话到 currentUser，再做团队联动，避免刷新时把登录账号当孤儿删掉
+            var hadSession = tryRestoreSessionFromStorage();
+
             try {
                 var rawTeam = localStorage.getItem('teamMemberData');
                 if (rawTeam && typeof syncTeamMembersAcrossSystem === 'function') {
                     var parsedTeam = JSON.parse(rawTeam);
                     if (Array.isArray(parsedTeam) && parsedTeam.length && typeof teamMemberData !== 'undefined') {
                         teamMemberData = parsedTeam;
-                        syncTeamMembersAcrossSystem();
+                        syncTeamMembersAcrossSystem({ preserveSessionUser: true });
+                        // 联动后 id 可能变化，再匹配一次
+                        if (hadSession) tryRestoreSessionFromStorage();
                     }
                 }
             } catch (eTeamSync) {}
@@ -93,24 +99,78 @@
             const p = localStorage.getItem('passwordPolicy'); if (p) passwordPolicy = JSON.parse(p);
             const a = localStorage.getItem('loginAttempts'); if (a) loginAttempts = JSON.parse(a);
 
-            // Token 免登录（24h）
-            const session = JSON.parse(localStorage.getItem('currentSession') || 'null');
-            if (session && Date.now() - session.loginTime < TOKEN_EXPIRE_MS) {
-                const user = accountData.find(u => u.id === session.userId && u.status === 'active');
-                if (user) { currentUser = user; enterSystem(); return; }
+            if (currentUser || tryRestoreSessionFromStorage()) {
+                enterSystem();
+                return;
             }
-            if (session) localStorage.removeItem('currentSession');
 
             document.getElementById('loginOverlay').classList.add('active'); initLoginMotion();
             document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
             document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
         };
 
+        // 1) 立即用本地数据尝试恢复（刷新不掉线）
+        start(false);
+
+        // 2) 后台同步云端；若本地未登录成功、云端回来后再试一次恢复
         if (typeof pullAllFromCloud === 'function') {
-            pullAllFromCloud({ silent: true }).then(start).catch(function() { start(); });
-        } else {
-            start();
+            pullAllFromCloud({ silent: true }).then(function() {
+                try {
+                    var rawAcc = localStorage.getItem('accountData');
+                    if (rawAcc) accountData = JSON.parse(rawAcc);
+                } catch (e) {}
+                if (migrateDemoAccountNames()) saveAccountData();
+                if (!currentUser && tryRestoreSessionFromStorage()) {
+                    enterSystem();
+                } else if (currentUser && typeof onCloudAccountPermissionHydrated === 'function') {
+                    onCloudAccountPermissionHydrated();
+                    try { if (typeof rematchSessionAfterAccountSync === 'function') rematchSessionAfterAccountSync(); } catch (eR) {}
+                    try { updateHeaderUserInfo(); } catch (eH) {}
+                }
+            }).catch(function() {});
         }
+    }
+
+    /** 从 localStorage 恢复会话；找不到用户时不轻易清除 session（避免云端未就绪误踢） */
+    function tryRestoreSessionFromStorage() {
+        var session = null;
+        try { session = JSON.parse(localStorage.getItem('currentSession') || 'null'); } catch (e) { session = null; }
+        if (!session || !session.loginTime) return false;
+        if (Date.now() - Number(session.loginTime) >= TOKEN_EXPIRE_MS) {
+            localStorage.removeItem('currentSession');
+            return false;
+        }
+        var user = findAccountForSession(session);
+        if (!user) return false;
+        if (user.status && user.status !== 'active') {
+            localStorage.removeItem('currentSession');
+            return false;
+        }
+        currentUser = user;
+        try { window.currentUser = currentUser; } catch (eSync) {}
+        // 回写补全 studentId，便于后续 id 变动时仍能匹配
+        try {
+            localStorage.setItem('currentSession', JSON.stringify({
+                userId: user.id,
+                studentId: user.studentId || session.studentId || '',
+                loginTime: session.loginTime
+            }));
+        } catch (eSave) {}
+        return true;
+    }
+
+    function findAccountForSession(session) {
+        if (!session || !Array.isArray(accountData)) return null;
+        var byId = accountData.find(function(u) {
+            return Number(u.id) === Number(session.userId);
+        });
+        if (byId) return byId;
+        if (session.studentId) {
+            return accountData.find(function(u) {
+                return String(u.studentId || '') === String(session.studentId);
+            }) || null;
+        }
+        return null;
     }
 
     function mergePermissionMatrixDefaults() {
@@ -185,7 +245,15 @@
         } catch (e) {}
 
         if (currentUser) {
-            var fresh = accountData.find(function(a) { return a.id === currentUser.id; });
+            var fresh = accountData.find(function(a) { return Number(a.id) === Number(currentUser.id); });
+            if (!fresh && currentUser.studentId) {
+                fresh = accountData.find(function(a) { return String(a.studentId || '') === String(currentUser.studentId); });
+            }
+            if (!fresh) {
+                // 云端暂未带回账号：保留当前会话，不踢出
+                try { window.currentUser = currentUser; window.accountData = accountData; } catch (eSync) {}
+                return;
+            }
             if (fresh) {
                 currentUser = fresh;
                 if (fresh.status !== 'active') {
@@ -197,6 +265,18 @@
                     initLoginMotion();
                     return;
                 }
+                try {
+                    localStorage.setItem('currentSession', JSON.stringify({
+                        userId: fresh.id,
+                        studentId: fresh.studentId || '',
+                        loginTime: (function() {
+                            try {
+                                var s = JSON.parse(localStorage.getItem('currentSession') || 'null');
+                                return (s && s.loginTime) || Date.now();
+                            } catch (e) { return Date.now(); }
+                        })()
+                    }));
+                } catch (eS) {}
                 try { window.currentUser = currentUser; window.accountData = accountData; } catch (eSync) {}
                 updateHeaderUserInfo();
                 applyRolePermissions();
@@ -346,7 +426,11 @@
 
         currentUser = account;
         try { window.currentUser = currentUser; } catch (eSync) {}
-        localStorage.setItem('currentSession', JSON.stringify({ userId: account.id, loginTime: Date.now() }));
+        localStorage.setItem('currentSession', JSON.stringify({
+            userId: account.id,
+            studentId: account.studentId || '',
+            loginTime: Date.now()
+        }));
 
         loadOperationLogData();
         cleanExpiredLogs();
@@ -492,10 +576,15 @@
     }
 
     function updateHeaderUserInfo() {
-        if (!currentUser) return;
         const nameEl = document.getElementById('headerUserName');
         const roleEl = document.getElementById('headerUserRole');
         const avEl = document.getElementById('headerAvatar');
+        if (!currentUser) {
+            if (nameEl) nameEl.textContent = '未登录';
+            if (roleEl) roleEl.textContent = '请先登录';
+            if (avEl) { avEl.innerHTML = ''; avEl.textContent = '?'; }
+            return;
+        }
         if (nameEl) nameEl.textContent = currentUser.realName || currentUser.studentId || '';
         if (roleEl) roleEl.textContent = (typeof ROLE_LABELS !== 'undefined' && ROLE_LABELS[currentUser.role]) ? ROLE_LABELS[currentUser.role] : (currentUser.role || '');
         if (avEl) {
@@ -512,6 +601,58 @@
         try { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); } catch (e2) {}
         try { if (typeof updateHomeSyncChrome === 'function') updateHomeSyncChrome(); } catch (e3) {}
     }
+
+    /** 账号库被团队联动/云端拉取改写后，按学号或姓名重新对齐会话，避免刷新掉线 */
+    function rematchSessionAfterAccountSync() {
+        try {
+            var session = null;
+            try { session = JSON.parse(localStorage.getItem('currentSession') || 'null'); } catch (e0) { session = null; }
+            if (!session || !session.loginTime) {
+                if (currentUser) {
+                    try { window.currentUser = currentUser; window.accountData = accountData; } catch (e1) {}
+                }
+                return !!currentUser;
+            }
+            if (Date.now() - Number(session.loginTime) >= TOKEN_EXPIRE_MS) {
+                localStorage.removeItem('currentSession');
+                currentUser = null;
+                try { window.currentUser = null; } catch (e2) {}
+                return false;
+            }
+            var user = findAccountForSession(session);
+            if (!user && currentUser) {
+                user = findAccountForSession({
+                    userId: currentUser.id,
+                    studentId: currentUser.studentId || session.studentId || ''
+                });
+            }
+            if (!user && currentUser && currentUser.realName && Array.isArray(accountData)) {
+                user = accountData.find(function(a) {
+                    return a && a.role !== 'visitor' && String(a.realName || '') === String(currentUser.realName);
+                }) || null;
+            }
+            if (!user) return !!currentUser;
+            if (user.status && user.status !== 'active') {
+                localStorage.removeItem('currentSession');
+                currentUser = null;
+                try { window.currentUser = null; } catch (e3) {}
+                return false;
+            }
+            currentUser = user;
+            try {
+                localStorage.setItem('currentSession', JSON.stringify({
+                    userId: user.id,
+                    studentId: user.studentId || session.studentId || '',
+                    loginTime: session.loginTime
+                }));
+            } catch (e4) {}
+            try { window.currentUser = currentUser; window.accountData = accountData; } catch (e5) {}
+            return true;
+        } catch (e) {
+            return !!currentUser;
+        }
+    }
+    window.rematchSessionAfterAccountSync = rematchSessionAfterAccountSync;
 
     // ===== 3. 权限控制 =====
     function hasPermission(featureName) {
@@ -1335,7 +1476,15 @@
         if (fileName.endsWith('.csv')) {
             parseCSVFile(fileInput.files[0]);
         } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-            parseExcelFile(fileInput.files[0]);
+            var file = fileInput.files[0];
+            var run = function () { parseExcelFile(file); };
+            if (typeof ensureVendor === 'function') {
+                ensureVendor('xlsx').then(run).catch(function () {
+                    resultDiv.innerHTML = '<div style="color:#e53935;">Excel 组件加载失败</div>';
+                });
+            } else {
+                run();
+            }
         } else {
             resultDiv.innerHTML = '<div style="color:#e53935;">不支持的文件格式，请选择 CSV 或 Excel 文件</div>';
         }
@@ -4115,8 +4264,22 @@
 
     function getHomePatentList() {
         try {
+            if (typeof patentMgmtData !== 'undefined' && Array.isArray(patentMgmtData) && patentMgmtData.length) {
+                return patentMgmtData;
+            }
+        } catch (e0) {}
+        try {
+            if (typeof window !== 'undefined' && Array.isArray(window.patentMgmtData) && window.patentMgmtData.length) {
+                return window.patentMgmtData;
+            }
+        } catch (e1) {}
+        try {
             if (typeof patentData !== 'undefined' && Array.isArray(patentData)) return patentData;
         } catch (e) {}
+        try {
+            var rawMgmt = JSON.parse(localStorage.getItem('patentMgmtData') || 'null');
+            if (Array.isArray(rawMgmt) && rawMgmt.length) return rawMgmt;
+        } catch (eMgmt) {}
         try {
             var raw = JSON.parse(localStorage.getItem('patentData') || '[]');
             return Array.isArray(raw) ? raw : [];
@@ -4125,8 +4288,13 @@
 
     function getHomePaperList() {
         try {
-            if (typeof paperData !== 'undefined' && Array.isArray(paperData)) return paperData;
+            if (typeof paperData !== 'undefined' && Array.isArray(paperData) && paperData.length) return paperData;
         } catch (e) {}
+        try {
+            if (typeof window !== 'undefined' && Array.isArray(window.paperData) && window.paperData.length) {
+                return window.paperData;
+            }
+        } catch (e1) {}
         try {
             var raw = JSON.parse(localStorage.getItem('paperData') || '[]');
             return Array.isArray(raw) ? raw : [];
@@ -5453,12 +5621,14 @@
             return await file.text();
         }
         if (ext === 'docx' || (file.type || '').indexOf('wordprocessingml') >= 0) {
+            if (typeof ensureVendor === 'function') await ensureVendor('mammoth');
             if (!window.mammoth) throw new Error('Word 解析库未加载，请刷新页面后重试');
             const arrayBuffer = await file.arrayBuffer();
             const result = await window.mammoth.extractRawText({ arrayBuffer });
             return result.value || '';
         }
         if (ext === 'pdf' || (file.type || '') === 'application/pdf') {
+            if (typeof ensureVendor === 'function') await ensureVendor('pdfjs');
             if (!window.pdfjsLib) throw new Error('PDF 解析库未加载，请刷新页面后重试');
             if (window.pdfjsLib.GlobalWorkerOptions) {
                 window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
@@ -11404,12 +11574,19 @@
 
     function openMemberFromLogDetail() {
         if (!__currentLogDetailMemberId) return;
+        var mid = __currentLogDetailMemberId;
         closeLogDetailModal();
         try {
-            if (typeof showModule === 'function') showModule('member_archive');
-            setTimeout(function() {
-                if (typeof showMemberDetail === 'function') showMemberDetail(__currentLogDetailMemberId);
-            }, 120);
+            var go = function () {
+                if (typeof showMemberDetail === 'function') showMemberDetail(mid);
+            };
+            if (typeof showModule === 'function') {
+                Promise.resolve(showModule('member_archive')).then(function () {
+                    setTimeout(go, 80);
+                }).catch(function () { setTimeout(go, 200); });
+            } else {
+                setTimeout(go, 200);
+            }
         } catch (e) {}
     }
 

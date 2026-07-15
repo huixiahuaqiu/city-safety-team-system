@@ -656,7 +656,7 @@
         setDocStatus('OCR 重试中', 'busy');
         showDocLoading('正在 OCR：' + entry.name);
         try {
-            var pdfjs = getPdfjs();
+            var pdfjs = await getPdfjs();
             var buf = await entry.file.arrayBuffer();
             var pdf = await pdfjs.getDocument({ data: buf }).promise;
             _pdfDocCache = pdf;
@@ -790,6 +790,7 @@
     }
 
     async function parseDocx(file) {
+        if (typeof global.ensureVendor === 'function') await global.ensureVendor('mammoth');
         if (typeof global.mammoth === 'undefined') throw new Error('mammoth 未加载');
         var buf = await file.arrayBuffer();
         var res = await global.mammoth.extractRawText({ arrayBuffer: buf });
@@ -808,11 +809,12 @@
         return cjk * 2 + latin + Math.min(digits, 20);
     }
 
-    function getPdfjs() {
+    async function getPdfjs() {
+        if (typeof global.ensureVendor === 'function') await global.ensureVendor('pdfjs');
         var pdfjs = global.pdfjsLib || global.pdfjs;
         if (!pdfjs) throw new Error('PDF.js 未加载');
         if (pdfjs.GlobalWorkerOptions) {
-            pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
+            pdfjs.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
         }
         return pdfjs;
     }
@@ -915,7 +917,7 @@
 
     async function parsePdfSmart(file, opts) {
         opts = opts || {};
-        var pdfjs = getPdfjs();
+        var pdfjs = await getPdfjs();
         var buf = await file.arrayBuffer();
         var pdf = await pdfjs.getDocument({ data: buf }).promise;
         _pdfDocCache = pdf;
@@ -960,7 +962,7 @@
         var entry = docLibrary.find(function (d) { return d.id === activeDocId; });
         var file = (entry && entry.file) || (currentDocument && currentDocument.file);
         if (!file || !/\.pdf$/i.test((entry && entry.name) || (currentDocument && currentDocument.name) || '')) return false;
-        var pdfjs = getPdfjs();
+        var pdfjs = await getPdfjs();
         var buf = await file.arrayBuffer();
         _pdfDocCache = await pdfjs.getDocument({ data: buf }).promise;
         return true;

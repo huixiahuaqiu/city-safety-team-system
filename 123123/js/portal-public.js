@@ -103,7 +103,8 @@
         });
 
         var papers = arr('paperData');
-        var patents = arr('patentData');
+        var patents = arr('patentMgmtData');
+        if (!patents.length) patents = arr('patentData');
         var standards = arr('standardData');
         var copyrights = arr('copyrightData');
         var competitions = arr('competitionData');
@@ -1320,7 +1321,7 @@
         // 业务数据变更时失效缓存
         global.addEventListener('storage', function (ev) {
             if (!ev || !ev.key) return;
-            var hot = { teamMemberData:1, paperData:1, patentData:1, standardData:1, copyrightData:1, competitionData:1, longitudinalData:1, horizontalData:1, schoolData:1, portalContentConfig_v1:1 };
+            var hot = { teamMemberData:1, paperData:1, patentData:1, patentMgmtData:1, standardData:1, copyrightData:1, competitionData:1, longitudinalData:1, horizontalData:1, schoolData:1, portalContentConfig_v1:1, portalFeedbackData_v1:1 };
             if (hot[ev.key]) invalidatePortalCache();
         });
         setTimeout(function () {
