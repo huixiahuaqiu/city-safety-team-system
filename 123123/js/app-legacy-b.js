@@ -105,6 +105,8 @@
             }
 
             document.getElementById('loginOverlay').classList.add('active'); initLoginMotion();
+            ensureTeamAccountsReady();
+            refreshLoginDemoChips();
             document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
             document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
         };
@@ -231,6 +233,7 @@
             var rawAcc = localStorage.getItem('accountData');
             if (rawAcc) accountData = JSON.parse(rawAcc);
         } catch (e) {}
+        try { if (typeof applyPendingPasswordCommit === 'function') applyPendingPasswordCommit(); } catch (eP) {}
         if (migrateDemoAccountNames()) saveAccountData();
         try {
             var rawPerm = localStorage.getItem('permissionMatrix');
@@ -245,10 +248,7 @@
         } catch (e) {}
 
         if (currentUser) {
-            var fresh = accountData.find(function(a) { return Number(a.id) === Number(currentUser.id); });
-            if (!fresh && currentUser.studentId) {
-                fresh = accountData.find(function(a) { return String(a.studentId || '') === String(currentUser.studentId); });
-            }
+            var fresh = findAccountRecordForUser(currentUser);
             if (!fresh) {
                 // 云端暂未带回账号：保留当前会话，不踢出
                 try { window.currentUser = currentUser; window.accountData = accountData; } catch (eSync) {}
@@ -280,6 +280,7 @@
                 try { window.currentUser = currentUser; window.accountData = accountData; } catch (eSync) {}
                 updateHeaderUserInfo();
                 applyRolePermissions();
+                try { if (typeof enforceMustChangePasswordGate === 'function') enforceMustChangePasswordGate(); } catch (eG) {}
             }
         }
     }
@@ -347,12 +348,16 @@
         if (open) panel.removeAttribute('hidden');
         else panel.setAttribute('hidden', '');
         if (btn) btn.textContent = open ? '演示账号 ▴' : '演示账号 ▾';
+        if (open) refreshLoginDemoChips();
     }
 
     function fillLoginDemo(studentId) {
+        ensureTeamAccountsReady();
+        refreshLoginDemoChips();
+        const resolved = resolveDemoLoginId(studentId);
         const u = document.getElementById('loginUsername');
         const p = document.getElementById('loginPassword');
-        if (u) u.value = studentId || '';
+        if (u) u.value = resolved || studentId || '';
         if (p) p.value = '123456';
         const err = document.getElementById('loginError');
         if (err) err.textContent = '';
@@ -364,17 +369,161 @@
         pwd.type = pwd.type === 'password' ? 'text' : 'password';
     }
 
+    /** 登录前确保团队成员已同步生成账号 */
+    function ensureTeamAccountsReady() {
+        try {
+            var rawTeam = localStorage.getItem('teamMemberData');
+            if (rawTeam) {
+                var parsed = JSON.parse(rawTeam);
+                if (Array.isArray(parsed) && parsed.length) {
+                    try { teamMemberData = parsed; } catch (eT) { window.teamMemberData = parsed; }
+                    if (typeof syncTeamMembersAcrossSystem === 'function') {
+                        syncTeamMembersAcrossSystem({ preserveSessionUser: true });
+                    }
+                }
+            }
+        } catch (e) {}
+        try {
+            var rawAcc = localStorage.getItem('accountData');
+            if (rawAcc) accountData = JSON.parse(rawAcc);
+        } catch (e2) {}
+        try { window.accountData = accountData; } catch (e3) {}
+        ensureDemoLoginAliases();
+    }
+
+    /** 保证演示账号 admin / leader01 / stu001 总能落到真实账号上 */
+    function ensureDemoLoginAliases() {
+        if (!Array.isArray(accountData) || !accountData.length) return;
+        var changed = false;
+        function pick(rolePrefer) {
+            var list = accountData.filter(function(a) {
+                return a && a.role !== 'visitor' && a.status !== 'disabled';
+            });
+            var hit = list.find(function(a) { return a.role === rolePrefer; });
+            return hit || list[0] || null;
+        }
+        function bindAlias(alias, account) {
+            if (!account || !alias) return;
+            if (String(account.studentId) === alias) return;
+            if (!Array.isArray(account.loginAliases)) account.loginAliases = [];
+            // 先清掉其他账号上的同名别名，避免冲突
+            accountData.forEach(function(a) {
+                if (!a || a === account || !Array.isArray(a.loginAliases)) return;
+                var i = a.loginAliases.indexOf(alias);
+                if (i >= 0) { a.loginAliases.splice(i, 1); changed = true; }
+            });
+            if (account.loginAliases.indexOf(alias) < 0) {
+                account.loginAliases.push(alias);
+                changed = true;
+            }
+        }
+        var hasExact = function(id) {
+            return accountData.some(function(a) {
+                return a && (String(a.studentId) === id || (Array.isArray(a.loginAliases) && a.loginAliases.indexOf(id) >= 0));
+            });
+        };
+        if (!hasExact('admin')) bindAlias('admin', pick('admin'));
+        if (!hasExact('leader01')) bindAlias('leader01', pick('leader') || pick('student'));
+        if (!hasExact('stu001')) bindAlias('stu001', pick('student'));
+        if (changed) saveAccountData();
+    }
+
+    function findAccountForLogin(loginId) {
+        var id = String(loginId || '').trim();
+        if (!id || !Array.isArray(accountData)) return null;
+        var idLower = id.toLowerCase();
+        var digits = id.replace(/\D/g, '');
+        return accountData.find(function(a) {
+            if (!a) return false;
+            if (String(a.studentId || '') === id) return true;
+            if (Array.isArray(a.loginAliases) && a.loginAliases.indexOf(id) >= 0) return true;
+            if (digits.length >= 11) {
+                var phone = String(a.phone || '').replace(/\D/g, '');
+                if (phone === digits) return true;
+                if (String(a.studentId || '').replace(/\D/g, '') === digits) return true;
+            }
+            if (a.email) {
+                var email = String(a.email).toLowerCase();
+                if (email === idLower) return true;
+                if (email.split('@')[0] === idLower) return true;
+            }
+            return false;
+        }) || null;
+    }
+
+    function resolveDemoLoginId(preferred) {
+        ensureDemoLoginAliases();
+        var acc = findAccountForLogin(preferred);
+        if (acc) return preferred;
+        // 回退到角色对应真实学号
+        var roleMap = { admin: 'admin', leader01: 'leader', stu001: 'student', visitor01: 'visitor' };
+        var role = roleMap[preferred];
+        if (role === 'visitor') return 'visitor01';
+        var hit = accountData.find(function(a) { return a && a.role === role && a.status !== 'disabled'; });
+        return hit ? hit.studentId : preferred;
+    }
+
+    function refreshLoginDemoChips() {
+        ensureDemoLoginAliases();
+        var box = document.querySelector('#loginDemoPanel .login-demo-chips');
+        if (!box) return;
+        function labelFor(preferred, roleFallback, fallbackText) {
+            var acc = findAccountForLogin(preferred);
+            if (!acc && roleFallback) {
+                acc = accountData.find(function(a) { return a && a.role === roleFallback && a.status !== 'disabled'; });
+            }
+            if (!acc) return fallbackText;
+            var sid = preferred;
+            if (String(acc.studentId) !== preferred && !(acc.loginAliases || []).includes(preferred)) {
+                sid = acc.studentId;
+            }
+            return (ROLE_LABELS[acc.role] || '') + ' ' + sid + (acc.realName ? '（' + acc.realName + '）' : '');
+        }
+        box.innerHTML =
+            '<button type="button" onclick="fillLoginDemo(\'admin\')">' + labelFor('admin', 'admin', '导师 admin') + '</button>' +
+            '<button type="button" onclick="fillLoginDemo(\'leader01\')">' + labelFor('leader01', 'leader', '组长 leader01') + '</button>' +
+            '<button type="button" onclick="fillLoginDemo(\'stu001\')">' + labelFor('stu001', 'student', '学生 stu001') + '</button>' +
+            '<button type="button" onclick="fillLoginDemo(\'visitor01\')">访客 visitor01</button>';
+    }
+
     function handleLogin() {
+        ensureTeamAccountsReady();
         const studentId = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
         const errorEl = document.getElementById('loginError');
         const warningEl = document.getElementById('loginAttemptWarning');
         errorEl.textContent = ''; warningEl.style.display = 'none';
 
-        if (!studentId || !password) { errorEl.textContent = '请输入学号和密码'; return; }
+        if (!studentId || !password) { errorEl.textContent = '请输入学号/手机号和密码'; return; }
 
-        const account = accountData.find(a => a.studentId === studentId);
-        if (!account) { errorEl.textContent = '账号不存在'; return; }
+        let account = findAccountForLogin(studentId);
+        if (!account) {
+            // 团队有该成员但账号缺失时再同步一次
+            ensureTeamAccountsReady();
+            account = findAccountForLogin(studentId);
+        }
+        if (!account) {
+            var teamHit = null;
+            try {
+                var members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData))
+                    ? teamMemberData
+                    : JSON.parse(localStorage.getItem('teamMemberData') || '[]');
+                var digits = studentId.replace(/\D/g, '');
+                teamHit = (members || []).find(function(m) {
+                    if (!m) return false;
+                    if (m.name === studentId) return true;
+                    if (digits.length >= 6 && String(m.phone || '').replace(/\D/g, '') === digits) return true;
+                    if (m.email && String(m.email).toLowerCase().indexOf(studentId.toLowerCase()) === 0) return true;
+                    return false;
+                });
+            } catch (eTeam) {}
+            if (teamHit) {
+                errorEl.textContent = '成员「' + teamHit.name + '」账号开通失败，请管理员打开「账号管理」点刷新后再试';
+            } else {
+                errorEl.textContent = '账号不存在（可用手机号或学号登录）';
+            }
+            return;
+        }
         if (account.status === 'disabled') { errorEl.textContent = '账号已禁用，请联系管理员'; return; }
 
         if (account.lockedUntil && new Date(account.lockedUntil) > new Date()) {
@@ -384,7 +533,8 @@
 
         const maxAttempts = getConfigInt('user.passwordErrorLockCount', 5);
         const lockDuration = getConfigInt('user.lockTime', 30);
-        const attempts = loginAttempts[studentId] || 0;
+        const attemptKey = account.studentId || studentId;
+        const attempts = loginAttempts[attemptKey] || loginAttempts[studentId] || 0;
         if (attempts >= maxAttempts) {
             account.lockedUntil = new Date(Date.now() + lockDuration * 60000).toISOString();
             saveAccountData();
@@ -393,7 +543,7 @@
         }
 
         if (account.password !== password) {
-            loginAttempts[studentId] = attempts + 1;
+            loginAttempts[attemptKey] = attempts + 1;
             localStorage.setItem('loginAttempts', JSON.stringify(loginAttempts));
             const remain = maxAttempts - (attempts + 1);
             if (remain <= 2) { warningEl.textContent = `密码错误！再失败 ${remain} 次后账号将被锁定`; warningEl.style.display = 'block'; }
@@ -404,11 +554,12 @@
 
         try {
             const remember = document.getElementById('loginRemember');
-            if (remember && remember.checked) localStorage.setItem('loginRememberedUser', studentId);
+            if (remember && remember.checked) localStorage.setItem('loginRememberedUser', account.studentId || studentId);
             else localStorage.removeItem('loginRememberedUser');
         } catch (eRem) {}
 
         // 登录成功
+        loginAttempts[attemptKey] = 0;
         loginAttempts[studentId] = 0;
         localStorage.setItem('loginAttempts', JSON.stringify(loginAttempts));
         account.lastLogin = new Date().toLocaleString('zh-CN');
@@ -444,35 +595,170 @@
         enterSystem();
     }
 
+    function findAccountRecordForUser(user) {
+        if (!user || !Array.isArray(accountData)) return null;
+        var byId = accountData.find(function(a) { return a && Number(a.id) === Number(user.id); });
+        if (byId) return byId;
+        if (user.studentId) {
+            var bySid = accountData.find(function(a) { return a && String(a.studentId || '') === String(user.studentId); });
+            if (bySid) return bySid;
+        }
+        if (user.phone) {
+            var digits = String(user.phone).replace(/\D/g, '');
+            if (digits.length >= 11) {
+                return accountData.find(function(a) {
+                    return a && String(a.phone || '').replace(/\D/g, '') === digits;
+                }) || null;
+            }
+        }
+        return null;
+    }
+
+    function applyPendingPasswordCommit() {
+        var pending = null;
+        try { pending = JSON.parse(sessionStorage.getItem('pendingPasswordCommit') || 'null'); } catch (e) { pending = null; }
+        if (!pending || !pending.password) return false;
+        var acc = null;
+        if (pending.userId != null) {
+            acc = accountData.find(function(a) { return a && Number(a.id) === Number(pending.userId); });
+        }
+        if (!acc && pending.studentId) {
+            acc = accountData.find(function(a) { return a && String(a.studentId || '') === String(pending.studentId); });
+        }
+        if (!acc) return false;
+        var changed = false;
+        if (acc.password !== pending.password) { acc.password = pending.password; changed = true; }
+        if (acc.mustChangePwd !== false) { acc.mustChangePwd = false; changed = true; }
+        if (acc.firstLogin) { acc.firstLogin = false; changed = true; }
+        if (Number(acc.passwordUpdatedAt || 0) < Number(pending.ts || 0)) {
+            acc.passwordUpdatedAt = pending.ts || Date.now();
+            changed = true;
+        }
+        if (currentUser && (
+            Number(currentUser.id) === Number(acc.id)
+            || String(currentUser.studentId || '') === String(acc.studentId || '')
+        )) {
+            currentUser = acc;
+            try { window.currentUser = currentUser; } catch (e2) {}
+        }
+        if (changed) {
+            // 直接写存储并强制推云，避免被随后的拉取盖掉
+            try {
+                Storage.prototype.setItem.call(localStorage, 'accountData', JSON.stringify(accountData));
+            } catch (e3) {
+                localStorage.setItem('accountData', JSON.stringify(accountData));
+            }
+            try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e4) {}
+        }
+        return true;
+    }
+
+    function clearPendingPasswordCommit() {
+        try { sessionStorage.removeItem('pendingPasswordCommit'); } catch (e) {}
+    }
+
+    function enforceMustChangePasswordGate() {
+        if (!currentUser) return false;
+        var acc = findAccountRecordForUser(currentUser) || currentUser;
+        if (!acc.mustChangePwd) return false;
+        currentUser = acc;
+        try { window.currentUser = currentUser; } catch (e) {}
+        document.getElementById('loginOverlay').classList.remove('active');
+        if (!document.getElementById('forceChangePwdModal')) {
+            showForceChangePasswordModal();
+        }
+        return true;
+    }
+
     function showForceChangePasswordModal() {
+        var old = document.getElementById('forceChangePwdModal');
+        if (old) old.remove();
         const div = document.createElement('div');
         div.id = 'forceChangePwdModal';
         div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:11000;display:flex;justify-content:center;align-items:center;';
         div.innerHTML = `
-            <div style="background:#fff;border-radius:12px;padding:28px;width:420px;max-width:90vw;">
+            <div style="background:#fff;border-radius:12px;padding:28px;width:420px;max-width:90vw;" onclick="event.stopPropagation()">
                 <h3 style="margin:0 0 8px;color:#e65100;">首次登录 · 请修改密码</h3>
-                <p style="font-size:13px;color:#888;margin-bottom:20px;">您的账号为首次登录，请修改初始密码后再进入系统</p>
+                <p style="font-size:13px;color:#888;margin-bottom:20px;">您的账号为首次登录，请修改初始密码后再进入系统。改密完成前刷新页面仍会要求修改。</p>
                 <div class="form-group"><label>新密码</label><input type="password" id="forceNewPwd" placeholder="至少8位，含字母和数字" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;" oninput="checkPasswordStrength(this.value,'forcePwdStrength')"><div class="password-strength-bar"><div class="fill" id="forcePwdStrengthBar"></div></div><div class="password-strength-text" id="forcePwdStrength"></div></div>
                 <div class="form-group"><label>确认新密码</label><input type="password" id="forceNewPwdConfirm" placeholder="再次输入新密码" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;"></div>
+                <div id="forcePwdError" style="color:#e53935;font-size:13px;min-height:18px;margin-bottom:8px;"></div>
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-                    <button class="btn" onclick="submitForceChangePwd()">确认修改并进入系统</button>
+                    <button class="btn" type="button" id="forcePwdSubmitBtn" onclick="submitForceChangePwd()">确认修改并进入系统</button>
                 </div>
             </div>`;
         document.body.appendChild(div);
     }
 
-    function submitForceChangePwd() {
-        const newPwd = document.getElementById('forceNewPwd').value;
-        const confirmPwd = document.getElementById('forceNewPwdConfirm').value;
-        if (!validatePassword(newPwd)) { alert('密码不符合复杂度要求（至少8位，含字母和数字）'); return; }
-        if (newPwd !== confirmPwd) { alert('两次输入的密码不一致'); return; }
-        currentUser.password = newPwd;
-        currentUser.mustChangePwd = false;
-        const acc = accountData.find(a => a.id === currentUser.id);
-        if (acc) { acc.password = newPwd; acc.mustChangePwd = false; }
-        saveAccountData();
+    async function submitForceChangePwd() {
+        const errEl = document.getElementById('forcePwdError');
+        const btn = document.getElementById('forcePwdSubmitBtn');
+        const newPwd = (document.getElementById('forceNewPwd') || {}).value || '';
+        const confirmPwd = (document.getElementById('forceNewPwdConfirm') || {}).value || '';
+        if (errEl) errEl.textContent = '';
+        if (!validatePassword(newPwd)) {
+            if (errEl) errEl.textContent = '密码不符合复杂度要求（至少8位，含字母和数字）';
+            else alert('密码不符合复杂度要求（至少8位，含字母和数字）');
+            return;
+        }
+        if (newPwd !== confirmPwd) {
+            if (errEl) errEl.textContent = '两次输入的密码不一致';
+            else alert('两次输入的密码不一致');
+            return;
+        }
+        if (!currentUser) {
+            if (errEl) errEl.textContent = '登录状态已失效，请重新登录后再改密';
+            return;
+        }
+
+        // 重新从本地加载，避免内存中的 accountData 已被云端旧数据替换
+        try {
+            var rawAcc = localStorage.getItem('accountData');
+            if (rawAcc) accountData = JSON.parse(rawAcc);
+        } catch (eReload) {}
+
+        var acc = findAccountRecordForUser(currentUser);
+        if (!acc) {
+            if (errEl) errEl.textContent = '找不到账号记录，请联系导师在「账号管理」重置密码';
+            return;
+        }
+        if (newPwd === DEFAULT_PASSWORD || newPwd === '123456') {
+            if (errEl) errEl.textContent = '请勿继续使用初始密码，请设置新的密码';
+            return;
+        }
+
+        var ts = Date.now();
+        acc.password = newPwd;
+        acc.mustChangePwd = false;
+        acc.firstLogin = false;
+        acc.passwordUpdatedAt = ts;
+        currentUser = acc;
+        try { window.currentUser = currentUser; } catch (eU) {}
+
+        var commit = {
+            userId: acc.id,
+            studentId: acc.studentId || '',
+            password: newPwd,
+            ts: ts
+        };
+        try { sessionStorage.setItem('pendingPasswordCommit', JSON.stringify(commit)); } catch (eS) {}
+
+        if (btn) { btn.disabled = true; btn.textContent = '保存中…'; }
+        try {
+            Storage.prototype.setItem.call(localStorage, 'accountData', JSON.stringify(accountData));
+        } catch (eSet) {
+            localStorage.setItem('accountData', JSON.stringify(accountData));
+        }
+        try {
+            if (typeof cloudUpsert === 'function') {
+                await cloudUpsert('accountData', JSON.stringify(accountData));
+            }
+        } catch (eCloud) {
+            console.warn('force change pwd cloud upsert', eCloud);
+        }
+
         document.getElementById('forceChangePwdModal')?.remove();
-        enterSystem();
+        enterSystem({ afterPasswordChange: true });
     }
 
     function syncGlobalsForExternalModules() {
@@ -482,7 +768,6 @@
         try {
             if (typeof literatureData !== 'undefined') {
                 if (Array.isArray(window.literatureData) && window.literatureData !== literatureData) {
-                    // 外部模块可能已写入 window.literatureData，回灌到本脚本变量
                     literatureData = window.literatureData;
                 } else {
                     window.literatureData = literatureData;
@@ -516,10 +801,52 @@
     }
     window.syncGlobalsForExternalModules = syncGlobalsForExternalModules;
 
-    function enterSystem() {
+    function enterSystem(options) {
+        options = options || {};
+        applyPendingPasswordCommit();
         syncGlobalsForExternalModules();
-        // 登录后先拉云端，保证账号权限与全站数据全局一致
+
+        // 刷新/恢复会话时也必须挡住未改密用户
+        if (!options.afterPasswordChange && enforceMustChangePasswordGate()) {
+            // 仍后台同步，但不放行业务（弹窗已显示）
+            if (typeof syncFromCloudAndRefresh === 'function') {
+                syncFromCloudAndRefresh({ silent: true }).then(function() {
+                    applyPendingPasswordCommit();
+                    try {
+                        var rawAcc = localStorage.getItem('accountData');
+                        if (rawAcc) accountData = JSON.parse(rawAcc);
+                    } catch (e) {}
+                    if (currentUser) {
+                        var fresh = findAccountRecordForUser(currentUser);
+                        if (fresh) currentUser = fresh;
+                    }
+                    if (enforceMustChangePasswordGate()) return;
+                    clearPendingPasswordCommit();
+                    syncGlobalsForExternalModules();
+                    updateHeaderUserInfo();
+                    applyRolePermissions();
+                }).catch(function() {});
+            }
+            document.getElementById('loginOverlay').classList.remove('active');
+            return;
+        }
+
+        // 登录后先拉云端；改密后先合并密码再刷新
         syncFromCloudAndRefresh({ silent: false }).then(function() {
+            applyPendingPasswordCommit();
+            try {
+                var rawAcc2 = localStorage.getItem('accountData');
+                if (rawAcc2) accountData = JSON.parse(rawAcc2);
+            } catch (e2) {}
+            if (currentUser) {
+                var fresh2 = findAccountRecordForUser(currentUser);
+                if (fresh2) {
+                    currentUser = fresh2;
+                    try { window.currentUser = currentUser; } catch (e3) {}
+                }
+            }
+            if (!options.afterPasswordChange && enforceMustChangePasswordGate()) return;
+            if (options.afterPasswordChange) clearPendingPasswordCommit();
             syncGlobalsForExternalModules();
             updateHeaderUserInfo();
             applyRolePermissions();
@@ -527,7 +854,7 @@
             try { if (typeof renderAccountTable === 'function') renderAccountTable(); } catch (e) {}
             try { if (typeof renderHomeNewsPanel === 'function') renderHomeNewsPanel(); } catch (e) {}
             try { if (typeof initNewsManagement === 'function' && document.getElementById('news_management') && document.getElementById('news_management').classList.contains('active')) initNewsManagement(); } catch (e) {}
-        }).catch(function(e){ console.warn(e); syncGlobalsForExternalModules(); applyRolePermissions(); });
+        }).catch(function(e){ console.warn(e); applyPendingPasswordCommit(); syncGlobalsForExternalModules(); applyRolePermissions(); });
 
         document.getElementById('loginOverlay').classList.remove('active');
         updateHeaderUserInfo();
@@ -856,9 +1183,16 @@
         const members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData)) ? teamMemberData : [];
         return members.filter(function(m) {
             if (!m || !m.name) return false;
+            const preferred = typeof getPreferredStudentId === 'function' ? getPreferredStudentId(m) : '';
             return !accountData.some(function(a) {
                 if (!a || a.role === 'visitor') return false;
-                return a.realName === m.name || (m.email && a.email === m.email) || (a.teamMemberId && Number(a.teamMemberId) === Number(m.id));
+                if (typeof accountMatchesTeamMember === 'function') {
+                    return accountMatchesTeamMember(a, m, preferred);
+                }
+                return a.realName === m.name
+                    || (m.email && a.email === m.email)
+                    || (a.teamMemberId && Number(a.teamMemberId) === Number(m.id))
+                    || (m.phone && String(a.phone || '').replace(/\D/g, '') === String(m.phone).replace(/\D/g, ''));
             });
         });
     }
@@ -881,6 +1215,266 @@
         return graduated ? '已毕业' : '在读';
     }
 
+    function getAccountPasswordDisplay(a) {
+        if (!a) return '-';
+        if (a.role === 'admin') return '—';
+        // 仅导师可见明文初始密码；学生改密后不再展示
+        if (currentUser && currentUser.role === 'admin') {
+            if (a.mustChangePwd || a.firstLogin || !a.lastLogin) {
+                return '<code style="background:#fff7e6;padding:2px 6px;border-radius:4px;color:#ad6800;">' +
+                    escHtml(a.password || DEFAULT_PASSWORD) + '</code>' +
+                    '<div style="font-size:11px;color:#fa8c16;margin-top:2px;">待首次改密</div>';
+            }
+            return '<span style="color:#888;font-size:12px;">已自行修改</span>';
+        }
+        return a.mustChangePwd ? '待改密' : '已设置';
+    }
+
+    function getStudentAccountsForOps() {
+        return (accountData || []).filter(function(a) {
+            if (!a || isVisitorAccount(a)) return false;
+            if (a.role === 'admin') return false;
+            // 学生 + 组长都算可分发账号；导师账号不导出
+            return a.role === 'student' || a.role === 'leader';
+        });
+    }
+
+    /** 一键按团队档案匹配并开通学生账号，统一重置初始密码 */
+    function matchAndOpenAllStudentAccounts() {
+        if (!hasPermission('账号管理（新建/删除）')) {
+            alert('当前角色无「账号管理（新建/删除）」权限');
+            return;
+        }
+        var members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData))
+            ? teamMemberData
+            : [];
+        try {
+            if (!members.length) {
+                var raw = localStorage.getItem('teamMemberData');
+                members = raw ? JSON.parse(raw) : [];
+            }
+        } catch (e0) { members = []; }
+        var students = members.filter(function(m) { return m && m.category !== 'advisor'; });
+        if (!students.length) {
+            alert('团队成员档案中暂无学生。\n请先到「团队成员档案」导入/添加学生，再点本按钮匹配账号。');
+            return;
+        }
+        if (!confirm(
+            '将为团队中的 ' + students.length + ' 位学生/成员：\n' +
+            '1）自动生成或对齐专属登录账号（优先手机号）\n' +
+            '2）统一重置初始密码为「' + DEFAULT_PASSWORD + '」\n' +
+            '3）要求首次登录自行修改密码\n\n' +
+            '导师账号与访客不受影响。是否继续？'
+        )) return;
+
+        try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (e1) {}
+
+        var created = 0;
+        var reset = 0;
+        var linked = 0;
+        students.forEach(function(m) {
+            var preferred = typeof getPreferredStudentId === 'function' ? getPreferredStudentId(m) : ('member' + m.id);
+            var acc = accountData.find(function(a) {
+                if (!a || a.role === 'visitor' || a.role === 'admin') return false;
+                if (typeof accountMatchesTeamMember === 'function') return accountMatchesTeamMember(a, m, preferred);
+                return a.realName === m.name || Number(a.teamMemberId) === Number(m.id);
+            });
+            if (!acc) {
+                // sync 应已创建；若仍缺失则补建
+                var newId = accountData.length ? Math.max.apply(null, accountData.map(function(x) { return Number(x.id) || 0; })) + 1 : 1;
+                acc = {
+                    id: newId,
+                    studentId: preferred,
+                    realName: m.name,
+                    role: 'student',
+                    group: '',
+                    grade: m.category === 'advisor' ? '' : (m.category + '级'),
+                    research: m.research || '',
+                    phone: m.phone || '',
+                    email: m.email || '',
+                    status: 'active',
+                    password: DEFAULT_PASSWORD,
+                    mustChangePwd: true,
+                    firstLogin: true,
+                    lastLogin: '',
+                    lastLoginIp: '',
+                    createdAt: new Date().toISOString().split('T')[0],
+                    loginFailCount: 0,
+                    lockedUntil: null,
+                    fromTeam: true,
+                    teamMemberId: m.id,
+                    loginAliases: []
+                };
+                accountData.push(acc);
+                created++;
+            } else {
+                linked++;
+            }
+            if (acc.password !== DEFAULT_PASSWORD || !acc.mustChangePwd) reset++;
+            acc.password = DEFAULT_PASSWORD;
+            acc.mustChangePwd = true;
+            acc.firstLogin = true;
+            acc.loginFailCount = 0;
+            acc.lockedUntil = null;
+            acc.status = 'active';
+            acc.fromTeam = true;
+            acc.teamMemberId = m.id;
+            acc.realName = m.name;
+            acc.phone = m.phone || acc.phone || '';
+            acc.email = m.email || acc.email || '';
+            if (!acc.studentId) acc.studentId = preferred;
+        });
+
+        saveAccountData();
+        try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (e2) {}
+        accountPage = 1;
+        renderAccountTable();
+        recordOperationLog('账号管理', '匹配开通', '一键匹配学生账号密码：成员' + students.length + '人', { count: students.length, created: created, reset: reset }, { success: true }, 1, '', 0);
+
+        var msg = '匹配完成！\n\n团队学生：' + students.length +
+            ' 人\n新开通：' + created + ' 人\n已对齐并重置密码：' + (linked + created) +
+            ' 人\n初始密码：' + DEFAULT_PASSWORD +
+            '\n\n请点击「导出学生账号密码」下载清单发给学生。';
+        if (confirm(msg + '\n\n是否立即导出？')) {
+            exportStudentCredentials();
+        }
+    }
+
+    /** 导出学生专属账号 + 初始密码（仅导师） */
+    function exportStudentCredentials() {
+        if (!(currentUser && currentUser.role === 'admin') && !hasPermission('账号管理（新建/删除）')) {
+            alert('仅导师可导出学生账号密码');
+            return;
+        }
+        try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (e0) {}
+        var list = getStudentAccountsForOps().filter(function(a) {
+            return findTeamMemberForAccount(a) || a.fromTeam;
+        });
+        if (!list.length) {
+            alert('没有可导出的学生账号。\n请先导入团队成员并执行「一键匹配账号密码」。');
+            return;
+        }
+        if (!confirm('将导出 ' + list.length + ' 名学生的登录账号与密码到 CSV。\n该文件含敏感信息，请仅用于线下分发，用后妥善保管或销毁。\n\n继续导出？')) return;
+
+        var rows = [['登录账号', '姓名', '角色', '年级', '手机号', '邮箱', '初始密码', '首次登录须改密', '状态', '最后登录', '备注']];
+        list.forEach(function(a) {
+            var pwd = (a.mustChangePwd || !a.lastLogin) ? (a.password || DEFAULT_PASSWORD) : '（已自行修改，请重置后再导出）';
+            var note = '';
+            if (Array.isArray(a.loginAliases) && a.loginAliases.length) {
+                note = '也可使用别名：' + a.loginAliases.join(' / ');
+            }
+            rows.push([
+                a.studentId || '',
+                a.realName || '',
+                ROLE_LABELS[a.role] || a.role || '',
+                getAccountGradeDisplay(a),
+                a.phone || '',
+                a.email || '',
+                pwd,
+                (a.mustChangePwd ? '是' : '否'),
+                a.status === 'active' ? '已启用' : '已禁用',
+                a.lastLogin || '从未登录',
+                note
+            ]);
+        });
+        var csv = rows.map(function(r) {
+            return r.map(function(c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(',');
+        }).join('\n');
+        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = '学生账号密码_' + new Date().toISOString().slice(0, 10) + '.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+        recordOperationLog('账号管理', '导出', '导出学生账号密码 ' + list.length + ' 条', { count: list.length }, { success: true }, 1, '', 0);
+    }
+
+    /** 清除所有学生档案 + 对应账号，保留导师与访客 */
+    function clearAllStudentsThenHintImport() {
+        if (!hasPermission('账号管理（新建/删除）')) {
+            alert('当前角色无「账号管理（新建/删除）」权限');
+            return;
+        }
+        if (!(currentUser && currentUser.role === 'admin')) {
+            alert('仅导师可清除全部学生信息');
+            return;
+        }
+        var members = [];
+        try {
+            members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData))
+                ? teamMemberData
+                : JSON.parse(localStorage.getItem('teamMemberData') || '[]');
+        } catch (e1) { members = []; }
+        var studentMembers = members.filter(function(m) { return m && m.category !== 'advisor'; });
+        var studentAccounts = getStudentAccountsForOps();
+
+        if (!studentMembers.length && !studentAccounts.length) {
+            alert('当前没有学生可清除。\n可直接到「团队成员档案」导入学生，再回来「一键匹配账号密码」。');
+            return;
+        }
+
+        var tip = '即将清除：\n· 团队成员档案中的学生 ' + studentMembers.length + ' 人（导师保留）\n' +
+            '· 登录账号中的学生/组长 ' + studentAccounts.length + ' 个（导师与访客保留）\n\n' +
+            '此操作会同步到云端，不可轻易恢复。\n请输入「清除学生」确认：';
+        var ok = prompt(tip);
+        if (ok !== '清除学生') {
+            alert('已取消，未做任何修改');
+            return;
+        }
+
+        // 1) 团队档案只留导师
+        try {
+            if (typeof teamMemberData !== 'undefined') {
+                teamMemberData = members.filter(function(m) { return m && m.category === 'advisor'; });
+                if (typeof saveTeamMemberData === 'function') {
+                    saveTeamMemberData();
+                } else {
+                    localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData));
+                    try { if (typeof cloudUpsert === 'function') cloudUpsert('teamMemberData', JSON.stringify(teamMemberData)); } catch (eC) {}
+                }
+            } else {
+                var keepAdv = members.filter(function(m) { return m && m.category === 'advisor'; });
+                localStorage.setItem('teamMemberData', JSON.stringify(keepAdv));
+                try { if (typeof cloudUpsert === 'function') cloudUpsert('teamMemberData', JSON.stringify(keepAdv)); } catch (eC2) {}
+            }
+        } catch (eTeam) {
+            alert('清除团队学生失败：' + (eTeam && eTeam.message ? eTeam.message : eTeam));
+            return;
+        }
+
+        // 2) 账号：去掉学生/组长，保留导师与访客
+        var removedAcc = [];
+        accountData = accountData.filter(function(a) {
+            if (!a) return false;
+            if (a.role === 'admin' || a.role === 'visitor') return true;
+            // 当前登录保护
+            if (currentUser && Number(a.id) === Number(currentUser.id)) return true;
+            removedAcc.push(a);
+            return false;
+        });
+        saveAccountData();
+
+        try { if (typeof renderTeamMembers === 'function') renderTeamMembers(); } catch (eR) {}
+        try { if (typeof renderMemberNav === 'function') renderMemberNav(); } catch (eN) {}
+        try { if (typeof renderMemberAllSections === 'function') renderMemberAllSections(); } catch (eS) {}
+        accountPage = 1;
+        renderAccountTable();
+        recordOperationLog('账号管理', '清除学生', '清除学生档案' + studentMembers.length + '人、账号' + removedAcc.length + '个', {
+            members: studentMembers.length, accounts: removedAcc.length
+        }, { success: true }, 1, '', 0);
+
+        alert(
+            '已清除学生信息。\n\n档案：' + studentMembers.length + ' 人\n账号：' + removedAcc.length +
+            ' 个\n导师与访客已保留。\n\n下一步：打开「团队成员档案」重新导入学生，然后回到本页点击「一键匹配账号密码」。'
+        );
+        try {
+            if (typeof showModule === 'function' && confirm('是否现在跳转到「团队成员档案」去导入？')) {
+                showModule('member_archive');
+            }
+        } catch (eJump) {}
+    }
+
     function renderAccountTable() {
         try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (eSyncAcc) {}
 
@@ -895,7 +1489,8 @@
                 const linked = findTeamMemberForAccount(a);
                 if (!linked) return false;
             }
-            if (search && !a.studentId.toLowerCase().includes(search) && !a.realName.toLowerCase().includes(search)) return false;
+            if (search && !a.studentId.toLowerCase().includes(search) && !a.realName.toLowerCase().includes(search)
+                && !(a.phone && String(a.phone).includes(search))) return false;
             if (roleFilter && a.role !== roleFilter) return false;
             if (statusFilter && a.status !== statusFilter) return false;
             if (currentUser && currentUser.role === 'student' && a.id !== currentUser.id) return false;
@@ -916,16 +1511,19 @@
             const gradStyle = gradText === '已毕业' ? 'color:#888;background:#f5f5f5;' : (gradText === '在读' ? 'color:#1890ff;background:#e6f7ff;' : '');
             const sourceTip = isVisitorAccount(a)
                 ? '<div style="font-size:11px;color:#e65100;margin-top:2px;">访客（独立账号）</div>'
-                : '<div style="font-size:11px;color:#52c41a;margin-top:2px;">来自团队管理</div>';
+                : '<div style="font-size:11px;color:#52c41a;margin-top:2px;">来自团队管理 · 专属登录名</div>';
+            const aliasTip = (Array.isArray(a.loginAliases) && a.loginAliases.length)
+                ? '<div style="font-size:11px;color:#8c8c8c;margin-top:2px;">别名 ' + escHtml(a.loginAliases.join(' / ')) + '</div>'
+                : '';
             return `
             <tr>
-                <td><strong>${escHtml(a.studentId)}</strong>${sourceTip}</td>
+                <td><strong style="font-size:13px;">${escHtml(a.studentId)}</strong>${sourceTip}${aliasTip}</td>
                 <td>${escHtml(a.realName)}</td>
                 <td><span class="role-badge ${ROLE_BADGE_CLASS[a.role] || ''}">${ROLE_LABELS[a.role] || a.role}</span></td>
                 <td>${escHtml(gradeText)}</td>
                 <td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;${gradStyle}">${escHtml(gradText)}</span></td>
                 <td>${escHtml(a.group || '-')}</td>
-                <td>${escHtml(a.email || '-')}</td>
+                <td>${getAccountPasswordDisplay(a)}</td>
                 <td><span class="status-dot ${a.status}"></span>${a.status === 'active' ? '已启用' : '已禁用'}</td>
                 <td style="font-size:12px;color:#888;">${a.lastLogin || '从未登录'}</td>
                 <td>
@@ -943,8 +1541,9 @@
         if (pagDiv) {
             const teamCount = filtered.filter(a => !isVisitorAccount(a)).length;
             const visitorCount = filtered.filter(a => isVisitorAccount(a)).length;
+            const studentCount = filtered.filter(a => a.role === 'student' || a.role === 'leader').length;
             pagDiv.innerHTML = `
-                <span>共 ${filtered.length} 条（团队 ${teamCount} · 访客 ${visitorCount}）</span>
+                <span>共 ${filtered.length} 条（团队 ${teamCount} · 学生/组长 ${studentCount} · 访客 ${visitorCount}）</span>
                 <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="accountPage=1;renderAccountTable()" ${accountPage<=1?'disabled':''}>首页</button>
                 <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="accountPage--;renderAccountTable()" ${accountPage<=1?'disabled':''}>上一页</button>
                 <span>${accountPage} / ${totalPages}</span>
@@ -1670,14 +2269,26 @@
         const newPwd = document.getElementById('pwdNew').value;
         const newPwdConfirm = document.getElementById('pwdNewConfirm').value;
         if (!oldPwd || !newPwd) { alert('请填写完整'); return; }
-        if (currentUser.password !== oldPwd) { alert('当前密码错误'); return; }
+        var acc = findAccountRecordForUser(currentUser);
+        var checkPwd = (acc && acc.password) || (currentUser && currentUser.password);
+        if (checkPwd !== oldPwd) { alert('当前密码错误'); return; }
         if (!validatePassword(newPwd)) { alert('新密码不符合复杂度要求（至少8位，含字母和数字）'); return; }
         if (newPwd !== newPwdConfirm) { alert('两次输入的新密码不一致'); return; }
-        currentUser.password = newPwd;
-        currentUser.mustChangePwd = false;
-        const acc = accountData.find(a => a.id === currentUser.id);
-        if (acc) { acc.password = newPwd; acc.mustChangePwd = false; }
+        if (!acc) { alert('找不到账号记录'); return; }
+        var ts = Date.now();
+        acc.password = newPwd;
+        acc.mustChangePwd = false;
+        acc.firstLogin = false;
+        acc.passwordUpdatedAt = ts;
+        currentUser = acc;
+        try {
+            sessionStorage.setItem('pendingPasswordCommit', JSON.stringify({
+                userId: acc.id, studentId: acc.studentId || '', password: newPwd, ts: ts
+            }));
+        } catch (eS) {}
         saveAccountData();
+        try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (eC) {}
+        try { setTimeout(function() { clearPendingPasswordCommit(); }, 2000); } catch (eT) {}
         ['pwdOld','pwdNew','pwdNewConfirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         document.getElementById('newPwdStrength').textContent = '';
         document.getElementById('newPwdStrengthBar').style.width = '0';

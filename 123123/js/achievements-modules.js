@@ -1393,14 +1393,16 @@
         }
 
         function getMemberStudentId(member) {
+            // 优先手机号作为登录名（团队导入学生通常只有手机号）
+            const phoneDigits = String(member.phone || '').replace(/\D/g, '');
+            if (phoneDigits.length >= 11) return phoneDigits;
+            if (phoneDigits.length >= 6 && phoneDigits.indexOf('0000') < 0) return phoneDigits;
             const emailPrefix = member.email && String(member.email).split('@')[0];
             if (emailPrefix && /^[a-zA-Z0-9_.-]{3,}$/.test(emailPrefix)) return emailPrefix;
-            const phoneDigits = String(member.phone || '').replace(/\D/g, '');
-            if (phoneDigits.length >= 6) return phoneDigits;
             return 'member' + member.id;
         }
 
-        function getPreferredStudentId(member) {
+        function getDemoLoginAlias(member) {
             const preferredMap = {
                 '王丽萍': 'admin',
                 '王明': 'leader01',
@@ -1409,14 +1411,20 @@
                 '罗文文': 'luowenwen326',
                 '罗钧': 'jluo'
             };
-            if (member && preferredMap[member.name]) return preferredMap[member.name];
+            return (member && preferredMap[member.name]) || '';
+        }
+
+        function getPreferredStudentId(member) {
+            const demoAlias = getDemoLoginAlias(member);
+            if (demoAlias) return demoAlias;
             try {
-                if (typeof accountData !== 'undefined' && Array.isArray(accountData)) {
-                    const existing = accountData.find(function(a) {
-                        return a && a.role !== 'visitor' && a.realName === member.name;
-                    });
-                    if (existing && existing.studentId) return existing.studentId;
-                }
+                var accList = (typeof accountData !== 'undefined' && Array.isArray(accountData))
+                    ? accountData
+                    : (Array.isArray(window.accountData) ? window.accountData : []);
+                const existing = accList.find(function(a) {
+                    return a && a.role !== 'visitor' && a.realName === member.name;
+                });
+                if (existing && existing.studentId) return existing.studentId;
             } catch (e) {}
             return getMemberStudentId(member);
         }
@@ -1426,7 +1434,11 @@
             if (a.teamMemberId != null && Number(a.teamMemberId) === Number(m.id)) return true;
             if (a.realName && m.name && a.realName === m.name) return true;
             if (m.email && a.email && String(a.email).toLowerCase() === String(m.email).toLowerCase()) return true;
+            const mPhone = String(m.phone || '').replace(/\D/g, '');
+            const aPhone = String(a.phone || '').replace(/\D/g, '');
+            if (mPhone.length >= 6 && (aPhone === mPhone || String(a.studentId || '').replace(/\D/g, '') === mPhone)) return true;
             if (preferredStudentId && a.studentId === preferredStudentId) return true;
+            if (Array.isArray(a.loginAliases) && preferredStudentId && a.loginAliases.indexOf(preferredStudentId) >= 0) return true;
             const autoId = getMemberStudentId(m);
             if (autoId && a.studentId === autoId) return true;
             return false;
@@ -1467,10 +1479,15 @@
             localStorage.setItem('memberData', JSON.stringify(legacyMembers));
             try { if (typeof cloudUpsert === 'function') cloudUpsert('memberData', JSON.stringify(legacyMembers)); } catch (e) {}
 
-            if (typeof accountData === 'undefined' || !Array.isArray(accountData)) {
+            // 兼容跨脚本：优先本页 let accountData，否则用 window.accountData
+            var accRef = (typeof accountData !== 'undefined' && Array.isArray(accountData))
+                ? accountData
+                : (Array.isArray(window.accountData) ? window.accountData : null);
+            if (!accRef) {
                 reconcileCollaborativeDataWithTeamMembers();
                 return;
             }
+            try { accountData = accRef; } catch (eBind) { window.accountData = accRef; }
 
             let changed = false;
             let nextId = accountData.length > 0 ? Math.max(...accountData.map(a => Number(a.id) || 0)) + 1 : 1;
@@ -1571,12 +1588,33 @@
                         lastLoginIp: '',
                         createdAt: new Date().toISOString().split('T')[0],
                         loginFailCount: 0,
-                        lockedUntil: null
+                        lockedUntil: null,
+                        loginAliases: []
                     }, patch);
                     accountData.push(primary);
                     changed = true;
                 }
-                if (primary) linkedAccountIds.add(primary.id);
+                // 演示别名：保证 admin / stu001 等仍可登录（即使学号已是手机号）
+                if (primary) {
+                    var demoAlias = getDemoLoginAlias(m);
+                    if (demoAlias) {
+                        if (!Array.isArray(primary.loginAliases)) primary.loginAliases = [];
+                        if (primary.studentId !== demoAlias && primary.loginAliases.indexOf(demoAlias) < 0) {
+                            primary.loginAliases.push(demoAlias);
+                            changed = true;
+                        }
+                    }
+                    // 手机号也可作为别名登录
+                    var phoneDigits = String(m.phone || primary.phone || '').replace(/\D/g, '');
+                    if (phoneDigits.length >= 11 && primary.studentId !== phoneDigits) {
+                        if (!Array.isArray(primary.loginAliases)) primary.loginAliases = [];
+                        if (primary.loginAliases.indexOf(phoneDigits) < 0) {
+                            primary.loginAliases.push(phoneDigits);
+                            changed = true;
+                        }
+                    }
+                    linkedAccountIds.add(primary.id);
+                }
             });
 
             // 全局清理：非访客且未关联当前团队成员的账号一律移除（访客例外）
@@ -1607,10 +1645,19 @@
             }
 
             try { window.accountData = accountData; } catch (eWinAcc) {}
+            try {
+                if (typeof window.syncGlobalsForExternalModules === 'function') window.syncGlobalsForExternalModules();
+            } catch (eSyncG) {}
             try { if (typeof rematchSessionAfterAccountSync === 'function') rematchSessionAfterAccountSync(); } catch (eRematch2) {}
 
             reconcileCollaborativeDataWithTeamMembers();
         }
+
+        window.syncTeamMembersAcrossSystem = syncTeamMembersAcrossSystem;
+        window.getPreferredStudentId = getPreferredStudentId;
+        window.getMemberStudentId = getMemberStudentId;
+        window.accountMatchesTeamMember = accountMatchesTeamMember;
+        window.getDemoLoginAlias = getDemoLoginAlias;
 
         /** 强制按团队档案清理账号库（访客保留），供账号页一键联动 */
         function purgeAccountsNotInTeam(options) {
@@ -2995,7 +3042,12 @@
             saveTeamMemberData();
             renderTeamMembers();
             closeImportMembersModal();
-            alert(`导入完成：新增 ${count} 条，更新 ${updated} 条。敏感字段已按保密规则保存。`);
+            var msg = '导入完成：新增 ' + count + ' 条，更新 ' + updated + ' 条。敏感字段已按保密规则保存。';
+            if (typeof matchAndOpenAllStudentAccounts === 'function' && confirm(msg + '\n\n是否立即「一键匹配账号密码」并为学生重置初始密码？')) {
+                matchAndOpenAllStudentAccounts();
+            } else {
+                alert(msg + '\n\n可到「账号权限」→「账号管理」点击「一键匹配账号密码」。');
+            }
         }
         
         function parseCSVLine(line) {

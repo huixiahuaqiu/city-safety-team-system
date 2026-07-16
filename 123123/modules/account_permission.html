@@ -28,27 +28,33 @@
                                     <option value="disabled">已禁用</option>
                                 </select>
                             </div>
-                            <div class="toolbar-right">
+                            <div class="toolbar-right" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;">
+                                <button class="btn" data-perm="account-create" onclick="matchAndOpenAllStudentAccounts()" title="按团队成员档案为每位学生生成/对齐专属登录账号，并重置初始密码">🔑 一键匹配账号密码</button>
+                                <button class="btn btn-secondary" data-perm="account-create" onclick="exportStudentCredentials()" title="导出学生登录账号与初始密码，便于分发">📥 导出学生账号密码</button>
+                                <button class="btn btn-secondary" data-perm="account-create" onclick="clearAllStudentsThenHintImport()" title="清除团队中的学生档案及对应登录账号（导师/访客保留）" style="color:#c62828;">🗑️ 清除所有学生</button>
                                 <button class="btn btn-secondary" data-perm="account-create" onclick="purgeAccountsNotInTeam()" title="删除未在团队成员档案中的正式账号，访客保留">清理非团队账号</button>
                                 <button class="btn btn-secondary" data-perm="account-create" onclick="showOpenTeamAccountModal()" title="为尚未开通登录账号的团队成员开通">从团队开通</button>
                                 <button class="btn" data-perm="account-create" onclick="showAddVisitorAccountModal()">+ 新建访客</button>
-                                <button class="btn btn-secondary" onclick="exportAccounts()">📥 导出</button>
+                                <button class="btn btn-secondary" onclick="exportAccounts()">📥 导出全表</button>
                             </div>
                         </div>
-                        <div style="margin:0 0 12px;padding:10px 14px;background:#f0f5ff;border:1px solid #adc6ff;border-radius:8px;font-size:13px;color:#1d39c4;line-height:1.6;">
-                            <strong>全局联动：</strong>正式成员账号与「团队成员档案」一一对应（同名重复会自动合并，非团队正式账号会自动清理）。访客为唯一例外，可独立新建。姓名/年级/毕业状态以团队管理为准。
+                        <div style="margin:0 0 12px;padding:10px 14px;background:#f0f5ff;border:1px solid #adc6ff;border-radius:8px;font-size:13px;color:#1d39c4;line-height:1.7;">
+                            <strong>学生账号流程：</strong>
+                            ①「清除所有学生」→ ② 到「团队成员档案」重新导入学生 → ③ 回到本页点「一键匹配账号密码」
+                            → ④「导出学生账号密码」发给学生（默认 <code>123456</code>，首次登录会强制改密）。
+                            <br>列表中的<strong>用户名</strong>即每人专属登录账号（优先手机号；演示别名如 stu001 也可登录）。
                         </div>
                         <div style="overflow-x:auto;">
                             <table class="table" id="accountTable">
                                 <thead>
                                     <tr>
-                                        <th>用户名</th>
+                                        <th>专属账号</th>
                                         <th>姓名</th>
                                         <th>角色</th>
                                         <th>年级</th>
                                         <th>毕业</th>
                                         <th>所属小组</th>
-                                        <th>邮箱</th>
+                                        <th>初始密码</th>
                                         <th>状态</th>
                                         <th>最后登录</th>
                                         <th>操作</th>

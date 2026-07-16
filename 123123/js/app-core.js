@@ -267,6 +267,59 @@
             });
         }
 
+        /** 云端拉取时保留本机刚改过的密码，避免「改密后立刻被旧云端数据盖掉」 */
+        function mergeCloudAccountDataWithLocalPasswords(cloudAccounts) {
+            if (!Array.isArray(cloudAccounts)) return cloudAccounts;
+            var local = [];
+            try { local = JSON.parse(localStorage.getItem('accountData') || '[]'); } catch (e) { local = []; }
+            if (!local.length) return cloudAccounts;
+
+            var localMap = {};
+            local.forEach(function(a) {
+                if (!a) return;
+                if (a.studentId) localMap['sid:' + String(a.studentId)] = a;
+                if (a.id != null) localMap['id:' + String(a.id)] = a;
+                var phone = String(a.phone || '').replace(/\D/g, '');
+                if (phone.length >= 11) localMap['ph:' + phone] = a;
+            });
+
+            var pending = null;
+            try { pending = JSON.parse(sessionStorage.getItem('pendingPasswordCommit') || 'null'); } catch (eP) { pending = null; }
+
+            var merged = cloudAccounts.map(function(c) {
+                if (!c) return c;
+                var loc = (c.studentId && localMap['sid:' + String(c.studentId)])
+                    || (c.id != null && localMap['id:' + String(c.id)])
+                    || (c.phone && localMap['ph:' + String(c.phone).replace(/\D/g, '')])
+                    || null;
+                var out = Object.assign({}, c);
+                if (pending && (
+                    (pending.studentId && String(pending.studentId) === String(c.studentId))
+                    || (pending.userId != null && Number(pending.userId) === Number(c.id))
+                )) {
+                    out.password = pending.password;
+                    out.mustChangePwd = false;
+                    out.firstLogin = false;
+                    out.passwordUpdatedAt = pending.ts || Date.now();
+                    return out;
+                }
+                if (!loc) return out;
+                var locTs = Number(loc.passwordUpdatedAt || 0);
+                var cloudTs = Number(c.passwordUpdatedAt || 0);
+                var localNewer = locTs > cloudTs;
+                var localClearedMustChange = (loc.mustChangePwd === false && c.mustChangePwd === true && loc.password);
+                if (localNewer || localClearedMustChange) {
+                    out.password = loc.password;
+                    out.mustChangePwd = loc.mustChangePwd;
+                    out.firstLogin = loc.firstLogin;
+                    out.passwordUpdatedAt = loc.passwordUpdatedAt || locTs || Date.now();
+                }
+                return out;
+            });
+            return merged;
+        }
+        window.mergeCloudAccountDataWithLocalPasswords = mergeCloudAccountDataWithLocalPasswords;
+
         async function findSyncRowId(key) {
             if (cloudRowIdCache[key]) return cloudRowIdCache[key];
             var pn = encodeURIComponent(syncKeyToPatentNumber(key));
@@ -406,6 +459,9 @@
                         var parsed = JSON.parse(summaryRaw);
                         if (key === 'teamMemberData' && Array.isArray(parsed)) {
                             parsed = mergeCloudTeamMembersWithLocalAvatars(parsed);
+                        }
+                        if (key === 'accountData' && Array.isArray(parsed)) {
+                            parsed = mergeCloudAccountDataWithLocalPasswords(parsed);
                         }
                         var nextRaw = JSON.stringify(parsed);
                         if (!forceFull && localRaw === nextRaw) {
