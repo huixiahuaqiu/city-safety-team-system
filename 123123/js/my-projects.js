@@ -11,6 +11,10 @@
     role: '',
     life: '',
     year: '',
+    q: '',
+    sub: '立项',
+    sortField: 'startDate',
+    sortDir: 'desc',
     page: 1,
     currentKey: '',
     editingKey: null,
@@ -392,9 +396,39 @@
     return n.toFixed(1);
   }
 
-  function unifyOne(raw, nature) {
+  function currentUserName() {
+    try {
+      var u = global.currentUser;
+      if (u) return String(u.realName || u.name || '').trim();
+    } catch (e) {}
+    return '';
+  }
+
+  function currentUserRole() {
+    try {
+      var u = global.currentUser;
+      if (u) return String(u.role || '');
+    } catch (e) {}
+    return '';
+  }
+
+  function canManageAllProjects() {
+    var role = currentUserRole();
+    return role === 'admin' || role === 'leader' || !role;
+  }
+
+  function projectVisibleToUser(p) {
+    if (canManageAllProjects()) return true;
+    var name = currentUserName();
+    if (!name) return true;
+    if (String(p.leader || '') === name) return true;
+    if (Array.isArray(p.members) && p.members.some(function (m) { return m && String(m.name || '') === name; })) return true;
+    return false;
+  }
+
+  function unifyOne(raw, nature, extraMap) {
     var key = itemKey(nature, raw.id);
-    var extra = loadExtra()[key] || {};
+    var extra = (extraMap || loadExtra())[key] || {};
     return Object.assign({}, raw, {
       _key: key,
       _nature: nature,
@@ -472,24 +506,65 @@
   }
 
   function allProjects() {
+    var extraMap = loadExtra();
     var list = [];
-    loadArr('longitudinalData').forEach(function (d) { list.push(unifyOne(d, '纵向')); });
-    loadArr('horizontalData').forEach(function (d) { list.push(unifyOne(d, '横向')); });
-    loadArr('schoolData').forEach(function (d) { list.push(unifyOne(d, '校级')); });
-    list.sort(function (a, b) {
-      return String(b.startDate || '').localeCompare(String(a.startDate || ''));
-    });
+    loadArr('longitudinalData').forEach(function (d) { list.push(unifyOne(d, '纵向', extraMap)); });
+    loadArr('horizontalData').forEach(function (d) { list.push(unifyOne(d, '横向', extraMap)); });
+    loadArr('schoolData').forEach(function (d) { list.push(unifyOne(d, '校级', extraMap)); });
     return list;
   }
 
-  function filteredProjects() {
-    return allProjects().filter(function (p) {
+  function scopedProjects() {
+    return allProjects().filter(projectVisibleToUser);
+  }
+
+  function matchSubNav(p) {
+    var sub = state.sub || '立项';
+    var processText = (p.process || []).map(function (x) {
+      return String((x && (x.event || '')) + ' ' + (x && (x.note || '')));
+    }).join(' ');
+    if (sub === '立项') return true;
+    if (sub === '中检') return p.lifeStatus === '进行';
+    if (sub === '结项') return p.lifeStatus === '结题' || p.lifeStatus === '完成';
+    if (sub === '变更') return /变更/.test(processText) || /变更/.test(String(p.remark || ''));
+    if (sub === '合同变更') return /合同/.test(processText) && /变更/.test(processText);
+    if (sub === '延期') return /延期/.test(processText);
+    return true;
+  }
+
+  function sortProjects(list) {
+    var field = state.sortField || 'startDate';
+    var dir = state.sortDir === 'asc' ? 1 : -1;
+    return list.slice().sort(function (a, b) {
+      var av = a[field];
+      var bv = b[field];
+      if (field === 'funding' || field === 'outFunding' || field === 'matchFunding') {
+        av = Number(av) || 0;
+        bv = Number(bv) || 0;
+        return (av - bv) * dir;
+      }
+      av = String(av == null ? '' : av);
+      bv = String(bv == null ? '' : bv);
+      return av.localeCompare(bv, 'zh-CN') * dir;
+    });
+  }
+
+  function filteredProjects(baseList) {
+    var q = String(state.q || '').trim().toLowerCase();
+    var list = (baseList || scopedProjects()).filter(function (p) {
       if (state.nature && p._nature !== state.nature) return false;
       if (state.role && p.roleType !== state.role) return false;
       if (state.life && p.lifeStatus !== state.life) return false;
       if (state.year && yearOf(p) !== state.year) return false;
+      if (!matchSubNav(p)) return false;
+      if (q) {
+        var hay = [p.projectNumber, p.name, p.leader, p.unit, p.auditStatus, p._nature]
+          .join(' ').toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
       return true;
     });
+    return sortProjects(list);
   }
 
   function syncSideActive() {
@@ -510,13 +585,35 @@
     if (kind === 'role') state.role = (state.role === value ? '' : value);
     if (kind === 'life') state.life = (state.life === value ? '' : value);
     if (kind === 'year') state.year = (state.year === value ? '' : value);
+    // 侧栏点选后若与二级页签交叉为空，自动回到「立项」避免空白
+    if (state.sub && state.sub !== '立项') {
+      var scoped = scopedProjects();
+      if (!filteredProjects(scoped).length) {
+        var keepSub = state.sub;
+        state.sub = '立项';
+        if (filteredProjects(scoped).length) {
+          document.querySelectorAll('.kx-subnav-item').forEach(function (a, i) {
+            a.classList.toggle('active', i === 0);
+          });
+        } else {
+          state.sub = keepSub;
+        }
+      }
+    }
     state.page = 1;
     mpRender();
   }
 
   function mpResetFilters() {
     state.nature = state.role = state.life = state.year = '';
+    state.q = '';
+    state.sub = '立项';
     state.page = 1;
+    var search = document.getElementById('mpSearchInput');
+    if (search) search.value = '';
+    document.querySelectorAll('.kx-subnav-item').forEach(function (a, i) {
+      a.classList.toggle('active', i === 0);
+    });
     mpRender();
   }
 
@@ -529,15 +626,52 @@
   function mpSetSubNav(el, name) {
     document.querySelectorAll('.kx-subnav-item').forEach(function (a) { a.classList.remove('active'); });
     if (el) el.classList.add('active');
-    if (name === '立项') {
+    state.sub = name || '立项';
+    // 页签自带状态语义时，避免与侧栏「项目状态」打架：切页签时清空 life
+    if (name === '中检' || name === '结项' || name === '变更' || name === '合同变更' || name === '延期') {
       state.life = '';
-    } else if (name === '结项') {
-      state.life = '结题';
-    } else if (name === '中检') {
-      state.life = '进行';
     }
     state.page = 1;
     mpRender();
+  }
+
+  function mpOnSearch() {
+    var el = document.getElementById('mpSearchInput');
+    state.q = el ? String(el.value || '') : '';
+    state.page = 1;
+    mpRender();
+  }
+
+  function mpSortBy(field) {
+    if (!field) return;
+    if (state.sortField === field) {
+      state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      state.sortField = field;
+      state.sortDir = field === 'startDate' || field === 'funding' ? 'desc' : 'asc';
+    }
+    state.page = 1;
+    mpRender();
+  }
+
+  function updateSortHeaders() {
+    document.querySelectorAll('#mpTableHead th[data-mp-sort]').forEach(function (th) {
+      var f = th.getAttribute('data-mp-sort');
+      th.classList.toggle('is-sort', f === state.sortField);
+      th.classList.toggle('is-asc', f === state.sortField && state.sortDir === 'asc');
+      th.classList.toggle('is-desc', f === state.sortField && state.sortDir === 'desc');
+    });
+  }
+
+  function bindMpSortClicks() {
+    var head = document.getElementById('mpTableHead');
+    if (!head || head._mpSortBound) return;
+    head._mpSortBound = true;
+    head.addEventListener('click', function (ev) {
+      var th = ev.target && ev.target.closest ? ev.target.closest('th[data-mp-sort]') : null;
+      if (!th) return;
+      mpSortBy(th.getAttribute('data-mp-sort'));
+    });
   }
 
   function updateSideCounts(all) {
@@ -577,23 +711,37 @@
 
   function opsHtml(p) {
     var k = esc(p._key);
+    var canEdit = canManageAllProjects() || String(p.leader || '') === currentUserName();
     return '<div class="kx-ops">' +
-      '<a class="kx-a" href="javascript:void(0)" data-mp-act="finance" data-mp-key="' + k + '">录入财务账号</a>' +
-      '<a class="kx-a" href="javascript:void(0)" data-mp-act="info" data-mp-key="' + k + '">项目变更</a>' +
-      '<a class="kx-a" href="javascript:void(0)" data-mp-act="process" data-mp-key="' + k + '">中检</a>' +
-      '<a class="kx-a" href="javascript:void(0)" data-mp-act="docs" data-mp-key="' + k + '">结项</a>' +
-      '<a class="kx-a" href="javascript:void(0)" data-mp-act="docs" data-mp-key="' + k + '">文档+</a>' +
-      '<a class="kx-a" href="javascript:void(0)" data-mp-act="audit" data-mp-key="' + k + '">历史变更</a>' +
+      (canEdit ? '<a class="kx-a" href="javascript:void(0)" data-mp-act="finance" data-mp-key="' + k + '">财务编号</a>' : '') +
+      (canEdit ? '<a class="kx-a" href="javascript:void(0)" data-mp-act="edit" data-mp-key="' + k + '">变更</a>' : '') +
+      (canEdit ? '<a class="kx-a" href="javascript:void(0)" data-mp-act="midcheck" data-mp-key="' + k + '">中检</a>' : '') +
+      (canEdit ? '<a class="kx-a" href="javascript:void(0)" data-mp-act="close" data-mp-key="' + k + '">结项</a>' : '') +
+      '<a class="kx-a" href="javascript:void(0)" data-mp-act="docs" data-mp-key="' + k + '">文档</a>' +
+      '<a class="kx-a" href="javascript:void(0)" data-mp-act="process" data-mp-key="' + k + '">过程</a>' +
       '</div>';
+  }
+
+  function emptyHint() {
+    var sub = state.sub || '立项';
+    if (sub === '变更') return '暂无「项目变更」记录。可在详情中编辑项目，或在「执行过程」登记变更事项。';
+    if (sub === '合同变更') return '暂无「合同变更」记录。可在「执行过程」登记合同变更。';
+    if (sub === '延期') return '暂无「延期合同」记录。可在「执行过程」登记延期。';
+    if (sub === '中检') return '暂无进行中的项目。';
+    if (sub === '结项') return '暂无已结项/完成的项目。';
+    if (state.q) return '未找到匹配「' + state.q + '」的项目。';
+    return '暂无项目数据。可点击「＋ 新增」或侧栏「示例项目」。';
   }
 
   function mpRender() {
     hoistMpModals();
     bindMpTableClicks();
-    var all = allProjects();
-    updateSideCounts(all);
+    bindMpSortClicks();
+    var scoped = scopedProjects();
+    updateSideCounts(scoped);
     syncSideActive();
-    var list = filteredProjects();
+    updateSortHeaders();
+    var list = filteredProjects(scoped);
     var total = list.length;
     var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     if (state.page > pages) state.page = pages;
@@ -603,9 +751,22 @@
     var empty = document.getElementById('mpEmpty');
     if (!tbody) return;
 
+    var tip = document.getElementById('mpScopeTip');
+    if (tip) {
+      if (!canManageAllProjects()) {
+        tip.style.display = 'block';
+        tip.textContent = '当前为学生视角：仅显示您作为负责人或项目成员的项目（共 ' + scoped.length + ' 项）。';
+      } else {
+        tip.style.display = 'none';
+      }
+    }
+
     if (!pageRows.length) {
       tbody.innerHTML = '';
-      if (empty) empty.style.display = 'block';
+      if (empty) {
+        empty.style.display = 'block';
+        empty.textContent = emptyHint();
+      }
     } else {
       if (empty) empty.style.display = 'none';
       tbody.innerHTML = pageRows.map(function (p) {
@@ -625,9 +786,23 @@
 
     var pager = document.getElementById('mpPager');
     if (pager) {
-      pager.innerHTML = '共 ' + pages + ' 页 每页 ' + PAGE_SIZE + ' 条 共 ' + total + ' 条记录' +
-        ' <button type="button" ' + (state.page <= 1 ? 'disabled' : '') + ' onclick="mpGotoPage(' + (state.page - 1) + ')">上一页</button>' +
-        '<button type="button" ' + (state.page >= pages ? 'disabled' : '') + ' onclick="mpGotoPage(' + (state.page + 1) + ')">下一页</button>';
+      var nums = '';
+      var maxBtn = 7;
+      var from = Math.max(1, state.page - 3);
+      var to = Math.min(pages, from + maxBtn - 1);
+      from = Math.max(1, to - maxBtn + 1);
+      for (var i = from; i <= to; i++) {
+        nums += '<button type="button" class="kx-page-num' + (i === state.page ? ' active' : '') +
+          '" onclick="mpGotoPage(' + i + ')">' + i + '</button>';
+      }
+      pager.innerHTML =
+        '<span style="margin-right:auto;">共 ' + pages + ' 页 · 每页 ' + PAGE_SIZE + ' 条 · 合计 ' + total + ' 条' +
+        (state.sub && state.sub !== '立项' ? '（' + state.sub + '）' : '') + '</span>' +
+        '<button type="button" ' + (state.page <= 1 ? 'disabled' : '') + ' onclick="mpGotoPage(1)">首页</button>' +
+        '<button type="button" ' + (state.page <= 1 ? 'disabled' : '') + ' onclick="mpGotoPage(' + (state.page - 1) + ')">上一页</button>' +
+        nums +
+        '<button type="button" ' + (state.page >= pages ? 'disabled' : '') + ' onclick="mpGotoPage(' + (state.page + 1) + ')">下一页</button>' +
+        '<button type="button" ' + (state.page >= pages ? 'disabled' : '') + ' onclick="mpGotoPage(' + pages + ')">末页</button>';
     }
   }
 
@@ -693,11 +868,54 @@
       if (!key) return;
       if (act === 'view') mpView(key);
       else if (act === 'finance') mpEditFinance(key);
+      else if (act === 'edit') mpEdit(key);
+      else if (act === 'midcheck') mpMarkMidCheck(key);
+      else if (act === 'close') mpMarkClose(key);
       else if (act === 'info') mpOpenTab(key, 'info');
       else if (act === 'process') mpOpenTab(key, 'process');
       else if (act === 'docs') mpOpenTab(key, 'docs');
       else if (act === 'audit') mpShowAuditLogKey(key);
     });
+  }
+
+  function appendProcess(key, eventName, note) {
+    var p = findByKey(key);
+    if (!p) return;
+    var process = Array.isArray(p.process) ? p.process.slice() : [];
+    process.push({
+      time: nowStr().slice(0, 10),
+      event: eventName || '事项',
+      note: note || ''
+    });
+    persistExtraPatch(key, { process: process });
+  }
+
+  function mpMarkMidCheck(key) {
+    var p = findByKey(key);
+    if (!p) return;
+    var note = prompt('登记中检说明（可选）', '按计划推进，完成中期检查');
+    if (note == null) return;
+    persistExtraPatch(key, { lifeStatus: '进行' });
+    appendProcess(key, '中期检查', note || '中检登记');
+    mpRender();
+    mpOpenTab(key, 'process');
+    alert('已登记中检，并写入执行过程');
+  }
+
+  function mpMarkClose(key) {
+    var p = findByKey(key);
+    if (!p) return;
+    if (!confirm('确认将「' + p.name + '」标记为结项（结题）？')) return;
+    var note = prompt('结项说明（可选）', '项目结题归档');
+    if (note == null) return;
+    persistExtraPatch(key, {
+      lifeStatus: '结题',
+      actualEndDate: nowStr().slice(0, 10)
+    });
+    appendProcess(key, '项目结项', note || '结题');
+    mpRender();
+    mpOpenTab(key, 'process');
+    alert('已标记结项');
   }
 
   function findByKey(key) {
@@ -1252,6 +1470,8 @@
   global.mpResetFilters = mpResetFilters;
   global.mpToggleYears = mpToggleYears;
   global.mpSetSubNav = mpSetSubNav;
+  global.mpOnSearch = mpOnSearch;
+  global.mpSortBy = mpSortBy;
   global.mpGotoPage = mpGotoPage;
   global.mpView = mpView;
   global.mpOpenTab = mpOpenTab;
@@ -1260,6 +1480,8 @@
   global.mpShowAuditLog = mpShowAuditLog;
   global.mpShowAuditLogKey = mpShowAuditLogKey;
   global.mpEditFinance = mpEditFinance;
+  global.mpMarkMidCheck = mpMarkMidCheck;
+  global.mpMarkClose = mpMarkClose;
   global.mpShowAddModal = mpShowAddModal;
   global.mpEdit = mpEdit;
   global.mpEditCurrent = mpEditCurrent;

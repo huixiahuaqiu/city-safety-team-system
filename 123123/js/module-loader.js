@@ -15,7 +15,7 @@
     try {
       var html = prefetchCache[id];
       if (!html) {
-        var res = await fetch('modules/' + encodeURIComponent(id) + '.html?v=20260716-acc2', { credentials: 'same-origin' });
+        var res = await fetch('modules/' + encodeURIComponent(id) + '.html?v=20260716-ach3', { credentials: 'same-origin' });
         if (!res.ok) {
           console.warn('[loadModuleHtml] fetch failed', id, res.status);
           return false;
@@ -36,7 +36,7 @@
     if (!id || prefetchCache[id]) return;
     var el = document.getElementById(id);
     if (!el || el.getAttribute('data-lazy') !== '1' || el.getAttribute('data-loaded') === '1') return;
-    fetch('modules/' + encodeURIComponent(id) + '.html?v=20260716-acc2', { credentials: 'same-origin' })
+    fetch('modules/' + encodeURIComponent(id) + '.html?v=20260716-ach3', { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.text() : null; })
       .then(function (html) { if (html) prefetchCache[id] = html; })
       .catch(function () {});

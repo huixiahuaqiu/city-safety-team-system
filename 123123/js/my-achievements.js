@@ -9,7 +9,7 @@
   var PAGE_SIZE = 20;
   var TYPES = ['论文', '著作', '决策咨询报告', '专利', '获奖', '标准'];
   var state = {
-    type: '专利',
+    type: '',
     role: '',
     year: '',
     page: 1,
@@ -230,19 +230,44 @@
     return list;
   }
 
-  function filteredList() {
-    return allAchievements().filter(function (p) {
-      if (state.type && p._type !== state.type) return false;
-      if (state.role && p.roleType !== state.role) return false;
-      if (state.year && p.year !== state.year) return false;
-      return true;
-    });
+  function passFilters(p, opts) {
+    opts = opts || {};
+    var type = opts.type !== undefined ? opts.type : state.type;
+    var role = opts.role !== undefined ? opts.role : state.role;
+    var year = opts.year !== undefined ? opts.year : state.year;
+    if (type && p._type !== type) return false;
+    if (role && p.roleType !== role) return false;
+    if (year && String(p.year) !== String(year)) return false;
+    return true;
   }
 
-  function achSetFilter(kind, value, el) {
-    if (kind === 'type') state.type = value;
-    if (kind === 'role') state.role = (state.role === value ? '' : value);
-    if (kind === 'year') state.year = (state.year === value ? '' : value);
+  function filteredList() {
+    return allAchievements().filter(function (p) { return passFilters(p); });
+  }
+
+  function achSetFilter(kind, value) {
+    value = value == null ? '' : String(value);
+    if (kind === 'type') {
+      state.type = value;
+    } else if (kind === 'role') {
+      state.role = (state.role === value ? '' : value);
+    } else if (kind === 'year') {
+      state.year = (String(state.year) === value ? '' : value);
+    }
+    // 点侧栏后若当前组合无数据，自动放宽冲突条件，避免「点了却空白」
+    if (state.year || state.role || state.type) {
+      var all = allAchievements();
+      if (!all.some(function (p) { return passFilters(p); })) {
+        if (state.role && all.some(function (p) { return passFilters(p, { role: '' }); })) {
+          state.role = '';
+        } else if (state.type && all.some(function (p) { return passFilters(p, { type: '' }); })) {
+          state.type = '';
+        } else if (state.year && state.role && all.some(function (p) { return passFilters(p, { role: '', type: '' }); })) {
+          state.role = '';
+          state.type = '';
+        }
+      }
+    }
     state.page = 1;
     achRender();
   }
@@ -268,6 +293,25 @@
     if (name !== 'all') alert('「' + (el ? el.textContent : name) + '」可后续对接推送/核验流程，当前请先使用「所有成果」');
   }
 
+  function bindSideClicks() {
+    var side = document.getElementById('achSide');
+    if (!side) return;
+    // 模块 HTML 重载后节点会换新，必须重新绑定
+    if (side._achSideHandler) {
+      try { side.removeEventListener('click', side._achSideHandler); } catch (e) {}
+    }
+    side._achSideHandler = function (ev) {
+      var a = ev.target && ev.target.closest ? ev.target.closest('a[data-ach-type],a[data-ach-role],a[data-ach-year]') : null;
+      if (!a || !side.contains(a)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (a.hasAttribute('data-ach-type')) achSetFilter('type', a.getAttribute('data-ach-type') || '');
+      else if (a.hasAttribute('data-ach-role')) achSetFilter('role', a.getAttribute('data-ach-role') || '');
+      else if (a.hasAttribute('data-ach-year')) achSetFilter('year', a.getAttribute('data-ach-year') || '');
+    };
+    side.addEventListener('click', side._achSideHandler);
+  }
+
   function updateSide(all) {
     function set(id, n) {
       var el = document.getElementById(id);
@@ -277,29 +321,41 @@
     TYPES.forEach(function (t) {
       set('achCnt' + t, all.filter(function (p) { return p._type === t; }).length);
     });
-    set('achCntHost', all.filter(function (p) { return p.roleType === '主持'; }).length);
-    set('achCntJoin', all.filter(function (p) { return p.roleType === '参与'; }).length);
+    // 角标与列表同一套筛选（只放开自身维度），避免「角标有数、点开空白」
+    var forRole = all.filter(function (p) { return passFilters(p, { role: '' }); });
+    set('achCntHost', forRole.filter(function (p) { return p.roleType === '主持'; }).length);
+    set('achCntJoin', forRole.filter(function (p) { return p.roleType === '参与'; }).length);
 
     document.querySelectorAll('#achSide [data-ach-type]').forEach(function (el) {
-      el.classList.toggle('active', String(el.getAttribute('data-ach-type')) === String(state.type));
+      el.classList.toggle('active', String(el.getAttribute('data-ach-type') || '') === String(state.type || ''));
     });
     document.querySelectorAll('#achSide [data-ach-role]').forEach(function (el) {
       el.classList.toggle('active', el.getAttribute('data-ach-role') === state.role && !!state.role);
     });
 
+    var forYear = all.filter(function (p) { return passFilters(p, { year: '' }); });
     var yearMap = {};
-    all.forEach(function (p) { yearMap[p.year] = (yearMap[p.year] || 0) + 1; });
+    forYear.forEach(function (p) { yearMap[p.year] = (yearMap[p.year] || 0) + 1; });
     var years = Object.keys(yearMap).filter(function (y) { return y !== '其他'; })
       .sort(function (a, b) { return Number(a) - Number(b); });
     if (yearMap['其他']) years.push('其他');
     var box = document.getElementById('achYearList');
     if (!box) return;
     box.innerHTML = years.map(function (y) {
-      return '<a href="javascript:void(0)" class="ach-side-a' + (state.year === y ? ' active' : '') +
-        '" data-ach-year="' + esc(y) + '" onclick="achSetFilter(\'year\',\'' + esc(y) + '\',this)">' +
+      return '<a href="javascript:void(0)" class="ach-side-a' + (String(state.year) === String(y) ? ' active' : '') +
+        '" data-ach-year="' + esc(y) + '">' +
         esc(y) + '<span class="ach-badge">' + yearMap[y] + '</span></a>';
     }).join('');
     if (state.yearsCollapsed) box.style.display = 'none';
+  }
+
+  function emptyHint() {
+    var parts = [];
+    if (state.type) parts.push('类型「' + state.type + '」');
+    if (state.year) parts.push('年度「' + state.year + '」');
+    if (state.role) parts.push('参与形式「' + state.role + '」');
+    if (!parts.length) return '暂无成果数据';
+    return '当前筛选（' + parts.join(' · ') + '）下没有数据。可点侧栏「清除筛选」或改选「全部」。';
   }
 
   function headHtml() {
@@ -369,6 +425,7 @@
   function achRender() {
     hoistModal();
     bindTableClicks();
+    bindSideClicks();
     var all = allAchievements();
     updateSide(all);
     var list = filteredList();
@@ -392,7 +449,10 @@
 
     if (!rows.length) {
       tbody.innerHTML = '';
-      if (empty) empty.style.display = 'block';
+      if (empty) {
+        empty.style.display = 'block';
+        empty.textContent = emptyHint();
+      }
     } else {
       if (empty) empty.style.display = 'none';
       if (!state.type) {
@@ -412,6 +472,8 @@
     var pager = document.getElementById('achPager');
     if (pager) {
       pager.innerHTML = '共 ' + pages + ' 页 每页 ' + PAGE_SIZE + ' 条 共 ' + total + ' 条记录' +
+        (state.year ? ' · ' + state.year + '年' : '') +
+        (state.type ? ' · ' + state.type : '') +
         ' <button type="button" ' + (state.page <= 1 ? 'disabled' : '') + ' onclick="achGotoPage(' + (state.page - 1) + ')">上一页</button>' +
         '<button type="button" ' + (state.page >= pages ? 'disabled' : '') + ' onclick="achGotoPage(' + (state.page + 1) + ')">下一页</button>';
     }
@@ -658,7 +720,6 @@
       }
     }
 
-    if (!state.type) state.type = '专利';
     achRender();
     return true;
   }
@@ -669,7 +730,6 @@
     function ready() {
       hoistModal();
       achSeedDemo(false);
-      if (!state.type) state.type = '专利';
       achRender();
     }
     if (root && !root.querySelector('.ach-root') && typeof window.forceReloadModuleHtml === 'function') {

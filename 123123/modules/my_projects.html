@@ -45,23 +45,26 @@
       <div class="kx-panel">
         <div class="kx-panel-hd">
           <span class="kx-panel-title">项目列表</span>
-          <div class="kx-panel-tools">
+          <div class="kx-panel-tools" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <input type="search" id="mpSearchInput" class="kx-search" placeholder="搜索编号/名称/负责人/单位…" oninput="mpOnSearch()" style="height:26px;padding:0 10px;border:1px solid #c5d8ec;border-radius:2px;font-size:12px;width:220px;">
             <button type="button" class="kx-btn-sm" onclick="mpRender()">刷新</button>
-            <button type="button" class="kx-icon-btn" title="导出" onclick="mpExportCsv()">✎</button>
+            <button type="button" class="kx-btn-sm" onclick="mpExportCsv()" title="导出当前筛选结果">导出</button>
+            <button type="button" class="kx-btn-sm kx-btn-add" onclick="mpShowAddModal()">＋ 新增</button>
           </div>
         </div>
+        <div id="mpScopeTip" class="kx-scope-tip" style="display:none;"></div>
         <div class="kx-table-scroll">
           <table class="kx-table">
             <thead>
-              <tr>
-                <th>项目编号 <i class="kx-sort"></i></th>
-                <th>项目名称 <i class="kx-sort"></i></th>
-                <th>负责人姓名 <i class="kx-sort"></i></th>
-                <th>批准经费(万元) <i class="kx-sort"></i></th>
-                <th>立项日期 <i class="kx-sort"></i></th>
-                <th>所属单位 <i class="kx-sort"></i></th>
-                <th>审核状态 <i class="kx-sort"></i></th>
-                <th style="min-width:280px">操作</th>
+              <tr id="mpTableHead">
+                <th data-mp-sort="projectNumber">项目编号 <i class="kx-sort"></i></th>
+                <th data-mp-sort="name">项目名称 <i class="kx-sort"></i></th>
+                <th data-mp-sort="leader">负责人姓名 <i class="kx-sort"></i></th>
+                <th data-mp-sort="funding">批准经费(万元) <i class="kx-sort"></i></th>
+                <th data-mp-sort="startDate">立项日期 <i class="kx-sort"></i></th>
+                <th data-mp-sort="unit">所属单位 <i class="kx-sort"></i></th>
+                <th data-mp-sort="auditStatus">审核状态 <i class="kx-sort"></i></th>
+                <th style="min-width:300px">操作</th>
               </tr>
             </thead>
             <tbody id="mpTableBody"></tbody>
@@ -229,6 +232,10 @@
   color:var(--kx-blue);font-size:12px;cursor:pointer;border-radius:2px;
 }
 .kx-btn-sm:hover{background:var(--kx-blue-l);}
+.kx-btn-add{background:#52c41a;border-color:#52c41a;color:#fff;}
+.kx-btn-add:hover{background:#73d13d;color:#fff;}
+.kx-search:focus{outline:none;border-color:var(--kx-blue);box-shadow:0 0 0 2px rgba(30,122,214,.12);}
+.kx-scope-tip{padding:8px 12px;background:#fffbe6;border-bottom:1px solid #ffe58f;font-size:12px;color:#ad6800;}
 .kx-icon-btn{
   width:26px;height:26px;border:1px solid #d9d9d9;background:#fff;
   cursor:pointer;border-radius:2px;color:#666;line-height:1;
@@ -240,6 +247,9 @@
   background:#f5f7fa;color:#555;font-weight:600;font-size:12px;
   padding:8px 8px;border-bottom:1px solid #e0e0e0;text-align:left;white-space:nowrap;
 }
+.kx-table th[data-mp-sort]{cursor:pointer;user-select:none;}
+.kx-table th[data-mp-sort]:hover{color:var(--kx-blue);}
+.kx-table th.is-sort{color:var(--kx-blue);}
 .kx-table td{
   padding:8px;border-bottom:1px solid #f0f0f0;font-size:12px;color:#333;
   vertical-align:middle;word-break:break-all;
@@ -247,6 +257,8 @@
 .kx-table tbody tr:nth-child(even) td{background:#fafafa;}
 .kx-table tbody tr:hover td{background:#eef6ff;}
 .kx-sort::after{content:"⇅";font-size:10px;color:#bbb;margin-left:2px;}
+.kx-table th.is-asc .kx-sort::after{content:"↑";color:var(--kx-blue);}
+.kx-table th.is-desc .kx-sort::after{content:"↓";color:var(--kx-blue);}
 .kx-a{color:var(--kx-blue);text-decoration:none;cursor:pointer;}
 .kx-a:hover{text-decoration:underline;}
 .kx-ops{white-space:nowrap;line-height:1.7;}
@@ -254,12 +266,14 @@
 .kx-empty{padding:48px;text-align:center;color:#999;}
 .kx-pager{
   padding:8px 12px;border-top:1px solid #eee;display:flex;justify-content:flex-end;
-  align-items:center;gap:8px;font-size:12px;color:#666;
+  align-items:center;gap:8px;font-size:12px;color:#666;flex-wrap:wrap;
 }
 .kx-pager button{
   height:24px;padding:0 8px;border:1px solid #d9d9d9;background:#fff;cursor:pointer;font-size:12px;
 }
 .kx-pager button:disabled{opacity:.45;cursor:not-allowed;}
+.kx-pager .kx-page-num{min-width:28px;}
+.kx-pager .kx-page-num.active{background:var(--kx-blue);border-color:var(--kx-blue);color:#fff;}
 
 /* 弹窗 */
 .kx-mask{
