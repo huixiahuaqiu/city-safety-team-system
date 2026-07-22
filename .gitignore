@@ -110,3 +110,7 @@ tools/minio/mc.exe
 # ---- 巨型 HTML 瘦身备份（勿提交）----
 123123/index.html.bak*
 123123/_verify_*.py
+
+# ---- 浏览器验证/测试截图产物（勿提交）----
+screenshot_*.png
+console_*_check.png
