@@ -567,39 +567,65 @@
     return sortProjects(list);
   }
 
+  function passMpFilters(p, opts) {
+    opts = opts || {};
+    var nature = opts.nature !== undefined ? opts.nature : state.nature;
+    var role = opts.role !== undefined ? opts.role : state.role;
+    var life = opts.life !== undefined ? opts.life : state.life;
+    var year = opts.year !== undefined ? opts.year : state.year;
+    if (nature && p._nature !== nature) return false;
+    if (role && p.roleType !== role) return false;
+    if (life && p.lifeStatus !== life) return false;
+    if (year && yearOf(p) !== year) return false;
+    return true;
+  }
+
   function syncSideActive() {
     document.querySelectorAll('#mpSide [data-mp-nature]').forEach(function (el) {
-      el.classList.toggle('active', el.getAttribute('data-mp-nature') === state.nature && !!state.nature);
+      var v = el.getAttribute('data-mp-nature') || '';
+      el.classList.toggle('active', v === String(state.nature || ''));
     });
     document.querySelectorAll('#mpSide [data-mp-role]').forEach(function (el) {
-      el.classList.toggle('active', el.getAttribute('data-mp-role') === state.role && !!state.role);
+      var v = el.getAttribute('data-mp-role') || '';
+      el.classList.toggle('active', v === String(state.role || ''));
     });
     document.querySelectorAll('#mpSide [data-mp-life]').forEach(function (el) {
-      el.classList.toggle('active', el.getAttribute('data-mp-life') === state.life && !!state.life);
+      var v = el.getAttribute('data-mp-life') || '';
+      el.classList.toggle('active', v === String(state.life || ''));
+    });
+    document.querySelectorAll('#mpSide [data-mp-year]').forEach(function (el) {
+      var v = el.getAttribute('data-mp-year') || '';
+      el.classList.toggle('active', v === String(state.year || ''));
     });
   }
 
-  function mpSetFilter(kind, value, el) {
-    // 再次点击同一项 → 取消筛选（截图侧栏无“全部”，用二次点击清空）
-    if (kind === 'nature') state.nature = (state.nature === value ? '' : value);
-    if (kind === 'role') state.role = (state.role === value ? '' : value);
-    if (kind === 'life') state.life = (state.life === value ? '' : value);
-    if (kind === 'year') state.year = (state.year === value ? '' : value);
-    // 侧栏点选后若与二级页签交叉为空，自动回到「立项」避免空白
-    if (state.sub && state.sub !== '立项') {
-      var scoped = scopedProjects();
-      if (!filteredProjects(scoped).length) {
-        var keepSub = state.sub;
-        state.sub = '立项';
-        if (filteredProjects(scoped).length) {
-          document.querySelectorAll('.kx-subnav-item').forEach(function (a, i) {
-            a.classList.toggle('active', i === 0);
-          });
-        } else {
-          state.sub = keepSub;
-        }
-      }
+  function bindMpSideClicks() {
+    var side = document.getElementById('mpSide');
+    if (!side) return;
+    if (side._mpSideHandler) {
+      try { side.removeEventListener('click', side._mpSideHandler); } catch (e) {}
     }
+    side._mpSideHandler = function (ev) {
+      var a = ev.target && ev.target.closest
+        ? ev.target.closest('a[data-mp-nature],a[data-mp-role],a[data-mp-life],a[data-mp-year]')
+        : null;
+      if (!a || !side.contains(a)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (a.hasAttribute('data-mp-nature')) mpSetFilter('nature', a.getAttribute('data-mp-nature') || '');
+      else if (a.hasAttribute('data-mp-role')) mpSetFilter('role', a.getAttribute('data-mp-role') || '');
+      else if (a.hasAttribute('data-mp-life')) mpSetFilter('life', a.getAttribute('data-mp-life') || '');
+      else if (a.hasAttribute('data-mp-year')) mpSetFilter('year', a.getAttribute('data-mp-year') || '');
+    };
+    side.addEventListener('click', side._mpSideHandler);
+  }
+
+  function mpSetFilter(kind, value, el) {
+    value = value == null ? '' : String(value);
+    if (kind === 'nature') state.nature = value;
+    else if (kind === 'role') state.role = value;
+    else if (kind === 'life') state.life = value;
+    else if (kind === 'year') state.year = value;
     state.page = 1;
     mpRender();
   }
@@ -679,17 +705,21 @@
       var el = document.getElementById(id);
       if (el) el.textContent = String(n);
     }
-    set('mpCntNature纵', all.filter(function (p) { return p._nature === '纵向'; }).length);
-    set('mpCntNature横', all.filter(function (p) { return p._nature === '横向'; }).length);
-    set('mpCntNature校', all.filter(function (p) { return p._nature === '校级'; }).length);
-    set('mpCntRoleHost', all.filter(function (p) { return p.roleType === '主持'; }).length);
-    set('mpCntRoleJoin', all.filter(function (p) { return p.roleType === '参与'; }).length);
-    set('mpCntLifeRun', all.filter(function (p) { return p.lifeStatus === '进行'; }).length);
-    set('mpCntLifeDone', all.filter(function (p) { return p.lifeStatus === '完成'; }).length);
-    set('mpCntLifeClose', all.filter(function (p) { return p.lifeStatus === '结题'; }).length);
+    set('mpCntNatureAll', all.filter(function (p) { return passMpFilters(p, { nature: '' }); }).length);
+    set('mpCntNature纵', all.filter(function (p) { return passMpFilters(p, { nature: '纵向' }); }).length);
+    set('mpCntNature横', all.filter(function (p) { return passMpFilters(p, { nature: '横向' }); }).length);
+    set('mpCntNature校', all.filter(function (p) { return passMpFilters(p, { nature: '校级' }); }).length);
+    set('mpCntRoleAll', all.filter(function (p) { return passMpFilters(p, { role: '' }); }).length);
+    set('mpCntRoleHost', all.filter(function (p) { return passMpFilters(p, { role: '主持' }); }).length);
+    set('mpCntRoleJoin', all.filter(function (p) { return passMpFilters(p, { role: '参与' }); }).length);
+    set('mpCntLifeAll', all.filter(function (p) { return passMpFilters(p, { life: '' }); }).length);
+    set('mpCntLifeRun', all.filter(function (p) { return passMpFilters(p, { life: '进行' }); }).length);
+    set('mpCntLifeDone', all.filter(function (p) { return passMpFilters(p, { life: '完成' }); }).length);
+    set('mpCntLifeClose', all.filter(function (p) { return passMpFilters(p, { life: '结题' }); }).length);
 
+    var forYear = all.filter(function (p) { return passMpFilters(p, { year: '' }); });
     var yearMap = {};
-    all.forEach(function (p) {
+    forYear.forEach(function (p) {
       var y = yearOf(p);
       yearMap[y] = (yearMap[y] || 0) + 1;
     });
@@ -700,12 +730,15 @@
 
     var box = document.getElementById('mpYearList');
     if (!box) return;
-    box.innerHTML = years.map(function (y) {
+    var yearAllActive = !state.year ? ' active' : '';
+    var html = '<a href="javascript:void(0)" class="kx-side-a' + yearAllActive + '" data-mp-year="">' +
+      '全部<span class="kx-badge">' + forYear.length + '</span></a>';
+    html += years.map(function (y) {
       var active = state.year === y ? ' active' : '';
-      return '<a href="javascript:void(0)" class="kx-side-a' + active + '" data-mp-year="' + esc(y) + '"' +
-        ' onclick="mpSetFilter(\'year\',\'' + esc(y) + '\',this)">' + esc(y) +
+      return '<a href="javascript:void(0)" class="kx-side-a' + active + '" data-mp-year="' + esc(y) + '">' + esc(y) +
         '<span class="kx-badge">' + yearMap[y] + '</span></a>';
     }).join('');
+    box.innerHTML = html;
     if (state.yearsCollapsed) box.style.display = 'none';
   }
 
@@ -724,12 +757,21 @@
 
   function emptyHint() {
     var sub = state.sub || '立项';
+    var parts = [];
+    if (state.nature) parts.push('项目性质「' + state.nature + '」');
+    if (state.role) parts.push('参与形式「' + state.role + '」');
+    if (state.life) parts.push('项目状态「' + state.life + '」');
+    if (state.year) parts.push('年度「' + state.year + '」');
+    if (state.q) parts.push('搜索「' + state.q + '」');
+    if (sub !== '立项') parts.push('页签「' + sub + '」');
+    if (parts.length) {
+      return '当前筛选（' + parts.join(' · ') + '）下没有项目。可点侧栏「全部」或底部「清除筛选」。';
+    }
     if (sub === '变更') return '暂无「项目变更」记录。可在详情中编辑项目，或在「执行过程」登记变更事项。';
     if (sub === '合同变更') return '暂无「合同变更」记录。可在「执行过程」登记合同变更。';
     if (sub === '延期') return '暂无「延期合同」记录。可在「执行过程」登记延期。';
     if (sub === '中检') return '暂无进行中的项目。';
     if (sub === '结项') return '暂无已结项/完成的项目。';
-    if (state.q) return '未找到匹配「' + state.q + '」的项目。';
     return '暂无项目数据。可点击「＋ 新增」或侧栏「示例项目」。';
   }
 
@@ -737,6 +779,7 @@
     hoistMpModals();
     bindMpTableClicks();
     bindMpSortClicks();
+    bindMpSideClicks();
     var scoped = scopedProjects();
     updateSideCounts(scoped);
     syncSideActive();
