@@ -1,0 +1,54 @@
+name: CI
+
+# 部署卡点：语法 + 缓存戳新鲜度 + 文档↔代码一致性。
+# 任一失败即拦截，避免“忘了重建缓存戳”或“文档与网关接口脱节”流入主干。
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Python 语法校验（网关与工具，仅标准库）
+        run: |
+          python -m py_compile \
+            123123/working_proxy.py \
+            123123/start_web.py \
+            123123/build_assets.py \
+            123123/mlops_report.py \
+            deploy/scripts/check_docs_consistency.py
+
+      - name: JS 语法校验（全 js/ 树）
+        run: |
+          set -e
+          for f in 123123/js/*.js; do
+            node -c "$f"
+          done
+
+      - name: 缓存戳新鲜度（内容哈希未重建则拦截）
+        working-directory: 123123
+        run: python build_assets.py --check
+
+      - name: 文档↔代码一致性（接口 / 环境变量）
+        run: python deploy/scripts/check_docs_consistency.py
+
+      - name: Shell 脚本语法校验（bash -n）
+        run: |
+          set -e
+          for s in deploy/scripts/*.sh; do
+            bash -n "$s"
+          done

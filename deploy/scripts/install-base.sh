@@ -11,9 +11,22 @@ echo "[install] repo=${REPO_ROOT}"
 id appsvc >/dev/null 2>&1 || useradd -r -s /usr/sbin/nologin -d /opt/citysafe appsvc
 id minio-user >/dev/null 2>&1 || useradd -r -s /usr/sbin/nologin -d /data/minio minio-user
 
-mkdir -p /opt/citysafe/{releases,venv} /data/{minio,uploads,backups} /data/uploads/{shared,datasets,annotations}
-chown -R appsvc:appsvc /opt/citysafe /data/uploads /data/backups
+mkdir -p /opt/citysafe/{releases,venv} /data/{minio,uploads,backups,logs} /data/uploads/{shared,datasets,annotations}
+chown -R appsvc:appsvc /opt/citysafe /data/uploads /data/backups /data/logs
 chown -R minio-user:minio-user /data/minio
+
+# 审计日志防篡改（等保 2.0 / 网络安全法）：核心审计文件设为 append-only，
+# 服务被入侵也无法删除或改写历史；logrotate 轮转时会临时摘除该属性（见 logrotate/citysafe）。
+touch /data/logs/server_audit.log
+chown appsvc:appsvc /data/logs/server_audit.log
+chmod 640 /data/logs/server_audit.log
+if command -v chattr >/dev/null 2>&1; then
+  chattr +a /data/logs/server_audit.log 2>/dev/null \
+    && echo "[install] /data/logs/server_audit.log 已设为 append-only（chattr +a）" \
+    || echo "[install] WARN: chattr +a 失败（文件系统可能不支持），请人工确认审计日志防篡改策略"
+else
+  echo "[install] WARN: 未找到 chattr，跳过审计日志 append-only 设置"
+fi
 
 # Nginx
 mkdir -p /etc/nginx/snippets /etc/nginx/conf.d

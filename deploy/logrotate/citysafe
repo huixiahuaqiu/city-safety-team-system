@@ -1,6 +1,27 @@
 # 安装：sudo cp deploy/logrotate/citysafe /etc/logrotate.d/citysafe
 
-/opt/citysafe/current/logs/*.log
+# 审计日志（合规红线）：独立 180 天留存 + 压缩，持久化在 /data/logs，
+# 不随 8 版 release 被 rm -rf 清理。轮转前后临时摘除 / 恢复 append-only，
+# 兼容 copytruncate（应用持有的 fd 不变）与防篡改（等保 2.0 / 网络安全法）。
+/data/logs/*.log {
+    daily
+    rotate 180
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    dateext
+    maxsize 200M
+    prerotate
+        chattr -a /data/logs/*.log 2>/dev/null || true
+    endscript
+    postrotate
+        chattr +a /data/logs/server_audit.log 2>/dev/null || true
+    endscript
+}
+
+# 其它按上传目录分布的应用日志（非核心审计，简单轮转）
 /data/uploads/**/logs/*.log {
     daily
     rotate 180

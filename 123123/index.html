@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>城市安全数智创新团队文献管理系统</title>
     <!-- 首屏仅保留 Tailwind + ECharts；xlsx/pdf/mammoth/cropper/wangEditor 见 js/vendor-lazy.js -->
+    <script>
+        /* 抑制 Tailwind Play 构建自带的“cdn.tailwindcss.com 生产环境”提示：
+           本项目已本地化到 vendor/tailwind（内网离线可用），该提示对我们无意义。
+           仅吞此一条，其余 console.warn 照常输出。生产级替代方案：用 tailwindcss CLI 预编译静态 CSS。 */
+        (function () {
+            var _warn = console.warn.bind(console);
+            console.warn = function () {
+                try {
+                    var m = arguments && arguments[0];
+                    if (typeof m === 'string' && m.indexOf('cdn.tailwindcss.com') !== -1) return;
+                } catch (e) {}
+                return _warn.apply(console, arguments);
+            };
+        })();
+    </script>
     <script src="vendor/echarts/echarts.min.js"></script>
     <script src="vendor/tailwind/tailwindcss.js"></script>
     <script>
@@ -16,9 +31,9 @@
         }
     </script>
     <link href="vendor/fonts/fonts-local.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/app-shell.css?v=20260714-shell2">
-    <link rel="stylesheet" href="css/portal-public.css?v=20260713-portal11">
-    <script src="js/vendor-lazy.js?v=20260714-vl2"></script>
+    <link rel="stylesheet" href="css/app-shell.css?v=bf16c3756e">
+    <link rel="stylesheet" href="css/portal-public.css?v=2cf647d824">
+    <script src="js/vendor-lazy.js?v=960c38a41e"></script>
 </head>
 <body>
     <!-- 登录页 -->
@@ -375,6 +390,8 @@
                         <div class="home-stat accent-e" data-stat="member" onclick="homeJumpStat('member')"><div class="k">在籍成员</div><div class="v" id="homeStatMember">-</div><div class="h" id="homeStatMemberHint">进入团队档案</div></div>
                         <div class="home-stat accent-f" data-stat="task" onclick="homeJumpStat('task')"><div class="k">待办</div><div class="v" id="homeStatTask">-</div><div class="h" id="homeStatTaskHint">未完成任务</div></div>
                     </div>
+
+                    <div id="homeStorageSummary" style="margin:14px 0;"></div>
 
                     <div class="home-quick" id="homeQuickNav"></div>
 
@@ -1114,12 +1131,13 @@
     
     <script src="config.js"></script>
     <script src="config.local.js"></script>
-    <script src="js/module-loader.js?v=20260716-ach3"></script>
-    <script src="js/app-core.js?v=20260716-pwd1"></script>
-    <script src="js/excel-tools.js?v=20260714-excel1"></script>
-    <script src="js/achievements-modules.js?v=20260716-acc2"></script>
-    <script src="js/my-projects.js?v=20260716-mp6"></script>
-    <script src="js/my-achievements.js?v=20260716-ach3"></script>
+    <script src="js/module-manifest.js?v=3fedafa6e7"></script>
+    <script src="js/module-loader.js?v=2791c68f3c"></script>
+    <script src="js/app-core.js?v=573c9d182d"></script>
+    <script src="js/excel-tools.js?v=09429a56a4"></script>
+    <script src="js/achievements-modules.js?v=afef06b013"></script>
+    <script src="js/my-projects.js?v=289f32d836"></script>
+    <script src="js/my-achievements.js?v=fcf14d4a19"></script>
     
     <!-- 文献管理模块 -->
     <div id="literature" class="module">
@@ -1334,22 +1352,22 @@
         </div>
     </div>
     
-    <script src="js/app-legacy-a.js?v=20260714-core2"></script>
+    <script src="js/app-legacy-a.js?v=4fcc3a6a28"></script>
 
     <!-- ==================== 账号体系 JavaScript（按规范重写） ==================== -->
-    <script src="js/app-legacy-b.js?v=20260716-pwd1"></script>
-    <script src="js/literature-compare.js?v=20260712-3000"></script>
-    <script src="js/document-analysis.js?v=20260714-doc1"></script>
-    <script src="js/news-management.js?v=20260712-3000"></script>
-    <script src="js/literature-library.js?v=20260714-lit1"></script>
-    <script src="js/dataset-library.js?v=20260714-folder4"></script>
-    <script src="js/project-report.js?v=20260711-2800"></script>
-    <script src="js/shared-file-library.js?v=20260714-presign1"></script>
-    <script src="js/notice-enhance.js?v=20260714-ne1"></script>
-    <script src="js/competition-management.js?v=20260712-3000"></script>
-    <script src="js/application-center.js?v=20260715-hl1"></script>
-    <script src="js/holiday-leave.js?v=20260715-grad1"></script>
-    <script src="js/home-dashboard-p3.js?v=20260715-mp1"></script>
-    <script src="js/portal-public.js?v=20260714-portal12"></script>
+    <script src="js/app-legacy-b.js?v=f3c55bbb81"></script>
+    <script src="js/literature-compare.js?v=2d0f71f3a2"></script>
+    <script src="js/document-analysis.js?v=6f2d731798"></script>
+    <script src="js/news-management.js?v=072cd4ede2"></script>
+    <script src="js/literature-library.js?v=c5219a01b0"></script>
+    <script src="js/dataset-library.js?v=1c4915d013"></script>
+    <script src="js/project-report.js?v=d01933794a"></script>
+    <script src="js/shared-file-library.js?v=4596f4e2df"></script>
+    <script src="js/notice-enhance.js?v=2131737780"></script>
+    <script src="js/competition-management.js?v=89100d10bf"></script>
+    <script src="js/application-center.js?v=a8046caf79"></script>
+    <script src="js/holiday-leave.js?v=a1b8b224c2"></script>
+    <script src="js/home-dashboard-p3.js?v=ab4b703c3d"></script>
+    <script src="js/portal-public.js?v=17f4556571"></script>
 </body>
 </html>

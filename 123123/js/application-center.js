@@ -55,9 +55,7 @@
     };
 
     function esc(s) {
-        return String(s == null ? '' : s)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+        return window.escapeHtml(s);
     }
 
     function nowStr() {
@@ -1077,6 +1075,14 @@
                 '<span>' + esc(a.name) + '</span>' +
                 '<button type="button" class="btn btn-secondary" style="padding:2px 8px;font-size:11px;" onclick="removeApplicationAttach(' + i + ')">移除</button></div>';
         }).join('');
+    }
+
+    function removeApplicationAttach(i) {
+        i = Number(i);
+        if (i >= 0 && i < pendingAttachments.length) {
+            pendingAttachments.splice(i, 1);
+            renderAttachList();
+        }
     }
 
     function handleApplicationAttachUpload(event) {

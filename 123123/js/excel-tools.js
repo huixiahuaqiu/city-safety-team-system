@@ -55,7 +55,7 @@
                     extractDataTypes(workbook, file.name);
                     
                     // 文件上传成功后，立即调用 AI 进行预处理和分析
-                    console.log('文件上传成功，开始 AI 预处理...');
+                    dlog('文件上传成功，开始 AI 预处理...');
                     await preprocessExcelWithAI(excelItem);
                     
                 } catch (error) {
@@ -76,7 +76,7 @@
             const model = document.getElementById('openaiModel').value;
             
             if (!apiKey) {
-                console.log('⚠️ 未设置 API Key，跳过 AI 预处理');
+                dlog('⚠️ 未设置 API Key，跳过 AI 预处理');
                 return;
             }
             
@@ -102,7 +102,7 @@
                 
                 const jsonDataString = JSON.stringify(excelDataForAI, null, 2);
                 
-                console.log('🔄 正在预处理文件:', excelItem.file.name);
+                dlog('🔄 正在预处理文件:', excelItem.file.name);
                 
                 // 调用 AI 进行预处理
                 const localProxy = `${API_PROXY}/api/aliyun`;
@@ -146,7 +146,7 @@ ${jsonDataString}
                     const data = await response.json();
                     const aiResponse = data.choices?.[0]?.message?.content;
                     
-                    console.log('✅ AI 预处理完成');
+                    dlog('✅ AI 预处理完成');
                     
                     // 保存预处理结果
                     excelItem.aiPreprocess = {
@@ -1640,8 +1640,8 @@ ${jsonDataString}
                 return;
             }
             
-            console.log('excelData 长度:', excelData.length);
-            console.log('uploadedExcelFiles 长度:', uploadedExcelFiles.length);
+            dlog('excelData 长度:', excelData.length);
+            dlog('uploadedExcelFiles 长度:', uploadedExcelFiles.length);
             
             if (excelData.length === 0) {
                 alert('请先上传 Excel 文件。当前 excelData 为空数组！');
@@ -1659,8 +1659,8 @@ ${jsonDataString}
                     }))
                 }));
                 
-                console.log('发送给 AI 的 Excel 数据:', JSON.stringify(excelDataForAI, null, 2));
-                console.log('数据大小:', JSON.stringify(excelDataForAI).length, '字节');
+                dlog('发送给 AI 的 Excel 数据:', JSON.stringify(excelDataForAI, null, 2));
+                dlog('数据大小:', JSON.stringify(excelDataForAI).length, '字节');
                 
                 // 调用阿里云百炼 API
                 const localProxy = `${API_PROXY}/api/aliyun`;
@@ -1694,7 +1694,7 @@ ${jsonDataString}
                     const data = await response.json();
                     const aiResponse = data.choices?.[0]?.message?.content || '未获取到响应';
                     
-                    console.log('AI 响应:', aiResponse);
+                    dlog('AI 响应:', aiResponse);
                     
                     // 显示 AI 分析结果
                     const mergeResult = document.getElementById('mergeResult');
@@ -2007,9 +2007,9 @@ ${jsonDataString}
         
         // 显示智能指令面板
         function showSmartInstructionPanel() {
-            console.log('=== 打开智能指令面板 ===');
-            console.log('excelData 长度:', excelData.length);
-            console.log('uploadedExcelFiles 长度:', uploadedExcelFiles.length);
+            dlog('=== 打开智能指令面板 ===');
+            dlog('excelData 长度:', excelData.length);
+            dlog('uploadedExcelFiles 长度:', uploadedExcelFiles.length);
             
             if (excelData.length === 0) {
                 alert('请先上传 Excel 文件！当前没有检测到已上传的文件数据。');
@@ -2172,10 +2172,10 @@ ${jsonDataString}
                 });
                 
                 const jsonDataString = JSON.stringify(excelDataForAI, null, 2);
-                console.log('=== 发送给 AI 的 Excel 数据 ===');
-                console.log('数据大小:', jsonDataString.length, '字节');
-                console.log('文件数量:', excelDataForAI.length);
-                console.log('===============================');
+                dlog('=== 发送给 AI 的 Excel 数据 ===');
+                dlog('数据大小:', jsonDataString.length, '字节');
+                dlog('文件数量:', excelDataForAI.length);
+                dlog('===============================');
                 
                 // 构建输出要求
                 let outputRequirements = '';
@@ -2228,7 +2228,7 @@ ${outputRequirements}
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('API 返回数据:', data);
+                    dlog('API 返回数据:', data);
                     
                     const aiResponse = data.choices?.[0]?.message?.content;
                     
@@ -2238,7 +2238,7 @@ ${outputRequirements}
                         return;
                     }
                     
-                    console.log('智能指令 AI 响应:', aiResponse);
+                    dlog('智能指令 AI 响应:', aiResponse);
                     
                     // 显示 AI 分析结果
                     const mergeResult = document.getElementById('mergeResult');
@@ -2695,7 +2695,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
                         mode: 'cors'
                     });
                 } catch (proxyError) {
-                    console.log('本地代理不可用，使用备用方案');
+                    dlog('本地代理不可用，使用备用方案');
                     // 备用方案：直接返回模拟数据用于演示
                     response = {
                         ok: true,
@@ -2726,7 +2726,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
                     const data = await response.json();
                     const aiResponse = data.choices?.[0]?.message?.content;
                     
-                    console.log('AI 响应:', aiResponse);
+                    dlog('AI 响应:', aiResponse);
                     
                     // 解析 AI 响应
                     let result;
@@ -2776,7 +2776,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
                 
             } catch (error) {
                 // API 调用失败，使用演示模式
-                console.log('⚠️ API 调用失败，使用演示模式');
+                dlog('⚠️ API 调用失败，使用演示模式');
                 
                 try {
                     // 模拟 API 调用延迟
@@ -2825,7 +2825,7 @@ ${JSON.stringify(excelDataArray, null, 2)}
                         renderChart(demoResult.chartConfig);
                     }
                     
-                    console.log('✅ 演示图表已生成');
+                    dlog('✅ 演示图表已生成');
                     
                 } catch (demoError) {
                     console.error('演示模式失败:', demoError);

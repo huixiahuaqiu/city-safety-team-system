@@ -98,6 +98,9 @@ temp/
 # ---- 本地敏感配置 ----
 123123/.env
 123123/.env.local
+# 已填入真实随机密钥的生产 .env 模板（绝不提交）
+deploy/.env.production.filled
+deploy/supabase/.env
 
 # ---- MinIO Windows 二进制（超过 GitHub 100MB 限制，本机 Docker 部署即可）----
 tools/minio/*.exe

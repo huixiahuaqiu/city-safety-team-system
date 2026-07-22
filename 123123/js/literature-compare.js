@@ -41,10 +41,7 @@
     ];
 
     function _esc(s) {
-        if (typeof global.escHtml === 'function') return global.escHtml(s);
-        return String(s == null ? '' : s)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+        return window.escapeHtml(s);
     }
 
     function _owner() {

@@ -30,6 +30,17 @@ mkdir -p "${DST}/config"
 cp -a /etc/nginx/sites-available/citysafe.conf "${DST}/config/" 2>/dev/null || true
 cp -a /etc/systemd/system/citysafe-gateway.service "${DST}/config/" 2>/dev/null || true
 
+# 1b) 审计日志纳入备份（合规红线：独立留存 + 随归档统一加密 + 异地）。
+# append-only 文件可正常读取复制；轮转历史（*.gz）一并纳入，满足事后追溯。
+if [[ -d /data/logs ]]; then
+  mkdir -p "${DST}/audit-logs"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a /data/logs/ "${DST}/audit-logs/" 2>/dev/null || log "WARN: audit log backup failed"
+  else
+    cp -a /data/logs/. "${DST}/audit-logs/" 2>/dev/null || log "WARN: audit log backup failed"
+  fi
+fi
+
 # 2) 本地 uploads 增量（大文件，慎用全量；默认 rsync 到备份盘）
 if [[ "${BACKUP_UPLOADS:-1}" == "1" ]]; then
   mkdir -p "${BACKUP_ROOT}/uploads-mirror"

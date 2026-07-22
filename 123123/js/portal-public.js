@@ -12,10 +12,7 @@
     var observers = [];
 
     function esc(s) {
-        if (typeof global.escHtml === 'function') return global.escHtml(s);
-        var d = document.createElement('div');
-        d.textContent = s == null ? '' : String(s);
-        return d.innerHTML;
+        return window.escapeHtml(s);
     }
 
     function arr(name) {

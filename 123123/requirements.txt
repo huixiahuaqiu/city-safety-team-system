@@ -1,2 +1,6 @@
 # Runtime dependencies for the Python local gateway.
-# Current gateway uses only the Python standard library.
+#
+# 网关核心仅使用 Python 标准库；以下为“可选后端”依赖：
+# 当 SHARED_STORAGE_BACKEND=minio（共享文件走 MinIO/S3 兼容对象存储 + 预签名直传）时必须安装。
+# 服务器部署：在 venv 内执行 `pip install -r requirements.txt`。
+minio>=7.2,<8

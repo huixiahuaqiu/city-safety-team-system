@@ -6068,7 +6068,7 @@
     }
 
     function escMeetingName(s) {
-        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        return window.escapeHtml(s);
     }
 
     function getMeetingParticipantNameSet() {
@@ -6274,7 +6274,9 @@
         setStatus('正在识别「' + file.name + '」...', '#7c3aed');
         try {
             let text = await extractMeetingFileText(file);
-            text = String(text || '').replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+            var _LF = String.fromCharCode(10);
+            text = String(text || '').split(String.fromCharCode(13) + _LF).join(_LF);
+            text = text.replace(new RegExp(_LF + '{3,}', 'g'), _LF + _LF).trim();
             if (!text) {
                 setStatus('未识别到有效文字（可能是扫描件/图片型 PDF），请手动录入。', '#c0392b');
                 input.value = '';
@@ -7560,18 +7562,6 @@
         } else if (document.getElementById('storageStats')) {
             document.getElementById('storageStats').style.border = 'none';
         }
-    }
-
-    function formatFileSize(bytes) {
-        if (!bytes || bytes === 0) return '0 B';
-        const units = ['B', 'KB', 'MB', 'GB'];
-        let index = 0;
-        let size = bytes;
-        while (size >= 1024 && index < units.length - 1) {
-            size /= 1024;
-            index++;
-        }
-        return size.toFixed(2) + ' ' + units[index];
     }
 
     async function handleFileDownload(id) {
@@ -11595,10 +11585,89 @@
         applyConfigToUI(key);
     }
 
+    function _fmtSize(bytes) {
+        var n = Number(bytes) || 0;
+        if (n <= 0) return '0 B';
+        var u = ['B', 'KB', 'MB', 'GB', 'TB'];
+        var i = 0;
+        while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+        return n.toFixed(i === 0 ? 0 : (n >= 100 ? 0 : 1)) + ' ' + u[i];
+    }
+
+    function _storageTile(label, value, sub, color) {
+        return '<div style="flex:1 1 130px;min-width:120px;background:#fff;border:1px solid #eee;border-radius:12px;padding:12px 14px;">' +
+            '<div style="font-size:12px;color:#6b7280;margin-bottom:4px;">' + escHtml(label) + '</div>' +
+            '<div style="font-size:20px;font-weight:700;color:' + color + ';">' + escHtml(value) + '</div>' +
+            (sub ? '<div style="font-size:11px;color:#9ca3af;margin-top:2px;">' + escHtml(sub) + '</div>' : '') +
+            '</div>';
+    }
+
+    // 存储协同面板：读取 /api/storage/usage（无需登录，服务端真值→多端一致），
+    // 同时展示"磁盘物理容量"与"应用各模块真实占用"，并联动系统配置页的后端上限说明。
+    async function renderStorageStats(force) {
+        var body = document.getElementById('storageStatsBody');
+        if (!body) return;
+        if (force) body.innerHTML = '<div style="color:#9ca3af;">正在刷新…</div>';
+        try {
+            var r = await fetch('/api/storage/usage', { cache: 'no-store' });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            var s = await r.json();
+            var disk = s.disk || {}, u = s.usage || {}, lim = s.limits || {};
+            var total = Number(disk.totalGB) || 0;
+            var free = Number(disk.freeGB) || 0;
+            var usedPct = Number(disk.usedPercent) || 0;
+            var used = Math.max(0, total - free);
+            var barColor = usedPct >= 90 ? '#e5484d' : (usedPct >= 75 ? '#f5a623' : '#7c3aed');
+            function g(o, k) { return (o && o[k]) || {}; }
+            body.innerHTML =
+                '<div style="font-size:12px;color:#6b7280;margin:0 0 8px;font-weight:600;">磁盘容量（服务端物理盘）</div>' +
+                '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;">' +
+                    _storageTile('总容量', total.toFixed(1) + ' GB', '', '#4f46e5') +
+                    _storageTile('已用', used.toFixed(1) + ' GB', '含系统与其他', barColor) +
+                    _storageTile('还能存（剩余）', free.toFixed(1) + ' GB', '', '#16a34a') +
+                '</div>' +
+                '<div style="background:#eef2f7;border-radius:999px;height:12px;overflow:hidden;">' +
+                    '<div style="height:100%;width:' + Math.min(100, usedPct) + '%;background:' + barColor + ';transition:width .4s;"></div>' +
+                '</div>' +
+                '<div style="font-size:12px;color:#6b7280;margin-top:5px;">磁盘已用 ' + usedPct + '% · 存储后端：' + escHtml(String(s.storageBackend || '-')) + '</div>' +
+                '<div style="font-size:12px;color:#6b7280;margin:16px 0 8px;font-weight:600;">应用数据占用（各模块实际存了多少）</div>' +
+                '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+                    _storageTile('共享文件', _fmtSize(g(u, 'shared').bytes), (g(u, 'shared').count || 0) + ' 个', '#0ea5e9') +
+                    _storageTile('数据集', _fmtSize(g(u, 'datasets').bytes), (g(u, 'datasets').count || 0) + ' 个', '#8b5cf6') +
+                    _storageTile('标注', _fmtSize(g(u, 'annotations').bytes), (g(u, 'annotations').count || 0) + ' 个', '#f59e0b') +
+                    _storageTile('应用合计', _fmtSize(u.appTotalBytes), '', '#111827') +
+                '</div>' +
+                '<div style="font-size:12px;color:#9ca3af;margin-top:12px;">单文件上限：数据集 ' + _fmtSize(lim.datasetMaxBytes) +
+                    ' · 共享文件直传 ' + _fmtSize(lim.sharedPresignMaxBytes) + ' · 网关兜底 ' + _fmtSize(lim.sharedGatewayMaxBytes) +
+                    '（分片 ' + _fmtSize(lim.datasetChunkSize) + '）</div>';
+            var ts = document.getElementById('storageUpdatedAt');
+            if (ts) ts.textContent = '更新于 ' + new Date().toLocaleTimeString('zh-CN');
+            // 协同：把后端真实上限写进系统配置"文件上传"页的说明，终结 UI 与后端脱节
+            var noteEl = document.getElementById('fileLimitsBackendNote');
+            if (noteEl) {
+                noteEl.textContent = '后端实际上限（全系统生效，真值来自网关）：数据集 ' + _fmtSize(lim.datasetMaxBytes) +
+                    '，共享文件浏览器直传 ' + _fmtSize(lim.sharedPresignMaxBytes) + '，网关直传兜底 ' + _fmtSize(lim.sharedGatewayMaxBytes) + '。';
+            }
+        } catch (e) {
+            body.innerHTML = '<div style="color:#e5484d;">读取失败：' + escHtml(String((e && e.message) || e)) + '（请确认网关运行中）</div>';
+        }
+    }
+
     function initSystemConfigModule() {
         loadSystemConfig();
         renderConfigForm();
         applyAllConfigToUI();
+        renderStorageStats();
+        // 面板可见时每 30s 自动刷新；离开该模块（元素消失）自动停止，避免定时器泄漏
+        if (window.__storageStatsTimer) clearInterval(window.__storageStatsTimer);
+        window.__storageStatsTimer = setInterval(function () {
+            if (document.getElementById('storageStatsBody')) {
+                renderStorageStats();
+            } else {
+                clearInterval(window.__storageStatsTimer);
+                window.__storageStatsTimer = null;
+            }
+        }, 30000);
     }
 
     function switchConfigTab(tabName, btn) {

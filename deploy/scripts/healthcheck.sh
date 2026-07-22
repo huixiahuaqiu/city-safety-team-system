@@ -13,9 +13,15 @@ ts() { date '+%F %T'; }
 
 check() {
   local name="$1" url="$2"
-  local code body
+  local body
   body="$(curl -fsS --max-time 8 "${url}" 2>/dev/null || true)"
   if echo "${body}" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'; then
+    if echo "${body}" | grep -q '"degraded"[[:space:]]*:[[:space:]]*true'; then
+      # 进程存活但依赖未就绪 / 磁盘高水位 —— 记 WARN 并触发告警，但不重启服务
+      echo "$(ts) WARN ${name} degraded body=${body:0:200}" >> "${LOG}"
+      FAIL=1
+      return 0
+    fi
     echo "$(ts) OK ${name}" >> "${LOG}"
     return 0
   fi

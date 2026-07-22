@@ -1,0 +1,11 @@
+# 本机 Windows 预演覆盖：把 Linux 路径 bind mount(/data/pg) 换成命名卷，避免 Windows 挂载问题。
+# 服务器仍用原 docker-compose.yml（/data/pg 便于备份）。
+# 用法：
+#   docker compose -f docker-compose.yml -f docker-compose.windows.yml --env-file .env up -d
+services:
+  db:
+    volumes:
+      - citysafe_pg:/var/lib/postgresql/data
+
+volumes:
+  citysafe_pg:

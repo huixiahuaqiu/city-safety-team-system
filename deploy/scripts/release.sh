@@ -30,6 +30,13 @@ if [[ ! -f "${SRC}/working_proxy.py" ]]; then
   exit 1
 fi
 
+# 发布前按内容哈希刷新静态资源 ?v= 缓存戳，保证前端改动能绕过浏览器缓存。
+# best-effort：失败只告警、沿用现有 ?v=，不阻断发布。
+if command -v python3 >/dev/null 2>&1 && [[ -f "${SRC}/build_assets.py" ]]; then
+  echo "[release] refresh cache-busting stamps"
+  ( cd "${SRC}" && python3 build_assets.py ) || echo "[release] WARN: build_assets 执行失败，沿用现有 ?v="
+fi
+
 mkdir -p "${ROOT}/releases" "${REL}"
 echo "[release] sync ${SRC} → ${REL}"
 rsync -a --delete \
@@ -47,10 +54,15 @@ if [[ -f "${ROOT}/.env" ]]; then
   ln -sfn "${ROOT}/.env" "${REL}/.env"
 fi
 
-# 运行态数据目录：指向数据盘，避免写进 release
-mkdir -p /data/uploads/{shared,datasets,annotations} "${REL}/logs" 2>/dev/null || true
+# 运行态数据目录：指向数据盘，避免写进 release。
+# 审计日志与上传均持久化到 /data，不随 release 目录被 rm -rf 清理（合规留存见 deploy/logrotate/citysafe）。
+mkdir -p /data/uploads/{shared,datasets,annotations} /data/logs 2>/dev/null || true
 if [[ ! -e "${REL}/uploads" ]]; then
   ln -sfn /data/uploads "${REL}/uploads"
+fi
+# 审计日志持久化：current/logs → /data/logs（append-only 防篡改，见 install-base.sh）
+if [[ ! -e "${REL}/logs" ]]; then
+  ln -sfn /data/logs "${REL}/logs"
 fi
 
 PREV=""

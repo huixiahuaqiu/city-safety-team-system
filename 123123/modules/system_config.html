@@ -3,6 +3,18 @@
                     <p>系统基础参数、配置管理，修改后实时生效</p>
                 </div>
 
+                <div class="card" id="storageStatsCard">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                        <h2 style="margin:0;">💽 存储容量</h2>
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <span id="storageUpdatedAt" style="color:#9ca3af;font-size:12px;"></span>
+                            <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;" onclick="renderStorageStats(true)">↻ 刷新</button>
+                        </div>
+                    </div>
+                    <p style="color:#6b7280;margin:6px 0 14px;">服务端实时容量，手机 / 服务器均可查看（来源 <code>/api/health</code>，无需登录）</p>
+                    <div id="storageStatsBody"><div style="color:#9ca3af;">正在读取存储信息…</div></div>
+                </div>
+
                 <div class="card" style="padding: 0;">
                     <div class="config-tabs">
                         <button class="tab-btn active" onclick="switchConfigTab('system', this)">📋 系统基本信息</button>
@@ -120,6 +132,7 @@
                         <!-- 文件上传 -->
                         <div id="tab_file" class="tab-content">
                             <div class="config-form">
+                                <div id="fileLimitsBackendNote" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 12px;font-size:12px;color:#6b21a8;margin-bottom:14px;">后端实际上限加载中…（真值来自网关，全系统生效；下方为前端展示项）</div>
                                 <div class="form-group">
                                     <label>单文件最大大小</label>
                                     <div style="display: flex; align-items: center; gap: 8px;">

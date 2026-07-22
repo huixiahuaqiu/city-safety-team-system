@@ -66,7 +66,9 @@
         // 更新筛选标签数量
         function updateFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
-            document.getElementById('countAll').textContent = copyrightData.length;
+            const elAll = document.getElementById('countAll');
+            if (!elAll) return; // 软著模块未加载时相关元素不存在，直接跳过
+            elAll.textContent = copyrightData.length;
             document.getElementById('countCurrentYear').textContent = copyrightData.filter(d => d.regDate && d.regDate.startsWith(currentYear)).length;
             document.getElementById('countReviewing').textContent = copyrightData.filter(d => d.status === '审核中').length;
             document.getElementById('countApproved').textContent = copyrightData.filter(d => d.status === '已通过').length;
@@ -77,7 +79,8 @@
         function renderCopyrightTable() {
             const tbody = document.getElementById('copyrightTableBody');
             const emptyMsg = document.getElementById('emptyMessage');
-            
+            if (!tbody || !emptyMsg) return; // 软著模块未加载时相关元素不存在，直接跳过
+
             tbody.innerHTML = '';
             
             if (filteredData.length === 0) {
@@ -92,14 +95,14 @@
                 const statusClass = item.status === '已通过' ? 'tag-success' : item.status === '审核中' ? 'tag-warning' : 'tag-danger';
                 row.innerHTML = `
                     <td><input type="checkbox" ${selectedCopyrights.has(item.id) ? 'checked' : ''} onchange="toggleSelect(${item.id}, this)"></td>
-                    <td>${item.regDate ? item.regDate.substring(0, 4) : '-'}</td>
-                    <td>${item.regNumber || '-'}</td>
-                    <td>${item.name}</td>
-                    <td>${item.category || '-'}</td>
-                    <td>${item.applicant || '-'}</td>
-                    <td>${item.unit || '-'}</td>
-                    <td>${item.regDate || '-'}</td>
-                    <td><span class="tag ${statusClass}">${item.status}</span></td>
+                    <td>${item.regDate ? escapeHtml(item.regDate.substring(0, 4)) : '-'}</td>
+                    <td>${escapeHtml(item.regNumber || '-')}</td>
+                    <td>${escapeHtml(item.name)}</td>
+                    <td>${escapeHtml(item.category || '-')}</td>
+                    <td>${escapeHtml(item.applicant || '-')}</td>
+                    <td>${escapeHtml(item.unit || '-')}</td>
+                    <td>${escapeHtml(item.regDate || '-')}</td>
+                    <td><span class="tag ${statusClass}">${escapeHtml(item.status)}</span></td>
                     <td>
                         <button class="btn" style="padding: 4px 10px; font-size: 12px; margin-right: 5px;" onclick="editCopyright(${item.id})">编辑</button>
                         <button class="btn btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="deleteCopyright(${item.id})">删除</button>

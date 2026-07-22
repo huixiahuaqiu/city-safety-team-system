@@ -14,6 +14,12 @@ if BASE_DIR not in sys.path:
 
 from working_proxy import run_server
 
+# 缓存戳工具（内容哈希）。以 best-effort 方式引入，缺失也不影响启动。
+try:
+    import build_assets
+except Exception:  # pragma: no cover - 容错：任何导入异常都不应阻断启动
+    build_assets = None
+
 PORT = 8000
 URL = f"http://localhost:{PORT}"
 # 生产 systemd 设 CITYSAFE_NO_BROWSER=1，避免无头服务器弹浏览器
@@ -49,6 +55,18 @@ def main() -> None:
     print(f"访问地址: {URL}")
     print("按 Ctrl+C 可停止服务")
     print("=" * 50)
+
+    # 生产不可变制品：发布阶段（release.sh）已完成缓存戳构建，启动一律不再重建，
+    # 避免回滚到旧版后启动期重新构建导致版本漂移。生产 systemd 设 CITYSAFE_NO_BROWSER=1
+    # 即视为生产；也可显式 CITYSAFE_SKIP_BUILD=1 强制跳过。仅本地开发时自动刷新，方便调试。
+    skip_build = NO_BROWSER or (os.environ.get('CITYSAFE_SKIP_BUILD') or '').strip().lower() in ('1', 'true', 'yes')
+    if skip_build:
+        print("[start_web] 不可变模式：跳过启动期资源构建（缓存戳由 release.sh 负责）")
+    elif build_assets is not None:
+        try:
+            build_assets.build()
+        except Exception as exc:  # 刷新失败绝不阻断服务启动
+            print(f"[start_web] 资源缓存戳刷新已跳过：{exc}")
 
     if not NO_BROWSER:
         threading.Thread(

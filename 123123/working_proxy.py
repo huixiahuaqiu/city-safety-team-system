@@ -71,6 +71,12 @@ CORS_ALLOW_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN', '*')
 MINIO_PRESIGN_EXPIRE = int(os.environ.get('MINIO_PRESIGN_EXPIRE', '600'))
 MINIO_PUBLIC_UPLOAD_PREFIX = (os.environ.get('MINIO_PUBLIC_UPLOAD_PREFIX') or '').strip().rstrip('/')
 MINIO_PRESIGN_MAX_BYTES = int(os.environ.get('MINIO_PRESIGN_MAX_BYTES', str(MAX_DATASET_BYTES)))
+# P2 加固：仅当对外前缀是 HTTPS 时才启用预签名直传，否则回退网关代理上传，
+# 避免浏览器拿到 http:// 或内网直连的预签名 URL（明文传输 / 前缀不匹配上传失败）。
+# 内网测试如必须放开，显式设 MINIO_ALLOW_INSECURE_PRESIGN=1（严禁用于公网）。
+MINIO_ALLOW_INSECURE_PRESIGN = (os.environ.get('MINIO_ALLOW_INSECURE_PRESIGN') or '0').strip().lower() in ('1', 'true', 'yes')
+# S3/MinIO 单次预签名 PUT 的硬上限为 5GiB；超过者共享文件直传无法完成，应走数据集分片上传。
+SINGLE_PUT_MAX_BYTES = 5 * 1024 * 1024 * 1024
 ALLOWED_UPLOAD_EXTENSIONS = {
     ext.strip().lower()
     for ext in os.environ.get(
@@ -99,6 +105,15 @@ IMAGE_PDF_SAFE_EXTENSIONS = {
     '.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif', '.pdf',
 }
 _HTML_SCRIPT_SNIFF_PREFIXES = (b'<html', b'<script', b'<?php')
+# 可执行体魔数（与 head.lower() 比较）：ELF / Mach-O 均为非 ASCII，零误伤；
+# Windows PE 单看 'MZ' 易误伤以 MZ 开头的文本，故在函数内额外要求 DOS stub 文案。
+_EXECUTABLE_MAGICS = (
+    b'\x7felf',                                   # Linux ELF
+    b'\xfe\xed\xfa\xce', b'\xfe\xed\xfa\xcf',      # Mach-O 32/64
+    b'\xce\xfa\xed\xfe', b'\xcf\xfa\xed\xfe',      # Mach-O 反序
+    b'\xca\xfe\xba\xbe',                          # Mach-O fat / Java class
+)
+_PE_DOS_STUB = b'this program cannot be run in dos mode'
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
@@ -354,10 +369,59 @@ def push_jobs_to_cloud(jobs):
         logger.exception('mlops cloud sync failed: %s', e)
 
 
+# 轻量业务指标（内存计数，进程重启清零）：供 /api/health 暴露成功率，接监控可采集告警。
+_metrics_lock = threading.Lock()
+_metrics = {
+    'uploads_ok': 0, 'uploads_fail': 0,
+    'downloads_ok': 0, 'downloads_fail': 0,
+    'presign_ok': 0, 'presign_fail': 0,
+}
+
+
+def _metrics_note(event):
+    """按审计事件名粗粒度累计成功/失败，供健康接口计算业务成功率（防“假活”）。"""
+    try:
+        ev = str(event or '')
+        if 'presign' in ev:
+            bucket = 'presign'
+        elif 'download' in ev:
+            bucket = 'downloads'
+        elif 'upload' in ev or 'confirm' in ev:
+            bucket = 'uploads'
+        else:
+            return
+        if ev.endswith('_ok'):
+            key = bucket + '_ok'
+        elif ev.endswith(('_failed', '_denied', '_reject')):
+            key = bucket + '_fail'
+        else:
+            return
+        with _metrics_lock:
+            if key in _metrics:
+                _metrics[key] += 1
+    except Exception:
+        pass
+
+
+def _health_metrics_snapshot():
+    with _metrics_lock:
+        m = dict(_metrics)
+
+    def _rate(ok, fail):
+        tot = ok + fail
+        return round(ok / tot * 100, 1) if tot else 100.0
+
+    m['uploadSuccessRate'] = _rate(m['uploads_ok'], m['uploads_fail'])
+    m['downloadSuccessRate'] = _rate(m['downloads_ok'], m['downloads_fail'])
+    m['presignSuccessRate'] = _rate(m['presign_ok'], m['presign_fail'])
+    return m
+
+
 def audit_event(event, **fields):
     payload = {'event': event, 'time': _now_iso()}
     payload.update(fields)
     logger.info('AUDIT %s', json.dumps(payload, ensure_ascii=False, sort_keys=True))
+    _metrics_note(event)
 
 
 def sniff_allowed_upload(content, filename):
@@ -366,6 +430,13 @@ def sniff_allowed_upload(content, filename):
     if ext in DANGEROUS_UPLOAD_EXTENSIONS:
         raise ValueError('dangerous file extension not allowed: %s' % ext)
     head = (content or b'')[:512].lstrip().lower()
+    # 可执行文件魔数：无论扩展名一律拒绝（防 .exe/.elf 改名 .txt/.zip 等混入木马/可执行体）
+    for magic in _EXECUTABLE_MAGICS:
+        if head.startswith(magic):
+            raise ValueError('executable binary not allowed by content sniff')
+    # Windows PE：'MZ' 开头且含 DOS stub 文案才判定，避免误伤以 MZ 开头的文本
+    if head.startswith(b'mz') and _PE_DOS_STUB in head:
+        raise ValueError('executable binary not allowed by content sniff')
     if ext in IMAGE_PDF_SAFE_EXTENSIONS:
         for prefix in _HTML_SCRIPT_SNIFF_PREFIXES:
             if head.startswith(prefix):
@@ -657,6 +728,13 @@ def init_dataset_upload(payload):
     upload_id = _safe_dataset_id(payload.get('uploadId') or ('up_' + secrets.token_hex(8)))
     up_dir = _dataset_upload_dir(upload_id)
     os.makedirs(up_dir, exist_ok=True)
+    # 直写偏移优化：预分配最终文件（稀疏，瞬时），分片后续按偏移写入，
+    # 免去二次合并复制，磁盘峰值从 2× 降到 1×。
+    assembled_path = os.path.join(up_dir, 'assembled.bin')
+    if not os.path.exists(assembled_path):
+        with open(assembled_path, 'wb') as _pre:
+            if size > 0:
+                _pre.truncate(size)
 
     def _mutate(reg):
         reg['uploads'][upload_id] = {
@@ -691,13 +769,19 @@ def save_dataset_chunk(upload_id, index, content, total_chunks=None):
         raise ValueError('分片过大')
     up_dir = _dataset_upload_dir(upload_id)
     os.makedirs(up_dir, exist_ok=True)
-    part_path = os.path.join(up_dir, 'chunk_%d.part' % index)
-    tmp_path = part_path + '.tmp'
-    with open(tmp_path, 'wb') as f:
+    # 直写偏移：按 index * chunkSize 定位，分片直接落到最终文件对应区间。
+    # 各分片写入互不重叠、各自独立句柄，Windows/Linux 下并发安全；省去二次合并与 2× 磁盘峰值。
+    reg0 = _dataset_registry_load()
+    meta0 = reg0['uploads'].get(upload_id) or {}
+    chunk_size = int(meta0.get('chunkSize') or DATASET_CHUNK_SIZE)
+    assembled_path = os.path.join(up_dir, 'assembled.bin')
+    if not os.path.exists(assembled_path):
+        open(assembled_path, 'ab').close()  # 兜底创建（不截断，正常已由 init 预分配）
+    with open(assembled_path, 'r+b') as f:
+        f.seek(index * chunk_size)
         f.write(content)
         f.flush()
         os.fsync(f.fileno())
-    os.replace(tmp_path, part_path)
 
     def _mutate(reg):
         meta = reg['uploads'].get(upload_id) or {
@@ -744,43 +828,42 @@ def complete_dataset_upload(payload):
     if missing:
         raise ValueError('missing chunks: %s' % missing[:20])
 
-    file_id = _safe_dataset_id(payload.get('fileId') or ('dsf_' + secrets.token_hex(8)))
-    final_path = _dataset_final_path(file_id, file_name)
-    os.makedirs(os.path.dirname(final_path), exist_ok=True)
+    assembled_path = os.path.join(up_dir, 'assembled.bin')
+    if not os.path.isfile(assembled_path):
+        raise FileNotFoundError('assembled file missing')
 
+    # 直写模式：分片已落到最终位置，这里只做一次顺序读校验（md5 + 大小），不再二次写入。
     hasher = hashlib.md5()
     written = 0
-    with open(final_path, 'wb') as out:
-        for i in range(total_chunks):
-            part_path = os.path.join(up_dir, 'chunk_%d.part' % i)
-            with open(part_path, 'rb') as inp:
-                while True:
-                    buf = inp.read(1024 * 1024)
-                    if not buf:
-                        break
-                    out.write(buf)
-                    hasher.update(buf)
-                    written += len(buf)
-
+    with open(assembled_path, 'rb') as inp:
+        for buf in iter(lambda: inp.read(1024 * 1024), b''):
+            hasher.update(buf)
+            written += len(buf)
     actual_md5 = hasher.hexdigest()
     if expect_size and written != expect_size:
         try:
-            os.remove(final_path)
+            os.remove(assembled_path)
         except OSError:
             pass
         raise ValueError('size mismatch: got %s expect %s' % (written, expect_size))
-    if expect_md5 and actual_md5 != expect_md5:
-        # 前端可能只给了轻量指纹；仅在双方都是 32 位 hex 时强制校验
-        if len(expect_md5) == 32 and all(c in '0123456789abcdef' for c in expect_md5):
-            try:
-                os.remove(final_path)
-            except OSError:
-                pass
-            raise ValueError('md5 mismatch')
+    # 前端对 >8MB 文件用轻量指纹，仅当双方都是 32 位 hex 时才强制 md5 校验
+    if expect_md5 and len(expect_md5) == 32 and all(c in '0123456789abcdef' for c in expect_md5) and actual_md5 != expect_md5:
+        try:
+            os.remove(assembled_path)
+        except OSError:
+            pass
+        raise ValueError('md5 mismatch')
 
-    with open(final_path, 'rb') as _sniff_f:
+    # 内容安全：文件头魔数（512B）+ 可选 ClamAV，均在改名入库前拦截
+    with open(assembled_path, 'rb') as _sniff_f:
         sniff_allowed_upload(_sniff_f.read(512), file_name)
-    enforce_clamav_scan(final_path, context='dataset_complete')
+    enforce_clamav_scan(assembled_path, context='dataset_complete')
+
+    file_id = _safe_dataset_id(payload.get('fileId') or ('dsf_' + secrets.token_hex(8)))
+    final_path = _dataset_final_path(file_id, file_name)
+    os.makedirs(os.path.dirname(final_path), exist_ok=True)
+    # 直接改名入库（同盘 O(1)、零复制，磁盘峰值保持 1×）
+    os.replace(assembled_path, final_path)
 
     inspect = inspect_dataset_file(final_path, file_name)
     file_meta = {
@@ -869,12 +952,15 @@ def inspect_dataset_file(path, file_name=''):
             sep = '\t' if ext == '.tsv' else ','
             preview_lines = []
             count = 0
+            huge = result['size'] > 1024 * 1024 * 1024  # >1GB 跳过全量行数统计，避免再全量读一遍
             with open(path, 'r', encoding='utf-8', errors='ignore') as f:
                 for i, line in enumerate(f):
-                    count = i + 1
                     if i < 101:
                         preview_lines.append(line.rstrip('\n'))
-            result['sampleCount'] = max(0, count - 1)
+                    if huge and i >= 101:
+                        break
+                    count = i + 1
+            result['sampleCount'] = 0 if huge else max(0, count - 1)
             if preview_lines:
                 cols = [c.strip().strip('"') for c in preview_lines[0].split(sep)]
                 result['fieldCount'] = len(cols)
@@ -886,24 +972,27 @@ def inspect_dataset_file(path, file_name=''):
                     ],
                 }
             result['dataType'] = 'table'
-            result['note'] = 'CSV/TSV 已统计记录数与字段'
+            result['note'] = '超大文件：仅预览前 100 行，未统计总记录数' if huge else 'CSV/TSV 已统计记录数与字段'
         elif ext == '.json':
-            with open(path, 'r', encoding='utf-8', errors='ignore') as f:
-                data = json.load(f)
-            if isinstance(data, list):
-                result['sampleCount'] = len(data)
-                if data and isinstance(data[0], dict):
-                    cols = list(data[0].keys())
-                    result['fieldCount'] = len(cols)
-                    result['preview'] = {
-                        'columns': cols,
-                        'rows': [[row.get(c) for c in cols] for row in data[:20]],
-                    }
-            elif isinstance(data, dict) and isinstance(data.get('images'), list):
-                result['sampleCount'] = len(data['images'])
-                result['imageCount'] = len(data['images'])
-                result['dataType'] = 'image'
-            result['note'] = 'JSON 已解析'
+            if result['size'] > 256 * 1024 * 1024:
+                result['note'] = '超大 JSON（>256MB）：跳过全量解析以防内存溢出'
+            else:
+                with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                    data = json.load(f)
+                if isinstance(data, list):
+                    result['sampleCount'] = len(data)
+                    if data and isinstance(data[0], dict):
+                        cols = list(data[0].keys())
+                        result['fieldCount'] = len(cols)
+                        result['preview'] = {
+                            'columns': cols,
+                            'rows': [[row.get(c) for c in cols] for row in data[:20]],
+                        }
+                elif isinstance(data, dict) and isinstance(data.get('images'), list):
+                    result['sampleCount'] = len(data['images'])
+                    result['imageCount'] = len(data['images'])
+                    result['dataType'] = 'image'
+                result['note'] = 'JSON 已解析'
         elif ext == '.zip':
             result['dataType'] = 'image'
             img_exts = {'.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif'}
@@ -1186,16 +1275,72 @@ def _rewrite_presign_url(url):
         return url
 
 
-def create_shared_presign(file_name, file_type, remark, size, content_type='', original_name=''):
+def _presign_https_ok():
+    """P2：仅当对外前缀为 HTTPS（或显式放开内网测试）时才允许预签名直传。
+    否则应回退网关代理上传，避免浏览器拿到明文 / 前缀不匹配的直传 URL。"""
+    return MINIO_PUBLIC_UPLOAD_PREFIX.lower().startswith('https://') or MINIO_ALLOW_INSECURE_PRESIGN
+
+
+def _dir_size_and_count(root):
+    """统计目录下所有文件的总字节与数量（跳过注册表文件）。"""
+    total = 0
+    count = 0
+    if not os.path.isdir(root):
+        return 0, 0
+    for dirpath, _dirs, files in os.walk(root):
+        for name in files:
+            if name == '_registry.json':
+                continue
+            try:
+                total += os.path.getsize(os.path.join(dirpath, name))
+                count += 1
+            except OSError:
+                pass
+    return total, count
+
+
+def compute_storage_usage():
+    """全系统存储用量聚合：共享文件 + 数据集 + 标注（协同底座，服务端真值）。"""
+    shared_bytes = shared_count = 0
+    try:
+        for meta in (_shared_registry_load().get('files') or {}).values():
+            if meta.get('deletedAt') or meta.get('pendingConfirm'):
+                continue
+            shared_bytes += int(meta.get('size') or 0)
+            shared_count += 1
+    except Exception:
+        pass
+    dataset_bytes = dataset_count = 0
+    try:
+        for meta in (_dataset_registry_load().get('files') or {}).values():
+            dataset_bytes += int(meta.get('size') or 0)
+            dataset_count += 1
+    except Exception:
+        pass
+    anno_bytes, anno_count = _dir_size_and_count(ANNOTATION_UPLOAD_ROOT)
+    return {
+        'shared': {'bytes': shared_bytes, 'count': shared_count},
+        'datasets': {'bytes': dataset_bytes, 'count': dataset_count},
+        'annotations': {'bytes': anno_bytes, 'count': anno_count},
+        'appTotalBytes': shared_bytes + dataset_bytes + anno_bytes,
+    }
+
+
+def create_shared_presign(file_name, file_type, remark, size, content_type='', original_name='', owner=''):
     """签发 MinIO PUT 预签名；文件体不经网关。未启用 minio 时抛错，前端可回退 multipart。"""
     size = int(size or 0)
     if size <= 0:
         raise ValueError('文件大小无效（不能为 0）')
     if size > MINIO_PRESIGN_MAX_BYTES:
         raise ValueError('文件过大：最大允许 %s 字节' % MINIO_PRESIGN_MAX_BYTES)
+    if size > SINGLE_PUT_MAX_BYTES:
+        raise ValueError('单文件超过 5GB，共享文件直传不支持（S3 单次 PUT 上限）；请改用「数据集资源库」分片上传')
     client = _get_minio_client()
     if not client:
         raise RuntimeError('对象存储未就绪：请检查 MinIO 配置')
+    if not _presign_https_ok():
+        # P2：未配置 HTTPS 对外前缀时禁用直传，交由前端回退网关 multipart 代理上传。
+        raise RuntimeError('presign_disabled_insecure：未配置 HTTPS 对外前缀，已回退网关代理上传')
     name = original_name or file_name or 'file'
     ext = os.path.splitext(str(name).lower())[1]
     if ext and ext not in _shared_allow_extensions():
@@ -1205,7 +1350,7 @@ def create_shared_presign(file_name, file_type, remark, size, content_type='', o
     safe_name = ''.join(c for c in (file_name or 'file') if c not in '\\/:*?"<>|')[:120] or 'file'
     stored = file_id + (ext or '.bin')
     object_key = 'shared/%s/%s' % (date_path, stored)
-    expire = max(60, min(MINIO_PRESIGN_EXPIRE, 3600))
+    expire = max(60, min(MINIO_PRESIGN_EXPIRE, 900))
     ctype = (content_type or 'application/octet-stream').strip() or 'application/octet-stream'
     upload_url = client.presigned_put_object(
         MINIO_BUCKET,
@@ -1219,6 +1364,7 @@ def create_shared_presign(file_name, file_type, remark, size, content_type='', o
         'originalName': name,
         'fileType': file_type or 'other',
         'remark': remark or '',
+        'owner': str(owner or '')[:120],
         'size': size,
         'md5': '',
         'createdAt': _now_iso(),
@@ -1246,8 +1392,8 @@ def create_shared_presign(file_name, file_type, remark, size, content_type='', o
     }
 
 
-def confirm_shared_presign(file_id, md5='', size=None):
-    """直传完成后确认：校验对象存在并写入注册表。"""
+def confirm_shared_presign(file_id, md5='', size=None, owner=''):
+    """直传完成后确认：校验对象存在、归属与文件头，再写入注册表。"""
     file_id = _safe_dataset_id(file_id)
     reg = _shared_registry_load()
     meta = reg['files'].get(file_id)
@@ -1255,6 +1401,9 @@ def confirm_shared_presign(file_id, md5='', size=None):
         raise FileNotFoundError('shared file not found')
     if not meta.get('pendingConfirm'):
         return meta
+    # P2：仅允许本人确认本人签发的预签名（双方都带 owner 时强校验，记入审计）。
+    if meta.get('owner') and owner and not secrets.compare_digest(str(owner), str(meta.get('owner'))):
+        raise PermissionError('presign owner mismatch')
     client = _get_minio_client()
     if not client:
         raise RuntimeError('minio unavailable')
@@ -1265,6 +1414,30 @@ def confirm_shared_presign(file_id, md5='', size=None):
         stat = client.stat_object(MINIO_BUCKET, object_key)
     except Exception as e:
         raise FileNotFoundError('object not uploaded yet: %s' % e)
+    # P2/四：直传字节不经网关，此处按文件头魔数兜底校验（只取前若干字节，
+    # 避免大文件全量下载）；识别为 HTML/脚本/webshell 等危险内容则删对象并拒绝。
+    try:
+        resp = client.get_object(MINIO_BUCKET, object_key, offset=0, length=512)
+        try:
+            head = resp.read()
+        finally:
+            resp.close()
+            resp.release_conn()
+    except Exception as e:
+        head = None
+        logging.warning('presign head sniff skipped (%s): %s', object_key, e)
+    if head:
+        try:
+            sniff_allowed_upload(head, meta.get('originalName') or meta.get('fileName') or object_key)
+        except Exception as e:
+            try:
+                client.remove_object(MINIO_BUCKET, object_key)
+            except Exception:
+                pass
+            reg['files'].pop(file_id, None)
+            _shared_registry_save(reg)
+            audit_event('shared_presign_sniff_reject', fileId=file_id, error=str(e))
+            raise ValueError('uploaded content rejected by content sniff: %s' % e)
     actual_size = int(getattr(stat, 'size', 0) or 0)
     expected = int(meta.get('size') or 0)
     if expected and actual_size and actual_size > MINIO_PRESIGN_MAX_BYTES:
@@ -1626,12 +1799,18 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                     payload.get('size') or 0,
                     content_type=payload.get('contentType') or payload.get('type') or '',
                     original_name=payload.get('originalName') or payload.get('fileName') or '',
+                    owner=payload.get('owner') or payload.get('ownerId') or '',
                 )
                 audit_event('shared_presign_ok', ip=self.client_address[0], fileId=result.get('fileId'), bytes=payload.get('size'))
                 self._json(200, {'ok': True, **result})
             except Exception as e:
-                audit_event('shared_presign_failed', ip=self.client_address[0], error=str(e))
-                self._json(400, {'ok': False, 'error': str(e)})
+                # 未启用/未就绪/未配 HTTPS：回传 fallback，前端改走网关 multipart 代理上传。
+                msg = str(e)
+                fallback = ('presign_disabled_insecure' in msg
+                            or '对象存储未就绪' in msg
+                            or 'minio' in msg.lower())
+                audit_event('shared_presign_failed', ip=self.client_address[0], error=msg, fallback=fallback)
+                self._json(400, {'ok': False, 'fallback': fallback, 'error': msg})
             return
 
         if path.startswith('/api/shared-file/confirm'):
@@ -1644,6 +1823,7 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                     payload.get('fileId') or '',
                     md5=payload.get('md5') or '',
                     size=payload.get('size'),
+                    owner=payload.get('owner') or payload.get('ownerId') or '',
                 )
                 audit_event('shared_confirm_ok', ip=self.client_address[0], fileId=meta.get('fileId'), bytes=meta.get('size'))
                 self._json(200, {
@@ -1903,12 +2083,63 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self._json(500, {'error': str(e)})
             return
 
+        # CSP 违规上报收集：Report-Only 阶段持续排查，确认无误伤后再切强制策略。
+        if path.startswith('/api/csp-report'):
+            try:
+                raw = (post_data or b'')[:4096].decode('utf-8', errors='ignore')
+                try:
+                    parsed_report = json.loads(raw or '{}')
+                    rep = parsed_report.get('csp-report') or parsed_report or {}
+                except Exception:
+                    rep = {'raw': raw}
+                audit_event(
+                    'csp_violation',
+                    ip=self.client_address[0],
+                    documentUri=rep.get('document-uri') or rep.get('documentURL') or '',
+                    violatedDirective=rep.get('violated-directive') or rep.get('effectiveDirective') or '',
+                    blockedUri=rep.get('blocked-uri') or rep.get('blockedURL') or '',
+                )
+            except Exception:
+                pass
+            self._json(200, {'ok': True})
+            return
+
         self.send_error(404, 'Not found')
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
         qs = urllib.parse.parse_qs(parsed.query)
+
+        if path.startswith('/api/storage/usage'):
+            # 全系统存储协同视图：应用各模块真实占用 + 磁盘物理容量 + 各路径上限。
+            # 无需登录，服务端真值 → 本机/手机/服务器一致。
+            usage = compute_storage_usage()
+            disk = {}
+            try:
+                probe = SHARED_FILE_UPLOAD_ROOT if os.path.isdir(SHARED_FILE_UPLOAD_ROOT) else BASE_DIR
+                du = shutil.disk_usage(probe)
+                disk = {
+                    'totalGB': round(du.total / (1024 ** 3), 2),
+                    'freeGB': round(du.free / (1024 ** 3), 2),
+                    'usedPercent': round(du.used / du.total * 100, 1) if du.total else 0,
+                }
+            except Exception:
+                disk = {}
+            self._json(200, {
+                'ok': True,
+                'time': _now_iso(),
+                'storageBackend': SHARED_STORAGE_BACKEND,
+                'usage': usage,
+                'disk': disk,
+                'limits': {
+                    'sharedGatewayMaxBytes': MAX_UPLOAD_BYTES,
+                    'sharedPresignMaxBytes': SINGLE_PUT_MAX_BYTES,
+                    'datasetMaxBytes': MAX_DATASET_BYTES,
+                    'datasetChunkSize': DATASET_CHUNK_SIZE,
+                },
+            })
+            return
 
         if path == '/api/health' or path.startswith('/api/health'):
             minio_ready = False
@@ -1920,21 +2151,47 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             clamav_ready = False
             if CLAMAV_SCAN:
                 clamav_ready = bool(shutil.which(CLAMSCAN_BIN))
+            presign_https_ok = _presign_https_ok()
+            presign_enabled = SHARED_STORAGE_BACKEND == 'minio' and minio_ready and presign_https_ok
+            # 磁盘水位探活：避免“进程活着但盘满”的假活故障
+            disk = {}
+            try:
+                probe_path = SHARED_FILE_UPLOAD_ROOT if os.path.isdir(SHARED_FILE_UPLOAD_ROOT) else BASE_DIR
+                du = shutil.disk_usage(probe_path)
+                disk = {
+                    'path': probe_path,
+                    'totalGB': round(du.total / (1024 ** 3), 2),
+                    'freeGB': round(du.free / (1024 ** 3), 2),
+                    'usedPercent': round(du.used / du.total * 100, 1) if du.total else 0,
+                }
+            except Exception:
+                disk = {}
+            minio_ok = (SHARED_STORAGE_BACKEND != 'minio') or minio_ready
+            disk_ok = disk.get('usedPercent', 0) < 90
+            # ready=依赖就绪；ok 保持进程存活（liveness），避免依赖抖动触发重启风暴
+            ready = bool(minio_ok and disk_ok)
             self._json(200, {
                 'ok': True,
+                'ready': ready,
+                'degraded': not ready,
                 'service': 'citysafe-gateway',
                 'time': _now_iso(),
                 'bindHost': BIND_HOST,
                 'storageBackend': SHARED_STORAGE_BACKEND,
                 'minioReady': minio_ready,
-                'presignEnabled': SHARED_STORAGE_BACKEND == 'minio' and minio_ready,
+                'presignEnabled': presign_enabled,
+                'presignHttpsOk': presign_https_ok,
                 'clamavEnabled': CLAMAV_SCAN,
                 'clamavReady': clamav_ready,
                 'clamscanBin': CLAMSCAN_BIN if CLAMAV_SCAN else None,
+                'disk': disk,
+                'metrics': _health_metrics_snapshot(),
                 'checks': {
                     'dataset': True,
                     'sharedFile': True,
                     'mlops': True,
+                    'minio': minio_ok,
+                    'disk': disk_ok,
                 },
             })
             return
@@ -2168,6 +2425,14 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 content_type = 'application/octet-stream'
             self.send_response(200)
             self.send_header('Content-Type', content_type)
+            # 缓存策略（与生产 Nginx 一致，保证内容哈希 cache-busting 生效）：
+            # 带 ?v= 的哈希化 js/css/模块html 可长缓存 immutable；入口 index.html 及无版本资源
+            # 必须 no-cache 每次 revalidate，否则浏览器复用旧 index.html 就看不到新的 ?v=。
+            versioned = bool(qs.get('v'))
+            if versioned and (path.endswith('.js') or path.endswith('.css') or path.endswith('.html')):
+                self.send_header('Cache-Control', 'public, max-age=604800, immutable')
+            else:
+                self.send_header('Cache-Control', 'no-cache, must-revalidate')
             self._cors()
             self.end_headers()
             self.wfile.write(content)

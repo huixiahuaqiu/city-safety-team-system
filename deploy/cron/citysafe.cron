@@ -11,4 +11,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 */10 * * * * appsvc /opt/citysafe/bin/disk_alert.sh >/dev/null 2>&1
 
 # 备份：每小时（注册表等）；大文件镜像按 backup.sh 内开关
-0 * * * * appsvc /opt/citysafe/bin/backup.sh >> /opt/citysafe/current/logs/backup.log 2>&1
+0 * * * * appsvc /opt/citysafe/bin/backup.sh >> /data/logs/backup.log 2>&1
+
+# 备份恢复演练：每周日 03:30 只读校验最新归档可解密/解包/还原（避免“备份无效”）
+30 3 * * 0 appsvc /opt/citysafe/bin/restore-verify.sh >> /data/logs/restore-verify.log 2>&1

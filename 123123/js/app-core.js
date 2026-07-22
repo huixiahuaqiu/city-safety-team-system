@@ -7,6 +7,25 @@
             }
             return fallback;
         }
+
+        // 统一 HTML 转义：所有拼进 innerHTML 的云端/用户可编辑字段都必须经此处理，防存储型 XSS。
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        window.escapeHtml = escapeHtml;
+
+        // 统一调试日志器：仅在开启 DEBUG 时输出，避免生产环境把 AI/OCR/Excel 等数据打进控制台。
+        // 开启方式：config 中设 DEBUG:true，或运行时 window.__DEBUG__ = true。
+        window.dlog = function () {
+            try {
+                var cfg = window.APP_CONFIG || {};
+                if (cfg.DEBUG || window.__DEBUG__) {
+                    console.log.apply(console, arguments);
+                }
+            } catch (e) { /* 忽略日志异常，绝不影响主流程 */ }
+        };
         const SUPABASE_URL = String(getAppConfig('SUPABASE_URL', '') || '').trim();
         const SUPABASE_KEY = String(getAppConfig('SUPABASE_KEY', '') || '').trim();
         
@@ -609,7 +628,14 @@
         }
 
         async function syncFromCloudAndRefresh(options) {
-            var result = await pullAllFromCloud(options || {});
+            // 根治未处理拒绝：拉取失败也不向上抛，返回结构化结果；本函数对所有调用点保证永不 reject。
+            var result;
+            try {
+                result = await pullAllFromCloud(options || {});
+            } catch (ePull) {
+                result = { ok: false, applied: 0, error: String((ePull && ePull.message) || ePull) };
+                try { markCloudSyncState({ lastOk: false, lastError: result.error }); } catch (eMark) {}
+            }
             hydrateInMemoryFromLocalStorage();
             try { if (typeof onCloudAccountPermissionHydrated === 'function') onCloudAccountPermissionHydrated(); } catch (e) {}
             try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem({ preserveSessionUser: true }); } catch (e) {}
@@ -1096,10 +1122,10 @@
                     
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${patent.name}</td>
-                        <td>${applicant}</td>
-                        <td>${patent.applicationDate}</td>
-                        <td><span class="tag ${getTagClass(patent.status)}">${patent.status}</span></td>
+                        <td>${escapeHtml(patent.name)}</td>
+                        <td>${escapeHtml(applicant)}</td>
+                        <td>${escapeHtml(patent.applicationDate)}</td>
+                        <td><span class="tag ${getTagClass(patent.status)}">${escapeHtml(patent.status)}</span></td>
                         <td><button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="viewPatent(${patent.id})")">查看</button></td>
                     `;
                     tableBody.appendChild(row);
@@ -1171,12 +1197,12 @@
                     <button style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;" onclick="this.closest('.modal').remove()">关闭</button>
                 </div>
                 <div style="line-height: 1.8;">
-                    <p><strong>专利名称：</strong>${patent.name}</p>
-                    <p><strong>申请人：</strong>${applicant}</p>
-                    <p><strong>申请日期：</strong>${patent.applicationDate}</p>
-                    <p><strong>分类：</strong>${patent.classification}</p>
-                    <p><strong>法律状态：</strong><span class="tag ${getTagClass(patent.status)}">${patent.status}</span></p>
-                    <p><strong>摘要：</strong>${patent.summary}</p>
+                    <p><strong>专利名称：</strong>${escapeHtml(patent.name)}</p>
+                    <p><strong>申请人：</strong>${escapeHtml(applicant)}</p>
+                    <p><strong>申请日期：</strong>${escapeHtml(patent.applicationDate)}</p>
+                    <p><strong>分类：</strong>${escapeHtml(patent.classification)}</p>
+                    <p><strong>法律状态：</strong><span class="tag ${getTagClass(patent.status)}">${escapeHtml(patent.status)}</span></p>
+                    <p><strong>摘要：</strong>${escapeHtml(patent.summary)}</p>
                 </div>
             `;
             
@@ -1265,27 +1291,6 @@
             
             // 显示分类结果
             alert(`自动分类完成！共分类 ${classifiedCount} 个专利。`);
-        }
-        
-        // 更新专利列表
-        function updatePatentList() {
-            const tableBody = document.querySelector('#classification table tbody');
-            if (!tableBody) return;
-            
-            tableBody.innerHTML = '';
-            
-            patentData.forEach(patent => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${patent.name}</td>
-                    <td>${patent.classification}</td>
-                    <td>
-                        <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="alert('编辑功能待实现')">编辑</button>
-                        <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; margin-left: 5px;" onclick="deletePatent(this)">删除</button>
-                    </td>
-                `;
-                tableBody.appendChild(row);
-            });
         }
         
         // 一键全部删除专利
@@ -2660,7 +2665,7 @@
         
         // 页面加载完成后的初始化
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('重庆科技大学专利文献管理系统已加载完成');
+            dlog('重庆科技大学专利文献管理系统已加载完成');
             
             // 初始化批量导入文件上传功能
             initFileUpload('.upload-area', 'fileInput', 'fileList');
@@ -2794,10 +2799,10 @@
             patentData.forEach(patent => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${patent.name}</td>
-                    <td>${patent.applicant}</td>
-                    <td>${patent.applicationDate}</td>
-                    <td>${patent.classification}</td>
+                    <td>${escapeHtml(patent.name)}</td>
+                    <td>${escapeHtml(patent.applicant)}</td>
+                    <td>${escapeHtml(patent.applicationDate)}</td>
+                    <td>${escapeHtml(patent.classification)}</td>
                     <td>
                         <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="editPatent(${patent.id})">编辑</button>
                         <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="deletePatent(${patent.id})">删除</button>
@@ -2822,9 +2827,26 @@
             });
         }
         
-        // 编辑专利
+        // 编辑专利：就地修改并持久化（复用与 deletePatent 一致的存储/刷新流程）
         function editPatent(id) {
-            alert('编辑专利功能待实现');
+            const patent = patentData.find(p => p.id === id);
+            if (!patent) { alert('未找到该专利'); return; }
+            const name = prompt('专利名称：', patent.name || '');
+            if (name === null) return;
+            const applicant = prompt('申请人：', patent.applicant || '');
+            if (applicant === null) return;
+            const applicationDate = prompt('申请日期（YYYY-MM-DD）：', patent.applicationDate || '');
+            if (applicationDate === null) return;
+            const classification = prompt('分类：', patent.classification || '');
+            if (classification === null) return;
+            patent.name = name.trim();
+            patent.applicant = applicant.trim();
+            patent.applicationDate = applicationDate.trim();
+            patent.classification = classification.trim();
+            localStorage.setItem('patentData', JSON.stringify(patentData));
+            updatePatentList();
+            updateComparisonPatents();
+            alert('专利已更新');
         }
         
         // 删除专利
@@ -3034,15 +3056,6 @@
             if (files.length > 0) {
                 fileList.style.display = 'block';
             }
-        }
-        
-        // 格式化文件大小
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
         
         // 开始导入

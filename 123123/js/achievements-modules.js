@@ -21,6 +21,7 @@
         
         function updateLongitudinalFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
+            if (!document.getElementById('longitudinalCountAll')) return;
             document.getElementById('longitudinalCountAll').textContent = longitudinalData.length;
             document.getElementById('longitudinalCountCurrentYear').textContent = longitudinalData.filter(d => d.startDate && d.startDate.startsWith(currentYear)).length;
             document.getElementById('longitudinalCountReviewing').textContent = longitudinalData.filter(d => d.status === '审核中').length;
@@ -31,6 +32,7 @@
         function renderLongitudinalTable() {
             const tbody = document.getElementById('longitudinalTableBody');
             const emptyMsg = document.getElementById('longitudinalEmptyMessage');
+            if (!tbody || !emptyMsg) return;
             tbody.innerHTML = '';
             if (filteredLongitudinalData.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
@@ -338,6 +340,7 @@
         
         function updateHorizontalFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
+            if (!document.getElementById('horizontalCountAll')) return;
             document.getElementById('horizontalCountAll').textContent = horizontalData.length;
             document.getElementById('horizontalCountCurrentYear').textContent = horizontalData.filter(d => d.startDate && d.startDate.startsWith(currentYear)).length;
             document.getElementById('horizontalCountReviewing').textContent = horizontalData.filter(d => d.status === '审核中').length;
@@ -348,6 +351,7 @@
         function renderHorizontalTable() {
             const tbody = document.getElementById('horizontalTableBody');
             const emptyMsg = document.getElementById('horizontalEmptyMessage');
+            if (!tbody || !emptyMsg) return;
             tbody.innerHTML = '';
             if (filteredHorizontalData.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
@@ -655,6 +659,7 @@
         
         function updateSchoolFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
+            if (!document.getElementById('schoolCountAll')) return;
             document.getElementById('schoolCountAll').textContent = schoolData.length;
             document.getElementById('schoolCountCurrentYear').textContent = schoolData.filter(d => d.startDate && d.startDate.startsWith(currentYear)).length;
             document.getElementById('schoolCountReviewing').textContent = schoolData.filter(d => d.status === '审核中').length;
@@ -665,6 +670,7 @@
         function renderSchoolTable() {
             const tbody = document.getElementById('schoolTableBody');
             const emptyMsg = document.getElementById('schoolEmptyMessage');
+            if (!tbody || !emptyMsg) return;
             tbody.innerHTML = '';
             if (filteredSchoolData.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
@@ -2314,6 +2320,7 @@
         })();
         
         function switchMemberCategory(category, element) {
+            if (!document.getElementById('memberCategoryAll')) return; // 成员模块未渲染时相关分区元素不存在，直接跳过
             document.querySelectorAll('.member-nav-item').forEach(item => {
                 item.classList.remove('active');
                 item.style.borderLeftColor = 'transparent';
@@ -3241,7 +3248,8 @@
         
         let patentImageBase64 = null;
         
-        document.getElementById('patentMgmtFile').addEventListener('change', function(e) {
+        const _patentMgmtFileEl = document.getElementById('patentMgmtFile');
+        if (_patentMgmtFileEl) _patentMgmtFileEl.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) {
                 clearPatentImage();
@@ -3275,14 +3283,14 @@
             recognizeBtn.disabled = true;
 
             try {
-                console.log('开始 OCR 识别...');
+                dlog('开始 OCR 识别...');
                 const ocrResponse = await fetch(`${API_PROXY}/api/baidu-ocr`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ image: patentImageBase64 })
                 });
 
-                console.log('OCR 响应状态:', ocrResponse.status);
+                dlog('OCR 响应状态:', ocrResponse.status);
                 if (!ocrResponse.ok) {
                     const errText = await ocrResponse.text();
                     console.error('OCR 错误:', errText);
@@ -3290,11 +3298,11 @@
                 }
 
                 const ocrData = await ocrResponse.json();
-                console.log('OCR 返回数据:', JSON.stringify(ocrData).substring(0, 500));
+                dlog('OCR 返回数据:', JSON.stringify(ocrData).substring(0, 500));
 
                 if (ocrData.words_result && ocrData.words_result.length > 0) {
                     const ocrText = ocrData.words_result.map(item => item.words).join('\n');
-                    console.log('OCR 提取文本:', ocrText);
+                    dlog('OCR 提取文本:', ocrText);
 
                     recognizeBtn.innerHTML = '🤖 AI 提取字段中...';
 
@@ -3306,7 +3314,7 @@
                         return;
                     }
 
-                    console.log('开始调用 AI 提取字段...');
+                    dlog('开始调用 AI 提取字段...');
                     const aiResponse = await fetch(`${API_PROXY}/api/aliyun`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3337,9 +3345,9 @@ ${ocrText}`
                         })
                     });
 
-                    console.log('AI 响应状态:', aiResponse.status);
+                    dlog('AI 响应状态:', aiResponse.status);
                     const aiResponseText = await aiResponse.text();
-                    console.log('AI 返回内容:', aiResponseText.substring(0, 1000));
+                    dlog('AI 返回内容:', aiResponseText.substring(0, 1000));
 
                     if (!aiResponse.ok) {
                         throw new Error('AI 字段提取失败 (HTTP ' + aiResponse.status + '): ' + aiResponseText);
@@ -3352,12 +3360,12 @@ ${ocrText}`
                     }
 
                     const aiContent = aiData.choices[0].message.content;
-                    console.log('AI 提取内容:', aiContent);
+                    dlog('AI 提取内容:', aiContent);
 
                     const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
                     if (jsonMatch) {
                         const extractedData = JSON.parse(jsonMatch[0]);
-                        console.log('提取的字段数据:', extractedData);
+                        dlog('提取的字段数据:', extractedData);
 
                         if (extractedData.patentType) document.getElementById('patentMgmtPatentType').value = extractedData.patentType;
                         if (extractedData.name) document.getElementById('patentMgmtName').value = extractedData.name;
@@ -4102,6 +4110,7 @@ ${ocrText}`
         
         function updateStandardFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
+            if (!document.getElementById('standardCountAll')) return;
             document.getElementById('standardCountAll').textContent = standardData.length;
             document.getElementById('standardCountCurrentYear').textContent = standardData.filter(d => d.publishDate && d.publishDate.startsWith(currentYear)).length;
             document.getElementById('standardCountReviewing').textContent = standardData.filter(d => d.status === '审核中').length;
@@ -4112,6 +4121,7 @@ ${ocrText}`
         function renderStandardTable() {
             const tbody = document.getElementById('standardTableBody');
             const emptyMsg = document.getElementById('standardEmptyMessage');
+            if (!tbody || !emptyMsg) return;
             tbody.innerHTML = '';
             if (filteredStandardData.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
