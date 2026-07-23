@@ -89,15 +89,15 @@
                             <thead>
                                 <tr>
                                     <th style="width: 40px;"><input type="checkbox" id="horizontalSelectAll" onchange="toggleHorizontalSelectAll(this)"></th>
-                                    <th onclick="sortHorizontalTable('year')" style="cursor: pointer;">立项年度 ⇅</th>
-                                    <th onclick="sortHorizontalTable('projectNumber')" style="cursor: pointer;">合同编号 ⇅</th>
-                                    <th onclick="sortHorizontalTable('name')" style="cursor: pointer;">项目名称 ⇅</th>
-                                    <th onclick="sortHorizontalTable('company')" style="cursor: pointer;">委托单位 </th>
-                                    <th onclick="sortHorizontalTable('leader')" style="cursor: pointer;">负责人 </th>
-                                    <th onclick="sortHorizontalTable('unit')" style="cursor: pointer;">所属单位 ⇅</th>
-                                    <th onclick="sortHorizontalTable('startDate')" style="cursor: pointer;">立项日期 ⇅</th>
-                                    <th onclick="sortHorizontalTable('funding')" style="cursor: pointer;">经费(万元) ⇅</th>
-                                    <th onclick="sortHorizontalTable('status')" style="cursor: pointer;">状态 ⇅</th>
+                                    <th>立项年度 <span data-acfilter="horizontal" data-acfield="year" onclick="openHorizontalColFilter(event,'year','立项年度')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>合同编号 <span data-acfilter="horizontal" data-acfield="projectNumber" onclick="openHorizontalColFilter(event,'projectNumber','合同编号')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>项目名称 <span data-acfilter="horizontal" data-acfield="name" onclick="openHorizontalColFilter(event,'name','项目名称')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>委托单位 <span data-acfilter="horizontal" data-acfield="company" onclick="openHorizontalColFilter(event,'company','委托单位')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>负责人 <span data-acfilter="horizontal" data-acfield="leader" onclick="openHorizontalColFilter(event,'leader','负责人')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>所属单位 <span data-acfilter="horizontal" data-acfield="unit" onclick="openHorizontalColFilter(event,'unit','所属单位')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>立项日期 <span data-acfilter="horizontal" data-acfield="startDate" onclick="openHorizontalColFilter(event,'startDate','立项日期')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>经费(万元) <span data-acfilter="horizontal" data-acfield="funding" onclick="openHorizontalColFilter(event,'funding','经费(万元)')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>状态 <span data-acfilter="horizontal" data-acfield="status" onclick="openHorizontalColFilter(event,'status','状态')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
                                     <th>操作</th>
                                 </tr>
                             </thead>

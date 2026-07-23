@@ -672,7 +672,9 @@
       }
       return true;
     });
-    return sortProjects(list);
+    list = sortProjects(list);
+    if (typeof acColRows === 'function') list = acColRows('myprojects', list);
+    return list;
   }
 
   function passMpFilters(p, opts) {
@@ -748,6 +750,7 @@
     document.querySelectorAll('.kx-subnav-item').forEach(function (a, i) {
       a.classList.toggle('active', i === 0);
     });
+    if (typeof acClearColFilter === 'function') acClearColFilter('myprojects');
     mpRender();
   }
 
@@ -788,24 +791,19 @@
     mpRender();
   }
 
-  function updateSortHeaders() {
-    document.querySelectorAll('#mpTableHead th[data-mp-sort]').forEach(function (th) {
-      var f = th.getAttribute('data-mp-sort');
-      th.classList.toggle('is-sort', f === state.sortField);
-      th.classList.toggle('is-asc', f === state.sortField && state.sortDir === 'asc');
-      th.classList.toggle('is-desc', f === state.sortField && state.sortDir === 'desc');
-    });
+  function ensureMpColFilterReady() {
+    if (ensureMpColFilterReady._done) return;
+    if (typeof acColValFn === 'function') {
+      acColValFn('myprojects', 'funding', function (d) { return money(d && d.funding); });
+      ensureMpColFilterReady._done = true;
+    }
   }
 
-  function bindMpSortClicks() {
-    var head = document.getElementById('mpTableHead');
-    if (!head || head._mpSortBound) return;
-    head._mpSortBound = true;
-    head.addEventListener('click', function (ev) {
-      var th = ev.target && ev.target.closest ? ev.target.closest('th[data-mp-sort]') : null;
-      if (!th) return;
-      mpSortBy(th.getAttribute('data-mp-sort'));
-    });
+  function openMpColFilter(ev, field, label) {
+    ensureMpColFilterReady();
+    if (typeof acShowColFilter === 'function') {
+      acShowColFilter(ev, 'myprojects', field, label, scopedProjects(), 'mpRender');
+    }
   }
 
   function updateSideCounts(all) {
@@ -886,12 +884,12 @@
   function mpRender() {
     hoistMpModals();
     bindMpTableClicks();
-    bindMpSortClicks();
     bindMpSideClicks();
+    ensureMpColFilterReady();
     var scoped = scopedProjects();
     updateSideCounts(scoped);
     syncSideActive();
-    updateSortHeaders();
+    if (typeof acUpdateColIndicators === 'function') acUpdateColIndicators('myprojects');
     var list = filteredProjects(scoped);
     var total = list.length;
     var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -1674,6 +1672,7 @@
   global.mpSetSubNav = mpSetSubNav;
   global.mpOnSearch = mpOnSearch;
   global.mpSortBy = mpSortBy;
+  global.openMpColFilter = openMpColFilter;
   global.mpGotoPage = mpGotoPage;
   global.mpView = mpView;
   global.mpOpenTab = mpOpenTab;

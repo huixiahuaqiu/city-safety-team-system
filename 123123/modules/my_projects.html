@@ -60,13 +60,13 @@
           <table class="kx-table">
             <thead>
               <tr id="mpTableHead">
-                <th data-mp-sort="projectNumber">项目编号 <i class="kx-sort"></i></th>
-                <th data-mp-sort="name">项目名称 <i class="kx-sort"></i></th>
-                <th data-mp-sort="leader">负责人姓名 <i class="kx-sort"></i></th>
-                <th data-mp-sort="funding">批准经费(万元) <i class="kx-sort"></i></th>
-                <th data-mp-sort="startDate">立项日期 <i class="kx-sort"></i></th>
-                <th data-mp-sort="unit">所属单位 <i class="kx-sort"></i></th>
-                <th data-mp-sort="auditStatus">审核状态 <i class="kx-sort"></i></th>
+                <th>项目编号 <span data-acfilter="myprojects" data-acfield="projectNumber" onclick="openMpColFilter(event,'projectNumber','项目编号')" title="按此列筛选" class="kx-col-filter">▼</span></th>
+                <th>项目名称 <span data-acfilter="myprojects" data-acfield="name" onclick="openMpColFilter(event,'name','项目名称')" title="按此列筛选" class="kx-col-filter">▼</span></th>
+                <th>负责人姓名 <span data-acfilter="myprojects" data-acfield="leader" onclick="openMpColFilter(event,'leader','负责人姓名')" title="按此列筛选" class="kx-col-filter">▼</span></th>
+                <th>批准经费(万元) <span data-acfilter="myprojects" data-acfield="funding" onclick="openMpColFilter(event,'funding','批准经费(万元)')" title="按此列筛选" class="kx-col-filter">▼</span></th>
+                <th>立项日期 <span data-acfilter="myprojects" data-acfield="startDate" onclick="openMpColFilter(event,'startDate','立项日期')" title="按此列筛选" class="kx-col-filter">▼</span></th>
+                <th>所属单位 <span data-acfilter="myprojects" data-acfield="unit" onclick="openMpColFilter(event,'unit','所属单位')" title="按此列筛选" class="kx-col-filter">▼</span></th>
+                <th>审核状态 <span data-acfilter="myprojects" data-acfield="auditStatus" onclick="openMpColFilter(event,'auditStatus','审核状态')" title="按此列筛选" class="kx-col-filter">▼</span></th>
                 <th style="min-width:300px">操作</th>
               </tr>
             </thead>
@@ -250,18 +250,14 @@
   background:#f5f7fa;color:#555;font-weight:600;font-size:12px;
   padding:8px 8px;border-bottom:1px solid #e0e0e0;text-align:left;white-space:nowrap;
 }
-.kx-table th[data-mp-sort]{cursor:pointer;user-select:none;}
-.kx-table th[data-mp-sort]:hover{color:var(--kx-blue);}
-.kx-table th.is-sort{color:var(--kx-blue);}
+.kx-col-filter{cursor:pointer;color:#9ca3af;font-size:11px;margin-left:2px;font-style:normal;user-select:none;}
+.kx-col-filter:hover{color:var(--kx-blue);}
 .kx-table td{
   padding:8px;border-bottom:1px solid #f0f0f0;font-size:12px;color:#333;
   vertical-align:middle;word-break:break-all;
 }
 .kx-table tbody tr:nth-child(even) td{background:#fafafa;}
 .kx-table tbody tr:hover td{background:#eef6ff;}
-.kx-sort::after{content:"⇅";font-size:10px;color:#bbb;margin-left:2px;}
-.kx-table th.is-asc .kx-sort::after{content:"↑";color:var(--kx-blue);}
-.kx-table th.is-desc .kx-sort::after{content:"↓";color:var(--kx-blue);}
 .kx-a{color:var(--kx-blue);text-decoration:none;cursor:pointer;}
 .kx-a:hover{text-decoration:underline;}
 .kx-ops{white-space:nowrap;line-height:1.7;}

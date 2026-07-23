@@ -95,14 +95,14 @@
                             <thead>
                                 <tr>
                                     <th style="width: 40px;"><input type="checkbox" id="standardSelectAll" onchange="toggleStandardSelectAll(this)"></th>
-                                    <th onclick="sortStandardTable('year')" style="cursor: pointer;">所属年度 ⇅</th>
-                                    <th onclick="sortStandardTable('standardNumber')" style="cursor: pointer;">标准编号/ISBN ⇅</th>
-                                    <th onclick="sortStandardTable('name')" style="cursor: pointer;">名称 </th>
-                                    <th onclick="sortStandardTable('type')" style="cursor: pointer;">类型 </th>
-                                    <th onclick="sortStandardTable('author')" style="cursor: pointer;">起草人/作者 </th>
-                                    <th onclick="sortStandardTable('unit')" style="cursor: pointer;">所属单位 </th>
-                                    <th onclick="sortStandardTable('publishDate')" style="cursor: pointer;">发布日期 </th>
-                                    <th onclick="sortStandardTable('status')" style="cursor: pointer;">状态 </th>
+                                    <th>所属年度 <span data-acfilter="standard" data-acfield="year" onclick="openStandardColFilter(event,'year','所属年度')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>标准编号/ISBN <span data-acfilter="standard" data-acfield="standardNumber" onclick="openStandardColFilter(event,'standardNumber','标准编号/ISBN')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>名称 <span data-acfilter="standard" data-acfield="name" onclick="openStandardColFilter(event,'name','名称')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>类型 <span data-acfilter="standard" data-acfield="type" onclick="openStandardColFilter(event,'type','类型')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>起草人/作者 <span data-acfilter="standard" data-acfield="author" onclick="openStandardColFilter(event,'author','起草人/作者')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>所属单位 <span data-acfilter="standard" data-acfield="unit" onclick="openStandardColFilter(event,'unit','所属单位')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>发布日期 <span data-acfilter="standard" data-acfield="publishDate" onclick="openStandardColFilter(event,'publishDate','发布日期')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>状态 <span data-acfilter="standard" data-acfield="status" onclick="openStandardColFilter(event,'status','状态')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
                                     <th>操作</th>
                                 </tr>
                             </thead>

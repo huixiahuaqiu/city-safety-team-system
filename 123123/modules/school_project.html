@@ -95,15 +95,15 @@
                             <thead>
                                 <tr>
                                     <th style="width: 40px;"><input type="checkbox" id="schoolSelectAll" onchange="toggleSchoolSelectAll(this)"></th>
-                                    <th onclick="sortSchoolTable('year')" style="cursor: pointer;">立项年度 ⇅</th>
-                                    <th onclick="sortSchoolTable('projectNumber')" style="cursor: pointer;">项目编号 ⇅</th>
-                                    <th onclick="sortSchoolTable('name')" style="cursor: pointer;">项目名称 ⇅</th>
-                                    <th onclick="sortSchoolTable('type')" style="cursor: pointer;">项目类型 ⇅</th>
-                                    <th onclick="sortSchoolTable('leader')" style="cursor: pointer;">负责人 ⇅</th>
-                                    <th onclick="sortSchoolTable('unit')" style="cursor: pointer;">所属单位 ⇅</th>
-                                    <th onclick="sortSchoolTable('startDate')" style="cursor: pointer;">立项日期 ⇅</th>
-                                    <th onclick="sortSchoolTable('funding')" style="cursor: pointer;">经费(万元) ⇅</th>
-                                    <th onclick="sortSchoolTable('status')" style="cursor: pointer;">状态 ⇅</th>
+                                    <th>立项年度 <span data-acfilter="school" data-acfield="year" onclick="openSchoolColFilter(event,'year','立项年度')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>项目编号 <span data-acfilter="school" data-acfield="projectNumber" onclick="openSchoolColFilter(event,'projectNumber','项目编号')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>项目名称 <span data-acfilter="school" data-acfield="name" onclick="openSchoolColFilter(event,'name','项目名称')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>项目类型 <span data-acfilter="school" data-acfield="type" onclick="openSchoolColFilter(event,'type','项目类型')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>负责人 <span data-acfilter="school" data-acfield="leader" onclick="openSchoolColFilter(event,'leader','负责人')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>所属单位 <span data-acfilter="school" data-acfield="unit" onclick="openSchoolColFilter(event,'unit','所属单位')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>立项日期 <span data-acfilter="school" data-acfield="startDate" onclick="openSchoolColFilter(event,'startDate','立项日期')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>经费(万元) <span data-acfilter="school" data-acfield="funding" onclick="openSchoolColFilter(event,'funding','经费(万元)')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>状态 <span data-acfilter="school" data-acfield="status" onclick="openSchoolColFilter(event,'status','状态')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
                                     <th>操作</th>
                                 </tr>
                             </thead>

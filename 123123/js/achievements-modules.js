@@ -1,4 +1,113 @@
 // 项目/成员/成果台账模块（从 app-core 机械外置）
+
+        // ===== 通用列头筛选（Excel 式）：去排序箭头，点列头 ▼ 选值筛选，可与顶部面板叠加 =====
+        var _acColFilters = {};
+        var _acColValFns = {};
+        var _acColPopRender = null;
+        function _acCF(key) { return (_acColFilters[key] = _acColFilters[key] || {}); }
+        function acColValFn(key, field, fn) {
+            (_acColValFns[key] = _acColValFns[key] || {})[field] = fn;
+        }
+        function _acGetColVal(key, d, field) {
+            var fn = _acColValFns[key] && _acColValFns[key][field];
+            if (fn) {
+                var gv = fn(d);
+                return gv == null ? '' : String(gv);
+            }
+            return (d && d[field] != null) ? String(d[field]) : '';
+        }
+        function _acYearOf(dateField) {
+            return function (d) {
+                var v = d && d[dateField];
+                return v ? String(v).substring(0, 4) : '';
+            };
+        }
+        // 在各表 render 中调用：按当前列筛选过滤数组（不改原数组）
+        function acColRows(key, arr) {
+            arr = arr || [];
+            var f = _acColFilters[key];
+            if (!f) return arr;
+            var fields = Object.keys(f).filter(function (k) { return f[k] !== '' && f[k] != null; });
+            if (!fields.length) return arr;
+            return arr.filter(function (d) {
+                for (var i = 0; i < fields.length; i++) {
+                    var k = fields[i];
+                    if (_acGetColVal(key, d, k) !== String(f[k])) return false;
+                }
+                return true;
+            });
+        }
+        function acClearColFilter(key) { _acColFilters[key] = {}; _acUpdateColIndicators(key); }
+        function acUpdateColIndicators(key) { _acUpdateColIndicators(key); }
+        function _acUpdateColIndicators(key) {
+            var btns = document.querySelectorAll('[data-acfilter="' + key + '"]');
+            var f = _acCF(key);
+            for (var i = 0; i < btns.length; i++) {
+                var b = btns[i], field = b.getAttribute('data-acfield'), on = !!f[field];
+                b.style.color = on ? '#4f46e5' : '#9ca3af';
+                b.textContent = on ? '▼●' : '▼';
+                b.title = on ? ('已筛选：' + f[field] + '（点击可改/清除）') : '按此列筛选';
+            }
+        }
+        function _acCloseColPop() {
+            var ex = document.getElementById('acColFilterPop');
+            if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
+            document.removeEventListener('click', _acColPopOutside, true);
+        }
+        function _acColPopOutside(e) {
+            var pop = document.getElementById('acColFilterPop');
+            if (pop && !pop.contains(e.target)) _acCloseColPop();
+        }
+        function acShowColFilter(event, key, field, label, fullArr, renderFnName) {
+            if (event) event.stopPropagation();
+            _acCloseColPop();
+            var esc = window.escapeHtml || function (s) { return String(s); };
+            var counts = {};
+            (fullArr || []).forEach(function (d) {
+                var v = _acGetColVal(key, d, field);
+                if (v) counts[v] = (counts[v] || 0) + 1;
+            });
+            var cur = _acCF(key)[field] || '';
+            function opt(value, text, count) {
+                var active = cur === value;
+                var v = String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                return '<div onclick="acSetColFilter(\'' + key + '\',\'' + field + '\',\'' + v + '\')" style="padding:7px 14px;cursor:pointer;display:flex;justify-content:space-between;gap:16px;white-space:nowrap;' + (active ? 'background:#eef2ff;color:#4f46e5;font-weight:600;' : 'color:#334155;') + '"><span>' + (active ? '✓ ' : '') + esc(text) + '</span><span style="color:#9ca3af;">' + count + '</span></div>';
+            }
+            var rows = opt('', '全部', (fullArr || []).length);
+            Object.keys(counts).sort().forEach(function (k) { rows += opt(k, k, counts[k]); });
+            var pop = document.createElement('div');
+            pop.id = 'acColFilterPop';
+            pop.style.cssText = 'position:fixed;z-index:3000;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.18);min-width:190px;max-height:320px;overflow:auto;font-size:13px;';
+            pop.innerHTML = '<div style="padding:8px 14px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#334155;">按「' + esc(label) + '」筛选</div>' + rows;
+            document.body.appendChild(pop);
+            var r = (event && event.currentTarget ? event.currentTarget : document.body).getBoundingClientRect();
+            pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8)) + 'px';
+            pop.style.top = Math.max(8, Math.min(r.bottom + 4, window.innerHeight - pop.offsetHeight - 8)) + 'px';
+            _acColPopRender = renderFnName || '';
+            setTimeout(function () { document.addEventListener('click', _acColPopOutside, true); }, 0);
+        }
+        function acSetColFilter(key, field, value) {
+            _acCF(key)[field] = value || '';
+            var rf = _acColPopRender;
+            _acCloseColPop();
+            if (rf && typeof window[rf] === 'function') window[rf]();
+            _acUpdateColIndicators(key);
+        }
+        // 各表薄封装（闭包引用各自数据数组 + 渲染函数名）
+        function openLongitudinalColFilter(ev, field, label) { acShowColFilter(ev, 'longitudinal', field, label, longitudinalData, 'renderLongitudinalTable'); }
+        function openHorizontalColFilter(ev, field, label) { acShowColFilter(ev, 'horizontal', field, label, horizontalData, 'renderHorizontalTable'); }
+        function openSchoolColFilter(ev, field, label) { acShowColFilter(ev, 'school', field, label, schoolData, 'renderSchoolTable'); }
+        function openPaperColFilter(ev, field, label) { acShowColFilter(ev, 'paper', field, label, paperData, 'renderPaperTable'); }
+        function openStandardColFilter(ev, field, label) { acShowColFilter(ev, 'standard', field, label, standardData, 'renderStandardTable'); }
+        // 虚拟列：表头「年度」对应日期字段前 4 位；论文 publishDate → publish_date
+        acColValFn('longitudinal', 'year', _acYearOf('startDate'));
+        acColValFn('horizontal', 'year', _acYearOf('startDate'));
+        acColValFn('school', 'year', _acYearOf('startDate'));
+        acColValFn('paper', 'year', _acYearOf('publish_date'));
+        acColValFn('paper', 'publishDate', function (d) { return d && d.publish_date != null ? String(d.publish_date) : ''; });
+        acColValFn('standard', 'year', _acYearOf('publishDate'));
+        acColValFn('copyright', 'year', _acYearOf('regDate'));
+
         // ========== 纵向项目管理模块 ==========
         
         var longitudinalData = [];
@@ -34,9 +143,10 @@
             const emptyMsg = document.getElementById('longitudinalEmptyMessage');
             if (!tbody || !emptyMsg) return;
             tbody.innerHTML = '';
-            if (filteredLongitudinalData.length === 0) { emptyMsg.style.display = 'block'; return; }
+            const rows = acColRows('longitudinal', filteredLongitudinalData);
+            if (rows.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
-            filteredLongitudinalData.forEach(item => {
+            rows.forEach(item => {
                 const row = document.createElement('tr');
                 let statusClass = 'tag-warning';
                 if (item.status === '已通过') statusClass = 'tag-success';
@@ -353,9 +463,10 @@
             const emptyMsg = document.getElementById('horizontalEmptyMessage');
             if (!tbody || !emptyMsg) return;
             tbody.innerHTML = '';
-            if (filteredHorizontalData.length === 0) { emptyMsg.style.display = 'block'; return; }
+            const rows = acColRows('horizontal', filteredHorizontalData);
+            if (rows.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
-            filteredHorizontalData.forEach(item => {
+            rows.forEach(item => {
                 const row = document.createElement('tr');
                 let statusClass = 'tag-warning';
                 if (item.status === '已通过') statusClass = 'tag-success';
@@ -672,9 +783,10 @@
             const emptyMsg = document.getElementById('schoolEmptyMessage');
             if (!tbody || !emptyMsg) return;
             tbody.innerHTML = '';
-            if (filteredSchoolData.length === 0) { emptyMsg.style.display = 'block'; return; }
+            const rows = acColRows('school', filteredSchoolData);
+            if (rows.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
-            filteredSchoolData.forEach(item => {
+            rows.forEach(item => {
                 const row = document.createElement('tr');
                 let statusClass = 'tag-warning';
                 if (item.status === '已通过') statusClass = 'tag-success';
@@ -3094,6 +3206,8 @@
         var patentMgmtSortField = '';
         var patentMgmtSortOrder = 'asc';
         var patentPage = 1;
+        // 列头筛选（Excel 式自动筛选）：按数据字段名存当前筛选值，空串=不筛选
+        var patentMgmtColFilters = { patent_type: '', classification: '', status: '' };
         const PAGE_SIZE = 20;
         
         async function initPatentMgmtData(options) {
@@ -3494,6 +3608,8 @@ ${ocrText}`
         function filterPatentMgmtByTag(tag, element) {
             document.querySelectorAll('#patentMgmtFilterTags .filter-tag').forEach(t => t.classList.remove('active'));
             element.classList.add('active');
+            patentMgmtColFilters = { patent_type: '', classification: '', status: '' };
+            _updatePatentColFilterIndicators();
             const currentYear = new Date().getFullYear().toString();
             switch(tag) {
                 case 'all': filteredPatentMgmtData = [...patentMgmtData]; break;
@@ -3529,12 +3645,78 @@ ${ocrText}`
                 if (classification && d.classification !== classification) return false;
                 if (dateFrom && (!d.application_date || d.application_date < dateFrom)) return false;
                 if (dateTo && (!d.application_date || d.application_date > dateTo)) return false;
+                if (patentMgmtColFilters.patent_type && d.patent_type !== patentMgmtColFilters.patent_type) return false;
+                if (patentMgmtColFilters.classification && d.classification !== patentMgmtColFilters.classification) return false;
+                if (patentMgmtColFilters.status && d.status !== patentMgmtColFilters.status) return false;
                 return true;
             });
             patentPage = 1;
             renderPatentMgmtTable();
         }
         
+        function _updatePatentColFilterIndicators() {
+            ['patent_type', 'classification', 'status'].forEach(function (f) {
+                var b = document.getElementById('pcfBtn_' + f);
+                if (b) {
+                    var on = !!patentMgmtColFilters[f];
+                    b.style.color = on ? '#4f46e5' : '#94a3b8';
+                    b.textContent = on ? '▼●' : '▼';
+                    b.title = on ? ('已筛选：' + patentMgmtColFilters[f] + '（点击可改/清除）') : '按此列筛选';
+                }
+            });
+        }
+
+        function closePatentColFilterPopup() {
+            var ex = document.getElementById('patentColFilterPop');
+            if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
+            document.removeEventListener('click', _patentColFilterOutside, true);
+        }
+
+        function _patentColFilterOutside(e) {
+            var pop = document.getElementById('patentColFilterPop');
+            if (pop && !pop.contains(e.target)) closePatentColFilterPopup();
+        }
+
+        function setPatentColFilter(field, value) {
+            if (!patentMgmtColFilters.hasOwnProperty(field)) return;
+            patentMgmtColFilters[field] = value || '';
+            closePatentColFilterPopup();
+            applyPatentMgmtFilters();
+            _updatePatentColFilterIndicators();
+        }
+
+        // 列头筛选：点击列头 ▼ 弹出该列所有取值供选择（Excel 式自动筛选）
+        function openPatentColFilter(event, field, label) {
+            if (event) { event.stopPropagation(); }
+            closePatentColFilterPopup();
+            var esc = window.escapeHtml || function (s) { return String(s); };
+            var counts = {};
+            (patentMgmtData || []).forEach(function (d) {
+                var v = (d && d[field] != null) ? String(d[field]) : '';
+                if (v) counts[v] = (counts[v] || 0) + 1;
+            });
+            var cur = patentMgmtColFilters[field] || '';
+            var optStyle = 'padding:7px 14px;cursor:pointer;display:flex;justify-content:space-between;gap:16px;white-space:nowrap;';
+            var actStyle = 'background:#eef2ff;color:#4f46e5;font-weight:600;';
+            function opt(value, text, count) {
+                var active = cur === value;
+                var v = String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                return '<div onclick="setPatentColFilter(\'' + field + '\',\'' + v + '\')" style="' + optStyle + (active ? actStyle : 'color:#334155;') + '">' +
+                    '<span>' + (active ? '✓ ' : '') + esc(text) + '</span><span style="color:#94a3b8;">' + count + '</span></div>';
+            }
+            var rows = opt('', '全部', (patentMgmtData || []).length);
+            Object.keys(counts).sort().forEach(function (k) { rows += opt(k, k, counts[k]); });
+            var pop = document.createElement('div');
+            pop.id = 'patentColFilterPop';
+            pop.style.cssText = 'position:fixed;z-index:3000;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.18);min-width:190px;max-height:320px;overflow:auto;font-size:13px;';
+            pop.innerHTML = '<div style="padding:8px 14px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#334155;">按「' + esc(label) + '」筛选</div>' + rows;
+            document.body.appendChild(pop);
+            var r = (event && event.currentTarget ? event.currentTarget : document.getElementById('pcfBtn_' + field)).getBoundingClientRect();
+            pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8)) + 'px';
+            pop.style.top = Math.max(8, Math.min(r.bottom + 4, window.innerHeight - pop.offsetHeight - 8)) + 'px';
+            setTimeout(function () { document.addEventListener('click', _patentColFilterOutside, true); }, 0);
+        }
+
         function resetPatentMgmtFilters() {
             document.getElementById('patentMgmtFilterName').value = '';
             document.getElementById('patentMgmtFilterNumber').value = '';
@@ -3547,6 +3729,8 @@ ${ocrText}`
             document.getElementById('patentMgmtMoreFilters').style.display = 'none';
             document.querySelectorAll('#patentMgmtFilterTags .filter-tag').forEach(t => t.classList.remove('active'));
             document.querySelector('#patentMgmtFilterTags .filter-tag').classList.add('active');
+            patentMgmtColFilters = { patent_type: '', classification: '', status: '' };
+            _updatePatentColFilterIndicators();
             filteredPatentMgmtData = [...patentMgmtData];
             patentPage = 1;
             renderPatentMgmtTable();
@@ -3753,9 +3937,10 @@ ${ocrText}`
             const emptyMsg = document.getElementById('paperEmptyMessage');
             if (!tbody) return;
             tbody.innerHTML = '';
-            if (filteredPaperData.length === 0) { if (emptyMsg) emptyMsg.style.display = 'block'; return; }
+            const rows = acColRows('paper', filteredPaperData);
+            if (rows.length === 0) { if (emptyMsg) emptyMsg.style.display = 'block'; return; }
             if (emptyMsg) emptyMsg.style.display = 'none';
-            filteredPaperData.forEach(item => {
+            rows.forEach(item => {
                 const row = document.createElement('tr');
                 let statusClass = 'tag-warning';
                 if (item.status === '已通过') statusClass = 'tag-success';
@@ -4123,9 +4308,10 @@ ${ocrText}`
             const emptyMsg = document.getElementById('standardEmptyMessage');
             if (!tbody || !emptyMsg) return;
             tbody.innerHTML = '';
-            if (filteredStandardData.length === 0) { emptyMsg.style.display = 'block'; return; }
+            const rows = acColRows('standard', filteredStandardData);
+            if (rows.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
-            filteredStandardData.forEach(item => {
+            rows.forEach(item => {
                 const row = document.createElement('tr');
                 let statusClass = 'tag-warning';
                 if (item.status === '已通过') statusClass = 'tag-success';

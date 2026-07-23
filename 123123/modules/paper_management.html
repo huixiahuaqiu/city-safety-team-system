@@ -95,14 +95,14 @@
                             <thead>
                                 <tr>
                                     <th style="width: 40px;"><input type="checkbox" id="paperSelectAll" onchange="togglePaperSelectAll(this)"></th>
-                                    <th onclick="sortPaperTable('year')" style="cursor: pointer;">所属年度 ⇅</th>
-                                    <th onclick="sortPaperTable('title')" style="cursor: pointer;">论文标题 ⇅</th>
-                                    <th onclick="sortPaperTable('author')" style="cursor: pointer;">作者 </th>
-                                    <th onclick="sortPaperTable('journal')" style="cursor: pointer;">期刊名称 ⇅</th>
-                                    <th onclick="sortPaperTable('index')" style="cursor: pointer;">收录类型 ⇅</th>
-                                    <th onclick="sortPaperTable('unit')" style="cursor: pointer;">所属单位 </th>
-                                    <th onclick="sortPaperTable('publishDate')" style="cursor: pointer;">发表日期 ⇅</th>
-                                    <th onclick="sortPaperTable('status')" style="cursor: pointer;">状态 </th>
+                                    <th>所属年度 <span data-acfilter="paper" data-acfield="year" onclick="openPaperColFilter(event,'year','所属年度')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>论文标题 <span data-acfilter="paper" data-acfield="title" onclick="openPaperColFilter(event,'title','论文标题')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>作者 <span data-acfilter="paper" data-acfield="author" onclick="openPaperColFilter(event,'author','作者')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>期刊名称 <span data-acfilter="paper" data-acfield="journal" onclick="openPaperColFilter(event,'journal','期刊名称')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>收录类型 <span data-acfilter="paper" data-acfield="index" onclick="openPaperColFilter(event,'index','收录类型')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>所属单位 <span data-acfilter="paper" data-acfield="unit" onclick="openPaperColFilter(event,'unit','所属单位')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>发表日期 <span data-acfilter="paper" data-acfield="publishDate" onclick="openPaperColFilter(event,'publishDate','发表日期')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>状态 <span data-acfilter="paper" data-acfield="status" onclick="openPaperColFilter(event,'status','状态')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
                                     <th>操作</th>
                                 </tr>
                             </thead>

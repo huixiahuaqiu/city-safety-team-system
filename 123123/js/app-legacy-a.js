@@ -5,6 +5,10 @@
         let currentSortOrder = 'asc';
         let editingCopyrightId = null;
         let selectedCopyrights = new Set();
+        // 列头筛选薄封装（通用工具 acShowColFilter/acColRows 定义于 achievements-modules.js）
+        function openCopyrightColFilter(ev, field, label) {
+            if (typeof acShowColFilter === 'function') acShowColFilter(ev, 'copyright', field, label, copyrightData, 'renderCopyrightTable');
+        }
         
         // 初始化软著数据
         function initCopyrightData() {
@@ -82,15 +86,16 @@
             if (!tbody || !emptyMsg) return; // 软著模块未加载时相关元素不存在，直接跳过
 
             tbody.innerHTML = '';
+            const rows = (typeof acColRows === 'function') ? acColRows('copyright', filteredData) : filteredData;
             
-            if (filteredData.length === 0) {
+            if (rows.length === 0) {
                 emptyMsg.style.display = 'block';
                 return;
             }
             
             emptyMsg.style.display = 'none';
             
-            filteredData.forEach(item => {
+            rows.forEach(item => {
                 const row = document.createElement('tr');
                 const statusClass = item.status === '已通过' ? 'tag-success' : item.status === '审核中' ? 'tag-warning' : 'tag-danger';
                 row.innerHTML = `

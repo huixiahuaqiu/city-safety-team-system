@@ -94,15 +94,15 @@
                             <thead>
                                 <tr>
                                     <th style="width: 40px;"><input type="checkbox" id="longitudinalSelectAll" onchange="toggleLongitudinalSelectAll(this)"></th>
-                                    <th onclick="sortLongitudinalTable('year')" style="cursor: pointer;">立项年度 ⇅</th>
-                                    <th onclick="sortLongitudinalTable('projectNumber')" style="cursor: pointer;">项目编号 ⇅</th>
-                                    <th onclick="sortLongitudinalTable('name')" style="cursor: pointer;">项目名称 ⇅</th>
-                                    <th onclick="sortLongitudinalTable('level')" style="cursor: pointer;">项目级别 ⇅</th>
-                                    <th onclick="sortLongitudinalTable('leader')" style="cursor: pointer;">负责人 ⇅</th>
-                                    <th onclick="sortLongitudinalTable('unit')" style="cursor: pointer;">所属单位 ⇅</th>
-                                    <th onclick="sortLongitudinalTable('startDate')" style="cursor: pointer;">立项日期 ⇅</th>
-                                    <th onclick="sortLongitudinalTable('funding')" style="cursor: pointer;">经费(万元) ⇅</th>
-                                    <th onclick="sortLongitudinalTable('status')" style="cursor: pointer;">状态 ⇅</th>
+                                    <th>立项年度 <span data-acfilter="longitudinal" data-acfield="year" onclick="openLongitudinalColFilter(event,'year','立项年度')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>项目编号 <span data-acfilter="longitudinal" data-acfield="projectNumber" onclick="openLongitudinalColFilter(event,'projectNumber','项目编号')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>项目名称 <span data-acfilter="longitudinal" data-acfield="name" onclick="openLongitudinalColFilter(event,'name','项目名称')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>项目级别 <span data-acfilter="longitudinal" data-acfield="level" onclick="openLongitudinalColFilter(event,'level','项目级别')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>负责人 <span data-acfilter="longitudinal" data-acfield="leader" onclick="openLongitudinalColFilter(event,'leader','负责人')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>所属单位 <span data-acfilter="longitudinal" data-acfield="unit" onclick="openLongitudinalColFilter(event,'unit','所属单位')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>立项日期 <span data-acfilter="longitudinal" data-acfield="startDate" onclick="openLongitudinalColFilter(event,'startDate','立项日期')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>经费(万元) <span data-acfilter="longitudinal" data-acfield="funding" onclick="openLongitudinalColFilter(event,'funding','经费(万元)')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>状态 <span data-acfilter="longitudinal" data-acfield="status" onclick="openLongitudinalColFilter(event,'status','状态')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
                                     <th>操作</th>
                                 </tr>
                             </thead>

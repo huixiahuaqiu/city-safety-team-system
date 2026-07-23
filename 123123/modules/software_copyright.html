@@ -95,14 +95,14 @@
                             <thead>
                                 <tr>
                                     <th style="width: 40px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
-                                    <th onclick="sortTable('year')" style="cursor: pointer;">所属年度 ⇅</th>
-                                    <th onclick="sortTable('regNumber')" style="cursor: pointer;">登记号 ⇅</th>
-                                    <th onclick="sortTable('name')" style="cursor: pointer;">软著名称 ⇅</th>
-                                    <th onclick="sortTable('category')" style="cursor: pointer;">分类 ⇅</th>
-                                    <th onclick="sortTable('applicant')" style="cursor: pointer;">申请人 ⇅</th>
-                                    <th onclick="sortTable('unit')" style="cursor: pointer;">所属单位 ⇅</th>
-                                    <th onclick="sortTable('regDate')" style="cursor: pointer;">登记日期 ⇅</th>
-                                    <th onclick="sortTable('status')" style="cursor: pointer;">状态 ⇅</th>
+                                    <th>所属年度 <span data-acfilter="copyright" data-acfield="year" onclick="openCopyrightColFilter(event,'year','所属年度')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>登记号 <span data-acfilter="copyright" data-acfield="regNumber" onclick="openCopyrightColFilter(event,'regNumber','登记号')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>软著名称 <span data-acfilter="copyright" data-acfield="name" onclick="openCopyrightColFilter(event,'name','软著名称')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>分类 <span data-acfilter="copyright" data-acfield="category" onclick="openCopyrightColFilter(event,'category','分类')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>申请人 <span data-acfilter="copyright" data-acfield="applicant" onclick="openCopyrightColFilter(event,'applicant','申请人')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>所属单位 <span data-acfilter="copyright" data-acfield="unit" onclick="openCopyrightColFilter(event,'unit','所属单位')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>登记日期 <span data-acfilter="copyright" data-acfield="regDate" onclick="openCopyrightColFilter(event,'regDate','登记日期')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>状态 <span data-acfilter="copyright" data-acfield="status" onclick="openCopyrightColFilter(event,'status','状态')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
