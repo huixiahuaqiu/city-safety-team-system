@@ -114,3 +114,4 @@ tools/minio/mc.exe
 # ---- 浏览器验证/测试截图产物（勿提交）----
 screenshot_*.png
 console_*_check.png
+login_page_*.png

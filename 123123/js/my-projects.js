@@ -93,6 +93,64 @@
     return '<span class="kx-file-row">' + fileIconHtml(name) + open + '</span>';
   }
 
+  function mpTopFolder(name) {
+    var n = String(name || '');
+    var i = n.indexOf('/');
+    return i > 0 ? n.slice(0, i) : '';
+  }
+
+  async function mpFetchDocBlob(d) {
+    if (d && d.serverFileId) {
+      var r = await fetch('/api/shared-file/download?fileId=' + encodeURIComponent(d.serverFileId), { headers: authHeaders() });
+      if (!r.ok) throw new Error('下载失败 HTTP ' + r.status + '：' + (d.name || ''));
+      return await r.blob();
+    }
+    if (d && d.blobUrl) {
+      var rr = await fetch(d.blobUrl);
+      if (!rr.ok) throw new Error('本地文件读取失败：' + (d.name || ''));
+      return await rr.blob();
+    }
+    throw new Error('无可下载来源：' + ((d && d.name) || '未知文件'));
+  }
+
+  // 文件夹整体下载：把该文件夹下所有文件按相对路径打进一个 zip，解压即还原目录结构。
+  async function mpDownloadFolder(folderName) {
+    var p = findByKey(state.currentKey);
+    if (!p) { alert('请先打开项目'); return; }
+    var prefix = String(folderName || '') + '/';
+    var docs = (p.documents || []).filter(function (d) {
+      return String((d && (d.name || d.relativePath)) || '').indexOf(prefix) === 0;
+    });
+    if (!docs.length) { alert('该文件夹下没有文件'); return; }
+    try {
+      setUploadStatus('正在准备打包「' + folderName + '」…', 'busy');
+      if (typeof ensureVendor === 'function') await ensureVendor('jszip');
+      var Z = global.JSZip || (typeof JSZip !== 'undefined' ? JSZip : null);
+      if (!Z) throw new Error('压缩库(JSZip)未加载');
+      var zip = new Z();
+      for (var i = 0; i < docs.length; i++) {
+        setUploadStatus('打包中 ' + (i + 1) + '/' + docs.length + '：' + (docs[i].name || ''), 'busy');
+        var blob = await mpFetchDocBlob(docs[i]);
+        zip.file(String(docs[i].name || docs[i].relativePath), blob); // 相对路径作为 zip 内路径
+      }
+      setUploadStatus('正在生成压缩包…', 'busy');
+      var out = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+      var safe = String(folderName).replace(/[\\\/:*?"<>|]/g, '_') || 'folder';
+      var url = URL.createObjectURL(out);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = safe + '.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 15000);
+      setUploadStatus('已打包下载「' + folderName + '」（' + docs.length + ' 个文件）', 'ok');
+    } catch (e) {
+      setUploadStatus('打包下载失败：' + ((e && e.message) || e), 'err');
+      alert('打包下载失败：' + ((e && e.message) || e));
+    }
+  }
+
   function setUploadStatus(msg, kind) {
     var el = document.getElementById('mpUploadStatus');
     if (!el) return;
@@ -100,12 +158,14 @@
     el.textContent = msg || '';
   }
 
-  async function mpUploadOneFile(file, remark) {
-    var caps = null;
-    try {
-      var hr = await fetch('/api/shared-file/health');
-      if (hr.ok) caps = await hr.json();
-    } catch (e) { caps = null; }
+  async function mpUploadOneFile(file, remark, caps) {
+    if (typeof caps === 'undefined') {
+      caps = null;
+      try {
+        var hr = await fetch('/api/shared-file/health');
+        if (hr.ok) caps = await hr.json();
+      } catch (e) { caps = null; }
+    }
 
     if (caps && caps.ok) {
       var PRESIGN_THRESHOLD = 8 * 1024 * 1024;
@@ -195,24 +255,36 @@
   }
 
   function listFromFileList(fileList) {
-    var files = [];
+    var files = [], stats = { raw: 0, system: 0, empty: 0 };
+    var SYSTEM_RE = /(^|[\/\\])(\.DS_Store|Thumbs\.db|desktop\.ini|\.localized)$/i;
+    var MACOSX_RE = /(^|[\/\\])__MACOSX([\/\\]|$)/i;
     for (var i = 0; i < (fileList || []).length; i++) {
       var f = fileList[i];
-      if (!f || !f.size) continue;
+      if (!f) continue;
+      stats.raw++;
       var rel = f.webkitRelativePath || f.name || '';
-      if (/(^|\/|\\)\.DS_Store$|(^|\/|\\)Thumbs\.db$/i.test(rel)) continue;
+      if (SYSTEM_RE.test(rel) || MACOSX_RE.test(rel)) { stats.system++; continue; }
+      if (!f.size) { stats.empty++; continue; }
       files.push(f);
     }
-    return files;
+    return { files: files, stats: stats };
   }
 
   async function mpIngestFiles(fileList, opts) {
     opts = opts || {};
     var key = state.currentKey;
     if (!key) { alert('请先打开项目'); return; }
-    var files = listFromFileList(fileList);
+    var picked = listFromFileList(fileList);
+    var files = picked.files;
     if (!files.length) {
-      alert('未选到有效文件（空文件夹或仅含系统文件）');
+      var st = picked.stats;
+      if (st.raw === 0) {
+        alert('未选择任何文件（或选中的文件夹为空）。');
+      } else if (st.empty > 0) {
+        alert('选中了 ' + st.raw + ' 个文件，但均无法上传（0 字节空文件或系统文件）。\n\n若文件来自 OneDrive / 网盘且仅存在于“云端”，Windows 会将其报告为 0 字节——请先在资源管理器中右键该文件选择“始终保留在此设备上”，待其下载到本地后再上传。');
+      } else {
+        alert('未选到有效文件（仅含系统文件，如 .DS_Store / Thumbs.db / desktop.ini）。');
+      }
       return;
     }
 
@@ -220,61 +292,96 @@
     if (!p) return;
     var docs = (p.documents || []).slice();
     var remark = '项目文档|' + (p.projectNumber || '') + '|' + (p.name || '');
-    var ok = 0;
-    var fail = 0;
-    var taskBookSet = false;
-    setUploadStatus('正在上传 0/' + files.length + ' …', 'busy');
 
-    for (var i = 0; i < files.length; i++) {
-      var file = files[i];
-      setUploadStatus('正在上传 ' + (i + 1) + '/' + files.length + '：' + file.name, 'busy');
-      try {
-        var meta = await mpUploadOneFile(file, remark);
-        var displayName = opts.keepRelative && meta.relativePath ? meta.relativePath : meta.name;
-        docs.push({
-          name: displayName,
-          uploader: meta.uploader,
-          time: meta.time,
-          size: meta.size,
-          serverFileId: meta.serverFileId || '',
-          blobUrl: meta.blobUrl || '',
-          localOnly: !!meta.localOnly
+    // 上传能力只探测一次（此前每个文件都请求一次 /health，N 个文件 = N 次冗余往返）
+    var caps;
+    try {
+      var hr0 = await fetch('/api/shared-file/health');
+      caps = hr0.ok ? await hr0.json() : null;
+    } catch (eCaps) { caps = null; }
+
+    var total = files.length;
+    var ok = 0, fail = 0, done = 0;
+    var results = new Array(total); // 按原始下标保存结果，保持文档顺序稳定
+    setUploadStatus('正在上传 0/' + total + ' …', 'busy');
+
+    // 并发上传（限流 4）：网关多线程 + 注册表已加锁，可安全并行，显著快于逐个 await。
+    var cursor = 0;
+    async function mpUploadWorker() {
+      while (true) {
+        var i = cursor++;
+        if (i >= total) return;
+        try {
+          results[i] = await mpUploadOneFile(files[i], remark, caps);
+          ok++;
+        } catch (err) {
+          fail++;
+          console.warn('[my-projects] upload fail', files[i] && files[i].name, err);
+        }
+        done++;
+        setUploadStatus('正在上传 ' + done + '/' + total + ' …', 'busy');
+      }
+    }
+    var pool = [];
+    for (var w = 0; w < Math.min(4, total); w++) pool.push(mpUploadWorker());
+    await Promise.all(pool);
+
+    // 按原始顺序汇总入库
+    for (var di = 0; di < total; di++) {
+      var meta = results[di];
+      if (!meta) continue; // 上传失败的跳过
+      var displayName = opts.keepRelative && meta.relativePath ? meta.relativePath : meta.name;
+      docs.push({
+        name: displayName,
+        uploader: meta.uploader,
+        time: meta.time,
+        size: meta.size,
+        serverFileId: meta.serverFileId || '',
+        blobUrl: meta.blobUrl || '',
+        localOnly: !!meta.localOnly
+      });
+      if (opts.asAgreement && di === 0) {
+        persistExtraPatch(key, {
+          agreementName: meta.name,
+          agreementFileId: meta.serverFileId || '',
+          agreementBlobUrl: meta.blobUrl || ''
         });
-        ok++;
-
-        if (opts.asTaskBook && !taskBookSet) {
-          var isBook = /\.(pdf|docx?|wps)$/i.test(file.name) || files.length === 1;
-          if (isBook) {
-            persistExtraPatch(key, {
-              taskBookName: meta.name,
-              taskBookFileId: meta.serverFileId || '',
-              taskBookBlobUrl: meta.blobUrl || ''
-            });
-            try {
-              var arr = loadArr(p._store);
-              var idx = arr.findIndex(function (d) { return Number(d.id) === Number(p.id); });
-              if (idx >= 0) {
-                arr[idx].fileName = meta.name;
-                saveArr(p._store, arr);
-              }
-            } catch (eSync) {}
-            taskBookSet = true;
-          }
-        }
-        if (opts.asAgreement && i === 0) {
-          persistExtraPatch(key, {
-            agreementName: meta.name,
-            agreementFileId: meta.serverFileId || '',
-            agreementBlobUrl: meta.blobUrl || ''
-          });
-        }
-      } catch (err) {
-        fail++;
-        console.warn('[my-projects] upload fail', file.name, err);
       }
     }
 
     persistExtraPatch(key, { documents: docs });
+
+    // 任务书：若本次是「上传文件夹」（文件带相对路径），记为整个文件夹；否则取首个文件。
+    if (opts.asTaskBook) {
+      var tbFolder = '';
+      for (var t = 0; t < total; t++) {
+        if (!results[t]) continue;
+        var nm = String(results[t].relativePath || results[t].name || '');
+        var sl = nm.indexOf('/');
+        if (sl > 0) { tbFolder = nm.slice(0, sl); break; }
+      }
+      var tbPatch = null;
+      if (tbFolder) {
+        tbPatch = { taskBookFolder: tbFolder, taskBookName: '', taskBookFileId: '', taskBookBlobUrl: '' };
+      } else {
+        for (var t2 = 0; t2 < total; t2++) {
+          var bm = results[t2];
+          if (!bm) continue;
+          if (/\.(pdf|docx?|wps)$/i.test((files[t2] && files[t2].name) || '') || total === 1) {
+            tbPatch = { taskBookFolder: '', taskBookName: bm.name, taskBookFileId: bm.serverFileId || '', taskBookBlobUrl: bm.blobUrl || '' };
+            break;
+          }
+        }
+      }
+      if (tbPatch) {
+        persistExtraPatch(key, tbPatch);
+        try {
+          var arr = loadArr(p._store);
+          var idx = arr.findIndex(function (d) { return Number(d.id) === Number(p.id); });
+          if (idx >= 0) { arr[idx].fileName = tbPatch.taskBookName || ''; saveArr(p._store, arr); }
+        } catch (eSync) {}
+      }
+    }
 
     var msg = '完成：成功 ' + ok + ' 个' + (fail ? '，失败 ' + fail + ' 个' : '');
     if (ok) {
@@ -293,7 +400,9 @@
     function bind(el, ingestOpts) {
       if (!el) return;
       el.onchange = function () {
-        var list = el.files;
+        // 先把 FileList 拷成真数组，再重置 input：el.files 是活引用，直接 el.value=''
+        // 会清空它（连带清空已捕获的 list），导致文件夹上传拿到 0 个文件而误报“未选择任何文件”。
+        var list = Array.prototype.slice.call(el.files || []);
         el.value = '';
         mpIngestFiles(list, ingestOpts);
       };
@@ -457,6 +566,7 @@
       taskBookName: extra.taskBookName || raw.fileName || '',
       taskBookFileId: extra.taskBookFileId || '',
       taskBookBlobUrl: extra.taskBookBlobUrl || '',
+      taskBookFolder: extra.taskBookFolder || '',
       agreementName: extra.agreementName || '',
       agreementFileId: extra.agreementFileId || '',
       agreementBlobUrl: extra.agreementBlobUrl || '',
@@ -1002,6 +1112,30 @@
     return '<td class="lab">' + esc(lab) + '</td><td class="val">' + (html || '&nbsp;') + '</td>';
   }
 
+  function mpRemoveTaskBook() {
+    var key = state.currentKey;
+    var p = findByKey(key);
+    if (!p || (!p.taskBookName && !p.taskBookFolder)) return;
+    if (!confirm('确定删除「带公章的任务书完整版电子版」？此处引用将被清除（不影响项目文档列表中的文件）。')) return;
+    persistExtraPatch(key, { taskBookName: '', taskBookFileId: '', taskBookBlobUrl: '', taskBookFolder: '' });
+    // 任务书名重建时会回退到 raw.fileName，故一并清空，删除才会生效
+    try {
+      var arr = loadArr(p._store);
+      var idx = arr.findIndex(function (d) { return Number(d.id) === Number(p.id); });
+      if (idx >= 0 && arr[idx].fileName) { arr[idx].fileName = ''; saveArr(p._store, arr); }
+    } catch (e) {}
+    mpSwitchTab('info');
+  }
+
+  function mpRemoveAgreement() {
+    var key = state.currentKey;
+    var p = findByKey(key);
+    if (!p || !p.agreementName) return;
+    if (!confirm('确定删除「外拨经费协议」文件？此处引用将被清除。')) return;
+    persistExtraPatch(key, { agreementName: '', agreementFileId: '', agreementBlobUrl: '' });
+    mpSwitchTab('info');
+  }
+
   function summaryBanner(p) {
     return '<table class="kx-sum"><tr>' +
       '<td><span class="k">项目名称</span><span class="v">' + esc(p.name) + '</span></td>' +
@@ -1050,16 +1184,30 @@
           blobUrl: p.agreementBlobUrl
         }
         : null;
+      var tbFolderName = p.taskBookFolder || '';
+      var taskBookMain, taskBookHasFile;
+      if (tbFolderName) {
+        var _tbCnt = (p.documents || []).filter(function (d) { return mpTopFolder(d && (d.name || d.relativePath)) === tbFolderName; }).length;
+        var _tbArg = "'" + String(tbFolderName).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+        taskBookMain = '<span class="kx-file-row"><span class="kx-file-ico">📁</span>' +
+          '<a class="kx-a" href="javascript:void(0)" onclick="mpDownloadFolder(' + _tbArg + ')">' + esc(tbFolderName) + '（' + _tbCnt + ' 个文件 · 点击打包下载）</a></span>';
+        taskBookHasFile = true;
+      } else {
+        taskBookMain = taskDoc ? docLinkHtml(taskDoc) : '<span style="color:#bbb">未上传</span>';
+        taskBookHasFile = !!taskDoc;
+      }
       var pdf = '<div class="kx-file-row">' +
-        (taskDoc ? docLinkHtml(taskDoc) : '<span style="color:#bbb">未上传</span>') +
+        taskBookMain +
         '<span class="kx-file-actions">' +
         '<a class="kx-a" href="javascript:void(0)" onclick="mpPickDocs(\'taskbook\')">上传文件</a>' +
         '<a class="kx-a" href="javascript:void(0)" onclick="mpPickDocs(\'taskbook-folder\')">上传文件夹</a>' +
+        (taskBookHasFile ? '<a class="kx-a" href="javascript:void(0)" style="color:#e5484d" onclick="mpRemoveTaskBook()">删除</a>' : '') +
         '</span></div>';
       var agree = '<div class="kx-file-row">' +
         (agreeDoc ? docLinkHtml(agreeDoc) : '<span style="color:#bbb">未上传</span>') +
         '<span class="kx-file-actions">' +
         '<a class="kx-a" href="javascript:void(0)" onclick="mpPickDocs(\'agreement\')">上传</a>' +
+        (agreeDoc ? '<a class="kx-a" href="javascript:void(0)" style="color:#e5484d" onclick="mpRemoveAgreement()">删除</a>' : '') +
         '</span></div>';
       body.innerHTML =
         '<div class="kx-sec"><div class="kx-sec-h">基本信息</div>' +
@@ -1154,6 +1302,15 @@
     }
 
     if (tab === 'docs') {
+      var _folderCount = {};
+      (p.documents || []).forEach(function (d) {
+        var f = mpTopFolder(d && (d.name || d.relativePath));
+        if (f) _folderCount[f] = (_folderCount[f] || 0) + 1;
+      });
+      var _folderBtns = Object.keys(_folderCount).map(function (f) {
+        var arg = "'" + String(f).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+        return '<button type="button" class="kx-btn-sm" onclick="mpDownloadFolder(' + arg + ')">⬇ 下载文件夹「' + esc(f) + '」(' + _folderCount[f] + ')</button>';
+      }).join(' ');
       body.innerHTML = summaryBanner(p) +
         '<div class="kx-sec"><div class="kx-sec-h">项目文档</div>' +
         '<div class="kx-upload-bar">' +
@@ -1161,6 +1318,7 @@
         '<button type="button" class="kx-btn-sm" onclick="mpPickDocs(\'folder\')">选择文件夹</button>' +
         '<span class="kx-upload-status" id="mpUploadStatus">支持一次上传整个文件夹内全部相关文件</span>' +
         '</div>' +
+        (_folderBtns ? '<div class="kx-upload-bar" style="margin-top:6px;">' + _folderBtns + '</div>' : '') +
         (p.documents.length
           ? tableHtml(['序号', '文件名称', '上传人', '上传时间', '操作'], p.documents.map(function (d, i) {
             return [
@@ -1507,6 +1665,9 @@
   global.mpPickDocs = mpPickDocs;
   global.mpRemoveDoc = mpRemoveDoc;
   global.mpOpenDoc = mpOpenDoc;
+  global.mpDownloadFolder = mpDownloadFolder;
+  global.mpRemoveTaskBook = mpRemoveTaskBook;
+  global.mpRemoveAgreement = mpRemoveAgreement;
   global.mpSetFilter = mpSetFilter;
   global.mpResetFilters = mpResetFilters;
   global.mpToggleYears = mpToggleYears;

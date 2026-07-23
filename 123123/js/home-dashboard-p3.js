@@ -647,49 +647,8 @@
         global.manualHomeCloudSync.__p3 = true;
     }
 
-    function _hsFmt(bytes) {
-        var n = Number(bytes) || 0;
-        if (n <= 0) return '0 B';
-        var u = ['B', 'KB', 'MB', 'GB', 'TB'], i = 0;
-        while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
-        return n.toFixed(i === 0 ? 0 : (n >= 100 ? 0 : 1)) + ' ' + u[i];
-    }
+    // 首页存储汇总卡已按需移除（存储明细见「系统配置」模块；/api/storage/usage 接口保留）。
 
-    // 首页存储汇总卡：读 /api/storage/usage（服务端真值，多端一致），一进系统即见全局用量。
-    async function renderHomeStorageSummary() {
-        var box = document.getElementById('homeStorageSummary');
-        if (!box) return;
-        try {
-            var r = await fetch('/api/storage/usage', { cache: 'no-store' });
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            var s = await r.json();
-            var disk = s.disk || {}, u = s.usage || {};
-            var free = Number(disk.freeGB) || 0;
-            var total = Number(disk.totalGB) || 0;
-            var usedPct = Number(disk.usedPercent) || 0;
-            var barColor = usedPct >= 90 ? '#e5484d' : (usedPct >= 75 ? '#f5a623' : '#7c3aed');
-            function c(k) { return (u[k] && u[k].count) || 0; }
-            box.innerHTML =
-                '<div onclick="showModule(\'system_config\')" style="cursor:pointer;background:linear-gradient(90deg,rgba(124,58,237,0.06),rgba(79,70,229,0.03));border:1px solid #ece9fb;border-radius:14px;padding:14px 16px;">' +
-                    '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">' +
-                        '<div style="font-weight:700;color:#4f46e5;">💽 存储用量</div>' +
-                        '<div style="font-size:12px;color:#9ca3af;">进入系统配置看明细 →</div>' +
-                    '</div>' +
-                    '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;">' +
-                        '<div><span style="font-size:22px;font-weight:700;color:#16a34a;">' + free.toFixed(1) + ' GB</span> <span style="font-size:12px;color:#6b7280;">还能存</span></div>' +
-                        '<div style="font-size:13px;color:#6b7280;">已用 ' + usedPct + '% / 共 ' + total.toFixed(0) + ' GB</div>' +
-                        '<div style="font-size:13px;color:#6b7280;">应用合计 <b style="color:#111827;">' + _hsFmt(u.appTotalBytes) + '</b></div>' +
-                    '</div>' +
-                    '<div style="background:#eef2f7;border-radius:999px;height:8px;overflow:hidden;margin:10px 0 8px;">' +
-                        '<div style="height:100%;width:' + Math.min(100, usedPct) + '%;background:' + barColor + ';"></div>' +
-                    '</div>' +
-                    '<div style="font-size:12px;color:#9ca3af;">共享文件 ' + c('shared') + ' · 数据集 ' + c('datasets') + ' · 标注 ' + c('annotations') + '</div>' +
-                '</div>';
-        } catch (e) {
-            box.innerHTML = '';  // 首页保持干净：读取失败不显示占位（明细页有完整报错）
-        }
-    }
-    global.renderHomeStorageSummary = renderHomeStorageSummary;
 
     function patchRenderHomeDashboard() {
         if (typeof global.renderHomeDashboard !== 'function' || global.renderHomeDashboard.__p3) return;
@@ -699,7 +658,6 @@
             var ret = orig.apply(this, arguments);
             try { enhanceQuickNav(); } catch (e) {}
             try { applyHomeLayoutPrefs(); } catch (e2) {}
-            try { renderHomeStorageSummary(); } catch (eStore) {}
             try {
                 var foot = document.getElementById('homeFootNote');
                 var ov = global.homeDashUi && global.homeDashUi.lastOverview;

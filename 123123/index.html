@@ -31,7 +31,7 @@
         }
     </script>
     <link href="vendor/fonts/fonts-local.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/app-shell.css?v=bf16c3756e">
+    <link rel="stylesheet" href="css/app-shell.css?v=e71c667935">
     <link rel="stylesheet" href="css/portal-public.css?v=2cf647d824">
     <script src="js/vendor-lazy.js?v=960c38a41e"></script>
 </head>
@@ -115,6 +115,7 @@
     <!-- 顶部导航栏 -->
     <div class="top-nav">
             <div class="top-nav-left" style="display:flex;align-items:center;gap:4px;min-width:0;position:relative;z-index:2;">
+                <button type="button" class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" aria-label="打开/关闭菜单" title="菜单">☰</button>
                 <button type="button" class="nav-back-btn is-disabled" id="moduleBackBtn" onclick="goBackModule()" disabled title="返回上一级（Alt+←）">
                     <span class="back-arrow">←</span>
                     <span class="back-text">返回</span>
@@ -185,6 +186,24 @@
             <button type="button" onclick="runHomeConsistencyCheck(false)">一致性校验</button>
         </div>
     </button>
+
+    <!-- 侧栏抽屉遮罩（仅窄屏显示） -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()" aria-hidden="true"></div>
+    <script>
+        (function () {
+            function shell() { return document.querySelector('.app-shell'); }
+            window.toggleSidebar = function () { var s = shell(); if (s) s.classList.toggle('sidebar-open'); };
+            window.closeSidebar = function () { var s = shell(); if (s) s.classList.remove('sidebar-open'); };
+            // 窄屏点击叶子导航项后自动收起抽屉
+            document.addEventListener('click', function (e) {
+                if (window.innerWidth > 768) return;
+                var it = e.target.closest && e.target.closest('.sidebar .nav-item');
+                if (it && /showModule\(/.test(it.getAttribute('onclick') || '')) window.closeSidebar();
+            });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') window.closeSidebar(); });
+            window.addEventListener('resize', function () { if (window.innerWidth > 768) window.closeSidebar(); });
+        })();
+    </script>
 
     <!-- 主容器 -->
     <div class="app-shell">
@@ -390,8 +409,6 @@
                         <div class="home-stat accent-e" data-stat="member" onclick="homeJumpStat('member')"><div class="k">在籍成员</div><div class="v" id="homeStatMember">-</div><div class="h" id="homeStatMemberHint">进入团队档案</div></div>
                         <div class="home-stat accent-f" data-stat="task" onclick="homeJumpStat('task')"><div class="k">待办</div><div class="v" id="homeStatTask">-</div><div class="h" id="homeStatTaskHint">未完成任务</div></div>
                     </div>
-
-                    <div id="homeStorageSummary" style="margin:14px 0;"></div>
 
                     <div class="home-quick" id="homeQuickNav"></div>
 
@@ -1136,7 +1153,7 @@
     <script src="js/app-core.js?v=573c9d182d"></script>
     <script src="js/excel-tools.js?v=09429a56a4"></script>
     <script src="js/achievements-modules.js?v=afef06b013"></script>
-    <script src="js/my-projects.js?v=289f32d836"></script>
+    <script src="js/my-projects.js?v=6f1b24007d"></script>
     <script src="js/my-achievements.js?v=fcf14d4a19"></script>
     
     <!-- 文献管理模块 -->
@@ -1367,7 +1384,7 @@
     <script src="js/competition-management.js?v=89100d10bf"></script>
     <script src="js/application-center.js?v=a8046caf79"></script>
     <script src="js/holiday-leave.js?v=a1b8b224c2"></script>
-    <script src="js/home-dashboard-p3.js?v=ab4b703c3d"></script>
+    <script src="js/home-dashboard-p3.js?v=4edbecf70d"></script>
     <script src="js/portal-public.js?v=17f4556571"></script>
 </body>
 </html>

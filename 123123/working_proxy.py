@@ -128,6 +128,7 @@ CLOUD_SYNC_PN = '__SYNC_KV__modelTrainingData'
 
 _baidu_ocr_token = {'access_token': '', 'expire_at': 0}
 _store_lock = threading.Lock()
+_shared_registry_lock = threading.Lock()  # 保护共享文件注册表的读改写，支持并发上传而不丢记录
 
 os.makedirs(os.path.dirname(AUDIT_LOG_PATH), exist_ok=True)
 logging.basicConfig(
@@ -1092,6 +1093,17 @@ def _shared_registry_save(data):
     os.replace(tmp, SHARED_FILE_META_PATH)
 
 
+def _content_disposition(filename, disposition='attachment'):
+    """构造 Content-Disposition，兼容中文/非 ASCII 文件名（RFC 5987）。
+    HTTP 响应头按 latin-1 编码，非 ASCII 文件名直接放入会让 send_header 抛错、
+    导致响应头体错乱（浏览器报 ERR_CONTENT_LENGTH_MISMATCH / 协议冲突）。
+    这里输出纯 ASCII：filename 兜底 + filename* 承载 UTF-8 百分号编码真实名。"""
+    name = str(filename or 'download')
+    ascii_name = name.encode('ascii', 'ignore').decode('ascii').replace('"', '').replace('\\', '').strip() or 'download'
+    utf8_name = urllib.parse.quote(name, safe='')
+    return "%s; filename=\"%s\"; filename*=UTF-8''%s" % (disposition, ascii_name, utf8_name)
+
+
 def save_shared_upload(file_name, file_type, remark, content, original_name=''):
     if len(content) > MAX_UPLOAD_BYTES:
         raise ValueError('file too large: max %s bytes' % MAX_UPLOAD_BYTES)
@@ -1147,9 +1159,10 @@ def save_shared_upload(file_name, file_type, remark, content, original_name=''):
         meta['path'] = full
         meta['savedAs'] = os.path.relpath(full, SHARED_FILE_UPLOAD_ROOT).replace('\\', '/')
         enforce_clamav_scan(full, context='shared_upload')
-    reg = _shared_registry_load()
-    reg['files'][file_id] = meta
-    _shared_registry_save(reg)
+    with _shared_registry_lock:
+        reg = _shared_registry_load()
+        reg['files'][file_id] = meta
+        _shared_registry_save(reg)
     return meta
 
 
@@ -1378,9 +1391,10 @@ def create_shared_presign(file_name, file_type, remark, size, content_type='', o
         'contentType': ctype,
         'presignExpiresAt': (datetime.now(timezone.utc) + timedelta(seconds=expire)).astimezone().strftime('%Y-%m-%d %H:%M:%S'),
     }
-    reg = _shared_registry_load()
-    reg['files'][file_id] = meta
-    _shared_registry_save(reg)
+    with _shared_registry_lock:
+        reg = _shared_registry_load()
+        reg['files'][file_id] = meta
+        _shared_registry_save(reg)
     return {
         'fileId': file_id,
         'objectKey': object_key,
@@ -1434,8 +1448,10 @@ def confirm_shared_presign(file_id, md5='', size=None, owner=''):
                 client.remove_object(MINIO_BUCKET, object_key)
             except Exception:
                 pass
-            reg['files'].pop(file_id, None)
-            _shared_registry_save(reg)
+            with _shared_registry_lock:
+                reg = _shared_registry_load()
+                reg['files'].pop(file_id, None)
+                _shared_registry_save(reg)
             audit_event('shared_presign_sniff_reject', fileId=file_id, error=str(e))
             raise ValueError('uploaded content rejected by content sniff: %s' % e)
     actual_size = int(getattr(stat, 'size', 0) or 0)
@@ -1452,8 +1468,10 @@ def confirm_shared_presign(file_id, md5='', size=None, owner=''):
             meta['reportedSize'] = int(size)
         except Exception:
             pass
-    reg['files'][file_id] = meta
-    _shared_registry_save(reg)
+    with _shared_registry_lock:
+        reg = _shared_registry_load()
+        reg['files'][file_id] = meta
+        _shared_registry_save(reg)
     return meta
 
 
@@ -2222,9 +2240,9 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             return
 
         if path.startswith('/api/shared-file/download'):
-            if not check_dataset_token(self):
-                self._json(401, {'ok': False, 'error': 'invalid upload token'})
-                return
+            # 下载为读取操作：浏览器 <a href>/新标签打开无法携带 X-Upload-Token 头，
+            # 且该 token 本就在前端配置中可见，用它保护下载无实际意义。
+            # 上传 token 仅用于保护写入（上传/确认/删除/恢复），此处不再校验，避免文件打不开。
             file_id = (qs.get('fileId') or [''])[0]
             try:
                 meta = get_shared_file_meta(file_id)
@@ -2242,7 +2260,7 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/octet-stream')
                     self.send_header('Content-Length', str(len(data)))
-                    self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename.replace('"', ''))
+                    self.send_header('Content-Disposition', _content_disposition(filename))
                     self._cors()
                     self.end_headers()
                     self.wfile.write(data)
@@ -2252,7 +2270,7 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream')
                 self.send_header('Content-Length', str(size))
-                self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename.replace('"', ''))
+                self.send_header('Content-Disposition', _content_disposition(filename))
                 self._cors()
                 self.end_headers()
                 with open(path_file, 'rb') as f:
@@ -2302,7 +2320,7 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', mime)
                 self.send_header('Content-Length', str(len(data)))
-                self.send_header('Content-Disposition', 'inline; filename="%s"' % filename.replace('"', ''))
+                self.send_header('Content-Disposition', _content_disposition(filename, 'inline'))
                 self._cors()
                 self.end_headers()
                 self.wfile.write(data)
@@ -2323,7 +2341,7 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream')
                 self.send_header('Content-Length', str(size))
-                self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename.replace('"', ''))
+                self.send_header('Content-Disposition', _content_disposition(filename))
                 self._cors()
                 self.end_headers()
                 with open(path_file, 'rb') as f:
@@ -2352,7 +2370,7 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 filename = 'annotation-task-%s.zip' % task_id
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/zip')
-                self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename)
+                self.send_header('Content-Disposition', _content_disposition(filename))
                 self.send_header('Content-Length', str(len(raw)))
                 self._cors()
                 self.end_headers()
@@ -2370,7 +2388,7 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 filename = 'annotation-task-%s.zip' % task_id
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/zip')
-                self.send_header('Content-Disposition', 'attachment; filename="%s"' % filename)
+                self.send_header('Content-Disposition', _content_disposition(filename))
                 self.send_header('Content-Length', str(len(raw)))
                 self.send_header('X-Cloud-Share-Bytes', str(meta.get('bytes') or len(raw)))
                 self._cors()

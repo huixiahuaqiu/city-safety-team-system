@@ -28,7 +28,7 @@
                 radial-gradient(700px 420px at 70% 100%, rgba(236, 72, 153, 0.10), transparent 55%),
                 linear-gradient(180deg, #f4f1ff 0%, #f7f8fc 40%, #eef2ff 100%);
             background-attachment: fixed;
-            overflow-x: hidden;
+            overflow-x: visible; /* 允许整页横向滚动：内容超宽时窗口出现横向滚动条（装饰层已改为不溢出，避免幽灵滚动条） */
         }
 
         body::before {
@@ -52,7 +52,7 @@
             width: 420px;
             height: 420px;
             border-radius: 50%;
-            right: -120px;
+            right: 0;
             top: 120px;
             background: radial-gradient(circle, rgba(167, 139, 250, 0.28), transparent 70%);
             filter: blur(18px);
@@ -68,8 +68,8 @@
         }
 
         @keyframes appGridDrift {
-            from { transform: translate3d(0, 0, 0); }
-            to { transform: translate3d(-56px, -28px, 0); }
+            from { background-position: 0 0; }
+            to { background-position: -56px -28px; }
         }
         @keyframes appOrbFloat {
             0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
@@ -257,7 +257,8 @@
             position: sticky;
             top: 0;
             z-index: 1000;
-            overflow: visible;
+            overflow-x: clip;   /* 裁掉 ::before 流光(translateX ±130%)的水平溢出，避免整页幽灵横滚 */
+            overflow-y: visible; /* 保留通知/搜索/用户菜单等下拉面板向下溢出 */
         }
         .nav-back-btn {
             position: relative; z-index: 2; flex-shrink: 0;
@@ -890,6 +891,58 @@
             align-self: flex-start;
             box-sizing: border-box;
         }
+
+        /* ===== 移动端适配：侧栏抽屉 + 汉堡 + 遮罩（行为全部锁在 @media 内，桌面零影响）===== */
+        .sidebar-toggle {
+            display: none;
+            flex-shrink: 0;
+            width: 38px; height: 38px;
+            margin-right: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff; font-size: 18px; line-height: 1;
+            cursor: pointer;
+            align-items: center; justify-content: center;
+            transition: background 0.18s;
+        }
+        .sidebar-toggle:hover { background: rgba(255, 255, 255, 0.24); }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 8, 23, 0.5);
+            -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
+            z-index: 1150;
+            opacity: 0;
+            transition: opacity 0.28s ease;
+        }
+        @media (max-width: 768px) {
+            .sidebar-toggle { display: inline-flex; }
+            /* 隐藏桌面装饰层，避免极窄屏下装饰造成横向溢出，兼顾性能 */
+            body::before, body::after { display: none; }
+            .sidebar {
+                position: fixed;
+                left: 0; top: 0;
+                height: 100vh; height: 100dvh;
+                max-height: none;
+                width: 264px; max-width: 84vw;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+                z-index: 1200;
+                box-shadow: 12px 0 44px rgba(2, 8, 23, 0.4);
+            }
+            .app-shell.sidebar-open .sidebar { transform: translateX(0); }
+            .app-shell.sidebar-open .sidebar-backdrop { display: block; opacity: 1; }
+            .main-content { padding: 16px 14px; }
+            .top-nav { flex-wrap: wrap; row-gap: 8px; padding: 10px 12px; }
+            .top-nav .nav-links { flex-wrap: wrap; }
+            .top-nav .nav-links > a[data-portal] { display: none; }
+            .logo-text { display: none; }
+            .global-search { flex: 1 1 160px; min-width: 0; }
+        }
+
         .sidebar-nav {
             flex: 1 1 auto;
             min-height: 0;
@@ -1311,10 +1364,21 @@
             flex: 1;
             min-width: 0;
             padding: 28px;
+            overflow-x: auto;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
             position: relative;
         }
-        
+
+        /* 宽表格可横向滑动：包裹表格的卡片容器（常带内联 overflow:hidden 做圆角）改为横向滚动，
+           修复宽表 / 窄屏下右侧列被裁切且无法查看的问题。本项目已用 :has，兼容现代浏览器。 */
+        .main-content div:has(> table),
+        .main-content div:has(> .table) {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
         /* 模块显示 */
         .module {
             display: none;
@@ -1783,35 +1847,11 @@
             accent-color: #8A2BE2;
         }
         
-        /* 响应式设计 */
+        /* 响应式设计（旧堆叠式移动规则已并入上方“侧栏抽屉”方案；此处仅保留非冲突项，
+           避免覆盖抽屉的 position:fixed 与顶栏 nav-links 的精细处理） */
         @media (max-width: 768px) {
-            .app-shell {
-                flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-                display: flex;
-                overflow-x: auto;
-                padding: 10px;
-            }
-            
-            .nav-item {
-                white-space: nowrap;
-                border-left: none;
-                border-bottom: 4px solid transparent;
-            }
-            
-            .main-content {
-                padding: 15px;
-            }
-            
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .top-nav .nav-links {
-                display: none;
             }
         }
         
@@ -2206,6 +2246,57 @@
             transform: none;
             box-shadow: none;
         }
+        /* —— 登录页动感增强（克制、支持 prefers-reduced-motion 关闭）—— */
+        .login-hero-title {
+            background: linear-gradient(100deg, #f8fafc 0%, #f8fafc 38%, #a5f3fc 50%, #f8fafc 62%, #f8fafc 100%);
+            background-size: 220% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            text-shadow: none;
+            filter: drop-shadow(0 12px 40px rgba(2, 8, 23, 0.35));
+            animation: loginTitleSheen 7.5s ease-in-out infinite;
+        }
+        @keyframes loginTitleSheen {
+            0%, 100% { background-position: 128% 0; }
+            50% { background-position: -28% 0; }
+        }
+        .login-hero-meta li {
+            animation: loginMetaIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .login-hero-meta li:nth-child(1) { animation-delay: 0.48s; }
+        .login-hero-meta li:nth-child(2) { animation-delay: 0.60s; }
+        .login-hero-meta li:nth-child(3) { animation-delay: 0.72s; }
+        @keyframes loginMetaIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: none; }
+        }
+        .login-brand-mark { animation: loginMarkGlow 4.2s ease-in-out infinite; }
+        @keyframes loginMarkGlow {
+            0%, 100% { box-shadow: 0 10px 28px rgba(14, 165, 233, 0.2); }
+            50% { box-shadow: 0 12px 36px rgba(14, 165, 233, 0.45); }
+        }
+        .login-box .login-btn::after {
+            animation: loginBtnIdleShine 6s ease-in-out 1.6s infinite;
+        }
+        @keyframes loginBtnIdleShine {
+            0% { transform: translateX(-120%); }
+            14% { transform: translateX(120%); }
+            100% { transform: translateX(120%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .login-hero-title {
+                background: none;
+                -webkit-text-fill-color: #f8fafc;
+                color: #f8fafc;
+                animation: none;
+            }
+            .login-hero-meta li,
+            .login-brand-mark,
+            .login-box .login-btn::after { animation: none; }
+        }
+
         .login-error {
             color: #fecaca;
             font-size: 13px;
