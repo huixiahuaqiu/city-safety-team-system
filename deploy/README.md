@@ -1,101 +1,149 @@
-# 城市安全团队系统 · 生产部署底座（deploy/）
+# 城市安全团队系统 · 统一部署
 
-企业级内网部署的可落盘配置与脚本。**不改变本地开发默认行为**：`BIND_HOST`/`CORS` 仅在生产 `.env` 收紧。
-
-## 选型（已定）
-
-| 项 | 结论 |
-|----|------|
-| 结构化数据 | Supabase **内网自建**（见 `supabase/`） |
-| 大文件 | MinIO + **预签名直传**；现有分片 `/api/dataset/*` 保留 |
-| 对外入口 | 仅 Nginx 80/443；网关/MinIO/DB 绑 `127.0.0.1` |
+`deploy/` 是本机演示和公司服务器共用的部署入口。两端运行完全相同的应用镜像、数据库迁移和服务拓扑，区别只来自环境文件与 Compose 覆盖文件。
 
 ## 目录
 
-```
+```text
 deploy/
-├── nginx/           # 全量站点、安全头、CSP Report-Only、限流、MinIO 反代
-├── systemd/         # citysafe-gateway + minio
-├── fail2ban/        # sshd + nginx 4xx + 网关鉴权失败
-├── logrotate/       # 应用日志 + Nginx 180 天
-├── scripts/         # install / release / rollback / backup / health / disk
-├── minio/           # 策略、初始化脚本、env 模板
-├── supabase/        # 内网 Postgres compose + RLS SQL
-├── sysctl/          # 内核调优
-├── cron/            # 健康/磁盘/备份定时
-├── .env.production.example
-└── RUNBOOK.md       # 运维速查
+├── compose.yaml                 # 共用基础架构
+├── compose.local.yaml           # Windows 本机：仅 127.0.0.1:8080
+├── compose.server.yaml          # Linux 服务器：Nginx 80/443
+├── db/
+│   ├── migrate.py               # 带哈希漂移检测的迁移器
+│   └── migrations/              # 按文件名顺序执行的 SQL
+├── env/
+│   ├── local.example            # 本机模板
+│   └── server.example           # 服务器模板
+├── nginx/container/             # 容器入口、TLS、限流和安全代理
+└── scripts/
+    ├── stack.ps1                # 本机一键启动/停止/检查
+    ├── bootstrap-server.sh      # 服务器首次部署与后续更新
+    ├── deploy-server.ps1        # Windows 一键触发服务器安全更新
+    ├── smoke.py                 # 就绪与登录冒烟测试
+    ├── backup.sh                # 全栈备份
+    └── restore-verify.sh        # 隔离恢复验证
 ```
 
-## 快速安装（服务器）
+## 架构与端口
 
-```bash
-# 1) 系统依赖
-sudo apt update && sudo apt install -y nginx python3 python3-venv python3-pip \
-  fail2ban logrotate rsync curl ufw
-
-# 2) 一键落配置
-sudo bash deploy/scripts/install-base.sh
-
-# 3) 填密钥
-sudo nano /opt/citysafe/.env
-sudo nano /etc/default/minio
-sudo nano /etc/nginx/sites-available/citysafe.conf   # YOUR_DOMAIN
-
-# 4) MinIO 二进制（若尚未安装）
-wget https://dl.min.io/server/minio/release/linux-amd64/minio -O /usr/local/bin/minio
-chmod +x /usr/local/bin/minio
-
-# 5) Python venv + 依赖
-sudo -u appsvc python3 -m venv /opt/citysafe/venv
-sudo -u appsvc /opt/citysafe/venv/bin/pip install minio
-
-# 6) 首次发布
-sudo -u appsvc SRC="$(pwd)/123123" bash /opt/citysafe/bin/release.sh
-
-# 7) 启服务
-sudo systemctl enable --now minio citysafe-gateway nginx fail2ban
-bash deploy/minio/init-bucket.sh   # 需先 export 根账号与业务密钥
-
-# 8) 冒烟
-curl -s http://127.0.0.1:8000/api/health
+```text
+Browser
+   │
+   ▼
+edge / Nginx
+   │
+   ├── /api/* ──► gateway ──► PostgreSQL
+   │                         └► MinIO
+   └── 静态页面
 ```
 
-## 发布 / 回滚
+| 服务 | 本机宿主端口 | 服务器宿主端口 |
+|---|---:|---:|
+| Nginx | `127.0.0.1:8080` | `80/443` |
+| Gateway | 无 | 无 |
+| PostgreSQL | 无 | 无 |
+| MinIO API / Console | 默认无 | 无 |
 
-```bash
-sudo -u appsvc SRC=/path/to/123123 bash /opt/citysafe/bin/release.sh
-bash /opt/citysafe/bin/rollback.sh                 # 上一版
-bash /opt/citysafe/bin/rollback.sh 2026-07-14_013000
-```
+MinIO 控制台仅在本机显式启用 `console` profile 后绑定 `127.0.0.1:9001`。
 
-## 本机 Docker 预演 MinIO（Windows）
-
-数据目录：`D:\Docker\data\minio`。密钥模板：`deploy/minio/.env.local.example`（复制为 `.env.local`，已 gitignore）。
+## Windows 本机
 
 ```powershell
-docker compose -f deploy/minio/docker-compose.yml --env-file deploy/minio/.env.local up -d
-# 初始化桶/业务账号后写入 123123/.env：
-#   SHARED_STORAGE_BACKEND=minio
-#   MINIO_ENDPOINT=127.0.0.1:9000
-#   MINIO_ACCESS_KEY / MINIO_SECRET_KEY = APP_*
-python 123123/start_web.py
-curl http://127.0.0.1:8000/api/health   # 期望 minioReady/presignEnabled=true
+# 首次和后续启动
+.\deploy\scripts\stack.ps1 -Action up
+
+# 状态 / 日志 / 冒烟
+.\deploy\scripts\stack.ps1 -Action status
+.\deploy\scripts\stack.ps1 -Action logs
+.\deploy\scripts\stack.ps1 -Action smoke
+
+# 停止但保留全部数据
+.\deploy\scripts\stack.ps1 -Action down
 ```
 
-控制台：http://127.0.0.1:9001 ；API：http://127.0.0.1:9000。浏览器直传 ≥8MB 共享文件会走预签名 PUT。
+首次运行自动创建 `deploy/env/.env.local` 和随机管理员临时密码。该文件已被 Git 忽略。访问 <http://127.0.0.1:8080>，首次登录后立即改密。
 
-## 与现有功能的关系
+启用本机 MinIO 控制台：
 
-- 本地 `python start_web.py`：默认仍监听 `0.0.0.0:8000`，CORS `*`，行为不变。
-- 生产 `.env`：`BIND_HOST=127.0.0.1`、`CORS_ALLOW_ORIGIN=https://域名`。
-- 新增 `/api/health`、`/api/shared-file/presign`、`/api/shared-file/confirm`：**纯增量**；旧上传/分片路径未改。
-- 前端未强制切换预签名；启用 MinIO 后可按需对接，不影响现网 multipart。
+```powershell
+.\deploy\scripts\stack.ps1 -Action up -WithMinioConsole
+```
 
-## 优先级对照
+## Linux 公司服务器
 
-1. **P1 已交付**：Nginx / CSP / fail2ban / 软链回滚 / 日志轮转 / 备份·健康·Runbook  
-2. **P2 已交付**：网关预签名 + confirm + Nginx `/minio-upload/`  
-3. **P3 脚手架**：`supabase/docker-compose.yml` + `sql/rls_app_sync.sql`（迁移按窗口执行）
+首次部署或后续更新使用同一命令：
 
-详见 [RUNBOOK.md](./RUNBOOK.md) 与仓库根目录 `部署方案.md`。
+```bash
+sudo bash deploy/scripts/bootstrap-server.sh \
+  --domain citysafe.example.com \
+  --issue-cert \
+  --email admin@example.com
+```
+
+已有公司证书时，证书需位于：
+
+```text
+/etc/letsencrypt/live/<域名>/fullchain.pem
+/etc/letsencrypt/live/<域名>/privkey.pem
+```
+
+然后去掉 `--issue-cert --email`。服务器密钥保存在 `/etc/citysafe/server.env`；脚本重复运行不会轮换现有密钥、清空数据库或删除对象。
+
+服务器已有仓库并配置好 SSH/sudo 后，也可以从 Windows 本机触发后续更新：
+
+```powershell
+.\deploy\scripts\deploy-server.ps1 `
+  -Server deployer@server.example.com `
+  -Domain citysafe.example.com `
+  -RemotePath /opt/city-safety-team-system `
+  -Ref refs/tags/v1.0.0
+```
+
+该入口只接受安全格式的服务器、路径和 Git 引用；服务器工作区不干净或分支不能
+fast-forward 时会中止。使用 `-WhatIf` 可先预演。
+
+## 运行时配置
+
+浏览器只接收以下公开配置：
+
+- `APP_ENV`
+- `SHOW_DEMO_ACCOUNTS`
+- `GATEWAY_AUTH_ENABLED`
+- `DATA_BACKEND=gateway`
+- 同源 `API_PROXY`
+
+Nginx 启动时生成 `config.runtime.js`。数据库密码、MinIO 密钥、上传令牌、MLOps 令牌和 AI 密钥永远不会写入该文件。
+
+服务端主要配置：
+
+- `PG*`：PostgreSQL 连接；
+- `AUTH_SIGNING_SECRET`：会话签名；
+- `BOOTSTRAP_ADMIN_*`：仅空账号库时创建首个管理员；
+- `MINIO_*`：内部对象存储；
+- `MLOPS_TOKEN`、`ANNOTATION_UPLOAD_TOKEN`、`DATASET_UPLOAD_TOKEN`：非交互客户端令牌；
+- `CORS_ALLOW_ORIGINS`：确需跨域时的精确白名单。
+
+## 数据迁移
+
+迁移器会：
+
+1. 等待 PostgreSQL 就绪；
+2. 按文件名字典序读取 `db/migrations/*.sql`；
+3. 对每个文件记录 SHA-256；
+4. 相同文件重复部署时跳过；
+5. 已执行文件发生修改时立即失败；
+6. 使用 PostgreSQL advisory lock 防止两个部署同时迁移。
+
+已上线的迁移文件不得修改；结构变化必须新增下一个编号文件。
+
+## 本机数据与生产数据
+
+部署代码和迁移数据是两件独立的事：
+
+- 重复部署代码会保留目标机器上的持久卷；
+- 本机演示数据不会自动复制到服务器；
+- 如需带数据上线，先生成全栈备份，再在隔离环境执行恢复验证，最后安排明确迁移窗口；
+- 禁止直接复制本机 `.env.local` 到服务器。
+
+更多排障、备份和恢复命令见 [RUNBOOK.md](RUNBOOK.md)。

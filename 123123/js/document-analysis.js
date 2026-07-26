@@ -1103,7 +1103,7 @@
     }
 
     function extractKeywords(text) {
-        var stop = { '的': 1, '是': 1, '在': 1, '有': 1, '和': 1, '了': 1, '与': 1, '及': 1, '等': 1, '为': 1, '对': 1, '中': 1, '上': 1, '下': 1, '通过': 1, '进行': 1, '可以': 1, '我们': 1, '本文': 1, '研究': 1, '基于': 1, '一个': 1, '以及': 1, '或者': 1, '如果': 1, '因为': 1, '所以': 1, '但是': 1, '这个': 1, '那个': 1, '他们': 1, '以及': 1 };
+        var stop = { '的': 1, '是': 1, '在': 1, '有': 1, '和': 1, '了': 1, '与': 1, '及': 1, '等': 1, '为': 1, '对': 1, '中': 1, '上': 1, '下': 1, '通过': 1, '进行': 1, '可以': 1, '我们': 1, '本文': 1, '研究': 1, '基于': 1, '一个': 1, '以及': 1, '或者': 1, '如果': 1, '因为': 1, '所以': 1, '但是': 1, '这个': 1, '那个': 1, '他们': 1 };
         var words = String(text || '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ').split(/\s+/);
         var count = {};
         words.forEach(function (w) {
@@ -1256,7 +1256,7 @@
     function resolveDocApiKey() {
         return typeof global.getChatApiKey === 'function'
             ? global.getChatApiKey()
-            : (localStorage.getItem('openaiApiKey') || '');
+            : (sessionStorage.getItem('openaiApiKey') || '');
     }
 
     function resolveDocModel() {

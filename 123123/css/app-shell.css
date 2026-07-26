@@ -28,7 +28,7 @@
                 radial-gradient(700px 420px at 70% 100%, rgba(236, 72, 153, 0.10), transparent 55%),
                 linear-gradient(180deg, #f4f1ff 0%, #f7f8fc 40%, #eef2ff 100%);
             background-attachment: fixed;
-            overflow-x: visible; /* 允许整页横向滚动：内容超宽时窗口出现横向滚动条（装饰层已改为不溢出，避免幽灵滚动条） */
+            overflow-x: hidden;
         }
 
         body::before {
@@ -277,30 +277,6 @@
             opacity: 0.42; cursor: not-allowed;
         }
         .nav-back-btn .back-arrow { font-size: 14px; line-height: 1; }
-        .module-back-fab {
-            position: fixed; left: 288px; bottom: 28px; z-index: 1200;
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 12px 18px; border: 1px solid #dbe3ee; border-radius: 999px;
-            background: #0f2740; color: #f8fafc; font-size: 13px; font-weight: 650;
-            box-shadow: 0 12px 28px rgba(15, 39, 64, 0.28);
-            cursor: pointer; transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s, background 0.18s;
-        }
-        .module-back-fab:hover:not(:disabled) {
-            transform: translateY(-2px); background: #155e75;
-            box-shadow: 0 16px 32px rgba(15, 39, 64, 0.34);
-        }
-        .module-back-fab:disabled,
-        .module-back-fab.is-disabled {
-            opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none;
-        }
-        .module-back-fab .fab-prev {
-            max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-            font-size: 12px; font-weight: 500; color: rgba(226,232,240,0.85);
-        }
-        @media (max-width: 900px) {
-            .module-back-fab .fab-prev { display: none; }
-            .module-back-fab { left: 16px; bottom: 16px; padding: 11px 14px; }
-        }
         .top-nav::before {
             content: '';
             position: absolute;
@@ -430,9 +406,11 @@
         
         .top-nav .nav-links {
             display: flex;
+            align-items: center;
             gap: 8px;
             position: relative;
             z-index: 1;
+            white-space: nowrap;
         }
         
         .top-nav .nav-links a {
@@ -499,7 +477,7 @@
         .home-notice-banner .desc { font-size: 12px; color: #78716c; margin-top: 4px; line-height: 1.55; }
 
         /* 首页工作台 · 欢迎概览 + 统计 + 快捷 + 三栏 */
-        .main-content:has(> #home.active) { padding: 10px 12px 12px; }
+        .main-content:has(> #home.active) { padding: 10px 12px 92px; }
         #home.module {
             --home-ink: #1e1b4b;
             --home-muted: #6b7280;
@@ -744,7 +722,6 @@
         .cloud-sync-fab.is-syncing .fab-dot { background: #3b82f6; animation: homeSyncPulse 1s ease-in-out infinite; }
         .cloud-sync-fab .fab-sub { font-size: 11px; font-weight: 500; color: #64748b; }
 
-        body:has(#home.module.active) .module-back-fab { display: none !important; }
         @media (max-width: 1100px) {
             .home-ledger { flex-wrap: wrap; }
             .home-stat { flex: 1 1 33.33%; border-bottom: 1px solid var(--home-line); }
@@ -1363,12 +1340,63 @@
         .main-content {
             flex: 1;
             min-width: 0;
-            padding: 28px;
+            padding: 28px 28px 96px;
             overflow-x: auto;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior-x: contain;
             position: relative;
+        }
+
+        .kx-link-button {
+            appearance: none;
+            border: 0;
+            padding: 0;
+            background: transparent;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        /* 顶栏在中等宽度下改为“工作台模式”，避免门户链接和用户名被挤成竖排。 */
+        @media (max-width: 1280px) {
+            .top-nav { padding-inline: 16px; gap: 10px; }
+            .top-nav-left { flex: 0 1 auto; }
+            .top-nav .logo { gap: 8px; min-width: 0; }
+            .top-nav .logo-text {
+                max-width: 176px;
+                font-size: 15px;
+                line-height: 1.25;
+                white-space: normal;
+            }
+            .global-search { max-width: 340px; margin-inline: 10px; }
+            .top-nav .nav-links > a[data-portal] { display: none; }
+            .top-nav .nav-links { margin-left: auto; flex: 0 0 auto; }
+            .user-info-bar { white-space: nowrap; }
+        }
+
+        @media (max-width: 1024px) {
+            .nav-back-btn { margin-right: 4px; padding-inline: 10px; }
+            .nav-back-btn .back-text { display: none; }
+            .top-nav .logo-text { max-width: 132px; font-size: 14px; }
+            .global-search { max-width: none; min-width: 180px; margin-inline: 6px; }
+            .user-info-bar > div:not(.avatar-circle) { display: none; }
+            .user-info-bar { margin-left: 2px !important; }
+        }
+
+        @media (max-width: 768px) {
+            .top-nav { column-gap: 8px; }
+            .top-nav-left { order: 1; }
+            .top-nav .nav-links { order: 2; }
+            .global-search {
+                order: 3;
+                flex: 1 0 100%;
+                margin: 2px 0 0;
+            }
+            .top-nav .logo-text { display: none; }
+            .nav-sync-chip { padding-inline: 8px; }
+            #navSyncChipText { display: none; }
+            .main-content { padding-bottom: 92px; }
+            .cloud-sync-fab { bottom: max(14px, env(safe-area-inset-bottom)); }
         }
 
         /* 宽表格可横向滑动：包裹表格的卡片容器（常带内联 overflow:hidden 做圆角）改为横向滚动，
@@ -3528,4 +3556,3 @@
                 width: 2px;
             }
         }
-    

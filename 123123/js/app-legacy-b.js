@@ -1,6 +1,7 @@
     // ===== 常量 =====
-    const DEFAULT_PASSWORD = '123456';
     const TOKEN_EXPIRE_MS = 24 * 60 * 60 * 1000;
+    const PASSWORD_SCHEME = 'pbkdf2-sha256';
+    const PASSWORD_ITERATIONS = 120000;
     const ROLE_LABELS = { admin: '导师', leader: '组长', student: '学生', visitor: '访客' };
     const ROLE_BADGE_CLASS = { admin: 'admin', leader: 'leader', student: 'student', visitor: 'visitor' };
     const GROUPS = ['第一小组', '第二小组', '第三小组', '第四小组'];
@@ -42,17 +43,40 @@
     let passwordPolicy = { requireUpper: false, requireLower: true, requireDigit: true, requireSpecial: false, minLength: 8 };
     let loginAttempts = {};
     let currentUser = null;
+    let passwordHardeningRunning = false;
+    let passwordHardeningTimer = null;
     let accountPage = 1;
+    let gatewaySessionValidated = false;
+    let gatewayAuthReloading = false;
     const ACCOUNTS_PER_PAGE = 10;
+
+    window.addEventListener('citysafe:auth-expired', function() {
+        if (gatewayAuthReloading) return;
+        gatewayAuthReloading = true;
+        gatewaySessionValidated = false;
+        currentUser = null;
+        try { window.currentUser = null; } catch (eUser) {}
+        try { localStorage.removeItem('currentSession'); } catch (eSession) {}
+        try {
+            if (window.clearGatewayUserScopedCache) {
+                window.clearGatewayUserScopedCache({ preserveOutbox: false });
+            }
+        } catch (eCache) {}
+        try { clearGatewayAccountDraft(); } catch (eDraft) {}
+        try { if (window.GatewayAuth) window.GatewayAuth.clear(); } catch (eAuth) {}
+        setTimeout(function() { window.location.reload(); }, 0);
+    });
 
     function initAccountSystem() {
         // 先本地恢复登录态，再后台拉云端——避免「刷新必掉线」
         var start = function(fromCloud) {
             try {
-                accountData = JSON.parse(localStorage.getItem('accountData') || 'null');
+                accountData = window.AppStorage
+                    ? window.AppStorage.getJson('accountData', null)
+                    : JSON.parse(localStorage.getItem('accountData') || 'null');
             } catch (eAcc) { accountData = null; }
 
-            const defaults = [
+            const defaults = (window.GatewayAuth && window.GatewayAuth.enabled) ? [] : [
                 { id: 5, studentId: 'visitor01', realName: '访客', role: 'visitor', group: '', grade: '', research: '', phone: '', email: 'visitor@example.com', mustChangePwd: true, firstLogin: true, fromTeam: false }
             ];
 
@@ -63,7 +87,7 @@
                     const maxId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) : 0;
                     accountData.push({
                         ...def, id: Math.max(def.id, maxId + 1),
-                        status: 'active', password: DEFAULT_PASSWORD,
+                        status: 'active', password: generateTemporaryPassword(),
                         lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
                         loginFailCount: 0, lockedUntil: null, avatar: ''
                     });
@@ -101,21 +125,32 @@
 
             if (currentUser || tryRestoreSessionFromStorage()) {
                 enterSystem();
+                if (currentUser && currentUser.role === 'admin') {
+                    setTimeout(function() {
+                        pullGatewayAccountsFromServer().then(function() {
+                            try { renderAccountTable(); } catch (eRender) {}
+                            try { updateHeaderUserInfo(); } catch (eHeader) {}
+                        }).catch(function(err) {
+                            console.warn('[auth] account list refresh failed', err);
+                        });
+                    }, 0);
+                }
                 return;
             }
 
             document.getElementById('loginOverlay').classList.add('active'); initLoginMotion();
             ensureTeamAccountsReady();
+            schedulePasswordHardening();
             refreshLoginDemoChips();
             document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
             document.getElementById('loginUsername').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPassword').focus(); });
         };
 
-        // 1) 立即用本地数据尝试恢复（刷新不掉线）
+        // 1) 先初始化本地界面；网关模式必须经 /api/auth/me 复核后才恢复角色。
         start(false);
 
-        // 2) 后台同步云端；若本地未登录成功、云端回来后再试一次恢复
-        if (typeof pullAllFromCloud === 'function') {
+        var continueCloudBootstrap = function() {
+            if (typeof pullAllFromCloud !== 'function') return;
             pullAllFromCloud({ silent: true }).then(function() {
                 try {
                     var rawAcc = localStorage.getItem('accountData');
@@ -130,6 +165,56 @@
                     try { updateHeaderUserInfo(); } catch (eH) {}
                 }
             }).catch(function() {});
+        };
+
+        if (
+            window.GatewayAuth
+            && window.GatewayAuth.enabled
+            && window.GatewayAuth.hasSession()
+            && typeof window.GatewayAuth.validate === 'function'
+        ) {
+            window.GatewayAuth.validate().then(function(gatewayUser) {
+                if (!gatewayUser || !gatewayUser.studentId) return;
+                gatewaySessionValidated = true;
+                var account = findAccountForLogin(gatewayUser.studentId);
+                if (!account) {
+                    var gatewayNumericId = Number(gatewayUser.id);
+                    account = {
+                        id: Number.isFinite(gatewayNumericId) ? gatewayNumericId : Date.now(),
+                        studentId: String(gatewayUser.studentId),
+                        realName: gatewayUser.realName || gatewayUser.studentId,
+                        role: gatewayUser.role || 'visitor',
+                        status: 'active',
+                        mustChangePwd: !!gatewayUser.mustChangePwd,
+                        firstLogin: !!gatewayUser.mustChangePwd,
+                        fromTeam: false
+                    };
+                    accountData.push(account);
+                }
+                account.realName = gatewayUser.realName || account.realName || account.studentId;
+                account.role = gatewayUser.role || account.role || 'visitor';
+                account.status = 'active';
+                account.mustChangePwd = !!gatewayUser.mustChangePwd;
+                currentUser = account;
+                try { window.currentUser = currentUser; } catch (eUser) {}
+                if (account.role === 'admin') restoreGatewayAccountDraft();
+                localStorage.setItem('currentSession', JSON.stringify({
+                    userId: account.id,
+                    studentId: account.studentId || '',
+                    loginTime: Date.now()
+                }));
+                enterSystem();
+                continueCloudBootstrap();
+                if (account.role === 'admin') {
+                    pullGatewayAccountsFromServer().catch(function(err) {
+                        console.warn('[auth] account list refresh failed', err);
+                    });
+                }
+            }).catch(function(err) {
+                console.warn('[auth] session validation failed', err);
+            });
+        } else {
+            continueCloudBootstrap();
         }
     }
 
@@ -137,6 +222,19 @@
     function tryRestoreSessionFromStorage() {
         var session = null;
         try { session = JSON.parse(localStorage.getItem('currentSession') || 'null'); } catch (e) { session = null; }
+        if (
+            window.GatewayAuth
+            && window.GatewayAuth.enabled
+            && !gatewaySessionValidated
+        ) return false;
+        if (
+            window.GatewayAuth
+            && window.GatewayAuth.enabled
+            && !window.GatewayAuth.hasSession()
+        ) {
+            localStorage.removeItem('currentSession');
+            return false;
+        }
         if (!session || !session.loginTime) return false;
         if (Date.now() - Number(session.loginTime) >= TOKEN_EXPIRE_MS) {
             localStorage.removeItem('currentSession');
@@ -218,9 +316,391 @@
         return changed;
     }
 
+    function bytesToBase64(bytes) {
+        var binary = '';
+        for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        return btoa(binary);
+    }
+
+    function base64ToBytes(value) {
+        var binary = atob(String(value || ''));
+        var out = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+        return out;
+    }
+
+    async function derivePasswordVerifier(password, saltBase64, iterations) {
+        if (!window.crypto || !window.crypto.subtle || typeof TextEncoder === 'undefined') {
+            throw new Error('当前浏览器不支持安全密码存储，请通过 HTTPS 或 localhost 访问系统');
+        }
+        var encoder = new TextEncoder();
+        var material = await window.crypto.subtle.importKey(
+            'raw',
+            encoder.encode(String(password || '')),
+            'PBKDF2',
+            false,
+            ['deriveBits']
+        );
+        var bits = await window.crypto.subtle.deriveBits(
+            {
+                name: 'PBKDF2',
+                salt: base64ToBytes(saltBase64),
+                iterations: iterations,
+                hash: 'SHA-256'
+            },
+            material,
+            256
+        );
+        return bytesToBase64(new Uint8Array(bits));
+    }
+
+    async function createPasswordRecord(password) {
+        var salt = new Uint8Array(16);
+        window.crypto.getRandomValues(salt);
+        var saltBase64 = bytesToBase64(salt);
+        return {
+            passwordScheme: PASSWORD_SCHEME,
+            passwordSalt: saltBase64,
+            passwordIterations: PASSWORD_ITERATIONS,
+            passwordHash: await derivePasswordVerifier(password, saltBase64, PASSWORD_ITERATIONS),
+            passwordUpdatedAt: Date.now()
+        };
+    }
+
+    function applyPasswordRecord(account, record) {
+        if (!account || !record) return;
+        account.passwordScheme = record.passwordScheme || PASSWORD_SCHEME;
+        account.passwordSalt = record.passwordSalt || '';
+        account.passwordIterations = Number(record.passwordIterations) || PASSWORD_ITERATIONS;
+        account.passwordHash = record.passwordHash || '';
+        account.passwordUpdatedAt = Number(record.passwordUpdatedAt) || Date.now();
+        delete account.password;
+    }
+
+    async function setAccountPassword(account, password) {
+        if (window.GatewayAuth && window.GatewayAuth.enabled) {
+            // The gateway is the only password-verifier authority. Keeping another
+            // verifier in browser storage only adds an offline-cracking target.
+            ['password', 'passwordScheme', 'passwordSalt', 'passwordIterations', 'passwordHash']
+                .forEach(function(field) { try { delete account[field]; } catch (e) {} });
+            return { serverManaged: true };
+        }
+        var record = await createPasswordRecord(password);
+        applyPasswordRecord(account, record);
+        return record;
+    }
+
+    async function verifyAccountPassword(account, password) {
+        if (!account) return false;
+        if (account.passwordHash && account.passwordSalt) {
+            try {
+                var actual = await derivePasswordVerifier(
+                    password,
+                    account.passwordSalt,
+                    Number(account.passwordIterations) || PASSWORD_ITERATIONS
+                );
+                return actual === account.passwordHash;
+            } catch (err) {
+                console.warn('[auth] password verification unavailable', err);
+                return false;
+            }
+        }
+        // 兼容历史明文记录：仅成功登录时原地迁移，随后立即删除明文字段。
+        var legacyOk = typeof account.password === 'string' && account.password === password;
+        if (legacyOk) {
+            try { await setAccountPassword(account, password); } catch (e) {
+                console.warn('[auth] legacy password migration failed', e);
+            }
+        }
+        return legacyOk;
+    }
+
+    async function gatewayPasswordRequest(path, payload) {
+        if (!window.GatewayAuth || !window.GatewayAuth.enabled) return { ok: true, disabled: true };
+        var response = await window.GatewayAuth.fetch(path, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload || {})
+        });
+        var data = {};
+        try { data = await response.json(); } catch (e) {}
+        if (!response.ok) {
+            var rawError = data.error || '';
+            var localizedErrors = {
+                'current password is invalid': '当前密码错误',
+                'new password does not meet policy': '新密码不符合安全策略',
+                'new password must differ from the current password': '新密码不能与当前密码相同',
+                'invalid or expired session': '登录状态已失效，请重新登录',
+                'account unavailable': '账号不可用，请联系管理员'
+            };
+            throw new Error(localizedErrors[rawError] || rawError || ('HTTP ' + response.status));
+        }
+        if (data.token && window.GatewayAuth.acceptSession) {
+            window.GatewayAuth.acceptSession(data);
+        }
+        return data;
+    }
+
+    var gatewayAccountSyncTimer = null;
+    var gatewayAccountSyncFailures = 0;
+    var gatewayAccountDraftPending = false;
+    const GATEWAY_ACCOUNTS_DIGEST_KEY = 'citysafeGatewayAccountsDigest';
+    const GATEWAY_ACCOUNTS_DRAFT_KEY = 'citysafeGatewayAccountsDraft';
+
+    function sanitizeGatewayAccountsForBrowser(accounts) {
+        return (Array.isArray(accounts) ? accounts : []).map(function(account) {
+            var safe = Object.assign({}, account || {});
+            ['password', 'passwordScheme', 'passwordSalt', 'passwordIterations', 'passwordHash', 'passwordUpdatedAt']
+                .forEach(function(field) { delete safe[field]; });
+            return safe;
+        });
+    }
+
+    function gatewayAccountDraftStorageKey() {
+        var session = window.GatewayAuth && window.GatewayAuth.read
+            ? window.GatewayAuth.read()
+            : null;
+        var user = session && session.user;
+        if (!user) return '';
+        var identity = String(user.id != null ? user.id : (user.studentId || '')).trim();
+        return identity ? GATEWAY_ACCOUNTS_DRAFT_KEY + ':' + encodeURIComponent(identity) : '';
+    }
+
+    function persistGatewayAccountDraft() {
+        if (
+            !window.GatewayAuth
+            || !window.GatewayAuth.enabled
+            || !currentUser
+            || currentUser.role !== 'admin'
+        ) return;
+        var storageKey = gatewayAccountDraftStorageKey();
+        if (!storageKey) return;
+        var requiresCredentials = (Array.isArray(accountData) ? accountData : []).some(function(account) {
+            return !!(account && (
+                account.password
+                || account.passwordHash
+                || account.passwordSalt
+            ));
+        });
+        var draft = {
+            accounts: sanitizeGatewayAccountsForBrowser(accountData),
+            expectedDigest: sessionStorage.getItem(GATEWAY_ACCOUNTS_DIGEST_KEY) || '',
+            requiresCredentials: requiresCredentials,
+            updatedAt: Date.now()
+        };
+        sessionStorage.setItem(storageKey, JSON.stringify(draft));
+        gatewayAccountDraftPending = true;
+    }
+
+    function clearGatewayAccountDraft() {
+        var storageKey = gatewayAccountDraftStorageKey();
+        if (storageKey) sessionStorage.removeItem(storageKey);
+        gatewayAccountDraftPending = false;
+        gatewayAccountSyncFailures = 0;
+    }
+
+    function restoreGatewayAccountDraft() {
+        var storageKey = gatewayAccountDraftStorageKey();
+        if (!storageKey) return false;
+        var draft = null;
+        try { draft = JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch (e) { draft = null; }
+        if (!draft || !Array.isArray(draft.accounts)) return false;
+        if (draft.requiresCredentials) {
+            sessionStorage.removeItem(storageKey);
+            gatewayAccountDraftPending = false;
+            setTimeout(function() {
+                if (typeof showCloudSyncBanner === 'function') {
+                    showCloudSyncBanner('为保护临时密码，未完成的账号创建未在浏览器中保存，请核对服务器账号列表', true);
+                }
+            }, 0);
+            return false;
+        }
+        accountData = draft.accounts;
+        if (draft.expectedDigest) {
+            sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, String(draft.expectedDigest));
+        }
+        gatewayAccountDraftPending = true;
+        return true;
+    }
+
+    async function pullGatewayAccountsFromServer() {
+        if (
+            !window.GatewayAuth
+            || !window.GatewayAuth.enabled
+            || !window.GatewayAuth.hasSession()
+            || !currentUser
+            || currentUser.role !== 'admin'
+        ) {
+            return { ok: false, reason: 'not-admin' };
+        }
+        if (gatewayAccountDraftPending) {
+            await syncGatewayAccountsNow();
+            if (gatewayAccountDraftPending) {
+                var pendingError = new Error('local account draft is still pending');
+                pendingError.status = 409;
+                throw pendingError;
+            }
+        }
+        var response = await window.GatewayAuth.fetch('/api/auth/admin/accounts', {
+            method: 'GET',
+            cache: 'no-store'
+        });
+        var data = {};
+        try { data = await response.json(); } catch (e) {}
+        if (!response.ok || !Array.isArray(data.accounts) || !data.digest) {
+            throw new Error(data.error || ('HTTP ' + response.status));
+        }
+        accountData = data.accounts;
+        sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, String(data.digest));
+        if (window.AppStorage) window.AppStorage.setJson('accountData', accountData);
+        else Storage.prototype.setItem.call(localStorage, 'accountData', JSON.stringify(accountData));
+        var fresh = findAccountRecordForUser(currentUser);
+        if (fresh) {
+            currentUser = fresh;
+            try { window.currentUser = currentUser; } catch (eSync) {}
+        }
+        return data;
+    }
+    window.pullGatewayAccountsFromServer = pullGatewayAccountsFromServer;
+
+    async function syncGatewayAccountsNow() {
+        if (
+            !window.GatewayAuth
+            || !window.GatewayAuth.enabled
+            || !window.GatewayAuth.hasSession()
+            || !currentUser
+            || currentUser.role !== 'admin'
+        ) return;
+        var digest = sessionStorage.getItem(GATEWAY_ACCOUNTS_DIGEST_KEY) || '';
+        if (!digest) {
+            var digestError = new Error('account base version is unavailable; refresh before editing');
+            digestError.status = 409;
+            throw digestError;
+        }
+        var response = await window.GatewayAuth.fetch('/api/auth/admin/accounts/replace', {
+            method: 'POST',
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                expectedDigest: digest,
+                accounts: accountData
+            })
+        });
+        var data = {};
+        try { data = await response.json(); } catch (e) {}
+        if (!response.ok || !data.digest) {
+            var error = new Error(data.error || ('HTTP ' + response.status));
+            error.status = response.status;
+            throw error;
+        }
+        sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, String(data.digest));
+        if (Array.isArray(data.accounts)) {
+            accountData = data.accounts;
+            if (window.AppStorage) window.AppStorage.setJson('accountData', accountData);
+            else Storage.prototype.setItem.call(localStorage, 'accountData', JSON.stringify(accountData));
+            var fresh = findAccountRecordForUser(currentUser);
+            if (fresh) {
+                currentUser = fresh;
+                try { window.currentUser = currentUser; } catch (eSync) {}
+            }
+            try { renderAccountTable(); } catch (eRender) {}
+        }
+        clearGatewayAccountDraft();
+    }
+
+    function scheduleGatewayAccountSync() {
+        if (
+            !window.GatewayAuth
+            || !window.GatewayAuth.enabled
+            || !window.GatewayAuth.hasSession()
+            || !currentUser
+            || currentUser.role !== 'admin'
+        ) return;
+        clearTimeout(gatewayAccountSyncTimer);
+        gatewayAccountSyncTimer = setTimeout(function() {
+            syncGatewayAccountsNow().catch(function(err) {
+                console.warn('[auth] account collaboration sync failed', err);
+                if (typeof showCloudSyncBanner === 'function') {
+                    showCloudSyncBanner(
+                        err && err.status === 409
+                            ? '账号列表已被他人更新，请刷新后再修改'
+                            : '账号变更暂未同步到服务器',
+                        true
+                    );
+                }
+                if (err && err.status !== 409 && err.status !== 400 && err.status !== 403) {
+                    gatewayAccountSyncFailures += 1;
+                    var retryDelay = Math.min(60000, 2000 * Math.pow(2, Math.min(gatewayAccountSyncFailures - 1, 5)));
+                    clearTimeout(gatewayAccountSyncTimer);
+                    gatewayAccountSyncTimer = setTimeout(function() {
+                        syncGatewayAccountsNow().catch(function(retryError) {
+                            console.warn('[auth] account collaboration retry failed', retryError);
+                        });
+                    }, retryDelay);
+                }
+            });
+        }, 500);
+    }
+
+    function generateTemporaryPassword() {
+        var bytes = new Uint8Array(9);
+        window.crypto.getRandomValues(bytes);
+        var text = Array.from(bytes).map(function (b) {
+            return (b % 36).toString(36);
+        }).join('');
+        return 'Tmp-' + text + 'A9';
+    }
+
+    function schedulePasswordHardening() {
+        if (window.GatewayAuth && window.GatewayAuth.enabled) return;
+        if (passwordHardeningRunning || passwordHardeningTimer) return;
+        var hasLegacy = Array.isArray(accountData) && accountData.some(function (a) {
+            return a && typeof a.password === 'string' && a.password;
+        });
+        if (!hasLegacy) return;
+        passwordHardeningTimer = setTimeout(async function () {
+            passwordHardeningTimer = null;
+            passwordHardeningRunning = true;
+            var changed = false;
+            try {
+                for (var i = 0; i < accountData.length; i++) {
+                    var account = accountData[i];
+                    if (!account || typeof account.password !== 'string' || !account.password) continue;
+                    var legacyPassword = account.password;
+                    await setAccountPassword(account, legacyPassword);
+                    changed = true;
+                }
+                if (changed) {
+                    localStorage.setItem('accountData', JSON.stringify(accountData));
+                    if (typeof cloudUpsert === 'function') {
+                        await cloudUpsert('accountData', JSON.stringify(accountData));
+                    }
+                    try { renderAccountTable(); } catch (eRender) {}
+                }
+            } catch (err) {
+                console.warn('[auth] password hardening failed', err);
+            } finally {
+                passwordHardeningRunning = false;
+            }
+        }, 0);
+    }
+
     function saveAccountData() {
-        localStorage.setItem('accountData', JSON.stringify(accountData));
-        try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
+        var gatewayManaged = !!(window.GatewayAuth && window.GatewayAuth.enabled);
+        var persistedAccounts = accountData;
+        if (gatewayManaged) {
+            persistedAccounts = sanitizeGatewayAccountsForBrowser(accountData);
+        }
+        if (window.AppStorage) window.AppStorage.setJson('accountData', persistedAccounts);
+        else localStorage.setItem('accountData', JSON.stringify(persistedAccounts));
+        if (!gatewayManaged) {
+            try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
+            schedulePasswordHardening();
+        } else {
+            persistGatewayAccountDraft();
+        }
+        scheduleGatewayAccountSync();
     }
     function savePermissionData() {
         localStorage.setItem('permissionMatrix', JSON.stringify(permissionMatrix));
@@ -340,7 +820,13 @@
         } catch (e) {}
     }
 
+    function demoAccountsEnabled() {
+        try { return getAppConfig('SHOW_DEMO_ACCOUNTS', true) !== false; }
+        catch (e) { return true; }
+    }
+
     function toggleLoginDemoPanel() {
+        if (!demoAccountsEnabled()) return;
         const panel = document.getElementById('loginDemoPanel');
         const btn = document.querySelector('.login-demo-toggle');
         if (!panel) return;
@@ -352,6 +838,7 @@
     }
 
     function fillLoginDemo(studentId) {
+        if (!demoAccountsEnabled()) return;
         ensureTeamAccountsReady();
         refreshLoginDemoChips();
         const resolved = resolveDemoLoginId(studentId);
@@ -393,6 +880,7 @@
 
     /** 保证演示账号 admin / leader01 / stu001 总能落到真实账号上 */
     function ensureDemoLoginAliases() {
+        if (!demoAccountsEnabled()) return;
         if (!Array.isArray(accountData) || !accountData.length) return;
         var changed = false;
         function pick(rolePrefer) {
@@ -464,6 +952,12 @@
     }
 
     function refreshLoginDemoChips() {
+        var footer = document.querySelector('.login-footer');
+        if (!demoAccountsEnabled()) {
+            if (footer) footer.hidden = true;
+            return;
+        }
+        if (footer) footer.hidden = false;
         ensureDemoLoginAliases();
         var box = document.querySelector('#loginDemoPanel .login-demo-chips');
         if (!box) return;
@@ -486,7 +980,7 @@
             '<button type="button" onclick="fillLoginDemo(\'visitor01\')">访客 visitor01</button>';
     }
 
-    function handleLogin() {
+    async function handleLogin() {
         ensureTeamAccountsReady();
         const studentId = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -495,62 +989,107 @@
         errorEl.textContent = ''; warningEl.style.display = 'none';
 
         if (!studentId || !password) { errorEl.textContent = '请输入学号/手机号和密码'; return; }
+        if (Array.isArray(window.frontendConfigIssues) && window.frontendConfigIssues.length) {
+            errorEl.textContent = '系统生产配置不完整，请联系管理员';
+            return;
+        }
 
-        let account = findAccountForLogin(studentId);
-        if (!account) {
+        var gatewayUser = null;
+        if (window.GatewayAuth && window.GatewayAuth.enabled) {
+            try {
+                var gatewaySession = await window.GatewayAuth.login(studentId, password);
+                gatewayUser = gatewaySession && gatewaySession.user;
+                if (!gatewayUser || !gatewayUser.studentId) throw new Error('服务端未返回账号身份');
+                gatewaySessionValidated = true;
+            } catch (gatewayError) {
+                var retryText = gatewayError && gatewayError.retryAfter
+                    ? '，请 ' + Math.ceil(Number(gatewayError.retryAfter) / 60) + ' 分钟后重试'
+                    : '';
+                errorEl.textContent = '服务端身份验证失败' + retryText;
+                return;
+            }
+        }
+
+        let account = gatewayUser ? findAccountForLogin(gatewayUser.studentId) : findAccountForLogin(studentId);
+        if (!account && !gatewayUser) {
             // 团队有该成员但账号缺失时再同步一次
             ensureTeamAccountsReady();
             account = findAccountForLogin(studentId);
         }
-        if (!account) {
-            var teamHit = null;
-            try {
-                var members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData))
-                    ? teamMemberData
-                    : JSON.parse(localStorage.getItem('teamMemberData') || '[]');
-                var digits = studentId.replace(/\D/g, '');
-                teamHit = (members || []).find(function(m) {
-                    if (!m) return false;
-                    if (m.name === studentId) return true;
-                    if (digits.length >= 6 && String(m.phone || '').replace(/\D/g, '') === digits) return true;
-                    if (m.email && String(m.email).toLowerCase().indexOf(studentId.toLowerCase()) === 0) return true;
-                    return false;
-                });
-            } catch (eTeam) {}
-            if (teamHit) {
-                errorEl.textContent = '成员「' + teamHit.name + '」账号开通失败，请管理员打开「账号管理」点刷新后再试';
-            } else {
-                errorEl.textContent = '账号不存在（可用手机号或学号登录）';
+        if (gatewayUser) {
+            if (!account) {
+                var gatewayNumericId = Number(gatewayUser.id);
+                account = {
+                    id: Number.isFinite(gatewayNumericId) ? gatewayNumericId : Date.now(),
+                    studentId: String(gatewayUser.studentId),
+                    realName: gatewayUser.realName || gatewayUser.studentId,
+                    role: gatewayUser.role || 'visitor',
+                    group: '',
+                    grade: '',
+                    research: '',
+                    phone: '',
+                    email: '',
+                    status: 'active',
+                    fromTeam: false,
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                accountData.push(account);
             }
-            return;
-        }
-        if (account.status === 'disabled') { errorEl.textContent = '账号已禁用，请联系管理员'; return; }
+            account.studentId = String(gatewayUser.studentId);
+            account.realName = gatewayUser.realName || account.realName || account.studentId;
+            account.role = gatewayUser.role || account.role || 'visitor';
+            account.status = 'active';
+            account.mustChangePwd = !!gatewayUser.mustChangePwd;
+        } else {
+            if (!account) {
+                var teamHit = null;
+                try {
+                    var members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData))
+                        ? teamMemberData
+                        : JSON.parse(localStorage.getItem('teamMemberData') || '[]');
+                    var digits = studentId.replace(/\D/g, '');
+                    teamHit = (members || []).find(function(m) {
+                        if (!m) return false;
+                        if (m.name === studentId) return true;
+                        if (digits.length >= 6 && String(m.phone || '').replace(/\D/g, '') === digits) return true;
+                        if (m.email && String(m.email).toLowerCase().indexOf(studentId.toLowerCase()) === 0) return true;
+                        return false;
+                    });
+                } catch (eTeam) {}
+                errorEl.textContent = teamHit
+                    ? '成员「' + teamHit.name + '」账号开通失败，请管理员打开「账号管理」点刷新后再试'
+                    : '账号不存在（可用手机号或学号登录）';
+                return;
+            }
+            if (account.status === 'disabled') { errorEl.textContent = '账号已禁用，请联系管理员'; return; }
+            if (account.lockedUntil && new Date(account.lockedUntil) > new Date()) {
+                errorEl.textContent = `账号已锁定，请 ${Math.ceil((new Date(account.lockedUntil) - new Date()) / 60000)} 分钟后再试`;
+                return;
+            }
 
-        if (account.lockedUntil && new Date(account.lockedUntil) > new Date()) {
-            errorEl.textContent = `账号已锁定，请 ${Math.ceil((new Date(account.lockedUntil) - new Date()) / 60000)} 分钟后再试`;
-            return;
+            const maxAttempts = getConfigInt('user.passwordErrorLockCount', 5);
+            const lockDuration = getConfigInt('user.lockTime', 30);
+            const attempts = loginAttempts[account.studentId || studentId] || loginAttempts[studentId] || 0;
+            if (attempts >= maxAttempts) {
+                account.lockedUntil = new Date(Date.now() + lockDuration * 60000).toISOString();
+                saveAccountData();
+                errorEl.textContent = `连续失败次数过多，账号已锁定 ${lockDuration} 分钟`;
+                return;
+            }
+            if (!(await verifyAccountPassword(account, password))) {
+                const attemptKeyLocal = account.studentId || studentId;
+                loginAttempts[attemptKeyLocal] = attempts + 1;
+                localStorage.setItem('loginAttempts', JSON.stringify(loginAttempts));
+                const remain = maxAttempts - (attempts + 1);
+                if (remain <= 2) { warningEl.textContent = `密码错误！再失败 ${remain} 次后账号将被锁定`; warningEl.style.display = 'block'; }
+                errorEl.textContent = '密码错误';
+                recordOperationLog('系统登录', '登录', `${account.realName}(${account.studentId}) 登录失败：密码错误`, { studentId: account.studentId }, { success: false }, 0, '密码错误', 0, account.id, account.realName);
+                return;
+            }
         }
-
-        const maxAttempts = getConfigInt('user.passwordErrorLockCount', 5);
-        const lockDuration = getConfigInt('user.lockTime', 30);
         const attemptKey = account.studentId || studentId;
-        const attempts = loginAttempts[attemptKey] || loginAttempts[studentId] || 0;
-        if (attempts >= maxAttempts) {
-            account.lockedUntil = new Date(Date.now() + lockDuration * 60000).toISOString();
-            saveAccountData();
-            errorEl.textContent = `连续失败次数过多，账号已锁定 ${lockDuration} 分钟`;
-            return;
-        }
-
-        if (account.password !== password) {
-            loginAttempts[attemptKey] = attempts + 1;
-            localStorage.setItem('loginAttempts', JSON.stringify(loginAttempts));
-            const remain = maxAttempts - (attempts + 1);
-            if (remain <= 2) { warningEl.textContent = `密码错误！再失败 ${remain} 次后账号将被锁定`; warningEl.style.display = 'block'; }
-            errorEl.textContent = '密码错误';
-            recordOperationLog('系统登录', '登录', `${account.realName}(${account.studentId}) 登录失败：密码错误`, { studentId: account.studentId }, { success: false }, 0, '密码错误', 0, account.id, account.realName);
-            return;
-        }
+        // 成功登录可能刚完成历史密码迁移，立即保存哈希后的账号记录。
+        saveAccountData();
 
         try {
             const remember = document.getElementById('loginRemember');
@@ -577,11 +1116,21 @@
 
         currentUser = account;
         try { window.currentUser = currentUser; } catch (eSync) {}
+        if (gatewayUser && account.role === 'admin') restoreGatewayAccountDraft();
         localStorage.setItem('currentSession', JSON.stringify({
             userId: account.id,
             studentId: account.studentId || '',
             loginTime: Date.now()
         }));
+
+        if (gatewayUser && gatewayUser.role === 'admin') {
+            try {
+                await pullGatewayAccountsFromServer();
+                account = findAccountRecordForUser(currentUser) || currentUser;
+            } catch (accountSyncError) {
+                console.warn('[auth] initial account list pull failed', accountSyncError);
+            }
+        }
 
         loadOperationLogData();
         cleanExpiredLogs();
@@ -593,6 +1142,11 @@
             return;
         }
         enterSystem();
+        if (typeof window.syncFromCloudAndRefresh === 'function') {
+            setTimeout(function() {
+                window.syncFromCloudAndRefresh({ silent: true, full: false });
+            }, 0);
+        }
     }
 
     function findAccountRecordForUser(user) {
@@ -617,7 +1171,7 @@
     function applyPendingPasswordCommit() {
         var pending = null;
         try { pending = JSON.parse(sessionStorage.getItem('pendingPasswordCommit') || 'null'); } catch (e) { pending = null; }
-        if (!pending || !pending.password) return false;
+        if (!pending || (!pending.passwordHash && !pending.password)) return false;
         var acc = null;
         if (pending.userId != null) {
             acc = accountData.find(function(a) { return a && Number(a.id) === Number(pending.userId); });
@@ -627,7 +1181,16 @@
         }
         if (!acc) return false;
         var changed = false;
-        if (acc.password !== pending.password) { acc.password = pending.password; changed = true; }
+        if (pending.passwordHash) {
+            if (acc.passwordHash !== pending.passwordHash) {
+                applyPasswordRecord(acc, pending);
+                changed = true;
+            }
+        } else if (acc.password !== pending.password) {
+            // 仅兼容升级前产生的短期会话提交；后续 hardening 会立即迁移。
+            acc.password = pending.password;
+            changed = true;
+        }
         if (acc.mustChangePwd !== false) { acc.mustChangePwd = false; changed = true; }
         if (acc.firstLogin) { acc.firstLogin = false; changed = true; }
         if (Number(acc.passwordUpdatedAt || 0) < Number(pending.ts || 0)) {
@@ -710,6 +1273,14 @@
             if (errEl) errEl.textContent = '登录状态已失效，请重新登录后再改密';
             return;
         }
+        if (btn) { btn.disabled = true; btn.textContent = '保存中…'; }
+        try {
+            await gatewayPasswordRequest('/api/auth/change-password', { newPassword: newPwd });
+        } catch (gatewayPwdError) {
+            if (btn) { btn.disabled = false; btn.textContent = '确认修改并进入系统'; }
+            if (errEl) errEl.textContent = gatewayPwdError.message || '服务端密码修改失败';
+            return;
+        }
 
         // 重新从本地加载，避免内存中的 accountData 已被云端旧数据替换
         try {
@@ -722,13 +1293,19 @@
             if (errEl) errEl.textContent = '找不到账号记录，请联系导师在「账号管理」重置密码';
             return;
         }
-        if (newPwd === DEFAULT_PASSWORD || newPwd === '123456') {
+        if (newPwd === '123456') {
             if (errEl) errEl.textContent = '请勿继续使用初始密码，请设置新的密码';
             return;
         }
 
         var ts = Date.now();
-        acc.password = newPwd;
+        var passwordRecord;
+        try {
+            passwordRecord = await setAccountPassword(acc, newPwd);
+        } catch (hashError) {
+            if (errEl) errEl.textContent = hashError.message || '无法安全保存密码';
+            return;
+        }
         acc.mustChangePwd = false;
         acc.firstLogin = false;
         acc.passwordUpdatedAt = ts;
@@ -738,12 +1315,11 @@
         var commit = {
             userId: acc.id,
             studentId: acc.studentId || '',
-            password: newPwd,
+            ...passwordRecord,
             ts: ts
         };
         try { sessionStorage.setItem('pendingPasswordCommit', JSON.stringify(commit)); } catch (eS) {}
 
-        if (btn) { btn.disabled = true; btn.textContent = '保存中…'; }
         try {
             Storage.prototype.setItem.call(localStorage, 'accountData', JSON.stringify(accountData));
         } catch (eSet) {
@@ -868,14 +1444,26 @@
         const studentId = currentUser ? currentUser.studentId : '';
         const userId = currentUser ? currentUser.id : 0;
         recordOperationLog('系统登录', '登出', `${userName}(${studentId}) 退出登录`, { studentId }, { success: true }, 1, '', 0, userId, userName);
+        try {
+            if (window.GatewayAuth && window.GatewayAuth.enabled && window.GatewayAuth.hasSession()) {
+                window.GatewayAuth.fetch('/api/auth/logout', {
+                    method: 'POST',
+                    cache: 'no-store',
+                    keepalive: true
+                }).catch(function() {});
+            }
+        } catch (eServerLogout) {}
+        try {
+            if (window.clearGatewayUserScopedCache) {
+                window.clearGatewayUserScopedCache({ preserveOutbox: false });
+            }
+        } catch (eCache) {}
+        try { clearGatewayAccountDraft(); } catch (eDraft) {}
         currentUser = null;
         syncGlobalsForExternalModules();
         localStorage.removeItem('currentSession');
-        document.getElementById('loginOverlay').classList.add('active'); initLoginMotion();
-        document.getElementById('loginUsername').value = '';
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('loginError').textContent = '';
-        document.getElementById('loginAttemptWarning').style.display = 'none';
+        try { if (window.GatewayAuth) window.GatewayAuth.clear(); } catch (eGatewayLogout) {}
+        window.location.reload();
     }
 
     function resolveMemberAvatarUrl(person) {
@@ -894,10 +1482,10 @@
     }
 
     function renderHomeMemberAvatarHtml(m) {
-        var url = resolveMemberAvatarUrl(m);
+        var url = window.safeImageUrl ? window.safeImageUrl(resolveMemberAvatarUrl(m)) : '';
         var ch = escHtml(String((m && m.name) || '?').charAt(0));
         if (url) {
-            return '<div class="av"><img src="' + String(url).replace(/"/g, '&quot;') + '" alt="' + ch + '" onerror="this.remove();this.parentNode.textContent=\'' + ch + '\';"></div>';
+            return '<div class="av"><img src="' + escHtml(url) + '" alt="' + ch + '" onerror="this.remove()"></div>';
         }
         return '<div class="av">' + ch + '</div>';
     }
@@ -916,9 +1504,10 @@
         if (roleEl) roleEl.textContent = (typeof ROLE_LABELS !== 'undefined' && ROLE_LABELS[currentUser.role]) ? ROLE_LABELS[currentUser.role] : (currentUser.role || '');
         if (avEl) {
             var avUrl = resolveMemberAvatarUrl(currentUser) || resolveMemberAvatarUrl({ name: currentUser.realName, id: currentUser.memberId });
+            avUrl = window.safeImageUrl ? window.safeImageUrl(avUrl) : '';
             var ch = String(currentUser.realName || currentUser.studentId || '?').charAt(0);
             if (avUrl) {
-                avEl.innerHTML = '<img src="' + String(avUrl).replace(/"/g, '&quot;') + '" alt="' + escHtml(ch) + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.parentNode.textContent=\'' + ch + '\';">';
+                avEl.innerHTML = '<img src="' + escHtml(avUrl) + '" alt="' + escHtml(ch) + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.remove()">';
             } else {
                 avEl.innerHTML = '';
                 avEl.textContent = ch;
@@ -1221,9 +1810,12 @@
         // 仅导师可见明文初始密码；学生改密后不再展示
         if (currentUser && currentUser.role === 'admin') {
             if (a.mustChangePwd || a.firstLogin || !a.lastLogin) {
-                return '<code style="background:#fff7e6;padding:2px 6px;border-radius:4px;color:#ad6800;">' +
-                    escHtml(a.password || DEFAULT_PASSWORD) + '</code>' +
-                    '<div style="font-size:11px;color:#fa8c16;margin-top:2px;">待首次改密</div>';
+                if (a.password) {
+                    return '<code style="background:#fff7e6;padding:2px 6px;border-radius:4px;color:#ad6800;">' +
+                        escHtml(a.password) + '</code>' +
+                        '<div style="font-size:11px;color:#fa8c16;margin-top:2px;">仅本次显示，请立即安全分发</div>';
+                }
+                return '<span style="color:#fa8c16;font-size:12px;">临时密码已隐藏；需要时请重置</span>';
             }
             return '<span style="color:#888;font-size:12px;">已自行修改</span>';
         }
@@ -1262,7 +1854,7 @@
         if (!confirm(
             '将为团队中的 ' + students.length + ' 位学生/成员：\n' +
             '1）自动生成或对齐专属登录账号（优先手机号）\n' +
-            '2）统一重置初始密码为「' + DEFAULT_PASSWORD + '」\n' +
+            '2）为每位成员生成独立随机临时密码\n' +
             '3）要求首次登录自行修改密码\n\n' +
             '导师账号与访客不受影响。是否继续？'
         )) return;
@@ -1293,7 +1885,7 @@
                     phone: m.phone || '',
                     email: m.email || '',
                     status: 'active',
-                    password: DEFAULT_PASSWORD,
+                    password: generateTemporaryPassword(),
                     mustChangePwd: true,
                     firstLogin: true,
                     lastLogin: '',
@@ -1310,8 +1902,8 @@
             } else {
                 linked++;
             }
-            if (acc.password !== DEFAULT_PASSWORD || !acc.mustChangePwd) reset++;
-            acc.password = DEFAULT_PASSWORD;
+            if (!acc.mustChangePwd || !acc.firstLogin) reset++;
+            acc.password = generateTemporaryPassword();
             acc.mustChangePwd = true;
             acc.firstLogin = true;
             acc.loginFailCount = 0;
@@ -1333,8 +1925,8 @@
 
         var msg = '匹配完成！\n\n团队学生：' + students.length +
             ' 人\n新开通：' + created + ' 人\n已对齐并重置密码：' + (linked + created) +
-            ' 人\n初始密码：' + DEFAULT_PASSWORD +
-            '\n\n请点击「导出学生账号密码」下载清单发给学生。';
+            ' 人\n\n每位成员的临时密码均不相同，且只在本次操作中可导出。' +
+            '\n请立即下载清单并通过安全渠道分别发给学生。';
         if (confirm(msg + '\n\n是否立即导出？')) {
             exportStudentCredentials();
         }
@@ -1358,7 +1950,9 @@
 
         var rows = [['登录账号', '姓名', '角色', '年级', '手机号', '邮箱', '初始密码', '首次登录须改密', '状态', '最后登录', '备注']];
         list.forEach(function(a) {
-            var pwd = (a.mustChangePwd || !a.lastLogin) ? (a.password || DEFAULT_PASSWORD) : '（已自行修改，请重置后再导出）';
+            var pwd = (a.mustChangePwd || !a.lastLogin)
+                ? (a.password || '（临时密码已隐藏，请先重置）')
+                : '（已自行修改，请重置后再导出）';
             var note = '';
             if (Array.isArray(a.loginAliases) && a.loginAliases.length) {
                 note = '也可使用别名：' + a.loginAliases.join(' / ');
@@ -1653,6 +2247,7 @@
         if (m.category === 'advisor') role = 'admin';
         else if (role === 'admin') role = 'student';
         const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
+        const temporaryPassword = generateTemporaryPassword();
         accountData.push({
             id: newId,
             studentId: studentId,
@@ -1668,7 +2263,7 @@
             fromTeam: true,
             teamMemberId: m.id,
             status: 'active',
-            password: DEFAULT_PASSWORD,
+            password: temporaryPassword,
             mustChangePwd: true,
             firstLogin: true,
             lastLogin: '',
@@ -1681,7 +2276,7 @@
         document.getElementById(modalId)?.remove();
         renderAccountTable();
         recordOperationLog('账号管理', '新增', '从团队开通账号：' + m.name + '(' + studentId + ')', { studentId: studentId, realName: m.name, role: role }, { success: true }, 1, '', 0);
-        alert('已为「' + m.name + '」开通账号\n登录账号：' + studentId + '\n初始密码：' + DEFAULT_PASSWORD);
+        alert('已为「' + m.name + '」开通账号\n登录账号：' + studentId + '\n初始密码：' + temporaryPassword);
     }
 
     function showEditAccountModal(id) {
@@ -1774,7 +2369,7 @@
                         <label style="display:flex;align-items:center;gap:6px;font-weight:normal;cursor:pointer;"><input type="radio" name="modalStatusRadio" value="disabled" ${isEdit && account.status==='disabled'?'checked':''}> 禁用</label>
                     </div>
                 </div>
-                ${!isEdit ? `<div style="background:#f5f5f5;padding:10px;border-radius:6px;font-size:13px;color:#666;margin-bottom:16px;">新账号将自动生成默认密码：<strong>${DEFAULT_PASSWORD}</strong>，首次登录需修改密码</div>` : ''}
+                ${!isEdit ? `<div style="background:#f5f5f5;padding:10px;border-radius:6px;font-size:13px;color:#666;margin-bottom:16px;">新账号将自动生成独立随机临时密码，首次登录需修改密码</div>` : ''}
                 <input type="hidden" id="modalAccountMode" value="${isVisitorMode ? 'visitor' : 'team'}">
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
                     <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
@@ -1835,6 +2430,7 @@
             role = 'visitor';
         }
 
+        var temporaryPassword = '';
         if (editId) {
             const account = accountData.find(a => a.id === editId);
             if (account) {
@@ -1868,6 +2464,7 @@
         } else {
             if (accountData.find(a => a.studentId === studentId)) { alert('该学号已存在，不可重复'); return; }
             const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
+            temporaryPassword = generateTemporaryPassword();
             accountData.push({
                 id: newId, studentId, realName, role: 'visitor',
                 group: '',
@@ -1875,7 +2472,7 @@
                 graduated: false,
                 fromTeam: false,
                 research, phone, email, status,
-                password: DEFAULT_PASSWORD,
+                password: temporaryPassword,
                 mustChangePwd: true, firstLogin: true,
                 lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
                 loginFailCount: 0, lockedUntil: null, avatar: ''
@@ -1895,19 +2492,29 @@
             recordOperationLog('账号管理', '新增', `创建访客账号：${realName}(${studentId})`, { studentId, realName, role: 'visitor' }, { success: true }, 1, '', 0);
         }
         
-        alert(editId ? '账号已更新' : `访客账号创建成功！\n学号：${studentId}\n初始密码：${DEFAULT_PASSWORD}\n首次登录需修改密码`);
+        alert(editId ? '账号已更新' : `访客账号创建成功！\n学号：${studentId}\n初始密码：${temporaryPassword}\n首次登录需修改密码`);
     }
 
-    function resetAccountPassword(id) {
-        if (!confirm(`确定要重置该账号密码为 "${DEFAULT_PASSWORD}" 吗？`)) return;
+    async function resetAccountPassword(id) {
         const account = accountData.find(a => a.id === id);
         if (account) {
-            account.password = DEFAULT_PASSWORD;
+            const resetPassword = generateTemporaryPassword();
+            if (!confirm('确定要重置该账号密码吗？')) return;
+            try {
+                await gatewayPasswordRequest('/api/auth/admin/reset-password', {
+                    studentId: account.studentId,
+                    newPassword: resetPassword
+                });
+                await setAccountPassword(account, resetPassword);
+            } catch (err) {
+                alert(err.message || '密码重置失败');
+                return;
+            }
             account.mustChangePwd = true;
             account.loginFailCount = 0;
             account.lockedUntil = null;
             saveAccountData();
-            alert(`已重置 "${account.realName}" 的密码为 ${DEFAULT_PASSWORD}，下次登录需修改密码`);
+            alert(`已重置 "${account.realName}" 的密码为 ${resetPassword}，下次登录需修改密码`);
         }
     }
 
@@ -2206,10 +2813,10 @@
         if (currentUser && currentUser.role !== 'admin') { alert('只有导师可以导入账号'); return; }
         
         const passwordInput = document.getElementById('accountImportPassword');
-        const password = passwordInput.value.trim() || DEFAULT_PASSWORD;
         
         let success = 0, failed = 0;
         const errors = [];
+        const createdCredentials = [];
         
         importPreviewData.forEach(item => {
             if (item.errorMsg && item.errorMsg !== '角色无效，将默认设为student') {
@@ -2225,6 +2832,7 @@
             }
             
             const newId = accountData.length > 0 ? Math.max(...accountData.map(a => a.id)) + 1 : 1;
+            const temporaryPassword = generateTemporaryPassword();
             accountData.push({
                 id: newId,
                 studentId: item.studentId,
@@ -2236,7 +2844,7 @@
                 phone: item.phone,
                 email: item.email,
                 status: 'active',
-                password: password,
+                password: temporaryPassword,
                 mustChangePwd: true,
                 firstLogin: true,
                 lastLogin: '',
@@ -2246,13 +2854,26 @@
                 lockedUntil: null,
                 avatar: ''
             });
+            createdCredentials.push({
+                studentId: item.studentId,
+                realName: item.realName,
+                password: temporaryPassword
+            });
             success++;
         });
         
         saveAccountData();
         
         const resultDiv = document.getElementById('accountImportResult');
-        let html = `<div style="padding:12px;background:#e8f5e9;border-radius:6px;color:#2e7d32;">导入完成：成功 ${success} 条，失败 ${failed} 条<br>所有账号初始密码为 <strong>${password}</strong>，首次登录需修改密码</div>`;
+        let html = `<div style="padding:12px;background:#e8f5e9;border-radius:6px;color:#2e7d32;">导入完成：成功 ${success} 条，失败 ${failed} 条。每个账号均使用独立随机临时密码，首次登录需修改。</div>`;
+        if (createdCredentials.length) {
+            html += '<div style="margin-top:8px;font-size:13px;max-height:240px;overflow:auto;">' +
+                createdCredentials.map(function(item) {
+                    return escHtml(item.realName) + '（' + escHtml(item.studentId) + '）：<strong>' +
+                        escHtml(item.password) + '</strong>';
+                }).join('<br>') +
+                '</div>';
+        }
         if (errors.length > 0) {
             html += '<div style="margin-top:8px;font-size:13px;color:#e53935;max-height:200px;overflow-y:auto;">失败详情：<br>' + errors.join('<br>') + '</div>';
         }
@@ -2264,26 +2885,44 @@
     }
 
     // ===== 7. 密码管理 =====
-    function handleChangePassword() {
+    async function handleChangePassword() {
         const oldPwd = document.getElementById('pwdOld').value;
         const newPwd = document.getElementById('pwdNew').value;
         const newPwdConfirm = document.getElementById('pwdNewConfirm').value;
         if (!oldPwd || !newPwd) { alert('请填写完整'); return; }
         var acc = findAccountRecordForUser(currentUser);
-        var checkPwd = (acc && acc.password) || (currentUser && currentUser.password);
-        if (checkPwd !== oldPwd) { alert('当前密码错误'); return; }
+        if (!acc) { alert('找不到账号记录'); return; }
         if (!validatePassword(newPwd)) { alert('新密码不符合复杂度要求（至少8位，含字母和数字）'); return; }
         if (newPwd !== newPwdConfirm) { alert('两次输入的新密码不一致'); return; }
-        if (!acc) { alert('找不到账号记录'); return; }
+        if (window.GatewayAuth && window.GatewayAuth.enabled) {
+            try {
+                await gatewayPasswordRequest('/api/auth/change-password', {
+                    currentPassword: oldPwd,
+                    newPassword: newPwd
+                });
+            } catch (gatewayPwdError) {
+                alert(gatewayPwdError.message || '服务端密码修改失败');
+                return;
+            }
+        } else if (!(await verifyAccountPassword(acc, oldPwd))) {
+            alert('当前密码错误');
+            return;
+        }
         var ts = Date.now();
-        acc.password = newPwd;
+        var passwordRecord;
+        try {
+            passwordRecord = await setAccountPassword(acc, newPwd);
+        } catch (err) {
+            alert(err.message || '密码安全存储失败');
+            return;
+        }
         acc.mustChangePwd = false;
         acc.firstLogin = false;
         acc.passwordUpdatedAt = ts;
         currentUser = acc;
         try {
             sessionStorage.setItem('pendingPasswordCommit', JSON.stringify({
-                userId: acc.id, studentId: acc.studentId || '', password: newPwd, ts: ts
+                userId: acc.id, studentId: acc.studentId || '', ...passwordRecord, ts: ts
             }));
         } catch (eS) {}
         saveAccountData();
@@ -2296,7 +2935,7 @@
         alert('密码修改成功！');
     }
 
-    function handleResetPassword() {
+    async function handleResetPassword() {
         if (currentUser && currentUser.role !== 'admin') { alert('只有导师可以重置密码'); return; }
         const userId = parseInt(document.getElementById('resetPwdUser').value);
         const newPwd = document.getElementById('resetPwdNew').value;
@@ -2304,7 +2943,16 @@
         if (!validatePassword(newPwd)) { alert('密码不符合复杂度要求'); return; }
         const account = accountData.find(a => a.id === userId);
         if (account) {
-            account.password = newPwd;
+            try {
+                await gatewayPasswordRequest('/api/auth/admin/reset-password', {
+                    studentId: account.studentId,
+                    newPassword: newPwd
+                });
+                await setAccountPassword(account, newPwd);
+            } catch (err) {
+                alert(err.message || '密码重置失败');
+                return;
+            }
             account.mustChangePwd = true;
             account.loginFailCount = 0;
             account.lockedUntil = null;
@@ -2635,10 +3283,10 @@
         const modalSelect = document.getElementById('taskOwner');
         
         if (filterSelect) {
-            filterSelect.innerHTML = '<option value="">全部负责人</option>' + allOwners.map(o => `<option value="${o}">${o}</option>`).join('');
+            filterSelect.innerHTML = '<option value="">全部负责人</option>' + allOwners.map(o => `<option value="${escHtml(o)}">${escHtml(o)}</option>`).join('');
         }
         if (modalSelect) {
-            modalSelect.innerHTML = allOwners.map(o => `<option value="${o}">${o}</option>`).join('');
+            modalSelect.innerHTML = allOwners.map(o => `<option value="${escHtml(o)}">${escHtml(o)}</option>`).join('');
         }
     }
 
@@ -2646,9 +3294,9 @@
         const teamMembers = teamMemberData || [];
         const member = teamMembers.find(m => m.name === ownerName);
         if (member && member.avatar) {
-            return `<img src="${member.avatar}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;" />`;
+            return `<img src="${escHtml(member.avatar)}" alt="" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;" />`;
         }
-        return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:${size * 0.4}px;display:flex;align-items:center;justify-content:center;">${ownerName.charAt(0)}</div>`;
+        return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:${size * 0.4}px;display:flex;align-items:center;justify-content:center;">${escHtml(String(ownerName || '').charAt(0))}</div>`;
     }
 
     function updateTaskStats() {
@@ -3032,12 +3680,12 @@
                     <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:bold;color:${priority.color};background:${priority.bgColor};border:1px solid ${priority.borderColor};">${priority.label}优先级</span>
                     <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};border:1px solid ${status.borderColor};">${status.label}</span>
                 </div>
-                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0;">${task.title}</h2>
+                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0;">${escHtml(task.title || '')}</h2>
             </div>
             
             <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
                 <h4 style="margin: 0 0 12px; color: #333; font-size: 14px;">任务描述</h4>
-                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px;">${task.description || '暂无描述'}</p>
+                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space:pre-wrap;">${escHtml(task.description || '暂无描述')}</p>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
@@ -3045,12 +3693,12 @@
                     <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">负责人</h4>
                     <div style="display:flex;align-items:center;gap:8px;">
                         ${getOwnerAvatarHtml(task.owner, 36)}
-                        <span style="font-size:14px;color:#333;">${task.owner}</span>
+                        <span style="font-size:14px;color:#333;">${escHtml(task.owner || '')}</span>
                     </div>
                 </div>
                 <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">
                     <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">截止时间</h4>
-                    <p style="margin: 0; color: ${new Date(task.deadline) < new Date() && task.status !== 'completed' ? '#ff4d4f' : '#666'}; font-size: 14px;">${task.deadline}</p>
+                    <p style="margin: 0; color: ${new Date(task.deadline) < new Date() && task.status !== 'completed' ? '#ff4d4f' : '#666'}; font-size: 14px;">${escHtml(task.deadline || '')}</p>
                 </div>
             </div>
             
@@ -6301,8 +6949,7 @@
         const setStatus = (msg, color) => { if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#888'; } };
         const raw = (agendaEl.value || '').trim();
         if (!raw) { setStatus('请先录入或上传议程内容', '#c0392b'); return; }
-        const apiKey = (typeof getApiKey === 'function' ? getApiKey() : '') ||
-            String(localStorage.getItem('openaiApiKey') || localStorage.getItem('aliyunApiKey') || '').trim();
+        const apiKey = getChatApiKey();
         if (!apiKey) { setStatus('未配置 AI 密钥，请到「系统设置」填写后重试', '#c0392b'); return; }
         const title = (document.getElementById('meetingTitle').value || '').trim();
         const messages = [
@@ -6499,34 +7146,34 @@
                     <span style="font-size: 24px;">📅</span>
                     <span style="display:inline-block;padding:4px 12px;border-radius:12px;font-size:12px;color:${status.color};background:${status.bgColor};">${status.label}</span>
                 </div>
-                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0;">${meeting.title}</h2>
+                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0;">${escHtml(meeting.title || '')}</h2>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
                 <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">
                     <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">📍 会议地点</h4>
-                    <p style="margin: 0; color: #666; font-size: 14px;">${meeting.location || '未设置'}</p>
+                    <p style="margin: 0; color: #666; font-size: 14px;">${escHtml(meeting.location || '未设置')}</p>
                 </div>
                 <div style="background: #f8f9fa; padding: 16px; border-radius: 8px;">
                     <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">🕐 会议时间</h4>
-                    <p style="margin: 0; color: #666; font-size: 14px;">${meeting.startTime} - ${meeting.endTime}</p>
+                    <p style="margin: 0; color: #666; font-size: 14px;">${escHtml(meeting.startTime || '')} - ${escHtml(meeting.endTime || '')}</p>
                 </div>
             </div>
             
             <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
                 <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">👥 参会人员</h4>
-                <p style="margin: 0; color: #666; font-size: 14px;">${meeting.participants || '未设置'}</p>
+                <p style="margin: 0; color: #666; font-size: 14px;">${escHtml(meeting.participants || '未设置')}</p>
             </div>
             
             <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
                 <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">📋 会议议程</h4>
-                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${meeting.agenda || '暂无'}</p>
+                <p style="margin: 0; color: #666; line-height: 1.8; font-size: 14px; white-space: pre-wrap;">${escHtml(meeting.agenda || '暂无')}</p>
             </div>
             
             ${meeting.notes ? `
             <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
                 <h4 style="margin: 0 0 8px; color: #333; font-size: 14px;">备注</h4>
-                <p style="margin: 0; color: #666; font-size: 14px;">${meeting.notes}</p>
+                <p style="margin: 0; color: #666; font-size: 14px;">${escHtml(meeting.notes)}</p>
             </div>
             ` : ''}
             
@@ -8568,6 +9215,7 @@
         const body = document.getElementById('modelDetailBody');
         const actions = document.getElementById('modelDetailActions');
         if (!drawer || !body) return;
+        const safeLogUrl = typeof safeExternalUrl === 'function' ? safeExternalUrl(model.logUrl) : '';
         statusEl.textContent = st.text + ' · ' + ev.text;
         statusEl.style.cssText = `display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;margin-bottom:6px;color:${st.color};background:${st.bg};border:1px solid ${st.border};`;
         titleEl.textContent = model.name;
@@ -8580,7 +9228,7 @@
                 <div><div style="font-size:12px;color:#9ca3af;">负责人</div><div>${escHtml(model.owner || '-')}</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">数据集</div><div>${escHtml(model.dataset || '-')}${model.datasetId ? ` · <a href="javascript:void(0)" onclick="closeModelDetailDrawer();showModule('dataset_library');setTimeout(function(){showDatasetDetail(${Number(model.datasetId)});},200)">查看数据集</a>` : ''}</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">指标 / 进度</div><div>${escHtml(model.metric || model.accuracy || '—')} · ${Number(model.progress) || 0}%</div></div>
-                <div><div style="font-size:12px;color:#9ca3af;">日志链接</div><div style="word-break:break-all;">${model.logUrl ? `<a href="${escHtml(model.logUrl)}" target="_blank" rel="noopener">${escHtml(model.logUrl)}</a>` : '未填写'}</div></div>
+                <div><div style="font-size:12px;color:#9ca3af;">日志链接</div><div style="word-break:break-all;">${safeLogUrl ? `<a href="${escHtml(safeLogUrl)}" target="_blank" rel="noopener noreferrer">${escHtml(model.logUrl)}</a>` : '未填写或链接无效'}</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">权重路径</div><div style="word-break:break-all;font-family:ui-monospace,Consolas,monospace;font-size:12px;">${escHtml(model.weightPath || '未填写')}</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">创建 / 更新</div><div>${escHtml(model.createdAt || '-')} / ${escHtml(model.updatedAt || '-')}</div></div>
                 <div><div style="font-size:12px;color:#9ca3af;">同步来源</div><div>${model.syncSource === 'mlops' ? 'MLOps 自动上报' : '人工登记'} ${model.lastReportAt ? '· 最近上报 ' + escHtml(model.lastReportAt) : ''}</div></div>
@@ -9393,6 +10041,13 @@
         return String(getAppConfig('ANNOTATION_STORAGE_BUCKET', 'annotations') || 'annotations').trim() || 'annotations';
     }
 
+    function annotationGatewayHeaders(extra) {
+        const headers = Object.assign({}, extra || {});
+        const token = String(getAppConfig('ANNOTATION_UPLOAD_TOKEN', '') || '').trim();
+        if (token) headers['X-Upload-Token'] = token;
+        return headers;
+    }
+
     function annotationCloudObjectPath(taskId, relPath) {
         const safeRel = String(relPath || '').replace(/\\/g, '/').replace(/^\/+/, '').split('/').filter(function(p) {
             return p && p !== '.' && p !== '..';
@@ -9928,7 +10583,11 @@
 
         // 1b) 经本机网关拉取云端分片包
         try {
-            const resp = await fetch('/api/annotation/fetch-cloud?taskId=' + encodeURIComponent(String(id)), { cache: 'no-store' });
+            const resp = await fetch('/api/annotation/fetch-cloud?taskId=' + encodeURIComponent(String(id)), {
+                cache: 'no-store',
+                credentials: 'same-origin',
+                headers: annotationGatewayHeaders()
+            });
             if (resp.ok) {
                 const ct = resp.headers.get('Content-Type') || '';
                 if (ct.indexOf('application/zip') !== -1) {
@@ -9987,7 +10646,11 @@
 
         // 3) 本机网关 ZIP
         try {
-            const resp = await fetch('/api/annotation/export?taskId=' + encodeURIComponent(String(id)), { cache: 'no-store' });
+            const resp = await fetch('/api/annotation/export?taskId=' + encodeURIComponent(String(id)), {
+                cache: 'no-store',
+                credentials: 'same-origin',
+                headers: annotationGatewayHeaders()
+            });
             if (resp.ok) {
                 const blob = await resp.blob();
                 const ct = resp.headers.get('Content-Type') || '';
@@ -10137,7 +10800,15 @@
         } catch (e) {}
         const el = document.getElementById('openaiApiKey');
         if (el && el.value) return String(el.value).trim();
-        return String(localStorage.getItem('openaiApiKey') || localStorage.getItem('aliyunApiKey') || '').trim();
+        var sessionKey = sessionStorage.getItem('openaiApiKey') || '';
+        if (sessionKey) return String(sessionKey).trim();
+        var legacyKey = localStorage.getItem('openaiApiKey') || localStorage.getItem('aliyunApiKey') || '';
+        if (legacyKey) {
+            sessionStorage.setItem('openaiApiKey', legacyKey);
+            localStorage.removeItem('openaiApiKey');
+            localStorage.removeItem('aliyunApiKey');
+        }
+        return String(legacyKey).trim();
     }
 
     function updateChatModeBadge() {
@@ -11618,7 +12289,7 @@
             var usedPct = Number(disk.usedPercent) || 0;
             var used = Math.max(0, total - free);
             var barColor = usedPct >= 90 ? '#e5484d' : (usedPct >= 75 ? '#f5a623' : '#7c3aed');
-            function g(o, k) { return (o && o[k]) || {}; }
+            var g = function(o, k) { return (o && o[k]) || {}; };
             body.innerHTML =
                 '<div style="font-size:12px;color:#6b7280;margin:0 0 8px;font-weight:600;">磁盘容量（服务端物理盘）</div>' +
                 '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;">' +
@@ -12350,5 +13021,3 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-
-    

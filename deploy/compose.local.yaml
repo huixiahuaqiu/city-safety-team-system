@@ -1,0 +1,24 @@
+services:
+  edge:
+    ports:
+      - 127.0.0.1:${CITYSAFE_HTTP_PORT:-8080}:8080
+
+  # Optional loopback-only MinIO console. Start it with:
+  #   docker compose ... --profile console up -d
+  minio-console:
+    image: ${NGINX_IMAGE:-nginx:1.27-alpine}
+    profiles:
+      - console
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001
+    volumes:
+      - ./nginx/container/minio-console.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+

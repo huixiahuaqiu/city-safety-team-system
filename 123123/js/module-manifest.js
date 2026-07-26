@@ -23,7 +23,7 @@ window.__MODULE_VERSIONS = {
   "my_projects": "dacd56c2b2",
   "news_management": "91dc4033b2",
   "notice_publish": "9fd5d555fe",
-  "openai": "9205b1d6e8",
+  "openai": "8f36800765",
   "operation_log": "8a48c43027",
   "paper_management": "d3ebe35868",
   "patent_management": "453662c190",
@@ -37,4 +37,30 @@ window.__MODULE_VERSIONS = {
   "task_management": "da5e298fb8",
   "trend": "ccb615b1a7",
   "weekly_report": "43316442a7"
+};
+
+// js/*.js 的内容哈希，供按模块加载的脚本做精准缓存控制。
+window.__ASSET_VERSIONS = {
+  "js/achievements-modules.js": "7e1d17a162",
+  "js/app-core.js": "eb0882502e",
+  "js/app-legacy-a.js": "7a71092496",
+  "js/app-legacy-b.js": "5fb8fc0fcc",
+  "js/application-center.js": "a8046caf79",
+  "js/competition-management.js": "89100d10bf",
+  "js/dataset-library.js": "1c4915d013",
+  "js/document-analysis.js": "a63bba8f28",
+  "js/excel-tools.js": "a43a7ef85a",
+  "js/holiday-leave.js": "a1b8b224c2",
+  "js/home-dashboard-p3.js": "4edbecf70d",
+  "js/literature-compare.js": "f1050efd9a",
+  "js/literature-library.js": "cd9034ea0a",
+  "js/module-loader.js": "5c5afae487",
+  "js/my-achievements.js": "35dfc0eecb",
+  "js/my-projects.js": "c06536a6c7",
+  "js/news-management.js": "73df64f9b8",
+  "js/notice-enhance.js": "2131737780",
+  "js/portal-public.js": "17f4556571",
+  "js/project-report.js": "d01933794a",
+  "js/shared-file-library.js": "9cc30ee276",
+  "js/vendor-lazy.js": "960c38a41e"
 };

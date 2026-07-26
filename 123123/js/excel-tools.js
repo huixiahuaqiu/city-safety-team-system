@@ -2635,7 +2635,7 @@ ${outputRequirements}
                 }
                 
                 // 调用通义千问 API（密钥统一从「OpenAI入口」配置读取，禁止硬编码）
-                const apiKey = (typeof getChatApiKey === 'function' ? getChatApiKey() : (localStorage.getItem('openaiApiKey') || ''));
+                const apiKey = (typeof getChatApiKey === 'function' ? getChatApiKey() : (sessionStorage.getItem('openaiApiKey') || ''));
                 if (!apiKey) {
                     alert('未配置百炼 API 密钥，请先到「智能工具 → OpenAI入口」保存密钥后再试。');
                     return;

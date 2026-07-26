@@ -781,7 +781,7 @@
     };
 
     async function callLitAliyun(messages, maxTokens) {
-        var apiKey = typeof global.getChatApiKey === 'function' ? global.getChatApiKey() : (localStorage.getItem('openaiApiKey') || '');
+        var apiKey = typeof global.getChatApiKey === 'function' ? global.getChatApiKey() : (sessionStorage.getItem('openaiApiKey') || '');
         if (!apiKey) throw new Error('未配置百炼 API 密钥，请到「OpenAI入口」保存');
         var endpoint = (typeof global.API_PROXY !== 'undefined' && global.API_PROXY ? String(global.API_PROXY).replace(/\/$/, '') : '') + '/api/aliyun';
         var resp = await fetch(endpoint, {

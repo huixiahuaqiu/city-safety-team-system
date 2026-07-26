@@ -1,0 +1,4 @@
+vendor/
+js/module-manifest.js
+index.html.bak-*
+node_modules/

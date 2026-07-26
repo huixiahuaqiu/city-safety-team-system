@@ -922,24 +922,20 @@
         } catch (err) {
             console.warn('safeSetNewsEditorHtml fallback', err);
         }
-        try {
-            var toolbarEl = document.getElementById('toolbar_' + newsEditorId);
-            var editorEl = document.getElementById(newsEditorId);
-            try { if (newsEditorInstance.destroy) newsEditorInstance.destroy(); } catch (e6) {}
-            newsEditorInstance = null;
-            if (toolbarEl) {
-                toolbarEl.innerHTML = '';
-                toolbarEl.dataset.toolbarFix = '';
-            }
-            if (editorEl) {
-                editorEl.innerHTML = '';
-                editorEl.dataset.focusFix = '';
-            }
-            initNewsEditor(newsEditorId, newsEditorModalId, clean);
-            markNewsModalDirty();
-        } catch (err2) {
-            throw err2;
+        var toolbarEl = document.getElementById('toolbar_' + newsEditorId);
+        var editorEl = document.getElementById(newsEditorId);
+        try { if (newsEditorInstance.destroy) newsEditorInstance.destroy(); } catch (e6) {}
+        newsEditorInstance = null;
+        if (toolbarEl) {
+            toolbarEl.innerHTML = '';
+            toolbarEl.dataset.toolbarFix = '';
         }
+        if (editorEl) {
+            editorEl.innerHTML = '';
+            editorEl.dataset.focusFix = '';
+        }
+        initNewsEditor(newsEditorId, newsEditorModalId, clean);
+        markNewsModalDirty();
     }
 
     function portNewsEditorPanels() {
@@ -1584,7 +1580,7 @@
         try {
             apiKey = typeof global.getChatApiKey === 'function'
                 ? global.getChatApiKey()
-                : (localStorage.getItem('openaiApiKey') || localStorage.getItem('aliyunApiKey') || '');
+                : (sessionStorage.getItem('openaiApiKey') || sessionStorage.getItem('aliyunApiKey') || '');
         } catch (e) {}
         apiKey = String(apiKey || '').trim();
         if (!apiKey) throw new Error('未配置百炼密钥，请到「智能工具 → OpenAI入口」保存后再用');

@@ -122,6 +122,15 @@ def build_module_manifest(root_dir: str, check_only: bool = False) -> bool:
         mid = name[:-len(".html")]
         entries[mid] = content_hash(os.path.join(modules_dir, name))
 
+    asset_entries = {}
+    js_dir = os.path.join(root_dir, "js")
+    if os.path.isdir(js_dir):
+        for name in sorted(os.listdir(js_dir)):
+            if not name.endswith(".js") or name == os.path.basename(MANIFEST_REL):
+                continue
+            rel = "js/" + name
+            asset_entries[rel] = content_hash(os.path.join(js_dir, name))
+
     lines = [
         "// 本文件由 build_assets.py 自动生成，请勿手动修改。",
         "// modules/*.html 的内容哈希，供 module-loader.js 做精准缓存控制。",
@@ -132,6 +141,16 @@ def build_module_manifest(root_dir: str, check_only: bool = False) -> bool:
         comma = "," if i < len(items) - 1 else ""
         lines.append(f'  {json.dumps(mid, ensure_ascii=False)}: "{digest}"{comma}')
     lines.append("};")
+    lines.extend([
+        "",
+        "// js/*.js 的内容哈希，供按模块加载的脚本做精准缓存控制。",
+        "window.__ASSET_VERSIONS = {",
+    ])
+    assets = list(asset_entries.items())
+    for i, (rel, digest) in enumerate(assets):
+        comma = "," if i < len(assets) - 1 else ""
+        lines.append(f'  {json.dumps(rel, ensure_ascii=False)}: "{digest}"{comma}')
+    lines.append("};")
     new_text = "\n".join(lines) + "\n"
 
     manifest_path = os.path.join(root_dir, MANIFEST_REL)
@@ -141,17 +160,17 @@ def build_module_manifest(root_dir: str, check_only: bool = False) -> bool:
             old_text = f.read()
 
     if new_text == old_text:
-        print(f"[build_assets] module-manifest.js 无需更新（{len(entries)} 个模块）")
+        print(f"[build_assets] module-manifest.js 无需更新（{len(entries)} 个模块 / {len(asset_entries)} 个脚本）")
         return False
 
     if check_only:
-        print(f"[build_assets] 需要更新 module-manifest.js（{len(entries)} 个模块）")
+        print(f"[build_assets] 需要更新 module-manifest.js（{len(entries)} 个模块 / {len(asset_entries)} 个脚本）")
         return True
 
     os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
     with open(manifest_path, "w", encoding="utf-8", newline="") as f:
         f.write(new_text)
-    print(f"[build_assets] 已更新 module-manifest.js（{len(entries)} 个模块）")
+    print(f"[build_assets] 已更新 module-manifest.js（{len(entries)} 个模块 / {len(asset_entries)} 个脚本）")
     return True
 
 

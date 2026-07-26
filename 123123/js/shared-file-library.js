@@ -109,6 +109,17 @@
         return h;
     }
 
+    function triggerBlobDownload(blob, fileName) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || 'download';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+
     async function probeSharedServer() {
         try {
             var r = await fetch('/api/shared-file/health');
@@ -238,35 +249,32 @@
         // 优先服务端
         if (file.serverFileId) {
             try {
-                var a = document.createElement('a');
-                a.href = '/api/shared-file/download?fileId=' + encodeURIComponent(file.serverFileId);
-                a.download = file.name;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
+                var response = await fetch(
+                    '/api/shared-file/download?fileId=' + encodeURIComponent(file.serverFileId),
+                    { headers: authHeaders(), credentials: 'same-origin' }
+                );
+                if (!response.ok) throw new Error('下载失败 HTTP ' + response.status);
+                triggerBlobDownload(await response.blob(), file.name);
                 file.downloadCount = (file.downloadCount || 0) + 1;
                 saveSharedMeta();
-                pushDlLog(id, { user: who, time: when, mode: '服务端直链' });
+                pushDlLog(id, { user: who, time: when, mode: '服务端鉴权下载' });
                 if (typeof global.recordOperationLog === 'function') {
                     global.recordOperationLog('资源中心', '下载', '下载文件：' + file.name, { fileName: file.name }, { success: true }, 1, '', 0);
                 }
                 if (typeof global.renderFileList === 'function') global.renderFileList();
                 return;
-            } catch (e) { /* fallthrough */ }
+            } catch (e) {
+                console.warn('[shared-file] server download failed', e);
+                alert('服务端文件下载失败，请检查登录状态或下载令牌配置');
+                return;
+            }
         }
 
         if (_origDownload) await _origDownload(id);
         else if (typeof global.getSharedFileBlob === 'function') {
             var blob = await global.getSharedFileBlob(id);
             if (!blob) { alert('该文件没有保存完整内容'); return; }
-            var url = URL.createObjectURL(blob);
-            var a2 = document.createElement('a');
-            a2.href = url;
-            a2.download = file.name;
-            document.body.appendChild(a2);
-            a2.click();
-            a2.remove();
-            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+            triggerBlobDownload(blob, file.name);
             file.downloadCount = (file.downloadCount || 0) + 1;
             saveSharedMeta();
             if (typeof global.renderFileList === 'function') global.renderFileList();

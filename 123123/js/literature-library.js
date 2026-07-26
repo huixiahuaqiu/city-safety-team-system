@@ -49,6 +49,46 @@
         return window.escapeHtml(s);
     }
 
+    function safePositiveInt(value) {
+        var n = Number(value);
+        return Number.isSafeInteger(n) && n > 0 ? n : 0;
+    }
+
+    function safeNonNegativeInt(value) {
+        var n = Number(value);
+        return Number.isSafeInteger(n) && n >= 0 ? n : 0;
+    }
+
+    function inlineStringArg(value) {
+        return esc(JSON.stringify(String(value == null ? '' : value)));
+    }
+
+    function safeResourceUrl(value, allowBlob) {
+        var raw = String(value || '').trim();
+        if (!raw) return '';
+        var compact = '';
+        for (var i = 0; i < raw.length; i++) {
+            var code = raw.charCodeAt(i);
+            if (code > 32 && code !== 127) compact += raw.charAt(i);
+        }
+        compact = compact.toLowerCase();
+        if (/^(javascript|data|vbscript):/.test(compact)) return '';
+        if (allowBlob && compact.indexOf('blob:') === 0) return raw;
+        if (typeof global.safeExternalUrl === 'function') {
+            return global.safeExternalUrl(raw);
+        }
+        var scheme = compact.match(/^([a-z][a-z0-9+.-]*):/);
+        if (scheme && scheme[1] !== 'http' && scheme[1] !== 'https') {
+            return '';
+        }
+        return raw;
+    }
+
+    function safeReadStatus(value) {
+        value = String(value || '');
+        return value === 'reading' || value === 'read' ? value : 'unread';
+    }
+
     function currentOwner() {
         var u = global.currentUser;
         return (u && (u.realName || u.username)) || '未知';
@@ -90,7 +130,7 @@
         var litType = String(r.litType || r.type || 'journal');
         if (!LIT_TYPE_OPTIONS.some(function (o) { return o.key === litType; })) litType = 'other';
         return {
-            id: Number(r.id) || 0,
+            id: safePositiveInt(r.id),
             title: String(r.title || '').trim(),
             author: String(r.author || r.authors || '').trim(),
             journal: String(r.journal || r.venue || '').trim(),
@@ -101,22 +141,22 @@
             uploadTime: String(r.uploadTime || r.createdAt || new Date().toLocaleDateString('zh-CN')),
             doi: String(r.doi || '').trim(),
             summary: String(r.summary || r.abstract || r.description || '').trim(),
-            citations: Number(r.citations || r.citationCount || 0) || 0,
+            citations: safeNonNegativeInt(r.citations || r.citationCount || 0),
             litType: litType,
             paperUrl: String(r.paperUrl || r.url || '').trim(),
             pdfUrl: String(r.pdfUrl || r.pdf || '').trim(),
             pdfName: String(r.pdfName || '').trim(),
-            sharedFileId: r.sharedFileId != null ? Number(r.sharedFileId) : null,
-            projectIds: Array.isArray(r.projectIds) ? r.projectIds.map(Number).filter(Boolean) : [],
+            sharedFileId: safePositiveInt(r.sharedFileId) || null,
+            projectIds: Array.isArray(r.projectIds) ? r.projectIds.map(safePositiveInt).filter(Boolean) : [],
             projectNames: Array.isArray(r.projectNames) ? r.projectNames : [],
             favorites: Array.isArray(r.favorites) ? r.favorites.map(String) : [],
             groupIds: Array.isArray(r.groupIds) ? r.groupIds.map(String) : [],
-            readStatus: r.readStatus || 'unread',
+            readStatus: safeReadStatus(r.readStatus),
             notes: String(r.notes || '').trim(),
             isCore: !!(r.isCore || /SCI|CCF\s*[AB]|一区|Top/i.test(String(r.journal || '') + ' ' + tags.join(' '))),
-            downloadCount: Number(r.downloadCount || 0) || 0,
+            downloadCount: safeNonNegativeInt(r.downloadCount || 0),
             source: String(r.source || 'manual'),
-            compareId: r.compareId != null ? Number(r.compareId) : null
+            compareId: safePositiveInt(r.compareId) || null
         };
     }
 
@@ -207,7 +247,7 @@
             return normalizeLiteratureRecord(Object.assign({}, prev, n, {
                 favorites: (n.favorites && n.favorites.length) ? n.favorites : prev.favorites,
                 notes: n.notes || prev.notes,
-                downloadCount: Math.max(Number(n.downloadCount || 0), Number(prev.downloadCount || 0))
+                downloadCount: Math.max(safeNonNegativeInt(n.downloadCount), safeNonNegativeInt(prev.downloadCount))
             }));
         });
         Object.keys(localMap).forEach(function (id) {
@@ -342,10 +382,10 @@
             var quick = wrap.querySelector('.lit-tag-quick');
             if (quick) {
                 var chips = tags.slice(0, 20).map(function (t) {
-                    return '<button type="button" class="lit-tag-quick-chip" onclick="appendLitTagToInput(' + JSON.stringify(inputId) + ',' + JSON.stringify(t) + ')">' + esc(t) + '</button>';
+                    return '<button type="button" class="lit-tag-quick-chip" onclick="appendLitTagToInput(' + inlineStringArg(inputId) + ',' + inlineStringArg(t) + ')">' + esc(t) + '</button>';
                 }).join('');
                 quick.innerHTML = '<span style="font-size:11px;color:#9ca3af;margin-right:4px;line-height:22px;">快捷：</span>' + chips +
-                    '<button type="button" class="lit-tag-quick-chip lit-tag-quick-add" onclick="promptAddLitTagToInput(' + JSON.stringify(inputId) + ')">+ 新建</button>';
+                    '<button type="button" class="lit-tag-quick-chip lit-tag-quick-add" onclick="promptAddLitTagToInput(' + inlineStringArg(inputId) + ')">+ 新建</button>';
             }
         });
     }
@@ -417,7 +457,7 @@
         var groups = loadLiteratureGroups();
         var html = '<button type="button" class="lit-tag-chip' + (!litState.groupFilter ? ' active' : '') + '" onclick="setLitGroupFilter(\'\')">全部分组</button>';
         html += groups.map(function (g) {
-            return '<button type="button" class="lit-tag-chip' + (litState.groupFilter === g.id ? ' active' : '') + '" onclick="setLitGroupFilter(' + JSON.stringify(g.id) + ')">' + esc(g.name) + '</button>';
+            return '<button type="button" class="lit-tag-chip' + (litState.groupFilter === g.id ? ' active' : '') + '" onclick="setLitGroupFilter(' + inlineStringArg(g.id) + ')">' + esc(g.name) + '</button>';
         }).join('');
         html += '<button type="button" class="lit-tag-chip lit-tag-add" onclick="promptCreateLiteratureGroup()">+ 新建分组</button>';
         box.innerHTML = html;
@@ -534,6 +574,8 @@
     }
 
     function toggleLitSelect(id, checked) {
+        id = safePositiveInt(id);
+        if (!id) return;
         if (checked) litState.selected[String(id)] = true;
         else delete litState.selected[String(id)];
         updateLitBatchBar();
@@ -541,14 +583,16 @@
 
     function toggleSelectAllLit(checked) {
         getFilteredLiterature().forEach(function (l) {
-            if (checked) litState.selected[String(l.id)] = true;
-            else delete litState.selected[String(l.id)];
+            var itemId = safePositiveInt(l && l.id);
+            if (!itemId) return;
+            if (checked) litState.selected[String(itemId)] = true;
+            else delete litState.selected[String(itemId)];
         });
         renderLiteratureList();
     }
 
     function getSelectedLitIds() {
-        return Object.keys(litState.selected).map(Number).filter(Boolean);
+        return Object.keys(litState.selected).map(safePositiveInt).filter(Boolean);
     }
 
     function updateLitBatchBar() {
@@ -560,6 +604,8 @@
     }
 
     function toggleLiteratureFavorite(id) {
+        id = safePositiveInt(id);
+        if (!id) return;
         var key = String(id);
         if (litState.favorites[key]) delete litState.favorites[key];
         else litState.favorites[key] = true;
@@ -575,7 +621,7 @@
         var html = '<button type="button" class="lit-tag-chip' + (allActive ? ' active' : '') + '" onclick="setLitTagFilter(\'__all__\')">全部</button>';
         html += tags.map(function (t) {
             var active = litState.tagFilter === t;
-            return '<button type="button" class="lit-tag-chip' + (active ? ' active' : '') + '" onclick="setLitTagFilter(' + JSON.stringify(t) + ')">' + esc(t) + '</button>';
+            return '<button type="button" class="lit-tag-chip' + (active ? ' active' : '') + '" onclick="setLitTagFilter(' + inlineStringArg(t) + ')">' + esc(t) + '</button>';
         }).join('');
         html += '<button type="button" class="lit-tag-chip lit-tag-add" onclick="toggleLitTagAddPanel()">+ 添加</button>';
         html += '<span id="litTagAddPanel" class="lit-tag-add-panel" style="display:' + (litTagAddOpen ? 'inline-flex' : 'none') + ';">' +
@@ -587,6 +633,60 @@
             var inp = document.getElementById('litTagAddInput');
             if (inp) inp.focus();
         }
+    }
+
+    function renderLiteratureCardHtml(l) {
+        l = l || {};
+        var itemId = safePositiveInt(l.id);
+        if (!itemId) return '';
+        var fav = isFavorite(itemId);
+        var checked = !!litState.selected[String(itemId)];
+        var tagList = Array.isArray(l.tagList) ? l.tagList : parseTags(l.tags);
+        var tags = tagList.map(function (t) {
+            return '<span class="lit-mini-tag">' + esc(String(t || '')) + '</span>';
+        }).join('');
+        var pdfUrl = safeResourceUrl(l.pdfUrl, false);
+        var paperUrl = safeResourceUrl(l.paperUrl, false);
+        var sharedFileId = safePositiveInt(l.sharedFileId);
+        var pdfBadge = (pdfUrl || sharedFileId) ? '<span class="lit-pdf-badge">📄 有PDF</span>' : '';
+        var coreBadge = l.isCore ? '<span class="lit-core-badge">核心</span>' : '';
+        var readMap = { unread: '未读', reading: '在读', read: '已读' };
+        var readStatus = safeReadStatus(l.readStatus);
+        var readBadge = '<span class="lit-read-badge lit-read-' + readStatus + '">' + readMap[readStatus] + '</span>';
+        var citations = safeNonNegativeInt(l.citations);
+        var downloadCount = safeNonNegativeInt(l.downloadCount);
+        return (
+            '<div class="lit-card' + (checked ? ' selected' : '') + '">' +
+            '<div class="lit-card-main">' +
+            '<label class="lit-check"><input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="toggleLitSelect(' + itemId + ', this.checked)"></label>' +
+            '<button type="button" class="lit-fav-btn' + (fav ? ' on' : '') + '" title="收藏" onclick="toggleLiteratureFavorite(' + itemId + ')">' + (fav ? '★' : '☆') + '</button>' +
+            '<div class="lit-card-body">' +
+            '<div class="lit-title-row">' +
+            '<a href="javascript:void(0)" class="lit-title" onclick="showLibraryLiteratureDetail(' + itemId + ')" title="' + esc(String(l.title || '')) + '">' + esc(String(l.title || '')) + '</a>' +
+            coreBadge + pdfBadge + readBadge +
+            '</div>' +
+            '<div class="lit-meta">' + esc(String(l.author || '未知作者')) + ' · ' + esc(String(l.journal || '未填期刊')) + ' · ' + esc(String(l.year || '—')) +
+            (citations ? (' · 引用 ' + citations) : '') +
+            ' · ' + esc(litTypeLabel(l.litType)) +
+            '</div>' +
+            '<div class="lit-tags">' + tags + '</div>' +
+            '<div class="lit-foot">上传者：' + esc(String(l.uploader || '')) + ' | ' + esc(String(l.uploadTime || '')) +
+            (downloadCount ? (' | 下载 ' + downloadCount) : '') +
+            (l.doi ? (' | DOI ' + esc(String(l.doi))) : '') +
+            '</div>' +
+            '</div></div>' +
+            '<div class="lit-actions">' +
+            '<button type="button" class="btn btn-secondary lit-act" onclick="showLibraryLiteratureDetail(' + itemId + ')">查看</button>' +
+            (canDownloadPdf() && (pdfUrl || paperUrl || sharedFileId)
+                ? '<button type="button" class="btn lit-act" onclick="downloadLibraryLiterature(' + itemId + ')">下载</button>'
+                : '') +
+            '<button type="button" class="btn lit-act" style="background:#0d9488;" onclick="addLibraryLitToCompare(' + itemId + ')">加入对比</button>' +
+            '<button type="button" class="btn btn-secondary lit-act" onclick="insertLibraryLitToWeekly(' + itemId + ')">加周报</button>' +
+            (canEditLibraryItem(l)
+                ? '<button type="button" class="lit-act danger" onclick="deleteLibraryLiterature(' + itemId + ')">删除</button>'
+                : '') +
+            '</div></div>'
+        );
     }
 
     function renderLiteratureList() {
@@ -612,49 +712,7 @@
         }
         emptyState.style.display = 'none';
 
-        var html = pageItems.map(function (l) {
-            var fav = isFavorite(l.id);
-            var checked = !!litState.selected[String(l.id)];
-            var tags = (l.tagList || parseTags(l.tags)).map(function (t) {
-                return '<span class="lit-mini-tag">' + esc(t) + '</span>';
-            }).join('');
-            var pdfBadge = (l.pdfUrl || l.sharedFileId) ? '<span class="lit-pdf-badge">📄 有PDF</span>' : '';
-            var coreBadge = l.isCore ? '<span class="lit-core-badge">核心</span>' : '';
-            var readMap = { unread: '未读', reading: '在读', read: '已读' };
-            var readBadge = '<span class="lit-read-badge lit-read-' + esc(l.readStatus || 'unread') + '">' + (readMap[l.readStatus] || '未读') + '</span>';
-            return (
-                '<div class="lit-card' + (checked ? ' selected' : '') + '">' +
-                '<div class="lit-card-main">' +
-                '<label class="lit-check"><input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="toggleLitSelect(' + l.id + ', this.checked)"></label>' +
-                '<button type="button" class="lit-fav-btn' + (fav ? ' on' : '') + '" title="收藏" onclick="toggleLiteratureFavorite(' + l.id + ')">' + (fav ? '★' : '☆') + '</button>' +
-                '<div class="lit-card-body">' +
-                '<div class="lit-title-row">' +
-                '<a href="javascript:void(0)" class="lit-title" onclick="showLibraryLiteratureDetail(' + l.id + ')" title="' + esc(l.title) + '">' + esc(l.title) + '</a>' +
-                coreBadge + pdfBadge + readBadge +
-                '</div>' +
-                '<div class="lit-meta">' + esc(l.author || '未知作者') + ' · ' + esc(l.journal || '未填期刊') + ' · ' + esc(l.year || '—') +
-                (l.citations ? (' · 引用 ' + l.citations) : '') +
-                ' · ' + esc(litTypeLabel(l.litType)) +
-                '</div>' +
-                '<div class="lit-tags">' + tags + '</div>' +
-                '<div class="lit-foot">上传者：' + esc(l.uploader) + ' | ' + esc(l.uploadTime) +
-                (l.downloadCount ? (' | 下载 ' + l.downloadCount) : '') +
-                (l.doi ? (' | DOI ' + esc(l.doi)) : '') +
-                '</div>' +
-                '</div></div>' +
-                '<div class="lit-actions">' +
-                '<button type="button" class="btn btn-secondary lit-act" onclick="showLibraryLiteratureDetail(' + l.id + ')">查看</button>' +
-                (canDownloadPdf() && (l.pdfUrl || l.paperUrl || l.sharedFileId)
-                    ? '<button type="button" class="btn lit-act" onclick="downloadLibraryLiterature(' + l.id + ')">下载</button>'
-                    : '') +
-                '<button type="button" class="btn lit-act" style="background:#0d9488;" onclick="addLibraryLitToCompare(' + l.id + ')">加入对比</button>' +
-                '<button type="button" class="btn btn-secondary lit-act" onclick="insertLibraryLitToWeekly(' + l.id + ')">加周报</button>' +
-                (canEditLibraryItem(l)
-                    ? '<button type="button" class="lit-act danger" onclick="deleteLibraryLiterature(' + l.id + ')">删除</button>'
-                    : '') +
-                '</div></div>'
-            );
-        }).join('');
+        var html = pageItems.map(renderLiteratureCardHtml).join('');
 
         html += '<div class="lit-pager">';
         if (litState.page > 1) html += '<button type="button" onclick="setLiteraturePage(' + (litState.page - 1) + ')">上一页</button>';
@@ -667,7 +725,7 @@
     }
 
     function setLiteraturePage(p) {
-        litState.page = p;
+        litState.page = safePositiveInt(p) || 1;
         renderLiteratureList();
     }
 
@@ -908,7 +966,7 @@
         var tags = getAllTags();
         var datalistId = id + '_datalist';
         var chips = tags.slice(0, 20).map(function (t) {
-            return '<button type="button" class="lit-tag-quick-chip" onclick="appendLitTagToInput(' + JSON.stringify(id) + ',' + JSON.stringify(t) + ')">' + esc(t) + '</button>';
+            return '<button type="button" class="lit-tag-quick-chip" onclick="appendLitTagToInput(' + inlineStringArg(id) + ',' + inlineStringArg(t) + ')">' + esc(t) + '</button>';
         }).join('');
         return '<div style="margin-bottom:12px;" class="lit-tags-field" data-tags-input="' + id + '">' +
             '<label style="display:block;margin-bottom:5px;font-size:13px;">' + label + '</label>' +
@@ -918,7 +976,7 @@
             }).join('') + '</datalist>' +
             '<div class="lit-tag-quick" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">' +
             '<span style="font-size:11px;color:#9ca3af;margin-right:2px;">快捷：</span>' + chips +
-            '<button type="button" class="lit-tag-quick-chip lit-tag-quick-add" onclick="promptAddLitTagToInput(' + JSON.stringify(id) + ')">+ 新建</button>' +
+            '<button type="button" class="lit-tag-quick-chip lit-tag-quick-add" onclick="promptAddLitTagToInput(' + inlineStringArg(id) + ')">+ 新建</button>' +
             '</div></div>';
     }
 
@@ -931,8 +989,10 @@
                     try { arr = JSON.parse(localStorage.getItem(pair[0]) || '[]'); } catch (e) { arr = []; }
                 }
                 (arr || []).forEach(function (p) {
-                    var name = p.name || p.title || p.projectName || ('项目' + p.id);
-                    opts.push('<option value="' + pair[0] + ':' + p.id + '">[' + pair[1] + '] ' + esc(name) + '</option>');
+                    var projectId = safePositiveInt(p && p.id);
+                    if (!projectId) return;
+                    var name = p.name || p.title || p.projectName || ('项目' + projectId);
+                    opts.push('<option value="' + esc(pair[0] + ':' + projectId) + '">[' + pair[1] + '] ' + esc(String(name)) + '</option>');
                 });
             });
         } catch (e) {}
@@ -1062,9 +1122,11 @@
         box.innerHTML = '<div style="font-size:12px;color:#888;margin-bottom:4px;">最近查询</div>' +
             '<div style="display:flex;flex-wrap:wrap;gap:6px;">' +
             list.map(function (h) {
+                var doi = String((h && h.doi) || '');
+                var title = String((h && (h.title || h.doi)) || '');
                 return '<button type="button" class="btn btn-secondary" style="padding:3px 8px;font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" ' +
-                    'title="' + esc(h.doi) + '" onclick="fillDoiFromHistory(\'' + modalId + '\',\'' + esc(h.doi).replace(/'/g, '') + '\')">' +
-                    esc((h.title || h.doi).slice(0, 28)) + '</button>';
+                    'title="' + esc(doi) + '" onclick="fillDoiFromHistory(' + inlineStringArg(modalId) + ',' + inlineStringArg(doi) + ')">' +
+                    esc(title.slice(0, 28)) + '</button>';
             }).join('') + '</div>';
     }
 
@@ -1453,6 +1515,9 @@
         var box = document.getElementById(modalId + '_doiPreview');
         if (!box || !meta) return;
         var dup = findLibraryDuplicate(meta);
+        var dupId = safePositiveInt(dup && dup.id);
+        var citations = safeNonNegativeInt(meta.citations);
+        var summary = String(meta.summary || '');
         box.style.display = 'block';
         box.innerHTML =
             '<div style="font-weight:700;color:#166534;margin-bottom:8px;">✓ 元数据提取成功' + (dup ? ' · <span style="color:#b45309;">库中已有相似文献</span>' : '') + '</div>' +
@@ -1460,13 +1525,13 @@
             '<div style="font-size:12px;color:#4b5563;line-height:1.7;">' +
             '<div>作者：' + esc(meta.author || '—') + '</div>' +
             '<div>期刊/会议：' + esc(meta.journal || '—') + ' · ' + esc(meta.year || '—') + '</div>' +
-            '<div>DOI：' + esc(meta.doi || '—') + (meta.citations ? (' · 引用 ' + meta.citations) : '') + '</div>' +
-            (meta.summary ? ('<div style="margin-top:6px;">摘要：' + esc(meta.summary.slice(0, 180)) + (meta.summary.length > 180 ? '…' : '') + '</div>') : '') +
+            '<div>DOI：' + esc(meta.doi || '—') + (citations ? (' · 引用 ' + citations) : '') + '</div>' +
+            (summary ? ('<div style="margin-top:6px;">摘要：' + esc(summary.slice(0, 180)) + (summary.length > 180 ? '…' : '') + '</div>') : '') +
             '</div>' +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
-            '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="switchLitLibModalTab(\'' + modalId + '\',\'manual\')">去手动表单微调</button>' +
-            '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="copyDoiAsBibtex(\'' + modalId + '\')">复制 BibTeX</button>' +
-            (dup ? ('<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="showLibraryLiteratureDetail(' + dup.id + ')">查看已有文献</button>') : '') +
+            '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="switchLitLibModalTab(' + inlineStringArg(modalId) + ',\'manual\')">去手动表单微调</button>' +
+            '<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="copyDoiAsBibtex(' + inlineStringArg(modalId) + ')">复制 BibTeX</button>' +
+            (dupId ? ('<button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="showLibraryLiteratureDetail(' + dupId + ')">查看已有文献</button>') : '') +
             '</div>';
         box.dataset.meta = JSON.stringify(meta);
         updateLitModalFooter(modalId, 'doi');
@@ -1763,7 +1828,7 @@
         var projectNames = [];
         if (proj) {
             var parts = proj.split(':');
-            projectIds = [Number(parts[1]) || 0].filter(Boolean);
+            projectIds = [safePositiveInt(parts[1])].filter(Boolean);
             var sel = document.getElementById('libLitBibProject');
             projectNames = sel && sel.selectedOptions[0] ? [sel.selectedOptions[0].text.replace(/^\[[^\]]+\]\s*/, '')] : [];
         }
@@ -1838,7 +1903,7 @@
             doi: String((document.getElementById('libLitDoi') || {}).value || '').trim(),
             summary: String((document.getElementById('libLitSummary') || {}).value || '').trim(),
             tags: String((document.getElementById('libLitTags') || {}).value || '').trim(),
-            citations: Number((document.getElementById('libLitCite') || {}).value || 0) || 0,
+            citations: safeNonNegativeInt((document.getElementById('libLitCite') || {}).value || 0),
             litType: (document.getElementById('libLitType') || {}).value || 'journal',
             paperUrl: String((document.getElementById('libLitUrl') || {}).value || '').trim(),
             isCore: !!(document.getElementById('libLitCore') || {}).checked,
@@ -1847,7 +1912,7 @@
         var proj = String((document.getElementById('libLitProject') || {}).value || '');
         if (proj) {
             var parts = proj.split(':');
-            payload.projectIds = [Number(parts[1]) || 0].filter(Boolean);
+            payload.projectIds = [safePositiveInt(parts[1])].filter(Boolean);
             var sel = document.getElementById('libLitProject');
             payload.projectNames = sel && sel.selectedOptions[0] ? [sel.selectedOptions[0].text.replace(/^\[[^\]]+\]\s*/, '')] : [];
         }
@@ -1914,7 +1979,8 @@
     function persistLibraryItem(raw, options) {
         options = options || {};
         var list = getLiteratureData();
-        var newId = list.length ? Math.max.apply(null, list.map(function (l) { return Number(l.id) || 0; })) + 1 : 1;
+        var newId = list.length ? Math.max.apply(null, list.map(function (l) { return safePositiveInt(l && l.id); })) + 1 : 1;
+        if (!safePositiveInt(newId)) newId = 1;
         var item = normalizeLiteratureRecord(Object.assign({}, raw, {
             id: newId,
             uploader: currentOwner(),
@@ -1934,7 +2000,9 @@
 
     // ========== 详情 ==========
     function showLibraryLiteratureDetail(id) {
-        var item = getLiteratureData().find(function (l) { return l.id === id; });
+        id = safePositiveInt(id);
+        if (!id) return;
+        var item = getLiteratureData().find(function (l) { return safePositiveInt(l && l.id) === id; });
         if (!item) return;
         var modalId = 'litDetail_' + id;
         var old = document.getElementById(modalId);
@@ -1946,6 +2014,15 @@
         var citeApa = formatCitation(item, 'apa');
         var citeIeee = formatCitation(item, 'ieee');
         var related = getRelatedLiterature(item).slice(0, 5);
+        var citations = safeNonNegativeInt(item.citations);
+        var readStatus = safeReadStatus(item.readStatus);
+        var paperUrl = safeResourceUrl(item.paperUrl, false);
+        var projectNames = Array.isArray(item.projectNames) ? item.projectNames.map(String) : [];
+        var relatedHtml = related.map(function (r) {
+            var relatedId = safePositiveInt(r && r.id);
+            if (!relatedId) return '';
+            return '<li style="margin-bottom:4px;"><a href="javascript:void(0)" onclick="document.getElementById(\'' + modalId + '\').remove();showLibraryLiteratureDetail(' + relatedId + ')">' + esc(String(r.title || '')) + '</a></li>';
+        }).join('');
         modal.innerHTML =
             '<div style="background:#fff;border-radius:12px;width:100%;max-width:920px;margin:auto;">' +
             '<div style="padding:16px 20px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;gap:12px;">' +
@@ -1959,15 +2036,15 @@
             '<div><b>期刊/会议：</b>' + esc(item.journal || '—') + '</div>' +
             '<div><b>年份：</b>' + esc(item.year || '—') + ' · <b>类型：</b>' + esc(litTypeLabel(item.litType)) + '</div>' +
             '<div><b>DOI：</b>' + (item.doi ? ('<a href="https://doi.org/' + esc(item.doi) + '" target="_blank" rel="noopener">' + esc(item.doi) + '</a>') : '—') + '</div>' +
-            '<div><b>引用量：</b>' + (item.citations || 0) + '</div>' +
+            '<div><b>引用量：</b>' + citations + '</div>' +
             '<div><b>标签：</b>' + esc(item.tags || '—') + '</div>' +
-            (item.projectNames && item.projectNames.length ? ('<div><b>关联项目：</b>' + esc(item.projectNames.join('、')) + '</div>') : '') +
+            (projectNames.length ? ('<div><b>关联项目：</b>' + esc(projectNames.join('、')) + '</div>') : '') +
             '<div><b>上传：</b>' + esc(item.uploader) + ' · ' + esc(item.uploadTime) + '</div>' +
             '<div style="margin-top:8px;"><b>阅读状态：</b> ' +
             '<select id="litReadStatus_' + id + '" onchange="setLibraryLitReadStatus(' + id + ', this.value)" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;">' +
-            '<option value="unread"' + ((item.readStatus || 'unread') === 'unread' ? ' selected' : '') + '>未读</option>' +
-            '<option value="reading"' + (item.readStatus === 'reading' ? ' selected' : '') + '>在读</option>' +
-            '<option value="read"' + (item.readStatus === 'read' ? ' selected' : '') + '>已读</option>' +
+            '<option value="unread"' + (readStatus === 'unread' ? ' selected' : '') + '>未读</option>' +
+            '<option value="reading"' + (readStatus === 'reading' ? ' selected' : '') + '>在读</option>' +
+            '<option value="read"' + (readStatus === 'read' ? ' selected' : '') + '>已读</option>' +
             '</select></div>' +
             '</div>' +
             '<div style="margin-top:14px;"><b style="font-size:14px;">摘要</b>' +
@@ -1989,12 +2066,10 @@
             '<button type="button" class="btn btn-secondary" onclick="insertLibraryLitToWeekly(' + id + ')">插入周报</button>' +
             '<button type="button" class="btn btn-secondary" onclick="saveLibraryLitToShared(' + id + ')">存到共享文件库</button>' +
             '<button type="button" class="btn btn-secondary" onclick="openLibraryLitInDocAnalysis(' + id + ')">智能解析</button>' +
-            (item.paperUrl ? ('<a class="btn btn-secondary" style="padding:8px 14px;text-decoration:none;" href="' + esc(item.paperUrl) + '" target="_blank" rel="noopener">原文链接</a>') : '') +
+            (paperUrl ? ('<a class="btn btn-secondary" style="padding:8px 14px;text-decoration:none;" href="' + esc(paperUrl) + '" target="_blank" rel="noopener">原文链接</a>') : '') +
             '</div>' +
-            (related.length ? ('<div style="margin-top:16px;"><b style="font-size:14px;">相关文献</b><ul style="margin:8px 0 0;padding-left:18px;font-size:13px;color:#555;">' +
-                related.map(function (r) {
-                    return '<li style="margin-bottom:4px;"><a href="javascript:void(0)" onclick="document.getElementById(\'' + modalId + '\').remove();showLibraryLiteratureDetail(' + r.id + ')">' + esc(r.title) + '</a></li>';
-                }).join('') + '</ul></div>') : '') +
+            (relatedHtml ? ('<div style="margin-top:16px;"><b style="font-size:14px;">相关文献</b><ul style="margin:8px 0 0;padding-left:18px;font-size:13px;color:#555;">' +
+                relatedHtml + '</ul></div>') : '') +
             '</div></div></div>';
         document.body.appendChild(modal);
         modal.onclick = function (e) { if (e.target === modal) modal.remove(); };
@@ -2005,14 +2080,21 @@
         var box = document.getElementById('litPdfPreview_' + id);
         if (!box) return;
         function showUrl(url) {
-            box.innerHTML = '<iframe class="lit-pdf-frame" src="' + esc(url) + '#toolbar=1" title="PDF 预览"></iframe>';
+            var safeUrl = safeResourceUrl(url, true);
+            if (!safeUrl) {
+                box.innerHTML = '<div style="font-size:12px;color:#888;">PDF 预览不可用</div>';
+                return;
+            }
+            box.innerHTML = '<iframe class="lit-pdf-frame" src="' + esc(safeUrl) + '#toolbar=1" title="PDF 预览"></iframe>';
         }
-        if (item.pdfUrl) {
-            showUrl(item.pdfUrl);
+        var storedPdfUrl = safeResourceUrl(item.pdfUrl, false);
+        if (storedPdfUrl) {
+            showUrl(storedPdfUrl);
             return;
         }
-        if (item.sharedFileId && typeof global.getSharedFileBlob === 'function') {
-            global.getSharedFileBlob(item.sharedFileId).then(function (blob) {
+        var sharedFileId = safePositiveInt(item.sharedFileId);
+        if (sharedFileId && typeof global.getSharedFileBlob === 'function') {
+            global.getSharedFileBlob(sharedFileId).then(function (blob) {
                 if (!blob) {
                     box.innerHTML = '<div style="font-size:12px;color:#888;">暂无本地 PDF，可点击下载或打开原文链接</div>';
                     return;
@@ -2028,12 +2110,14 @@
     }
 
     function setLibraryLitReadStatus(id, status) {
+        id = safePositiveInt(id);
+        if (!id) return;
         var list = getLiteratureData();
-        var idx = list.findIndex(function (l) { return l.id === id; });
+        var idx = list.findIndex(function (l) { return safePositiveInt(l && l.id) === id; });
         if (idx < 0) return;
-        list[idx].readStatus = status || 'unread';
+        list[idx].readStatus = safeReadStatus(status);
         global.literatureData = list;
-        saveLiteratureLibraryData({ log: { action: '阅读状态', desc: list[idx].title + ' → ' + status } });
+        saveLiteratureLibraryData({ log: { action: '阅读状态', desc: list[idx].title + ' → ' + list[idx].readStatus } });
         renderLiteratureList();
     }
 
@@ -2083,9 +2167,11 @@
     }
 
     function saveLibraryLitNotes(id) {
+        id = safePositiveInt(id);
+        if (!id) return;
         var ta = document.getElementById('litNote_' + id);
         var list = getLiteratureData();
-        var idx = list.findIndex(function (l) { return l.id === id; });
+        var idx = list.findIndex(function (l) { return safePositiveInt(l && l.id) === id; });
         if (idx < 0) return;
         list[idx].notes = ta ? ta.value : '';
         global.literatureData = list;
@@ -2096,25 +2182,35 @@
 
     function downloadLibraryLiterature(id) {
         if (!canDownloadPdf()) { alert('访客不可下载'); return; }
-        var item = getLiteratureData().find(function (l) { return l.id === id; });
+        id = safePositiveInt(id);
+        if (!id) return;
+        var item = getLiteratureData().find(function (l) { return safePositiveInt(l && l.id) === id; });
         if (!item) return;
-        item.downloadCount = (item.downloadCount || 0) + 1;
+        var currentDownloads = safeNonNegativeInt(item.downloadCount);
+        item.downloadCount = currentDownloads < Number.MAX_SAFE_INTEGER ? currentDownloads + 1 : currentDownloads;
         saveLiteratureLibraryData();
-        if (item.sharedFileId && typeof global.handleFileDownload === 'function') {
-            global.handleFileDownload(item.sharedFileId);
+        var sharedFileId = safePositiveInt(item.sharedFileId);
+        if (sharedFileId && typeof global.handleFileDownload === 'function') {
+            global.handleFileDownload(sharedFileId);
             return;
         }
-        if (item.pdfUrl) { window.open(item.pdfUrl, '_blank'); return; }
-        if (item.paperUrl) { window.open(item.paperUrl, '_blank'); return; }
+        var downloadUrl = safeResourceUrl(item.pdfUrl, false) || safeResourceUrl(item.paperUrl, false);
+        if (downloadUrl) {
+            var opened = window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+            if (opened) opened.opener = null;
+            return;
+        }
         alert('该文献暂无附件或原文链接');
     }
 
     function deleteLibraryLiterature(id) {
-        var item = getLiteratureData().find(function (l) { return l.id === id; });
+        id = safePositiveInt(id);
+        if (!id) return;
+        var item = getLiteratureData().find(function (l) { return safePositiveInt(l && l.id) === id; });
         if (!item) return;
         if (!canEditLibraryItem(item)) { alert('无权限删除'); return; }
         if (!confirm('确定删除《' + item.title + '》？')) return;
-        global.literatureData = getLiteratureData().filter(function (l) { return l.id !== id; });
+        global.literatureData = getLiteratureData().filter(function (l) { return safePositiveInt(l && l.id) !== id; });
         delete litState.selected[String(id)];
         saveLiteratureLibraryData({ log: { action: '删除', desc: '删除文献：' + item.title } });
         renderLiteratureList();
@@ -2440,6 +2536,7 @@
         loadLiteratureLibraryData: loadLiteratureLibraryData,
         saveLiteratureLibraryData: saveLiteratureLibraryData,
         renderLiteratureList: renderLiteratureList,
+        renderLiteratureCardHtml: renderLiteratureCardHtml,
         showLibraryLiteratureModal: showLibraryLiteratureModal,
         showLibraryLiteratureDetail: showLibraryLiteratureDetail,
         deleteLibraryLiterature: deleteLibraryLiterature,

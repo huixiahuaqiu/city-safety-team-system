@@ -1,0 +1,22 @@
+services:
+  edge:
+    environment:
+      APP_ENV: production
+      SHOW_DEMO_ACCOUNTS: "false"
+      GATEWAY_AUTH_ENABLED: "true"
+      SERVER_NAME: ${SERVER_NAME:?SERVER_NAME is required}
+    ports:
+      - ${CITYSAFE_HTTP_BIND:-0.0.0.0}:80:8080
+      - ${CITYSAFE_HTTPS_BIND:-0.0.0.0}:443:8443
+    volumes:
+      # Same target as the base file: Compose replaces the local template.
+      - ./nginx/container/server.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ${TLS_CERT_ROOT:-/etc/letsencrypt}:/etc/letsencrypt:ro
+
+  gateway:
+    environment:
+      CITYSAFE_ENV: production
+      AUTH_REQUIRED: "1"
+      ALLOW_INSECURE_LOCAL_WRITES: "0"
+      MINIO_ALLOW_INSECURE_PRESIGN: "0"
+

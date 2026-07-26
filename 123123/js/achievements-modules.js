@@ -2521,7 +2521,9 @@
         }
         
         function getApiKey() {
-            return localStorage.getItem('openaiApiKey') || localStorage.getItem('aliyunApiKey') || '';
+            return typeof getChatApiKey === 'function'
+                ? getChatApiKey()
+                : (sessionStorage.getItem('openaiApiKey') || sessionStorage.getItem('aliyunApiKey') || '');
         }
 
         async function readMemberImportDocument(file) {
@@ -2831,7 +2833,7 @@
         function normalizeHeaderCell(h) {
             return String(h == null ? '' : h)
                 .replace(/^\ufeff/, '')
-                .replace(/[\s　]/g, '')
+                .replace(/[\s\u3000]/g, '')
                 .replace(/[（(].*?[）)]/g, '')
                 .toLowerCase();
         }
@@ -3036,12 +3038,12 @@
                 reader.readAsText(file, 'UTF-8');
             });
             var lines = String(text || '').replace(/^\ufeff/, '').split(/\r?\n/);
-            var aoa = [];
+            var aoaCsv = [];
             for (var i = 0; i < lines.length; i++) {
                 if (!String(lines[i] || '').trim()) continue;
-                aoa.push(parseCSVLine(lines[i]));
+                aoaCsv.push(parseCSVLine(lines[i]));
             }
-            var parsedCsv = parseTeamMemberRowsFromAoa(aoa);
+            var parsedCsv = parseTeamMemberRowsFromAoa(aoaCsv);
             pendingImportMeta = {
                 fileName: file.name,
                 columnMap: parsedCsv.columnMap,
@@ -3219,7 +3221,7 @@
                 });
                 persistPatentMgmtGlobalMirror();
             } catch (e) {
-                console.error('加载专利数据失败:', e);
+                if (!e || e.code !== 'AUTH_PENDING') console.error('加载专利数据失败:', e);
                 try {
                     var local = JSON.parse(localStorage.getItem('patentMgmtData') || localStorage.getItem('patentData') || '[]');
                     patentMgmtData = Array.isArray(local) ? local : [];
@@ -3425,7 +3427,7 @@
 
                     recognizeBtn.innerHTML = '🤖 AI 提取字段中...';
 
-                    const apiKey = (typeof getChatApiKey === 'function' ? getChatApiKey() : (localStorage.getItem('openaiApiKey') || ''));
+                    const apiKey = (typeof getChatApiKey === 'function' ? getChatApiKey() : (sessionStorage.getItem('openaiApiKey') || ''));
                     if (!apiKey) {
                         recognizeBtn.innerHTML = originalText;
                         recognizeBtn.disabled = false;
@@ -3827,7 +3829,7 @@ ${ocrText}`
                 paperData = data || [];
                 persistPaperGlobalMirror();
             } catch (e) {
-                console.error('加载论文数据失败:', e);
+                if (!e || e.code !== 'AUTH_PENDING') console.error('加载论文数据失败:', e);
                 try {
                     var local = JSON.parse(localStorage.getItem('paperData') || '[]');
                     paperData = Array.isArray(local) ? local : [];

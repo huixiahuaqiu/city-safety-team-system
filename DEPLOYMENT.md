@@ -1,92 +1,111 @@
-# 生产部署说明
+# 部署说明
 
-## 环境要求
+系统现已统一为同一套 Docker 架构：
 
-- Python 3.8 及以上
-- 现代浏览器（Chrome / Edge）
-- 可访问 Supabase 的网络环境（需要云同步时）
-
-## 配置步骤
-
-1. 进入服务目录：
-
-```bash
-cd 123123
+```text
+浏览器 → Nginx 唯一入口 → Python 网关 → PostgreSQL
+                                  └→ MinIO
 ```
 
-2. 创建服务端配置：
+本机演示与公司服务器使用同一个 `deploy/compose.yaml`，只通过本地/服务器覆盖文件和环境变量区分。浏览器不会直接连接数据库、MinIO 或 Supabase。
 
-```bash
-copy .env.example .env
+## 本机一键启动（Windows）
+
+前置条件：安装并启动 Docker Desktop。
+
+在仓库根目录打开 PowerShell：
+
+```powershell
+.\deploy\scripts\stack.ps1
 ```
 
-填写 `SUPABASE_URL`、`SUPABASE_KEY`、`MLOPS_TOKEN`、`ANNOTATION_UPLOAD_TOKEN`。所有 token 应使用随机强值，并通过团队密钥管理工具分发。
+首次运行会：
 
-3. 创建前端本地配置：
+1. 生成仅保存在本机、已被 Git 忽略的 `deploy/env/.env.local`；
+2. 生成随机数据库、MinIO、会话和上传密钥；
+3. 构建并启动 PostgreSQL、迁移器、MinIO、网关和 Nginx；
+4. 创建首个管理员并显示一次临时密码；
+5. 等待所有依赖真实就绪。
 
-```bash
-copy config.example.js config.local.js
+访问：<http://127.0.0.1:8080>
+
+首次登录后必须修改临时密码。默认仅 `127.0.0.1:8080` 对本机开放；数据库、MinIO 和网关没有宿主机端口。
+
+常用命令：
+
+```powershell
+.\deploy\scripts\stack.ps1 -Action status
+.\deploy\scripts\stack.ps1 -Action logs
+.\deploy\scripts\stack.ps1 -Action smoke
+.\deploy\scripts\stack.ps1 -Action restart
+.\deploy\scripts\stack.ps1 -Action down
 ```
 
-`config.local.js` 用于本机覆盖（上传 token 等）。公开云同步默认读可提交的 `config.js`。`ANNOTATION_UPLOAD_TOKEN` 用于本机标注上传鉴权。百炼大模型密钥仅保存在浏览器 localStorage（「OpenAI入口」），不进云同步。
+`down` 不删除数据卷。需要查看 MinIO 控制台时，显式加 `-WithMinioConsole`，控制台也只绑定本机。
 
-4. 安装依赖：
+## 公司服务器一键部署（Linux）
 
-```bash
-python -m pip install -r requirements.txt
-```
+前置条件：
 
-当前 Python 网关仅使用标准库，保留 `requirements.txt` 作为依赖管理入口。
+- Docker Engine 与 Docker Compose 插件；
+- 域名已解析到服务器；
+- 公司证书已放入 `/etc/letsencrypt/live/<域名>/`，或服务器可使用 Certbot；
+- 防火墙仅放行 SSH、80、443。
 
-## 智能对话问答
-
-- 知识库通过 `knowledgeData` 云端同步，团队成员互相可见。
-- 未配置百炼密钥：全局 TopK 检索本地回答，覆盖项目、任务、周报、训练、标注、文献、数据集和共享文件。
-- 已配置密钥：优先本机 `/api/aliyun`，其次远程 `API_PROXY`，失败回退全局检索。
-- 普通成员可维护自己添加的知识；`admin` / `leader` 可管理全部。
-
-## 启动服务
+将仓库放到服务器后执行：
 
 ```bash
-python start_web.py
+sudo bash deploy/scripts/bootstrap-server.sh \
+  --domain citysafe.example.com \
+  --issue-cert \
+  --email admin@example.com
 ```
 
-默认访问地址为 `http://localhost:8000`。日志写入 `123123/logs/server_audit.log`，真实上传文件写入 `123123/uploads/annotations/`。
+若公司已提供证书，去掉 `--issue-cert` 和 `--email`。脚本会把服务器密钥写入权限为 `0600` 的 `/etc/citysafe/server.env`，后续重复执行会保留密钥和数据，只更新应用版本。
 
-## 远程训练机接入
+服务器只发布 Nginx 的 80/443；PostgreSQL 5432、MinIO 9000/9001、网关 8000 均只存在于 Docker 内部网络。
 
-远程训练机需要能访问门户所在机器的 `8000` 端口，并使用相同的 `MLOPS_TOKEN`：
+服务器完成首次克隆和 SSH/sudo 准备后，后续版本可以直接在 Windows 本机一键触发：
+
+```powershell
+.\deploy\scripts\deploy-server.ps1 `
+  -Server deployer@server.example.com `
+  -Domain citysafe.example.com `
+  -RemotePath /opt/city-safety-team-system `
+  -Ref refs/tags/v1.0.0
+```
+
+建议生产始终部署审查过的 Git 标签或完整提交哈希。脚本遇到服务器工作区有未提交内容、
+分支不能快进或任一步失败都会停止，不会覆盖服务器上的临时改动。正式执行前可加
+`-WhatIf` 预演。
+
+只生成配置、不启动：
 
 ```bash
-python mlops_report.py --endpoint http://<portal-host>:8000/api/mlops/report --job-id exp-1 --status training --progress 30 --token "$MLOPS_TOKEN"
+sudo bash deploy/scripts/bootstrap-server.sh \
+  --domain citysafe.example.com \
+  --prepare-only
 ```
 
-## 标注文件全员共享
+## 数据边界
 
-标注任务元数据通过 `config.js` 中的公开 Supabase 配置在 **本机与 GitHub Pages** 之间同步。
+- 结构化数据：PostgreSQL 持久卷；
+- 共享文件与标注包：MinIO 持久卷；
+- 分片数据集、日志和本地状态：独立持久卷；
+- 数据库结构：`deploy/db/migrations/*.sql`，启动前由迁移容器按哈希校验并执行；
+- 浏览器离线修改：进入本地待同步队列，恢复连接后按版本提交；
+- 多人同时修改：版本不一致时拒绝静默覆盖，保留本机修改并提示处理。
 
-标注真实文件：先落到本机网关，再自动打包分片写入 Supabase `patents`（`classification=__APP_SYNC_BLOB__`），全员可在 Pages/本机导出 ZIP。
-
-上传优先级：
-
-1. 本机网关落盘
-2. 自动发布到团队云端分片（全员可见）
-3. 可选 Supabase Storage 桶（若已执行 `supabase_annotations_storage.sql`）
-4. 浏览器 IndexedDB（仅本机兜底）
-
-若旧任务只有本机备份：详情 → **发布到团队云端**。
-
-GitHub Pages 部署后需包含可提交的 `123123/config.js`；本机密钥覆盖仍用 `config.local.js`（不提交）。
+本机数据不会在代码部署时自动上传到公司服务器。需要迁移演示数据时，应使用经过校验的备份/恢复流程，避免把本机密钥、测试账号或无关文件带入生产。
 
 ## 安全要求
 
-- 禁止提交 `.env`、`config.local.js`、上传目录、日志文件和本地状态文件。
-- 生产环境必须配置 `MLOPS_TOKEN` 与 `ANNOTATION_UPLOAD_TOKEN`，未配置时写接口会拒绝请求。
-- 上传扩展名和大小通过 `ALLOWED_UPLOAD_EXTENSIONS`、`MAX_UPLOAD_BYTES` 控制。
-- 对外暴露服务时应放在 HTTPS 反向代理后，并启用来源限制、访问日志和网络防火墙。
+- 不提交 `deploy/env/.env.local`、`/etc/citysafe/server.env`、`.env` 或 `config.local.js`；
+- 生产必须使用 HTTPS、强随机密钥和服务端会话认证；
+- 不能把数据库、MinIO、上传、MLOps 或 AI 密钥写入任何前端 JavaScript；
+- 生产配置拒绝通配符跨域、明文外部 MinIO 地址和不安全预签名；
+- 首次管理员、账号管理、密码重置均由服务端保存 PBKDF2 验证器；
+- 关键同步采用版本比较，旧版本写入返回冲突，不会覆盖他人新数据；
+- 备份必须同时覆盖 PostgreSQL、MinIO 和应用持久卷，并定期做隔离恢复验证。
 
-## 版本迭代规范
-
-- 每次功能变更必须同步更新配置模板、部署说明或排障说明。
-- 涉及数据结构变更时，提交说明中写清迁移策略和回滚方式。
-- Git commit message 使用简体中文，例如 `feat: 加固标注文件上传鉴权`。
+详细运维命令见 [deploy/README.md](deploy/README.md) 与 [deploy/RUNBOOK.md](deploy/RUNBOOK.md)。

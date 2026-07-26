@@ -84,12 +84,13 @@
 
   function docLinkHtml(d) {
     var name = (d && (d.name || d.relativePath)) || '未命名';
-    var href = d && d.serverFileId
-      ? ('/api/shared-file/download?fileId=' + encodeURIComponent(d.serverFileId))
-      : ((d && d.blobUrl) || '');
-    var open = href
-      ? ('<a class="kx-a" href="' + esc(href) + '" target="_blank" rel="noopener">' + esc(name) + '</a>')
-      : ('<span>' + esc(name) + '</span>');
+    var open = d && d.serverFileId
+      ? ('<button type="button" class="kx-a kx-link-button" onclick="mpOpenServerDoc(decodeURIComponent(\'' +
+        encodeURIComponent(String(d.serverFileId)) + '\'),decodeURIComponent(\'' +
+        encodeURIComponent(String(name)) + '\'))">' + esc(name) + '</button>')
+      : ((d && d.blobUrl)
+        ? ('<a class="kx-a" href="' + esc(d.blobUrl) + '" target="_blank" rel="noopener">' + esc(name) + '</a>')
+        : ('<span>' + esc(name) + '</span>'));
     return '<span class="kx-file-row">' + fileIconHtml(name) + open + '</span>';
   }
 
@@ -112,6 +113,28 @@
     }
     throw new Error('无可下载来源：' + ((d && d.name) || '未知文件'));
   }
+
+  async function mpOpenServerDoc(fileId, fileName) {
+    var preview = window.open('about:blank', '_blank', 'noopener');
+    try {
+      var blob = await mpFetchDocBlob({ serverFileId: fileId, name: fileName });
+      var url = URL.createObjectURL(blob);
+      if (preview) preview.location.replace(url);
+      else {
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || 'download';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    } catch (err) {
+      if (preview) preview.close();
+      alert((err && err.message) || '文件打开失败');
+    }
+  }
+  global.mpOpenServerDoc = mpOpenServerDoc;
 
   // 文件夹整体下载：把该文件夹下所有文件按相对路径打进一个 zip，解压即还原目录结构。
   async function mpDownloadFolder(folderName) {
@@ -308,7 +331,7 @@
     // 并发上传（限流 4）：网关多线程 + 注册表已加锁，可安全并行，显著快于逐个 await。
     var cursor = 0;
     async function mpUploadWorker() {
-      while (true) {
+      while (cursor < total) {
         var i = cursor++;
         if (i >= total) return;
         try {
@@ -444,7 +467,7 @@
     if (!p || !p.documents || !p.documents[idx]) return;
     var d = p.documents[idx];
     if (d.serverFileId) {
-      window.open('/api/shared-file/download?fileId=' + encodeURIComponent(d.serverFileId), '_blank');
+      mpOpenServerDoc(d.serverFileId, d.name || d.relativePath || 'download');
       return;
     }
     if (d.blobUrl) {

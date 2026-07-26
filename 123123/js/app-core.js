@@ -16,6 +16,96 @@
         }
         window.escapeHtml = escapeHtml;
 
+        // 只允许可安全点击的外链协议，阻断 javascript:/data: 等可执行 URL。
+        function safeExternalUrl(value) {
+            var raw = String(value == null ? '' : value).trim();
+            if (!raw) return '';
+            try {
+                var parsed = new URL(raw, window.location.href);
+                if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.href;
+            } catch (e) {}
+            return '';
+        }
+        window.safeExternalUrl = safeExternalUrl;
+
+        function safeImageUrl(value) {
+            var raw = String(value == null ? '' : value).trim();
+            if (!raw) return '';
+            if (/^data:image\/(?:png|jpe?g|gif|webp);base64,[a-z0-9+/=\s]+$/i.test(raw)) return raw;
+            try {
+                var parsed = new URL(raw, window.location.href);
+                if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'blob:') {
+                    return parsed.href;
+                }
+            } catch (e) {}
+            return '';
+        }
+        window.safeImageUrl = safeImageUrl;
+
+        // 统一结构化存储入口：集中处理损坏 JSON、配额异常、跨标签页通知和版本标记。
+        // 旧模块可继续直接使用 localStorage，新代码与逐步迁移的核心数据优先走此接口。
+        window.AppStorage = (function () {
+            var SCHEMA_VERSION = 2;
+            var VERSION_KEY = 'citysafeStorageSchemaVersion';
+
+            function getJson(key, fallback) {
+                try {
+                    var raw = localStorage.getItem(key);
+                    if (raw == null || raw === '') return fallback;
+                    return JSON.parse(raw);
+                } catch (err) {
+                    console.warn('[storage] invalid JSON', key, err);
+                    return fallback;
+                }
+            }
+
+            function setJson(key, value) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(value));
+                    window.dispatchEvent(new CustomEvent('citysafe:storage', {
+                        detail: { key: key, value: value, local: true }
+                    }));
+                    return true;
+                } catch (err) {
+                    var quota = err && (err.name === 'QuotaExceededError' || err.code === 22);
+                    if (typeof showCloudSyncBanner === 'function') {
+                        showCloudSyncBanner(quota ? '本地存储空间不足，请导出备份后清理附件' : '本地数据保存失败', true);
+                    }
+                    console.error('[storage] write failed', key, err);
+                    return false;
+                }
+            }
+
+            function updateJson(key, fallback, updater) {
+                var current = getJson(key, fallback);
+                var next = updater(current);
+                return setJson(key, next) ? next : current;
+            }
+
+            try {
+                var currentVersion = Number(localStorage.getItem(VERSION_KEY) || 0);
+                if (currentVersion < SCHEMA_VERSION) {
+                    localStorage.setItem(VERSION_KEY, String(SCHEMA_VERSION));
+                }
+            } catch (e) {}
+
+            window.addEventListener('storage', function (event) {
+                if (!event || !event.key) return;
+                var value = event.newValue;
+                try { value = value == null ? null : JSON.parse(value); } catch (e) {}
+                window.dispatchEvent(new CustomEvent('citysafe:storage', {
+                    detail: { key: event.key, value: value, local: false }
+                }));
+            });
+
+            return {
+                schemaVersion: SCHEMA_VERSION,
+                getJson: getJson,
+                setJson: setJson,
+                updateJson: updateJson
+            };
+        })();
+
         // 统一调试日志器：仅在开启 DEBUG 时输出，避免生产环境把 AI/OCR/Excel 等数据打进控制台。
         // 开启方式：config 中设 DEBUG:true，或运行时 window.__DEBUG__ = true。
         window.dlog = function () {
@@ -26,11 +116,222 @@
                 }
             } catch (e) { /* 忽略日志异常，绝不影响主流程 */ }
         };
+        const GATEWAY_AUTH_ENABLED = getAppConfig('GATEWAY_AUTH_ENABLED', false) === true;
+        window.GatewayAuth = (function () {
+            const STORAGE_KEY = 'citysafeGatewaySession';
+
+            function read() {
+                if (!GATEWAY_AUTH_ENABLED) return null;
+                try {
+                    var session = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
+                    if (!session || !session.token || Number(session.expiresAt || 0) <= Date.now()) {
+                        sessionStorage.removeItem(STORAGE_KEY);
+                        return null;
+                    }
+                    return session;
+                } catch (e) {
+                    sessionStorage.removeItem(STORAGE_KEY);
+                    return null;
+                }
+            }
+
+            async function login(username, password) {
+                if (!GATEWAY_AUTH_ENABLED) return { ok: true, disabled: true, user: null };
+                var response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username, password: password })
+                });
+                var data = {};
+                try { data = await response.json(); } catch (e) {}
+                if (!response.ok || !data.token) {
+                    var err = new Error(data.error || ('服务端登录失败（HTTP ' + response.status + '）'));
+                    err.status = response.status;
+                    err.retryAfter = data.retryAfter || 0;
+                    throw err;
+                }
+                var session = {
+                    token: data.token,
+                    expiresAt: Number(data.expiresAt) || 0,
+                    user: data.user || null
+                };
+                sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+                return Object.assign({ ok: true }, session);
+            }
+
+            function acceptSession(data) {
+                if (!GATEWAY_AUTH_ENABLED || !data || !data.token) return null;
+                var session = {
+                    token: String(data.token),
+                    expiresAt: Number(data.expiresAt) || 0,
+                    user: data.user || null
+                };
+                sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+                return session;
+            }
+
+            function clear() {
+                try { sessionStorage.removeItem(STORAGE_KEY); } catch (e) {}
+            }
+
+            function notifyExpired(reason) {
+                try {
+                    window.dispatchEvent(new CustomEvent('citysafe:auth-expired', {
+                        detail: { reason: reason || 'unauthorized' }
+                    }));
+                } catch (e) {}
+            }
+
+            function headers(extra) {
+                var out = Object.assign({}, extra || {});
+                var session = read();
+                if (session && session.token) out.Authorization = 'Bearer ' + session.token;
+                return out;
+            }
+
+            async function authorizedFetch(url, options) {
+                options = Object.assign({}, options || {});
+                options.headers = headers(options.headers);
+                var response = await fetch(url, options);
+                if (GATEWAY_AUTH_ENABLED && response.status === 401) {
+                    notifyExpired('server-rejected-session');
+                    clear();
+                }
+                return response;
+            }
+
+            async function validate() {
+                if (!GATEWAY_AUTH_ENABLED) return null;
+                var session = read();
+                if (!session) return null;
+                var response = await authorizedFetch('/api/auth/me', {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                var data = {};
+                try { data = await response.json(); } catch (e) {}
+                if (!response.ok || !data.user) return null;
+                session.user = data.user;
+                sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+                return data.user;
+            }
+
+            return {
+                enabled: GATEWAY_AUTH_ENABLED,
+                login: login,
+                acceptSession: acceptSession,
+                clear: clear,
+                read: read,
+                hasSession: function () { return !!read(); },
+                headers: headers,
+                fetch: authorizedFetch,
+                validate: validate,
+                notifyExpired: notifyExpired
+            };
+        })();
+        (function attachGatewaySessionToSameOriginApiRequests() {
+            var nativeFetch = window.fetch.bind(window);
+            window.fetch = function (input, options) {
+                var requestUrl = '';
+                try {
+                    requestUrl = typeof input === 'string'
+                        ? input
+                        : (input && input.url ? input.url : String(input || ''));
+                    var parsed = new URL(requestUrl, location.href);
+                    if (
+                        parsed.origin === location.origin
+                        && parsed.pathname.indexOf('/api/') === 0
+                        && window.GatewayAuth
+                        && window.GatewayAuth.enabled
+                    ) {
+                        var session = window.GatewayAuth.read();
+                        if (session && session.token) {
+                            if (typeof Request !== 'undefined' && input instanceof Request) {
+                                var requestHeaders = new Headers(input.headers || {});
+                                requestHeaders.set('Authorization', 'Bearer ' + session.token);
+                                input = new Request(input, { headers: requestHeaders });
+                            } else {
+                                options = Object.assign({}, options || {});
+                                var headers = new Headers(options.headers || {});
+                                headers.set('Authorization', 'Bearer ' + session.token);
+                                options.headers = headers;
+                            }
+                        }
+                    }
+                } catch (e) {}
+                return nativeFetch(input, options);
+            };
+        })();
+        window.frontendConfigIssues = (function validateFrontendConfig() {
+            var env = String(getAppConfig('APP_ENV', 'development') || 'development').toLowerCase();
+            var issues = [];
+            if (env === 'production') {
+                if (!GATEWAY_AUTH_ENABLED) issues.push('生产环境必须启用 GATEWAY_AUTH_ENABLED');
+                if (getAppConfig('SHOW_DEMO_ACCOUNTS', false) === true) issues.push('生产环境必须关闭演示账号');
+                var proxy = String(getAppConfig('API_PROXY', '') || '').trim();
+                if (proxy && !/^https:\/\//i.test(proxy)) issues.push('远程 API_PROXY 必须使用 HTTPS');
+            }
+            if (issues.length) {
+                console.error('[config] ' + issues.join('；'));
+                var show = function () {
+                    if (!document.body || document.getElementById('frontendConfigError')) return;
+                    var banner = document.createElement('div');
+                    banner.id = 'frontendConfigError';
+                    banner.style.cssText = 'position:fixed;inset:0 0 auto 0;z-index:30000;padding:10px 16px;background:#7f1d1d;color:#fff;text-align:center;font-size:13px;';
+                    banner.textContent = '生产配置校验失败：' + issues.join('；');
+                    document.body.appendChild(banner);
+                };
+                if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
+                else show();
+            }
+            return issues;
+        })();
         const SUPABASE_URL = String(getAppConfig('SUPABASE_URL', '') || '').trim();
         const SUPABASE_KEY = String(getAppConfig('SUPABASE_KEY', '') || '').trim();
+        const DATA_BACKEND = String(getAppConfig('DATA_BACKEND', 'gateway') || 'gateway').trim().toLowerCase();
+        const GATEWAY_DATA_BACKEND = DATA_BACKEND === 'gateway';
+
+        async function gatewayJsonRequest(url, options) {
+            options = Object.assign({}, options || {});
+            options.headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+            var request = (window.GatewayAuth && typeof window.GatewayAuth.fetch === 'function')
+                ? window.GatewayAuth.fetch
+                : window.fetch.bind(window);
+            var response = await request(url, options);
+            var payload = await response.json().catch(function() { return null; });
+            if (!response.ok) {
+                var error = new Error((payload && payload.error) || ('HTTP ' + response.status));
+                error.status = response.status;
+                error.payload = payload;
+                throw error;
+            }
+            return payload;
+        }
         
         function supabaseRequest(method, table, data, options) {
             options = options || {};
+            if (GATEWAY_DATA_BACKEND) {
+                if (
+                    GATEWAY_AUTH_ENABLED
+                    && (!window.GatewayAuth || !window.GatewayAuth.hasSession())
+                ) {
+                    var authPendingError = new Error('请先登录后再访问团队数据');
+                    authPendingError.code = 'AUTH_PENDING';
+                    return Promise.reject(authPendingError);
+                }
+                return gatewayJsonRequest('/api/data/records', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        operation: String(method || 'GET').toUpperCase(),
+                        resource: String(table || ''),
+                        data: data == null ? null : data,
+                        options: options
+                    })
+                }).then(function(payload) {
+                    return payload && Array.isArray(payload.rows) ? payload.rows : [];
+                });
+            }
             var maxRetry = options.retries != null ? Number(options.retries) : 2;
             if (!isFinite(maxRetry) || maxRetry < 0) maxRetry = 0;
 
@@ -127,13 +428,14 @@
         window.diagnoseCloudSync = async function diagnoseCloudSync() {
             var result = {
                 url: SUPABASE_URL || '(空)',
-                keyPresent: !!(SUPABASE_KEY && SUPABASE_KEY.length > 8),
+                backend: DATA_BACKEND,
+                keyPresent: GATEWAY_DATA_BACKEND || !!(SUPABASE_KEY && SUPABASE_KEY.length > 8),
                 keyPrefix: SUPABASE_KEY ? String(SUPABASE_KEY).slice(0, 14) + '…' : '',
                 pageOrigin: location.origin,
                 ok: false,
                 detail: ''
             };
-            if (!SUPABASE_URL || !SUPABASE_KEY) {
+            if (!GATEWAY_DATA_BACKEND && (!SUPABASE_URL || !SUPABASE_KEY)) {
                 result.detail = '未配置 SUPABASE_URL / SUPABASE_KEY';
                 console.warn('[cloud-diagnose]', result);
                 return result;
@@ -178,16 +480,33 @@
             'knowledgeData', 'compareLiteratureData',
             'systemConfigData', 'operationLogData',
             'patentData', 'patentMgmtData', 'paperData', 'categoryData', 'memberData', 'researchAchievementExtra',
-            'portalContentConfig_v1', 'portalFeedbackData_v1',
+            'portalContentConfig_v1', 'portalHomeCarousel_v1', 'portalContactConfig_v1',
+            'portalTeamIntro_v1', 'portalFeedbackData_v1',
             'literatureCompareDimTemplate', 'literatureCompareNamedDimTemplates',
             'customInstructionTemplates', 'devlogEntries',
             'backupData', 'autoBackupConfig'
         ]);
+        // 服务端认证模式下，账号验证器只允许 service_role 读取；浏览器不再同步 accountData。
+        // Password verifiers and account status are server-private.
+        CLOUD_SYNC_KEYS.delete('accountData');
+        // Login/operation logs are server-owned append-only audit data. Never replay
+        // browser-local whole-array logs into a later, more privileged session.
+        CLOUD_SYNC_KEYS.delete('loginLogData');
+        CLOUD_SYNC_KEYS.delete('operationLogData');
         const CLOUD_SYNC_MARK = '__APP_SYNC__';
         const CLOUD_SYNC_PREFIX = '__SYNC_KV__';
 
         let cloudSyncReady = false;
-        let cloudSyncEnabled = Boolean(SUPABASE_URL && SUPABASE_KEY);
+        let cloudSyncEnabled = GATEWAY_DATA_BACKEND || Boolean(SUPABASE_URL && SUPABASE_KEY);
+        const CLOUD_HOME_POLL_MS = Math.max(10000, Number(getAppConfig('CLOUD_HOME_POLL_MS', 15000)) || 15000);
+        const CLOUD_BACKGROUND_POLL_MS = Math.max(
+            CLOUD_HOME_POLL_MS,
+            Number(getAppConfig('CLOUD_BACKGROUND_POLL_MS', 60000)) || 60000
+        );
+        const CLOUD_RETRY_MAX_MS = Math.max(
+            30000,
+            Number(getAppConfig('CLOUD_RETRY_MAX_MS', 300000)) || 300000
+        );
         var cloudSyncState = {
             enabled: cloudSyncEnabled,
             lastAt: 0,
@@ -195,7 +514,9 @@
             lastApplied: 0,
             lastError: '',
             lastReason: '',
-            pollMs: 15000
+            pollMs: CLOUD_HOME_POLL_MS,
+            consecutiveFailures: 0,
+            retryAt: 0
         };
         function markCloudSyncState( partial ) {
             try {
@@ -208,8 +529,218 @@
         window.markCloudSyncState = markCloudSyncState;
         let cloudPulling = false;
         const cloudUpsertTimers = {};
+        const cloudUpsertInFlight = {};
         const cloudRowIdCache = {};
+        const CLOUD_VERSION_KEY = 'citysafeSyncVersions';
+        const CLOUD_OUTBOX_KEY = 'citysafeSyncOutbox';
+        const CLOUD_REJECTED_KEY = 'citysafeSyncRejected';
         let cloudSyncBannerEl = null;
+
+        const CLOUD_ADMIN_ONLY_KEYS = new Set([
+            'permissionMatrix', 'passwordPolicy', 'systemConfigData',
+            'backupData', 'autoBackupConfig', 'loginLogData', 'operationLogData'
+        ]);
+        const CLOUD_LEADER_ONLY_KEYS = new Set([
+            'teamMemberData', 'memberGradeYears', 'approvalFlowConfig',
+            'holidayLeaveCampaigns', 'portalContentConfig_v1',
+            'portalHomeCarousel_v1', 'portalContactConfig_v1', 'portalTeamIntro_v1'
+        ]);
+
+        function currentCloudPrincipal() {
+            if (!GATEWAY_DATA_BACKEND || !GATEWAY_AUTH_ENABLED) return 'legacy';
+            var session = window.GatewayAuth && window.GatewayAuth.read
+                ? window.GatewayAuth.read()
+                : null;
+            var user = session && session.user;
+            if (!user) return '';
+            var id = String(user.id != null ? user.id : (user.studentId || '')).trim();
+            var role = String(user.role || 'visitor').trim().toLowerCase();
+            return id ? encodeURIComponent(id + ':' + role) : '';
+        }
+
+        function principalStorageKey(baseKey) {
+            var principal = currentCloudPrincipal();
+            if (!principal) return '';
+            return baseKey + ':' + principal;
+        }
+
+        function canCurrentRoleWriteSyncKey(key) {
+            if (!CLOUD_SYNC_KEYS.has(key)) return false;
+            if (!GATEWAY_DATA_BACKEND || !GATEWAY_AUTH_ENABLED) return true;
+            var session = window.GatewayAuth && window.GatewayAuth.read
+                ? window.GatewayAuth.read()
+                : null;
+            var role = String(session && session.user && session.user.role || 'visitor').toLowerCase();
+            if (role === 'visitor') return false;
+            if (CLOUD_ADMIN_ONLY_KEYS.has(key)) return role === 'admin';
+            if (CLOUD_LEADER_ONLY_KEYS.has(key)) return role === 'admin' || role === 'leader';
+            return role === 'admin' || role === 'leader' || role === 'student';
+        }
+
+        // Older builds used one global outbox. It is deliberately discarded instead
+        // of being migrated, because replaying it under a different account is unsafe.
+        if (GATEWAY_DATA_BACKEND && GATEWAY_AUTH_ENABLED) {
+            try {
+                Storage.prototype.removeItem.call(localStorage, CLOUD_OUTBOX_KEY);
+                Storage.prototype.removeItem.call(localStorage, CLOUD_VERSION_KEY);
+            } catch (eLegacyOutbox) {}
+        }
+
+        window.clearGatewayUserScopedCache = function(options) {
+            options = options || {};
+            if (!GATEWAY_DATA_BACKEND || !GATEWAY_AUTH_ENABLED) return;
+            var remove = function(key) {
+                try { Storage.prototype.removeItem.call(localStorage, key); } catch (e) {}
+            };
+            CLOUD_SYNC_KEYS.forEach(remove);
+            [
+                'accountData', 'currentSession', 'cloudSyncFingerprints',
+                'loginLogData', 'operationLogData'
+            ].forEach(remove);
+            var principal = currentCloudPrincipal();
+            if (principal) {
+                remove('cloudSyncFingerprints:' + principal);
+                remove(CLOUD_VERSION_KEY + ':' + principal);
+                if (options.preserveOutbox !== true) {
+                    remove(CLOUD_OUTBOX_KEY + ':' + principal);
+                    remove(CLOUD_REJECTED_KEY + ':' + principal);
+                }
+            }
+        };
+
+        function loadCloudMap(storageKey) {
+            try {
+                var parsed = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveCloudMap(storageKey, value) {
+            try {
+                Storage.prototype.setItem.call(localStorage, storageKey, JSON.stringify(value || {}));
+            } catch (e) {}
+        }
+
+        function getCloudVersion(key) {
+            var storageKey = principalStorageKey(CLOUD_VERSION_KEY);
+            if (!storageKey) return 0;
+            var value = Number(loadCloudMap(storageKey)[key]);
+            return Number.isFinite(value) && value >= 0 ? value : 0;
+        }
+
+        function setCloudVersion(key, version) {
+            var storageKey = principalStorageKey(CLOUD_VERSION_KEY);
+            if (!storageKey) return;
+            var versions = loadCloudMap(storageKey);
+            versions[key] = Math.max(0, Number(version) || 0);
+            saveCloudMap(storageKey, versions);
+        }
+
+        function rememberCloudMutation(key, rawValue) {
+            if (!canCurrentRoleWriteSyncKey(key)) return null;
+            var principal = currentCloudPrincipal();
+            var storageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
+            if (!principal || !storageKey) return null;
+            var outbox = loadCloudMap(storageKey);
+            var previous = outbox[key];
+            outbox[key] = Object.assign({}, previous || {}, {
+                rawValue: typeof rawValue === 'string' ? rawValue : JSON.stringify(rawValue),
+                baseVersion: previous && Number.isFinite(Number(previous.baseVersion))
+                    ? Number(previous.baseVersion)
+                    : getCloudVersion(key),
+                owner: principal,
+                revision: Math.max(0, Number(previous && previous.revision) || 0) + 1,
+                queuedAt: Date.now()
+            });
+            delete outbox[key].conflictedAt;
+            delete outbox[key].currentVersion;
+            delete outbox[key].retryAt;
+            delete outbox[key].failures;
+            saveCloudMap(storageKey, outbox);
+            return Object.assign({}, outbox[key]);
+        }
+
+        function clearCloudMutation(key, expectedRevision) {
+            var storageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
+            if (!storageKey) return false;
+            var outbox = loadCloudMap(storageKey);
+            if (!Object.prototype.hasOwnProperty.call(outbox, key)) return;
+            if (
+                expectedRevision != null
+                && Number(outbox[key] && outbox[key].revision) !== Number(expectedRevision)
+            ) return false;
+            delete outbox[key];
+            saveCloudMap(storageKey, outbox);
+            return true;
+        }
+
+        function advanceCloudMutationBase(key, expectedRevision, nextVersion) {
+            var storageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
+            if (!storageKey) return false;
+            var outbox = loadCloudMap(storageKey);
+            var entry = outbox[key];
+            if (!entry || Number(entry.revision) === Number(expectedRevision)) return false;
+            entry.baseVersion = Math.max(0, Number(nextVersion) || 0);
+            delete entry.retryAt;
+            delete entry.failures;
+            saveCloudMap(storageKey, outbox);
+            return true;
+        }
+
+        function markCloudMutationConflict(key, currentVersion, expectedRevision) {
+            var storageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
+            if (!storageKey) return;
+            var outbox = loadCloudMap(storageKey);
+            if (!outbox[key]) return;
+            if (
+                expectedRevision != null
+                && Number(outbox[key].revision) !== Number(expectedRevision)
+            ) return;
+            outbox[key].conflictedAt = Date.now();
+            outbox[key].currentVersion = Math.max(0, Number(currentVersion) || 0);
+            saveCloudMap(storageKey, outbox);
+        }
+
+        function deferCloudMutation(key, expectedRevision) {
+            var storageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
+            if (!storageKey) return;
+            var outbox = loadCloudMap(storageKey);
+            var entry = outbox[key];
+            if (!entry || Number(entry.revision) !== Number(expectedRevision)) return;
+            entry.failures = Math.max(0, Number(entry.failures) || 0) + 1;
+            entry.retryAt = Date.now() + Math.min(
+                CLOUD_RETRY_MAX_MS,
+                5000 * Math.pow(2, Math.min(entry.failures - 1, 6))
+            );
+            saveCloudMap(storageKey, outbox);
+        }
+
+        function quarantineCloudMutation(key, entry, status, reason) {
+            var storageKey = principalStorageKey(CLOUD_REJECTED_KEY);
+            if (storageKey) {
+                var rejected = loadCloudMap(storageKey);
+                rejected[key] = {
+                    status: Number(status) || 0,
+                    reason: String(reason || 'rejected').slice(0, 160),
+                    revision: Math.max(0, Number(entry && entry.revision) || 0),
+                    rejectedAt: Date.now()
+                };
+                var rejectedKeys = Object.keys(rejected).sort(function(a, b) {
+                    return Number(rejected[b].rejectedAt || 0) - Number(rejected[a].rejectedAt || 0);
+                });
+                rejectedKeys.slice(20).forEach(function(oldKey) { delete rejected[oldKey]; });
+                saveCloudMap(storageKey, rejected);
+            }
+            clearCloudMutation(key, entry && entry.revision);
+        }
+
+        function gatewaySyncHasSession() {
+            return !GATEWAY_DATA_BACKEND
+                || !GATEWAY_AUTH_ENABLED
+                || !!(window.GatewayAuth && window.GatewayAuth.hasSession());
+        }
 
         function showCloudSyncBanner(msg, isError) {
             if (!cloudSyncBannerEl) {
@@ -238,6 +769,19 @@
             return pn.slice(CLOUD_SYNC_PREFIX.length);
         }
 
+        function stableSyncStringify(value) {
+            function normalize(item) {
+                if (Array.isArray(item)) return item.map(normalize);
+                if (!item || typeof item !== 'object') return item;
+                var sorted = {};
+                Object.keys(item).sort().forEach(function(key) {
+                    sorted[key] = normalize(item[key]);
+                });
+                return sorted;
+            }
+            return JSON.stringify(normalize(value));
+        }
+
         function compactSyncValue(key, parsed) {
             // 保留压缩后的头像；仅当单张过大时才丢弃，避免撑爆字段
             if (key === 'teamMemberData' && Array.isArray(parsed)) {
@@ -253,10 +797,11 @@
                     return copy;
                 });
             }
-            // 账号头像过大时裁掉，密码与角色权限必须保留以支持全局登录
+            // 账号头像过大时裁掉；历史明文密码永不允许进入云端，只同步 PBKDF2 验证器。
             if (key === 'accountData' && Array.isArray(parsed)) {
                 return parsed.map(function(a) {
                     var copy = Object.assign({}, a);
+                    delete copy.password;
                     var av = copy.avatar ? String(copy.avatar) : '';
                     if (av.length > 80000) copy.avatar = '';
                     return copy;
@@ -286,7 +831,15 @@
             });
         }
 
-        /** 云端拉取时保留本机刚改过的密码，避免「改密后立刻被旧云端数据盖掉」 */
+        function copyPasswordVerifier(target, source) {
+            if (!target || !source) return target;
+            ['passwordScheme', 'passwordSalt', 'passwordIterations', 'passwordHash', 'passwordUpdatedAt'].forEach(function(key) {
+                if (source[key] != null && source[key] !== '') target[key] = source[key];
+            });
+            return target;
+        }
+
+        /** 云端拉取时保留本机刚改过的密码验证器，避免改密后被旧云端数据覆盖。 */
         function mergeCloudAccountDataWithLocalPasswords(cloudAccounts) {
             if (!Array.isArray(cloudAccounts)) return cloudAccounts;
             var local = [];
@@ -316,19 +869,26 @@
                     (pending.studentId && String(pending.studentId) === String(c.studentId))
                     || (pending.userId != null && Number(pending.userId) === Number(c.id))
                 )) {
-                    out.password = pending.password;
+                    copyPasswordVerifier(out, pending);
                     out.mustChangePwd = false;
                     out.firstLogin = false;
                     out.passwordUpdatedAt = pending.ts || Date.now();
+                    delete out.password;
                     return out;
                 }
                 if (!loc) return out;
                 var locTs = Number(loc.passwordUpdatedAt || 0);
                 var cloudTs = Number(c.passwordUpdatedAt || 0);
                 var localNewer = locTs > cloudTs;
-                var localClearedMustChange = (loc.mustChangePwd === false && c.mustChangePwd === true && loc.password);
+                var localClearedMustChange = (
+                    loc.mustChangePwd === false
+                    && c.mustChangePwd === true
+                    && (loc.passwordHash || loc.password)
+                );
                 if (localNewer || localClearedMustChange) {
-                    out.password = loc.password;
+                    copyPasswordVerifier(out, loc);
+                    // 仅保留在本机的升级前明文，后续登录/hardening 会立即替换。
+                    if (!out.passwordHash && loc.password) out.password = loc.password;
                     out.mustChangePwd = loc.mustChangePwd;
                     out.firstLogin = loc.firstLogin;
                     out.passwordUpdatedAt = loc.passwordUpdatedAt || locTs || Date.now();
@@ -350,71 +910,205 @@
             return null;
         }
 
-        async function cloudUpsert(key, rawValue) {
-            if (!cloudSyncEnabled || !CLOUD_SYNC_KEYS.has(key)) return;
-            var parsed;
+        function updateCloudFingerprint(key, summary) {
+            var storageKey = principalStorageKey('cloudSyncFingerprints');
+            if (!storageKey) return;
             try {
-                parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
-            } catch (e) {
-                parsed = rawValue;
-            }
-            parsed = compactSyncValue(key, parsed);
-            var summary = '';
-            try {
-                summary = JSON.stringify(parsed);
-            } catch (e) {
-                console.warn('cloud stringify failed', key, e);
-                return;
-            }
-            // 过大则跳过（约 500KB 保护）
-            if (summary.length > 500000) {
-                console.warn('cloud value too large, skip', key, summary.length);
-                return;
-            }
-            var payload = {
-                patent_type: '同步',
-                name: '[SYNC] ' + key,
-                patent_number: syncKeyToPatentNumber(key),
-                classification: CLOUD_SYNC_MARK,
-                status: 'SYNC',
-                applicant: 'system',
-                summary: summary,
-                remark: 'cloud-sync:' + new Date().toISOString()
-            };
-            try {
-                var id = await findSyncRowId(key);
-                if (id) {
-                    await supabaseRequest('PATCH', 'patents?id=eq.' + id, payload, { prefer: 'return=minimal' });
-                } else {
-                    var created = await supabaseRequest('POST', 'patents', payload, { prefer: 'return=representation' });
-                    if (created && created[0] && created[0].id) {
-                        cloudRowIdCache[key] = created[0].id;
-                    }
-                }
-                cloudSyncReady = true;
-            } catch (err) {
-                console.warn('cloud upsert failed', key, err);
-                if (String(err && err.message || err).indexOf('401') >= 0) {
-                    showCloudSyncBanner('云端同步权限不足', true);
-                }
-            }
-            try {
-                var fp = {};
-                try { fp = JSON.parse(localStorage.getItem('cloudSyncFingerprints') || '{}') || {}; } catch (eFp) { fp = {}; }
+                var fp = loadCloudMap(storageKey);
                 var h = 5381;
                 for (var i = 0; i < summary.length; i++) h = ((h << 5) + h) + summary.charCodeAt(i);
                 fp[key] = (h >>> 0).toString(36) + ':' + summary.length;
-                localStorage.setItem('cloudSyncFingerprints', JSON.stringify(fp));
-            } catch (eFp2) {}
+                saveCloudMap(storageKey, fp);
+            } catch (e) {}
+        }
+
+        async function drainCloudMutation(key) {
+            if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
+            if (cloudUpsertInFlight[key]) return cloudUpsertInFlight[key];
+
+            var task = (async function() {
+                while (gatewaySyncHasSession()) {
+                    var storageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
+                    if (!storageKey) return;
+                    var entry = loadCloudMap(storageKey)[key];
+                    if (!entry || entry.conflictedAt) return;
+                    if (!canCurrentRoleWriteSyncKey(key)) {
+                        quarantineCloudMutation(key, entry, 403, 'role is not allowed to write this key');
+                        continue;
+                    }
+                    if (entry.owner !== currentCloudPrincipal()) {
+                        quarantineCloudMutation(key, entry, 403, 'outbox owner mismatch');
+                        continue;
+                    }
+                    if (Number(entry.retryAt || 0) > Date.now()) return;
+
+                    var revision = Math.max(0, Number(entry.revision) || 0);
+                    var parsed;
+                    try {
+                        parsed = typeof entry.rawValue === 'string'
+                            ? JSON.parse(entry.rawValue)
+                            : entry.rawValue;
+                    } catch (e) {
+                        parsed = entry.rawValue;
+                    }
+                    parsed = compactSyncValue(key, parsed);
+                    var summary = '';
+                    try {
+                        summary = JSON.stringify(parsed);
+                    } catch (stringifyError) {
+                        quarantineCloudMutation(key, entry, 400, 'value cannot be serialized');
+                        continue;
+                    }
+                    if (summary.length > 500000) {
+                        quarantineCloudMutation(key, entry, 413, 'value exceeds browser sync limit');
+                        showCloudSyncBanner('“' + key + '”数据过大，已从同步队列隔离', true);
+                        continue;
+                    }
+
+                    var payload = {
+                        patent_type: '同步',
+                        name: '[SYNC] ' + key,
+                        patent_number: syncKeyToPatentNumber(key),
+                        classification: CLOUD_SYNC_MARK,
+                        status: 'SYNC',
+                        applicant: 'system',
+                        summary: summary,
+                        remark: 'cloud-sync:' + new Date().toISOString()
+                    };
+
+                    try {
+                        var savedVersion = getCloudVersion(key);
+                        if (GATEWAY_DATA_BACKEND) {
+                            var saved = await gatewayJsonRequest('/api/sync/upsert', {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    key: key,
+                                    value: parsed,
+                                    baseVersion: Math.max(0, Number(entry.baseVersion) || 0)
+                                })
+                            });
+                            var savedItem = saved && (saved.item || saved);
+                            savedVersion = Math.max(0, Number(savedItem && savedItem.version) || 0);
+                            setCloudVersion(key, savedVersion);
+                        } else {
+                            var id = await findSyncRowId(key);
+                            if (id) {
+                                await supabaseRequest('PATCH', 'patents?id=eq.' + id, payload, { prefer: 'return=minimal' });
+                            } else {
+                                var created = await supabaseRequest('POST', 'patents', payload, { prefer: 'return=representation' });
+                                if (created && created[0] && created[0].id) {
+                                    cloudRowIdCache[key] = created[0].id;
+                                }
+                            }
+                        }
+                        cloudSyncReady = true;
+                        updateCloudFingerprint(key, summary);
+                        if (!clearCloudMutation(key, revision)) {
+                            // A newer local write arrived while this request was in flight.
+                            // Carry the acknowledged server version forward and drain it next.
+                            advanceCloudMutationBase(key, revision, savedVersion);
+                            continue;
+                        }
+                        return { ok: true, key: key };
+                    } catch (err) {
+                        console.warn('cloud upsert failed', key, err);
+                        var status = Number(err && err.status) || 0;
+                        if (status === 409) {
+                            var currentVersion = Number(err.payload && err.payload.currentVersion);
+                            if (Number.isFinite(currentVersion)) setCloudVersion(key, currentVersion);
+                            if (GATEWAY_DATA_BACKEND) {
+                                try {
+                                    var currentPayload = await gatewayJsonRequest(
+                                        '/api/sync?key=' + encodeURIComponent(key),
+                                        { method: 'GET' }
+                                    );
+                                    var currentItem = currentPayload
+                                        && Array.isArray(currentPayload.items)
+                                        && currentPayload.items[0];
+                                    if (
+                                        currentItem
+                                        && stableSyncStringify(currentItem.value) === stableSyncStringify(parsed)
+                                    ) {
+                                        setCloudVersion(key, currentItem.version);
+                                        if (!clearCloudMutation(key, revision)) {
+                                            advanceCloudMutationBase(key, revision, currentItem.version);
+                                            continue;
+                                        }
+                                        return { ok: true, key: key, deduplicated: true };
+                                    }
+                                } catch (compareError) {
+                                    console.warn('sync conflict comparison failed', key, compareError);
+                                }
+                            }
+                            markCloudMutationConflict(key, currentVersion);
+                            markCloudSyncState({
+                                lastAt: Date.now(),
+                                lastOk: false,
+                                lastReason: 'conflict',
+                                lastError: '数据版本冲突：' + key
+                            });
+                            showCloudSyncBanner('检测到多人同时修改“' + key + '”，已保留本机版本；可点“全量同步”采用服务器版本', true);
+                            return;
+                        }
+                        if (status === 400 || status === 403 || status === 413) {
+                            var latest = loadCloudMap(storageKey)[key];
+                            if (latest && Number(latest.revision) !== revision) continue;
+                            quarantineCloudMutation(key, entry, status, err && err.message);
+                            showCloudSyncBanner('“' + key + '”无权或无法同步，已隔离且不会阻塞其他数据', true);
+                            continue;
+                        }
+                        if (status === 401) {
+                            showCloudSyncBanner('登录状态已失效，请重新登录', true);
+                            return;
+                        }
+                        deferCloudMutation(key, revision);
+                        return;
+                    }
+                }
+            })();
+
+            cloudUpsertInFlight[key] = task;
+            try {
+                return await task;
+            } finally {
+                if (cloudUpsertInFlight[key] === task) delete cloudUpsertInFlight[key];
+            }
+        }
+
+        async function cloudUpsert(key, rawValue, options) {
+            options = options || {};
+            if (!cloudSyncEnabled || !CLOUD_SYNC_KEYS.has(key)) return;
+            if (!options.alreadyQueued && !rememberCloudMutation(key, rawValue)) {
+                return { ok: false, skipped: 'not-authorized' };
+            }
+            if (!gatewaySyncHasSession()) return;
+            return drainCloudMutation(key);
         }
 
         function queueCloudUpsert(key, rawValue) {
-            if (!cloudSyncEnabled || cloudPulling || !CLOUD_SYNC_KEYS.has(key)) return;
+            if (!cloudSyncEnabled || !CLOUD_SYNC_KEYS.has(key)) return;
+            if (!rememberCloudMutation(key, rawValue)) return;
+            if (cloudPulling || !gatewaySyncHasSession()) return;
             clearTimeout(cloudUpsertTimers[key]);
             cloudUpsertTimers[key] = setTimeout(function() {
-                cloudUpsert(key, rawValue);
+                drainCloudMutation(key);
             }, 350);
         }
+
+        async function flushCloudOutbox() {
+            if (!cloudSyncEnabled || cloudPulling || !gatewaySyncHasSession()) return;
+            var storageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
+            if (!storageKey) return;
+            var outbox = loadCloudMap(storageKey);
+            var keys = Object.keys(outbox).filter(function(key) { return CLOUD_SYNC_KEYS.has(key); });
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
+                var entry = loadCloudMap(storageKey)[key];
+                if (!entry || entry.conflictedAt || Number(entry.retryAt || 0) > Date.now()) continue;
+                await cloudUpsert(key, entry.rawValue, { alreadyQueued: true });
+            }
+        }
+        window.flushCloudOutbox = flushCloudOutbox;
 
         (function patchLocalStorageSync() {
             var origSetItem = localStorage.setItem.bind(localStorage);
@@ -430,6 +1124,21 @@
                 markCloudSyncState({ lastAt: Date.now(), lastOk: false, lastReason: 'disabled', lastError: '未配置云端', lastApplied: 0 });
                 return { ok: false, reason: 'disabled', applied: 0, skipped: 0, changedKeys: [] };
             }
+            if (!gatewaySyncHasSession()) {
+                markCloudSyncState({ lastAt: Date.now(), lastOk: null, lastReason: 'waiting-login', lastError: '', lastApplied: 0 });
+                return { ok: false, reason: 'auth', applied: 0, skipped: 0, changedKeys: [] };
+            }
+            var isAutomatic = options.silent === true && options.full !== true;
+            if (isAutomatic && Number(cloudSyncState.retryAt || 0) > Date.now()) {
+                return {
+                    ok: false,
+                    reason: 'backoff',
+                    retryAt: cloudSyncState.retryAt,
+                    applied: 0,
+                    skipped: 0,
+                    changedKeys: []
+                };
+            }
             function syncContentHash(str) {
                 var h = 5381;
                 str = String(str || '');
@@ -437,23 +1146,42 @@
                 return (h >>> 0).toString(36) + ':' + str.length;
             }
             function loadSyncFingerprints() {
-                try { return JSON.parse(localStorage.getItem('cloudSyncFingerprints') || '{}') || {}; } catch (e) { return {}; }
+                var storageKey = principalStorageKey('cloudSyncFingerprints');
+                return storageKey ? loadCloudMap(storageKey) : {};
             }
             function saveSyncFingerprints(map) {
-                try { localStorage.setItem('cloudSyncFingerprints', JSON.stringify(map || {})); } catch (e) {}
+                var storageKey = principalStorageKey('cloudSyncFingerprints');
+                if (storageKey) saveCloudMap(storageKey, map || {});
             }
             try {
                 cloudPulling = true;
-                var rows = await supabaseRequest(
-                    'GET',
-                    'patents?classification=eq.' + encodeURIComponent(CLOUD_SYNC_MARK),
-                    { select: 'id,patent_number,summary,remark', limit: 500 }
-                );
+                var rows;
+                if (GATEWAY_DATA_BACKEND) {
+                    var syncPayload = await gatewayJsonRequest('/api/sync', { method: 'GET' });
+                    rows = ((syncPayload && syncPayload.items) || []).map(function(item, index) {
+                        setCloudVersion(item.syncKey, item.version);
+                        return {
+                            id: index + 1,
+                            patent_number: syncKeyToPatentNumber(item.syncKey),
+                            summary: JSON.stringify(item.value),
+                            remark: item.updatedAt || '',
+                            syncVersion: Number(item.version) || 0
+                        };
+                    });
+                } else {
+                    rows = await supabaseRequest(
+                        'GET',
+                        'patents?classification=eq.' + encodeURIComponent(CLOUD_SYNC_MARK),
+                        { select: 'id,patent_number,summary,remark', limit: 500 }
+                    );
+                }
                 cloudSyncReady = true;
                 var applied = 0;
                 var skipped = 0;
                 var changedKeys = [];
                 var fingerprints = loadSyncFingerprints();
+                var outboxStorageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
+                var pendingMutations = outboxStorageKey ? loadCloudMap(outboxStorageKey) : {};
                 var forceFull = !!options.full;
                 var latestByKey = {};
                 (rows || []).forEach(function(row) {
@@ -467,6 +1195,18 @@
                     var row = latestByKey[key];
                     cloudRowIdCache[key] = row.id;
                     try {
+                        var pendingMutation = pendingMutations[key];
+                        if (pendingMutation && !forceFull) {
+                            if (
+                                row.syncVersion != null
+                                && Number(pendingMutation.baseVersion || 0) !== Number(row.syncVersion || 0)
+                            ) {
+                                console.warn('sync conflict retained locally', key);
+                            }
+                            skipped++;
+                            return;
+                        }
+                        if (pendingMutation && forceFull) clearCloudMutation(key);
                         var summaryRaw = row.summary || 'null';
                         var hash = syncContentHash(summaryRaw);
                         var localRaw = null;
@@ -505,7 +1245,9 @@
                     lastMode: forceFull ? 'full' : 'incremental',
                     lastChangedKeys: changedKeys,
                     lastError: '',
-                    lastReason: 'ok'
+                    lastReason: 'ok',
+                    consecutiveFailures: 0,
+                    retryAt: 0
                 });
                 if (options.silent !== true) {
                     if (forceFull) {
@@ -521,15 +1263,23 @@
                         window.__homeRealtimeBroadcast({ type: 'cloud-applied', applied: applied, keys: changedKeys });
                     }
                 } catch (eBc) {}
+                setTimeout(function() { flushCloudOutbox(); }, 0);
                 return { ok: true, applied: applied, skipped: skipped, changedKeys: changedKeys, full: forceFull };
             } catch (err) {
                 console.warn('pullAllFromCloud failed', err);
+                var failures = Number(cloudSyncState.consecutiveFailures || 0) + 1;
+                var retryAt = Date.now() + Math.min(
+                    CLOUD_RETRY_MAX_MS,
+                    5000 * Math.pow(2, Math.min(failures - 1, 6))
+                );
                 markCloudSyncState({
                     lastAt: Date.now(),
                     lastOk: false,
                     lastApplied: 0,
                     lastError: String(err && err.message || err),
-                    lastReason: 'error'
+                    lastReason: 'error',
+                    consecutiveFailures: failures,
+                    retryAt: retryAt
                 });
                 if (options.silent !== true) showCloudSyncBanner('拉取云端数据失败', true);
                 try {
@@ -636,6 +1386,7 @@
                 result = { ok: false, applied: 0, error: String((ePull && ePull.message) || ePull) };
                 try { markCloudSyncState({ lastOk: false, lastError: result.error }); } catch (eMark) {}
             }
+            if (result && result.reason === 'backoff') return result;
             hydrateInMemoryFromLocalStorage();
             try { if (typeof onCloudAccountPermissionHydrated === 'function') onCloudAccountPermissionHydrated(); } catch (e) {}
             try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem({ preserveSessionUser: true }); } catch (e) {}
@@ -699,7 +1450,10 @@
         try {
             window.addEventListener('storage', function(ev) {
                 if (!ev || !ev.key) return;
-                if (!CLOUD_SYNC_KEYS.has(ev.key) && ev.key !== 'cloudSyncFingerprints') return;
+                if (
+                    !CLOUD_SYNC_KEYS.has(ev.key)
+                    && ev.key.indexOf('cloudSyncFingerprints:') !== 0
+                ) return;
                 clearTimeout(window.__cloudStorageSyncTimer);
                 window.__cloudStorageSyncTimer = setTimeout(function() {
                     syncFromCloudAndRefresh({ silent: true, full: false });
@@ -708,26 +1462,28 @@
         } catch (eStorageSync) {}
 
         setInterval(function() {
-            if (!cloudSyncEnabled) return;
+            if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
             if (document.hidden) return;
             var home = document.getElementById('home');
-            // 首页激活时由 5s 定时器负责，避免重复拉取
+            // 首页激活时由更短周期负责，避免重复拉取。
             if (home && home.classList.contains('active')) return;
             syncFromCloudAndRefresh({ silent: true, full: false });
-        }, 15000);
+        }, CLOUD_BACKGROUND_POLL_MS);
 
-        // 首页激活时 5s 增量同步，提升「实时」感
+        // 首页激活时增量同步；默认 15 秒，兼顾协作时效与网络/浏览器负载。
         setInterval(function() {
-            if (!cloudSyncEnabled) return;
+            if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
             if (document.hidden) return;
             var home = document.getElementById('home');
             if (!home || !home.classList.contains('active')) return;
             syncFromCloudAndRefresh({ silent: true, full: false });
-        }, 5000);
+        }, CLOUD_HOME_POLL_MS);
 
         window.__cloudBootstrapped = true;
         setTimeout(function() {
-            syncFromCloudAndRefresh({ silent: true, full: false });
+            if (gatewaySyncHasSession()) {
+                syncFromCloudAndRefresh({ silent: true, full: false });
+            }
         }, 400);
 
         // 显示模块
@@ -799,17 +1555,13 @@
             var prevLabel = prevId ? getModuleLabel(prevId) : '';
             var title = can ? ('返回上一级：' + prevLabel + '（Alt+←）') : '暂无上一级页面';
             var btn = document.getElementById('moduleBackBtn');
-            var fab = document.getElementById('moduleBackFab');
-            var fabPrev = document.getElementById('moduleBackFabPrev');
             var btnText = btn ? btn.querySelector('.back-text') : null;
-            [btn, fab].forEach(function (el) {
-                if (!el) return;
-                el.disabled = !can;
-                el.classList.toggle('is-disabled', !can);
-                el.title = title;
-            });
+            if (btn) {
+                btn.disabled = !can;
+                btn.classList.toggle('is-disabled', !can);
+                btn.title = title;
+            }
             if (btnText) btnText.textContent = can ? ('返回 ' + prevLabel) : '返回';
-            if (fabPrev) fabPrev.textContent = can ? prevLabel : '';
             try {
                 window.__moduleNavHistory = moduleNavHistory.slice();
                 window.__currentModuleId = currentModuleId;
@@ -858,7 +1610,7 @@
             currentModuleId = moduleId;
             updateModuleBackButton();
 
-            if (cloudSyncEnabled) {
+            if (cloudSyncEnabled && Date.now() - Number(cloudSyncState.lastAt || 0) >= 10000) {
                 clearTimeout(window.__cloudModuleSyncTimer);
                 window.__cloudModuleSyncTimer = setTimeout(function() {
                     syncFromCloudAndRefresh({ silent: true });
@@ -930,6 +1682,13 @@
                 try { if (typeof initMyProjects === 'function') initMyProjects(); } catch (eMp) {}
             } else if (moduleId === 'my_achievements') {
                 try { if (typeof initMyAchievements === 'function') initMyAchievements(); } catch (eAch) {}
+            } else if (moduleId === 'openai') {
+                try {
+                    if (typeof loadApiKey === 'function') loadApiKey();
+                    if (typeof updateOpenAIHeroStatus === 'function') updateOpenAIHeroStatus();
+                } catch (eAi) {}
+            } else if (moduleId === 'excel') {
+                try { if (typeof displayDevLogHistory === 'function') displayDevLogHistory(); } catch (eExcel) {}
             }
         }
 
@@ -1120,13 +1879,14 @@
                         }
                     }
                     
+                    const numericId = Number(patent.id);
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${escapeHtml(patent.name)}</td>
                         <td>${escapeHtml(applicant)}</td>
                         <td>${escapeHtml(patent.applicationDate)}</td>
                         <td><span class="tag ${getTagClass(patent.status)}">${escapeHtml(patent.status)}</span></td>
-                        <td><button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="viewPatent(${patent.id})")">查看</button></td>
+                        <td><button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="viewPatent(${Number.isFinite(numericId) ? numericId : -1})">查看</button></td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -1858,7 +2618,7 @@
                 let tagClass = 'tag-success';
                 if (patent.status === '审查中') tagClass = 'tag-warning';
                 if (patent.status === '已授权') tagClass = 'tag-primary';
-                td.innerHTML = `<span class="tag ${tagClass}">${patent.status}</span>`;
+                td.innerHTML = `<span class="tag ${tagClass}">${escapeHtml(patent.status)}</span>`;
                 statusRow.appendChild(td);
             });
             tbody.appendChild(statusRow);
@@ -2426,7 +3186,7 @@
             // 添加用户消息
             const userMessage = document.createElement('div');
             userMessage.className = 'chat-message user';
-            userMessage.innerHTML = `<strong>您：</strong><br>${message}`;
+            userMessage.innerHTML = `<strong>您：</strong><br>${escapeHtml(message)}`;
             container.appendChild(userMessage);
             
             // 记录对话历史
@@ -2442,7 +3202,7 @@
                 
                 const response = generateAIResponse(message);
                 
-                aiMessage.innerHTML = `<strong>智能助手：</strong><br>${response}`;
+                aiMessage.innerHTML = `<strong>智能助手：</strong><br>${escapeHtml(response)}`;
                 container.appendChild(aiMessage);
                 
                 // 记录AI回复
@@ -3047,7 +3807,7 @@
                 fileItem.style.padding = '8px';
                 fileItem.style.borderBottom = '1px solid #e9ecef';
                 fileItem.innerHTML = `
-                    <span>📄 ${file.name}</span>
+                    <span>📄 ${escapeHtml(file.name)}</span>
                     <span style="float: right; color: #666; font-size: 12px;">${formatFileSize(file.size)}</span>
                 `;
                 fileList.appendChild(fileItem);
@@ -3093,16 +3853,22 @@
         }
         
         // OpenAI 功能
-        const API_PROXY = 'https://dawn-night-d7ae.1970238795.workers.dev';
+        // 默认只走同源网关，避免把 API 密钥发送给未显式配置的第三方代理。
+        const API_PROXY = String(getAppConfig('API_PROXY', '') || '').trim().replace(/\/$/, '');
         window.API_PROXY = API_PROXY;
         const PORT = 3000;
         
         // 更新 API Key 显示
         function updateApiKeyDisplay() {
-            const apiKey = document.getElementById('openaiApiKey').value;
+            const input = document.getElementById('openaiApiKey');
             const display = document.getElementById('apiKeyDisplay');
+            if (!input || !display) return;
+            const apiKey = input.value;
             if (apiKey) {
-                display.textContent = `当前 API：${apiKey}`;
+                var masked = apiKey.length > 8
+                    ? apiKey.slice(0, 4) + '••••' + apiKey.slice(-4)
+                    : '••••••••';
+                display.textContent = `当前 API：${masked}`;
             } else {
                 display.textContent = '请输入 API 密钥';
             }
@@ -3112,7 +3878,8 @@
         function saveApiKey() {
             const apiKey = document.getElementById('openaiApiKey').value;
             if (apiKey) {
-                localStorage.setItem('openaiApiKey', apiKey);
+                sessionStorage.setItem('openaiApiKey', apiKey);
+                localStorage.removeItem('openaiApiKey');
                 updateApiKeyDisplay();
                 showApiKeyStatus('API 密钥保存成功！', 'success');
                 try { if (typeof updateChatModeBadge === 'function') updateChatModeBadge(); } catch (e) {}
@@ -3124,9 +3891,14 @@
         
         // 加载 API 密钥
         function loadApiKey() {
-            const savedKey = localStorage.getItem('openaiApiKey');
+            const input = document.getElementById('openaiApiKey');
+            if (!input) return;
+            const legacyKey = localStorage.getItem('openaiApiKey');
+            const savedKey = sessionStorage.getItem('openaiApiKey') || legacyKey;
             if (savedKey) {
-                document.getElementById('openaiApiKey').value = savedKey;
+                sessionStorage.setItem('openaiApiKey', savedKey);
+                if (legacyKey) localStorage.removeItem('openaiApiKey');
+                input.value = savedKey;
                 updateApiKeyDisplay();
                 showApiKeyStatus('API 密钥已加载', 'success');
             } else {
@@ -3140,7 +3912,7 @@
             const el = document.getElementById('openaiHeroStatus');
             if (!el) return;
             const key = (document.getElementById('openaiApiKey') && document.getElementById('openaiApiKey').value)
-                || localStorage.getItem('openaiApiKey')
+                || sessionStorage.getItem('openaiApiKey')
                 || '';
             if (String(key).trim()) {
                 el.textContent = '密钥已配置';
@@ -3152,10 +3924,10 @@
         }
         
         // 页面加载时加载开发日志历史
-        window.onload = function() {
+        window.addEventListener('load', function() {
             loadApiKey();
-            displayDevLogHistory();
-        }
+            if (typeof displayDevLogHistory === 'function') displayDevLogHistory();
+        });
         
         // 详情弹窗功能
         const modal = document.getElementById('details-modal');
@@ -3526,7 +4298,7 @@
             addOpenAIMessage('user', message);
             input.value = '';
             
-            const apiKey = document.getElementById('openaiApiKey').value || localStorage.getItem('openaiApiKey') || '';
+            const apiKey = document.getElementById('openaiApiKey').value || sessionStorage.getItem('openaiApiKey') || '';
             const model = document.getElementById('openaiModel').value;
             const temperature = parseFloat(document.getElementById('openaiTemperature').value);
             const maxTokens = parseInt(document.getElementById('openaiMaxTokens').value);
@@ -3593,7 +4365,7 @@
             row.className = 'team-chat-row ' + (isUser ? 'user' : 'assistant');
             const body = typing
                 ? '<div class="team-chat-typing" aria-label="正在思考"><span></span><span></span><span></span></div>'
-                : '<div>' + String(content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                : '<div>' + escapeHtml(content) + '</div>';
             row.innerHTML = '<div class="team-chat-bubble ' + (isUser ? 'user' : 'assistant') + '">' +
                 '<div class="team-chat-label">' + (isUser ? '我' : '百炼助手') + '</div>' +
                 body +
@@ -3610,7 +4382,7 @@
                 messageDiv.className = 'team-chat-row assistant';
                 messageDiv.innerHTML = '<div class="team-chat-bubble assistant">' +
                     '<div class="team-chat-label">百炼助手</div>' +
-                    '<div>' + String(content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>' +
+                    '<div>' + escapeHtml(content) + '</div>' +
                     '<div class="team-chat-meta">大模型直连</div></div>';
                 const chatContainer = document.getElementById('openaiChatContainer');
                 if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
