@@ -99,6 +99,7 @@
         function openSchoolColFilter(ev, field, label) { acShowColFilter(ev, 'school', field, label, schoolData, 'renderSchoolTable'); }
         function openPaperColFilter(ev, field, label) { acShowColFilter(ev, 'paper', field, label, paperData, 'renderPaperTable'); }
         function openStandardColFilter(ev, field, label) { acShowColFilter(ev, 'standard', field, label, standardData, 'renderStandardTable'); }
+        function openPatentColFilter(ev, field, label) { acShowColFilter(ev, 'patent', field, label, patentMgmtData, 'renderPatentMgmtTable'); }
         // 虚拟列：表头「年度」对应日期字段前 4 位；论文 publishDate → publish_date
         acColValFn('longitudinal', 'year', _acYearOf('startDate'));
         acColValFn('horizontal', 'year', _acYearOf('startDate'));
@@ -3206,8 +3207,6 @@
         var patentMgmtSortField = '';
         var patentMgmtSortOrder = 'asc';
         var patentPage = 1;
-        // 列头筛选（Excel 式自动筛选）：按数据字段名存当前筛选值，空串=不筛选
-        var patentMgmtColFilters = { patent_type: '', classification: '', status: '' };
         const PAGE_SIZE = 20;
         
         async function initPatentMgmtData(options) {
@@ -3272,17 +3271,21 @@
             const emptyMsg = document.getElementById('patentMgmtEmptyMessage');
             if (!tbody) return;
             tbody.innerHTML = '';
-            if (filteredPatentMgmtData.length === 0) {
+            const rows = acColRows('patent', filteredPatentMgmtData);
+            if (rows.length === 0) {
                 if (emptyMsg) emptyMsg.style.display = 'block';
+                const existingEmpty = document.getElementById('patentPagination');
+                if (existingEmpty) existingEmpty.remove();
+                if (typeof acUpdateColIndicators === 'function') acUpdateColIndicators('patent');
                 return;
             }
             if (emptyMsg) emptyMsg.style.display = 'none';
-            const totalPages = Math.ceil(filteredPatentMgmtData.length / PAGE_SIZE);
+            const totalPages = Math.ceil(rows.length / PAGE_SIZE) || 1;
             if (patentPage > totalPages) patentPage = totalPages;
             if (patentPage < 1) patentPage = 1;
             const start = (patentPage - 1) * PAGE_SIZE;
             const end = start + PAGE_SIZE;
-            const pageData = filteredPatentMgmtData.slice(start, end);
+            const pageData = rows.slice(start, end);
             pageData.forEach(item => {
                 const row = document.createElement('tr');
                 let statusClass = 'tag-warning';
@@ -3309,7 +3312,7 @@
                 tbody.appendChild(row);
             });
             let paginationHtml = `<div style="display:flex;justify-content:space-between;align-items:center;padding:15px;border-top:1px solid #eee;">
-                <span style="color:#666;">共 ${filteredPatentMgmtData.length} 条，第 ${patentPage}/${totalPages} 页</span>
+                <span style="color:#666;">共 ${rows.length} 条，第 ${patentPage}/${totalPages} 页</span>
                 <div style="display:flex;gap:5px;align-items:center;">
                     <button class="btn" style="padding:4px 12px;font-size:12px;${patentPage===1?'opacity:0.5;pointer-events:none':''}" onclick="changePatentPage(${patentPage-1})">上一页</button>`;
             for (let p = 1; p <= totalPages; p++) {
@@ -3327,10 +3330,12 @@
             paginationDiv.id = 'patentPagination';
             paginationDiv.innerHTML = paginationHtml;
             tbody.parentNode.parentNode.appendChild(paginationDiv);
+            if (typeof acUpdateColIndicators === 'function') acUpdateColIndicators('patent');
         }
         
         function changePatentPage(page) {
-            const totalPages = Math.ceil(filteredPatentMgmtData.length / PAGE_SIZE);
+            const rows = acColRows('patent', filteredPatentMgmtData);
+            const totalPages = Math.ceil(rows.length / PAGE_SIZE) || 1;
             if (page < 1 || page > totalPages) return;
             patentPage = page;
             selectedPatentMgmtIds.clear();
@@ -3608,8 +3613,7 @@ ${ocrText}`
         function filterPatentMgmtByTag(tag, element) {
             document.querySelectorAll('#patentMgmtFilterTags .filter-tag').forEach(t => t.classList.remove('active'));
             element.classList.add('active');
-            patentMgmtColFilters = { patent_type: '', classification: '', status: '' };
-            _updatePatentColFilterIndicators();
+            if (typeof acClearColFilter === 'function') acClearColFilter('patent');
             const currentYear = new Date().getFullYear().toString();
             switch(tag) {
                 case 'all': filteredPatentMgmtData = [...patentMgmtData]; break;
@@ -3645,78 +3649,12 @@ ${ocrText}`
                 if (classification && d.classification !== classification) return false;
                 if (dateFrom && (!d.application_date || d.application_date < dateFrom)) return false;
                 if (dateTo && (!d.application_date || d.application_date > dateTo)) return false;
-                if (patentMgmtColFilters.patent_type && d.patent_type !== patentMgmtColFilters.patent_type) return false;
-                if (patentMgmtColFilters.classification && d.classification !== patentMgmtColFilters.classification) return false;
-                if (patentMgmtColFilters.status && d.status !== patentMgmtColFilters.status) return false;
                 return true;
             });
             patentPage = 1;
             renderPatentMgmtTable();
         }
         
-        function _updatePatentColFilterIndicators() {
-            ['patent_type', 'classification', 'status'].forEach(function (f) {
-                var b = document.getElementById('pcfBtn_' + f);
-                if (b) {
-                    var on = !!patentMgmtColFilters[f];
-                    b.style.color = on ? '#4f46e5' : '#94a3b8';
-                    b.textContent = on ? '▼●' : '▼';
-                    b.title = on ? ('已筛选：' + patentMgmtColFilters[f] + '（点击可改/清除）') : '按此列筛选';
-                }
-            });
-        }
-
-        function closePatentColFilterPopup() {
-            var ex = document.getElementById('patentColFilterPop');
-            if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
-            document.removeEventListener('click', _patentColFilterOutside, true);
-        }
-
-        function _patentColFilterOutside(e) {
-            var pop = document.getElementById('patentColFilterPop');
-            if (pop && !pop.contains(e.target)) closePatentColFilterPopup();
-        }
-
-        function setPatentColFilter(field, value) {
-            if (!patentMgmtColFilters.hasOwnProperty(field)) return;
-            patentMgmtColFilters[field] = value || '';
-            closePatentColFilterPopup();
-            applyPatentMgmtFilters();
-            _updatePatentColFilterIndicators();
-        }
-
-        // 列头筛选：点击列头 ▼ 弹出该列所有取值供选择（Excel 式自动筛选）
-        function openPatentColFilter(event, field, label) {
-            if (event) { event.stopPropagation(); }
-            closePatentColFilterPopup();
-            var esc = window.escapeHtml || function (s) { return String(s); };
-            var counts = {};
-            (patentMgmtData || []).forEach(function (d) {
-                var v = (d && d[field] != null) ? String(d[field]) : '';
-                if (v) counts[v] = (counts[v] || 0) + 1;
-            });
-            var cur = patentMgmtColFilters[field] || '';
-            var optStyle = 'padding:7px 14px;cursor:pointer;display:flex;justify-content:space-between;gap:16px;white-space:nowrap;';
-            var actStyle = 'background:#eef2ff;color:#4f46e5;font-weight:600;';
-            function opt(value, text, count) {
-                var active = cur === value;
-                var v = String(value).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                return '<div onclick="setPatentColFilter(\'' + field + '\',\'' + v + '\')" style="' + optStyle + (active ? actStyle : 'color:#334155;') + '">' +
-                    '<span>' + (active ? '✓ ' : '') + esc(text) + '</span><span style="color:#94a3b8;">' + count + '</span></div>';
-            }
-            var rows = opt('', '全部', (patentMgmtData || []).length);
-            Object.keys(counts).sort().forEach(function (k) { rows += opt(k, k, counts[k]); });
-            var pop = document.createElement('div');
-            pop.id = 'patentColFilterPop';
-            pop.style.cssText = 'position:fixed;z-index:3000;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.18);min-width:190px;max-height:320px;overflow:auto;font-size:13px;';
-            pop.innerHTML = '<div style="padding:8px 14px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#334155;">按「' + esc(label) + '」筛选</div>' + rows;
-            document.body.appendChild(pop);
-            var r = (event && event.currentTarget ? event.currentTarget : document.getElementById('pcfBtn_' + field)).getBoundingClientRect();
-            pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8)) + 'px';
-            pop.style.top = Math.max(8, Math.min(r.bottom + 4, window.innerHeight - pop.offsetHeight - 8)) + 'px';
-            setTimeout(function () { document.addEventListener('click', _patentColFilterOutside, true); }, 0);
-        }
-
         function resetPatentMgmtFilters() {
             document.getElementById('patentMgmtFilterName').value = '';
             document.getElementById('patentMgmtFilterNumber').value = '';
@@ -3729,8 +3667,7 @@ ${ocrText}`
             document.getElementById('patentMgmtMoreFilters').style.display = 'none';
             document.querySelectorAll('#patentMgmtFilterTags .filter-tag').forEach(t => t.classList.remove('active'));
             document.querySelector('#patentMgmtFilterTags .filter-tag').classList.add('active');
-            patentMgmtColFilters = { patent_type: '', classification: '', status: '' };
-            _updatePatentColFilterIndicators();
+            if (typeof acClearColFilter === 'function') acClearColFilter('patent');
             filteredPatentMgmtData = [...patentMgmtData];
             patentPage = 1;
             renderPatentMgmtTable();

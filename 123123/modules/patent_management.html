@@ -96,15 +96,15 @@
                             <thead>
                                 <tr>
                                     <th style="width: 40px;"><input type="checkbox" id="patentMgmtSelectAll" onchange="togglePatentMgmtSelectAll(this)"></th>
-                                    <th onclick="sortPatentMgmtTable('patentType')" style="cursor: pointer;">专利类型 ⇅ <span id="pcfBtn_patent_type" onclick="event.stopPropagation();openPatentColFilter(event,'patent_type','专利类型')" title="按此列筛选" style="cursor:pointer;color:#94a3b8;font-size:11px;">▼</span></th>
-                                    <th onclick="sortPatentMgmtTable('name')" style="cursor: pointer;">专利名称 ⇅</th>
-                                    <th onclick="sortPatentMgmtTable('patentNumber')" style="cursor: pointer;">专利号 ⇅</th>
-                                    <th onclick="sortPatentMgmtTable('announcementNumber')" style="cursor: pointer;">授权公告号 ⇅</th>
-                                    <th onclick="sortPatentMgmtTable('grantDate')" style="cursor: pointer;">授权日 </th>
-                                    <th onclick="sortPatentMgmtTable('applicant')" style="cursor: pointer;">申请人 ⇅</th>
-                                    <th onclick="sortPatentMgmtTable('inventor')" style="cursor: pointer;">发明人 ⇅</th>
-                                    <th onclick="sortPatentMgmtTable('classification')" style="cursor: pointer;">专利所属类别 ⇅ <span id="pcfBtn_classification" onclick="event.stopPropagation();openPatentColFilter(event,'classification','专利所属类别')" title="按此列筛选" style="cursor:pointer;color:#94a3b8;font-size:11px;">▼</span></th>
-                                    <th onclick="sortPatentMgmtTable('status')" style="cursor: pointer;">状态 ⇅ <span id="pcfBtn_status" onclick="event.stopPropagation();openPatentColFilter(event,'status','状态')" title="按此列筛选" style="cursor:pointer;color:#94a3b8;font-size:11px;">▼</span></th>
+                                    <th>专利类型 <span data-acfilter="patent" data-acfield="patent_type" onclick="openPatentColFilter(event,'patent_type','专利类型')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>专利名称 <span data-acfilter="patent" data-acfield="name" onclick="openPatentColFilter(event,'name','专利名称')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>专利号 <span data-acfilter="patent" data-acfield="patent_number" onclick="openPatentColFilter(event,'patent_number','专利号')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>授权公告号 <span data-acfilter="patent" data-acfield="announcement_number" onclick="openPatentColFilter(event,'announcement_number','授权公告号')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>授权日 <span data-acfilter="patent" data-acfield="grant_date" onclick="openPatentColFilter(event,'grant_date','授权日')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>申请人 <span data-acfilter="patent" data-acfield="applicant" onclick="openPatentColFilter(event,'applicant','申请人')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>发明人 <span data-acfilter="patent" data-acfield="inventor" onclick="openPatentColFilter(event,'inventor','发明人')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>专利所属类别 <span data-acfilter="patent" data-acfield="classification" onclick="openPatentColFilter(event,'classification','专利所属类别')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
+                                    <th>状态 <span data-acfilter="patent" data-acfield="status" onclick="openPatentColFilter(event,'status','状态')" title="按此列筛选" style="cursor:pointer;color:#9ca3af;font-size:11px;">▼</span></th>
                                     <th>操作</th>
                                 </tr>
                             </thead>

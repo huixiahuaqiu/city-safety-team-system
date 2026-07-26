@@ -240,13 +240,46 @@
   }
 
   function filteredList() {
+    var list = allAchievements().filter(function (p) { return passFilters(p); });
+    if (typeof acColRows === 'function') list = acColRows('myachievements', list);
+    return list;
+  }
+
+  function sideFilteredList() {
     return allAchievements().filter(function (p) { return passFilters(p); });
+  }
+
+  function ensureAchColFilterReady() {
+    if (ensureAchColFilterReady._done) return;
+    if (typeof acColValFn === 'function') {
+      acColValFn('myachievements', 'info', function (d) {
+        return (d && (d.journal || d.status || d.authors)) || '';
+      });
+      ensureAchColFilterReady._done = true;
+    }
+  }
+
+  function openAchColFilter(ev, field, label) {
+    ensureAchColFilterReady();
+    if (typeof acShowColFilter === 'function') {
+      acShowColFilter(ev, 'myachievements', field, label, sideFilteredList(), 'achRender');
+    }
+  }
+
+  function achColTh(field, label, width) {
+    var w = width ? ' style="width:' + width + '"' : '';
+    var safeLabel = String(label).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return '<th' + w + '>' + esc(label) +
+      ' <span data-acfilter="myachievements" data-acfield="' + esc(field) +
+      '" onclick="openAchColFilter(event,\'' + esc(field) + '\',\'' + safeLabel +
+      '\')" title="按此列筛选" class="ach-col-filter">▼</span></th>';
   }
 
   function achSetFilter(kind, value) {
     value = value == null ? '' : String(value);
     if (kind === 'type') {
       state.type = value;
+      if (typeof acClearColFilter === 'function') acClearColFilter('myachievements');
     } else if (kind === 'role') {
       state.role = (state.role === value ? '' : value);
     } else if (kind === 'year') {
@@ -275,6 +308,7 @@
     state.role = '';
     state.year = '';
     state.page = 1;
+    if (typeof acClearColFilter === 'function') acClearColFilter('myachievements');
     achRender();
   }
 
@@ -359,12 +393,34 @@
   function headHtml() {
     var t = state.type;
     if (t === '专利') {
-      return '<tr><th style="width:14%">申请号</th><th>专利名称</th><th style="width:11%">申请日期</th><th style="width:10%">专利状态</th><th style="width:16%">所属单位</th><th style="width:9%">代理状态</th><th style="width:10%">审核状态</th></tr>';
+      return '<tr>' +
+        achColTh('no', '申请号', '14%') +
+        achColTh('title', '专利名称') +
+        achColTh('date', '申请日期', '11%') +
+        achColTh('status', '专利状态', '10%') +
+        achColTh('unit', '所属单位', '16%') +
+        achColTh('agentStatus', '代理状态', '9%') +
+        achColTh('audit', '审核状态', '10%') +
+        '</tr>';
     }
     if (t === '论文' || t === '') {
-      return '<tr><th>名称</th><th style="width:16%">刊物/论文集名称</th><th style="width:18%">所有作者</th><th style="width:11%">发表/出版日期</th><th style="width:10%">审核状态</th><th style="width:14%">所属单位</th><th style="width:8%">操作</th></tr>';
+      return '<tr>' +
+        achColTh('title', '名称') +
+        achColTh('journal', '刊物/论文集名称', '16%') +
+        achColTh('authors', '所有作者', '18%') +
+        achColTh('date', '发表/出版日期', '11%') +
+        achColTh('audit', '审核状态', '10%') +
+        achColTh('unit', '所属单位', '14%') +
+        '<th style="width:8%">操作</th></tr>';
     }
-    return '<tr><th>名称</th><th style="width:14%">日期</th><th style="width:18%">相关信息</th><th style="width:14%">所属单位</th><th style="width:10%">审核状态</th><th style="width:10%">参与形式</th></tr>';
+    return '<tr>' +
+      achColTh('title', '名称') +
+      achColTh('date', '日期', '14%') +
+      achColTh('info', '相关信息', '18%') +
+      achColTh('unit', '所属单位', '14%') +
+      achColTh('audit', '审核状态', '10%') +
+      achColTh('roleType', '参与形式', '10%') +
+      '</tr>';
   }
 
   function rowHtml(p) {
@@ -424,6 +480,7 @@
     hoistModal();
     bindTableClicks();
     bindSideClicks();
+    ensureAchColFilterReady();
     var all = allAchievements();
     updateSide(all);
     var list = filteredList();
@@ -434,10 +491,17 @@
     if (!thead || !tbody) return;
 
     if (!state.type) {
-      thead.innerHTML = '<tr><th style="width:10%">类型</th><th>名称</th><th style="width:12%">日期</th><th style="width:14%">所属单位</th><th style="width:10%">审核状态</th></tr>';
+      thead.innerHTML = '<tr>' +
+        achColTh('_type', '类型', '10%') +
+        achColTh('title', '名称') +
+        achColTh('date', '日期', '12%') +
+        achColTh('unit', '所属单位', '14%') +
+        achColTh('audit', '审核状态', '10%') +
+        '</tr>';
     } else {
       thead.innerHTML = headHtml();
     }
+    if (typeof acUpdateColIndicators === 'function') acUpdateColIndicators('myachievements');
 
     var total = list.length;
     var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -752,4 +816,5 @@
   global.achShowAddHint = achShowAddHint;
   global.achExportCsv = achExportCsv;
   global.achSeedDemo = achSeedDemo;
+  global.openAchColFilter = openAchColFilter;
 })(typeof window !== 'undefined' ? window : this);
