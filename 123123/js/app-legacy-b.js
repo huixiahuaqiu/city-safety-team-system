@@ -1251,6 +1251,23 @@
 
     function enforceMustChangePasswordGate() {
         if (!currentUser) return false;
+        // 静态演示站不强制改密（无服务端改密接口，旧缓存账号也直接放行）
+        if (isStaticPagesDemoHost()) {
+            try {
+                var list = Array.isArray(accountData) ? accountData : [];
+                list.forEach(function (a) {
+                    if (!a) return;
+                    a.mustChangePwd = false;
+                    a.firstLogin = false;
+                });
+                currentUser.mustChangePwd = false;
+                currentUser.firstLogin = false;
+                localStorage.setItem('accountData', JSON.stringify(list));
+                var modal = document.getElementById('forceChangePwdModal');
+                if (modal) modal.remove();
+            } catch (eStaticPwd) {}
+            return false;
+        }
         var acc = findAccountRecordForUser(currentUser) || currentUser;
         if (!acc.mustChangePwd) return false;
         currentUser = acc;

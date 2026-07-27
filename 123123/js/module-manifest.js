@@ -42,9 +42,9 @@ window.__MODULE_VERSIONS = {
 // js/*.js 的内容哈希，供按模块加载的脚本做精准缓存控制。
 window.__ASSET_VERSIONS = {
   "js/achievements-modules.js": "7e1d17a162",
-  "js/app-core.js": "e57aaa5e6a",
+  "js/app-core.js": "feb9adbaaf",
   "js/app-legacy-a.js": "7a71092496",
-  "js/app-legacy-b.js": "440eebe6b9",
+  "js/app-legacy-b.js": "921ac1ed43",
   "js/application-center.js": "a8046caf79",
   "js/competition-management.js": "89100d10bf",
   "js/dataset-library.js": "1c4915d013",
@@ -59,7 +59,7 @@ window.__ASSET_VERSIONS = {
   "js/my-projects.js": "c06536a6c7",
   "js/news-management.js": "73df64f9b8",
   "js/notice-enhance.js": "2131737780",
-  "js/pages-static-boot.js": "30bf21441c",
+  "js/pages-static-boot.js": "33f9b797b8",
   "js/portal-public.js": "17f4556571",
   "js/project-report.js": "d01933794a",
   "js/shared-file-library.js": "9cc30ee276",

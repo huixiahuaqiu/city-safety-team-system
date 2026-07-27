@@ -116,6 +116,19 @@
                 }
             } catch (e) { /* 忽略日志异常，绝不影响主流程 */ }
         };
+        // GitHub Pages 等静态托管没有网关：按主机名强制关闭，避免缓存旧 config 仍去打 /api
+        try {
+            if (/\.github\.io$/i.test(String(location.hostname || ''))) {
+                window.APP_CONFIG = Object.assign({}, window.APP_CONFIG || {}, {
+                    APP_ENV: 'pages',
+                    SHOW_DEMO_ACCOUNTS: true,
+                    GATEWAY_AUTH_ENABLED: false,
+                    DATA_BACKEND: 'local',
+                    API_PROXY: '',
+                    STATIC_PAGES_DEMO: true
+                });
+            }
+        } catch (ePagesHost) {}
         const GATEWAY_AUTH_ENABLED = getAppConfig('GATEWAY_AUTH_ENABLED', false) === true;
         window.GatewayAuth = (function () {
             const STORAGE_KEY = 'citysafeGatewaySession';

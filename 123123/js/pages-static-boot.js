@@ -50,13 +50,16 @@
         var meta = payload.meta || {};
         var version = String(meta.version || '');
         var applied = String(localStorage.getItem('__pagesSnapshotVersion') || '');
-        // 同版本且已有成员数据则不重复覆盖用户本地改动
+        var bootFix = 'pwd405-2';
+        var needBootFix = String(localStorage.getItem('__pagesBootFix') || '') !== bootFix;
+        // 同版本且已有成员数据则不重复覆盖；但引导修复（如强制改密残留）时仍重放快照
         try {
             var existing = JSON.parse(localStorage.getItem('teamMemberData') || '[]');
-            if (applied === version && Array.isArray(existing) && existing.length >= 20) {
+            if (!needBootFix && applied === version && Array.isArray(existing) && existing.length >= 20) {
                 return false;
             }
         } catch (e) {}
+        try { localStorage.setItem('__pagesBootFix', bootFix); } catch (eFix) {}
 
         Object.keys(payload.data).forEach(function (key) {
             if (SKIP[key]) return;
@@ -109,6 +112,32 @@
 
     forcePagesConfig();
 
+    // 每次进入都清掉「强制改密」残留，避免旧 localStorage 仍弹出改密框并打 /api
+    function clearForcePasswordFlags() {
+        try {
+            var raw = localStorage.getItem('accountData');
+            if (!raw) return;
+            var accounts = JSON.parse(raw);
+            if (!Array.isArray(accounts)) return;
+            var changed = false;
+            accounts.forEach(function (a) {
+                if (!a || typeof a !== 'object') return;
+                if (a.mustChangePwd || a.firstLogin) {
+                    a.mustChangePwd = false;
+                    a.firstLogin = false;
+                    changed = true;
+                }
+                if (!a.password && !a.passwordHash) {
+                    a.password = '123456';
+                    changed = true;
+                }
+            });
+            if (changed) localStorage.setItem('accountData', JSON.stringify(accounts));
+            try { sessionStorage.removeItem('pendingPasswordCommit'); } catch (e0) {}
+        } catch (e1) {}
+    }
+    clearForcePasswordFlags();
+
     // 同步拉取快照，保证在 app-core / 登录初始化前写入 localStorage
     var applied = false;
     try {
@@ -117,6 +146,7 @@
         xhr.send(null);
         if (xhr.status >= 200 && xhr.status < 300) {
             applied = applySnapshot(JSON.parse(xhr.responseText));
+            clearForcePasswordFlags();
         } else {
             console.warn('[pages-static-boot] snapshot HTTP', xhr.status);
         }
@@ -136,6 +166,9 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        showBanner('当前为 GitHub Pages 静态演示（快照数据）。登录可用演示账号，密码 123456。多人协作请使用正式服务器。');
+        clearForcePasswordFlags();
+        var modal = document.getElementById('forceChangePwdModal');
+        if (modal) modal.remove();
+        showBanner('当前为 GitHub Pages 静态演示。请用 admin / 123456 登录；若仍异常请用无痕窗口打开。');
     });
 })();
