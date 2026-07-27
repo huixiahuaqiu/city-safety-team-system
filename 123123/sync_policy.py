@@ -111,6 +111,8 @@ STUDENT_READ_KEYS = PUBLIC_READ_KEYS | frozenset(
         "taskData",
         "weeklyReportData",
         "applicationData",
+        "approvalFlowConfig",
+        "holidayLeaveCampaigns",
         "noticeData",
         "datasetData",
         "sharedFileData",
@@ -430,7 +432,8 @@ def _values(record: dict[str, Any], fields: Iterable[str]) -> set[str]:
 
 
 OWNERSHIP_FIELDS = {
-    "teamMemberData": ("id", "studentId", "studentNo", "username", "name", "realName"),
+    # teamMemberData 不在此列：学生需要完整名单做首页/周报/头像联动，
+    # 「仅自己」由前端权限矩阵控制；写权限仍禁止学生改档案。
     "taskData": (
         "owner",
         "ownerId",
@@ -455,11 +458,22 @@ def is_owned_record(key: str, record: Any, claims: dict[str, Any] | None) -> boo
     return bool(identities & _values(record, OWNERSHIP_FIELDS.get(key, ())))
 
 
+def _task_visible_to_student(record: dict[str, Any], claims: dict[str, Any] | None) -> bool:
+    if is_owned_record("taskData", record, claims):
+        return True
+    visibility = str(record.get("visibility") or "").strip().lower()
+    if visibility in ("all", "public", "team"):
+        return True
+    return False
+
+
 def filter_read_value(key: str, value: Any, claims: dict[str, Any] | None) -> Any:
     if _role(claims) != "student" or key not in OWNERSHIP_FIELDS:
         return deepcopy(value)
     if not isinstance(value, list):
         return []
+    if key == "taskData":
+        return [deepcopy(row) for row in value if isinstance(row, dict) and _task_visible_to_student(row, claims)]
     return [deepcopy(row) for row in value if is_owned_record(key, row, claims)]
 
 

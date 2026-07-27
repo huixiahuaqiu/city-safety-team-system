@@ -191,7 +191,9 @@
                     };
                     accountData.push(account);
                 }
-                account.realName = gatewayUser.realName || account.realName || account.studentId;
+                account.studentId = String(gatewayUser.studentId);
+                if (gatewayUser.realName) account.realName = gatewayUser.realName;
+                else if (!account.realName) account.realName = account.studentId;
                 account.role = gatewayUser.role || account.role || 'visitor';
                 account.status = 'active';
                 account.mustChangePwd = !!gatewayUser.mustChangePwd;
@@ -261,14 +263,21 @@
 
     function findAccountForSession(session) {
         if (!session || !Array.isArray(accountData)) return null;
+        // 网关登录以学号为准：本地自增 id 与服务器账号 id 常冲突，不能只按 id 认人
+        if (session.studentId) {
+            var bySid = accountData.find(function(u) {
+                return u && String(u.studentId || '') === String(session.studentId);
+            });
+            if (bySid) return bySid;
+        }
         var byId = accountData.find(function(u) {
             return Number(u.id) === Number(session.userId);
         });
-        if (byId) return byId;
-        if (session.studentId) {
-            return accountData.find(function(u) {
-                return String(u.studentId || '') === String(session.studentId);
-            }) || null;
+        if (byId) {
+            if (session.studentId && String(byId.studentId || '') !== String(session.studentId)) {
+                return null;
+            }
+            return byId;
         }
         return null;
     }
@@ -638,12 +647,18 @@
             syncGatewayAccountsNow().catch(function(err) {
                 console.warn('[auth] account collaboration sync failed', err);
                 if (typeof showCloudSyncBanner === 'function') {
-                    showCloudSyncBanner(
-                        err && err.status === 409
-                            ? '账号列表已被他人更新，请刷新后再修改'
-                            : '账号变更暂未同步到服务器',
-                        true
-                    );
+                    var syncMsg = '账号变更暂未同步到服务器';
+                    var detail = String((err && err.message) || '');
+                    if (err && err.status === 409) {
+                        syncMsg = '账号列表已被他人更新，请刷新后再修改';
+                    } else if (/password does not meet/i.test(detail)) {
+                        syncMsg = '账号密码不符合服务器策略（至少8位且含字母和数字，不能使用123456），请重置后再同步';
+                    } else if (/new accounts require a password/i.test(detail)) {
+                        syncMsg = '新账号缺少可同步的密码，请重新设置临时密码后再保存';
+                    } else if (detail) {
+                        syncMsg = '账号变更暂未同步到服务器：' + detail;
+                    }
+                    showCloudSyncBanner(syncMsg, true);
                 }
                 if (err && err.status !== 409 && err.status !== 400 && err.status !== 403) {
                     gatewayAccountSyncFailures += 1;
@@ -824,6 +839,7 @@
             });
         }
         restoreRememberedLogin();
+        try { refreshLoginRegisterVisibility(); } catch (eReg) {}
     }
 
     function restoreRememberedLogin() {
@@ -844,7 +860,7 @@
     function toggleLoginDemoPanel() {
         if (!demoAccountsEnabled()) return;
         const panel = document.getElementById('loginDemoPanel');
-        const btn = document.querySelector('.login-demo-toggle');
+        const btn = document.querySelector('.login-footer .login-demo-toggle:not(#loginRegisterToggle)');
         if (!panel) return;
         const open = panel.hasAttribute('hidden');
         if (open) panel.removeAttribute('hidden');
@@ -937,10 +953,17 @@
         if (!id || !Array.isArray(accountData)) return null;
         var idLower = id.toLowerCase();
         var digits = id.replace(/\D/g, '');
-        return accountData.find(function(a) {
+        // 1) 精确学号/别名优先，避免手机号命中别人的档案账号
+        var exact = accountData.find(function(a) {
             if (!a) return false;
             if (String(a.studentId || '') === id) return true;
             if (Array.isArray(a.loginAliases) && a.loginAliases.indexOf(id) >= 0) return true;
+            return false;
+        });
+        if (exact) return exact;
+        // 2) 完整手机号（≥11）或邮箱
+        return accountData.find(function(a) {
+            if (!a) return false;
             if (digits.length >= 11) {
                 var phone = String(a.phone || '').replace(/\D/g, '');
                 if (phone === digits) return true;
@@ -997,7 +1020,6 @@
     }
 
     async function handleLogin() {
-        ensureTeamAccountsReady();
         const studentId = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
         const errorEl = document.getElementById('loginError');
@@ -1029,6 +1051,10 @@
                     friendly = '账号服务不可用（数据库未就绪）。请用 http://127.0.0.1:8080 访问完整栈';
                 } else if (/invalid username or password/i.test(detail)) {
                     friendly = '账号或密码错误';
+                } else if (/registration pending approval/i.test(detail)) {
+                    friendly = '注册申请待导师审批，通过后方可登录';
+                } else if (/account disabled/i.test(detail)) {
+                    friendly = '账号已禁用，请联系导师';
                 } else if (/too many login attempts/i.test(detail)) {
                     friendly = '登录失败次数过多';
                 } else if (detail) {
@@ -1037,11 +1063,15 @@
                 errorEl.textContent = friendly + retryText;
                 return;
             }
+        } else {
+            // 纯本地模式才在登录前做团队账号联动；网关模式先以服务端身份为准，避免串名
+            ensureTeamAccountsReady();
         }
 
-        let account = gatewayUser ? findAccountForLogin(gatewayUser.studentId) : findAccountForLogin(studentId);
+        let account = gatewayUser
+            ? findAccountForLogin(gatewayUser.studentId)
+            : findAccountForLogin(studentId);
         if (!account && !gatewayUser) {
-            // 团队有该成员但账号缺失时再同步一次
             ensureTeamAccountsReady();
             account = findAccountForLogin(studentId);
         }
@@ -1064,11 +1094,20 @@
                 };
                 accountData.push(account);
             }
+            // 服务端身份为准：禁止被本地团队联动后的旧姓名覆盖
             account.studentId = String(gatewayUser.studentId);
-            account.realName = gatewayUser.realName || account.realName || account.studentId;
+            if (gatewayUser.realName) account.realName = gatewayUser.realName;
+            else if (!account.realName) account.realName = account.studentId;
             account.role = gatewayUser.role || account.role || 'visitor';
             account.status = 'active';
             account.mustChangePwd = !!gatewayUser.mustChangePwd;
+            account.firstLogin = !!gatewayUser.mustChangePwd;
+            // 自助注册 / 服务端未要求改密：清掉本地团队联动留下的「待改密」脏数据
+            if (!gatewayUser.mustChangePwd) {
+                account.mustChangePwd = false;
+                account.firstLogin = false;
+            }
+            applyGatewayPasswordGateFlags(account);
         } else {
             if (!account) {
                 var teamHit = null;
@@ -1090,6 +1129,7 @@
                     : '账号不存在（可用手机号或学号登录）';
                 return;
             }
+            if (account.status === 'pending') { errorEl.textContent = '注册申请待导师审批，通过后方可登录'; return; }
             if (account.status === 'disabled') { errorEl.textContent = '账号已禁用，请联系管理员'; return; }
             if (account.lockedUntil && new Date(account.lockedUntil) > new Date()) {
                 errorEl.textContent = `账号已锁定，请 ${Math.ceil((new Date(account.lockedUntil) - new Date()) / 60000)} 分钟后再试`;
@@ -1143,6 +1183,7 @@
 
         recordOperationLog('系统登录', '登录', `${account.realName}(${account.studentId}) 登录系统`, { studentId: account.studentId, realName: account.realName, role: account.role }, { success: true }, 1, '', 0, account.id, account.realName);
 
+        sanitizeAccountTeamMemberLink(account);
         currentUser = account;
         try { window.currentUser = currentUser; } catch (eSync) {}
         if (gatewayUser && account.role === 'admin') restoreGatewayAccountDraft();
@@ -1164,7 +1205,8 @@
         loadOperationLogData();
         cleanExpiredLogs();
 
-        // 首次登录强制改密
+        // 首次登录强制改密（仅导师开通的初始密码账号；自助注册不要求）
+        applyGatewayPasswordGateFlags(account);
         if (account.mustChangePwd) {
             document.getElementById('loginOverlay').classList.remove('active');
             showForceChangePasswordModal();
@@ -1173,25 +1215,370 @@
         enterSystem();
         if (typeof window.syncFromCloudAndRefresh === 'function') {
             setTimeout(function() {
-                window.syncFromCloudAndRefresh({ silent: true, full: false });
+                window.syncFromCloudAndRefresh({ silent: true, full: true });
             }, 0);
         }
     }
 
+    function isPublicRegisterEnabled() {
+        try {
+            if (typeof getConfigBoolean === 'function') {
+                return getConfigBoolean('system.enableRegister', true);
+            }
+        } catch (e) {}
+        return true;
+    }
+
+    function refreshLoginRegisterVisibility() {
+        var toggle = document.getElementById('loginRegisterToggle');
+        if (!toggle) return;
+        toggle.style.display = isPublicRegisterEnabled() ? '' : 'none';
+        if (!isPublicRegisterEnabled()) {
+            toggleLoginRegisterPanel(false);
+        }
+    }
+
+    function toggleLoginRegisterPanel(forceShow) {
+        var loginBox = document.getElementById('loginBox');
+        var registerBox = document.getElementById('loginRegisterBox');
+        if (!loginBox || !registerBox) return;
+        var showRegister = typeof forceShow === 'boolean'
+            ? forceShow
+            : registerBox.hasAttribute('hidden');
+        if (showRegister && !isPublicRegisterEnabled()) {
+            alert('当前未开放公开注册，请联系导师开通账号');
+            return;
+        }
+        if (showRegister) {
+            loginBox.setAttribute('hidden', '');
+            registerBox.removeAttribute('hidden');
+            var err = document.getElementById('registerError');
+            var ok = document.getElementById('registerSuccess');
+            if (err) err.textContent = '';
+            if (ok) { ok.style.display = 'none'; ok.textContent = ''; }
+        } else {
+            registerBox.setAttribute('hidden', '');
+            loginBox.removeAttribute('hidden');
+        }
+    }
+
+    async function handlePublicRegister() {
+        var errorEl = document.getElementById('registerError');
+        var successEl = document.getElementById('registerSuccess');
+        if (errorEl) errorEl.textContent = '';
+        if (successEl) { successEl.style.display = 'none'; successEl.textContent = ''; }
+        if (!isPublicRegisterEnabled()) {
+            if (errorEl) errorEl.textContent = '当前未开放公开注册';
+            return;
+        }
+        var username = (document.getElementById('regPublicUsername')?.value || '').trim();
+        var realName = (document.getElementById('regPublicRealName')?.value || '').trim();
+        var role = (document.getElementById('regPublicRole')?.value || 'student').trim();
+        var phone = (document.getElementById('regPublicPhone')?.value || '').trim();
+        var email = (document.getElementById('regPublicEmail')?.value || '').trim();
+        var password = document.getElementById('regPublicPassword')?.value || '';
+        var passwordConfirm = document.getElementById('regPublicPasswordConfirm')?.value || '';
+        var note = (document.getElementById('regPublicNote')?.value || '').trim();
+
+        if (!username || !realName) {
+            if (errorEl) errorEl.textContent = '请填写登录账号和真实姓名';
+            return;
+        }
+        if (!/^[A-Za-z0-9_\-\.@]{3,40}$/.test(username)) {
+            if (errorEl) errorEl.textContent = '登录账号需为 3-40 位字母、数字或 _-.@';
+            return;
+        }
+        if (role !== 'student' && role !== 'visitor') role = 'student';
+        if (!validatePassword(password)) {
+            if (errorEl) errorEl.textContent = '密码至少8位且含字母和数字，不能使用123456等弱口令';
+            return;
+        }
+        if (password !== passwordConfirm) {
+            if (errorEl) errorEl.textContent = '两次输入的密码不一致';
+            return;
+        }
+
+        var payload = {
+            username: username,
+            studentId: username,
+            realName: realName,
+            role: role,
+            phone: phone,
+            email: email,
+            password: password,
+            note: note
+        };
+
+        try {
+            if (window.GatewayAuth && window.GatewayAuth.enabled) {
+                var response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                var data = {};
+                try { data = await response.json(); } catch (eJson) {}
+                if (!response.ok || !data.ok) {
+                    var raw = String(data.error || ('HTTP ' + response.status));
+                    var localized = {
+                        'username already exists': '该账号已存在',
+                        'phone already registered': '该手机号已被注册',
+                        'email already registered': '该邮箱已被注册',
+                        'password does not meet the password policy': '密码不符合安全策略',
+                        'username must be 3-40 characters: letters, digits, _ - . @': '登录账号格式不正确',
+                        'realName is required': '请填写真实姓名',
+                        'public registration only allows student or visitor': '只能申请研究生或访客角色',
+                        'too many registration attempts': '提交过于频繁，请稍后再试'
+                    };
+                    throw new Error(localized[raw] || raw);
+                }
+            } else {
+                if (accountData.find(function(a) { return a && String(a.studentId) === username; })) {
+                    throw new Error('该账号已存在');
+                }
+                var newId = accountData.length ? Math.max.apply(null, accountData.map(function(a) { return Number(a.id) || 0; })) + 1 : 1;
+                accountData.push({
+                    id: newId,
+                    studentId: username,
+                    realName: realName,
+                    role: role,
+                    group: '',
+                    grade: '',
+                    research: '',
+                    phone: phone,
+                    email: email,
+                    status: 'pending',
+                    fromTeam: false,
+                    password: password,
+                    mustChangePwd: false,
+                    firstLogin: false,
+                    lastLogin: '',
+                    lastLoginIp: '',
+                    createdAt: new Date().toISOString().split('T')[0],
+                    loginFailCount: 0,
+                    lockedUntil: null,
+                    registrationRequestedAt: new Date().toISOString(),
+                    registrationNote: note
+                });
+                saveAccountData();
+            }
+
+            ['regPublicUsername', 'regPublicRealName', 'regPublicPhone', 'regPublicEmail',
+                'regPublicPassword', 'regPublicPasswordConfirm', 'regPublicNote'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            if (successEl) {
+                successEl.style.display = 'block';
+                successEl.textContent = '申请已提交。请等待导师在「账号权限设置 → 注册审批」中同意后，再用该账号登录（无需再改密码）。';
+            }
+            if (typeof recordOperationLog === 'function') {
+                recordOperationLog('账号注册', '申请', username + ' 提交注册申请', { studentId: username, realName: realName, role: role }, { success: true }, 1, '', 0);
+            }
+        } catch (err) {
+            if (errorEl) errorEl.textContent = (err && err.message) || '注册失败，请稍后重试';
+        }
+    }
+
+    function canApproveRegistrations() {
+        return !!(currentUser && (currentUser.role === 'admin' || currentUser.role === 'leader'));
+    }
+
+    function updatePendingRegistrationBadge(count) {
+        var badge = document.getElementById('accountPendingBadge');
+        if (!badge) return;
+        var n = Number(count) || 0;
+        if (n > 0) {
+            badge.style.display = 'inline-block';
+            badge.textContent = String(n);
+        } else {
+            badge.style.display = 'none';
+            badge.textContent = '0';
+        }
+    }
+
+    function renderPendingRegistrations(list) {
+        var tbody = document.getElementById('pendingRegisterTableBody');
+        if (!tbody) return;
+        var rows = Array.isArray(list) ? list : [];
+        updatePendingRegistrationBadge(rows.length);
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:24px;">暂无待审批申请</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(function(item) {
+            var sid = String(item.studentId || '');
+            var sidAttr = encodeURIComponent(sid);
+            var contact = [item.phone, item.email].filter(Boolean).map(escHtml).join('<br>') || '-';
+            var when = item.registrationRequestedAt || item.createdAt || '-';
+            return '<tr>' +
+                '<td><strong>' + escHtml(sid) + '</strong></td>' +
+                '<td>' + escHtml(item.realName || '-') + '</td>' +
+                '<td>' + escHtml(ROLE_LABELS[item.role] || item.role || '-') + '</td>' +
+                '<td style="font-size:12px;">' + contact + '</td>' +
+                '<td style="font-size:12px;max-width:220px;">' + escHtml(item.registrationNote || '-') + '</td>' +
+                '<td style="font-size:12px;color:#888;">' + escHtml(String(when)) + '</td>' +
+                '<td style="white-space:nowrap;">' +
+                    '<button class="btn" style="font-size:12px;padding:4px 10px;margin-right:6px;" data-sid="' + sidAttr + '" onclick="approvePendingRegistration(decodeURIComponent(this.getAttribute(\'data-sid\')))">同意</button>' +
+                    '<button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;color:#e53935;" data-sid="' + sidAttr + '" onclick="rejectPendingRegistration(decodeURIComponent(this.getAttribute(\'data-sid\')))">拒绝</button>' +
+                '</td></tr>';
+        }).join('');
+    }
+
+    async function loadPendingRegistrations(forceRemote) {
+        if (!canApproveRegistrations()) {
+            renderPendingRegistrations([]);
+            var tbody = document.getElementById('pendingRegisterTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888;padding:24px;">仅导师或组长可审批注册申请</td></tr>';
+            }
+            return;
+        }
+        var localPending = (accountData || []).filter(function(a) {
+            return a && a.status === 'pending';
+        });
+        if (window.GatewayAuth && window.GatewayAuth.enabled && window.GatewayAuth.hasSession() && forceRemote !== false) {
+            try {
+                var response = await window.GatewayAuth.fetch('/api/auth/admin/registrations', {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                var data = {};
+                try { data = await response.json(); } catch (e) {}
+                if (!response.ok) throw new Error(data.error || ('HTTP ' + response.status));
+                var remote = Array.isArray(data.registrations) ? data.registrations : [];
+                // 合并到本地列表，便于账号管理页也能看到
+                remote.forEach(function(item) {
+                    if (!item || !item.studentId) return;
+                    var existing = accountData.find(function(a) {
+                        return a && String(a.studentId) === String(item.studentId);
+                    });
+                    if (existing) {
+                        Object.assign(existing, item);
+                    } else {
+                        accountData.push(item);
+                    }
+                });
+                renderPendingRegistrations(remote);
+                try { renderAccountTable(); } catch (eRender) {}
+                return;
+            } catch (err) {
+                console.warn('[auth] load pending registrations failed', err);
+                if (typeof showCloudSyncBanner === 'function') {
+                    showCloudSyncBanner('待审批列表同步失败，已显示本地缓存', true);
+                }
+            }
+        }
+        renderPendingRegistrations(localPending);
+    }
+
+    async function approvePendingRegistration(studentId) {
+        if (!canApproveRegistrations()) { alert('仅导师或组长可审批'); return; }
+        studentId = String(studentId || '').trim();
+        if (!studentId) return;
+        if (!confirm('同意账号「' + studentId + '」的注册申请？通过后对方即可登录。')) return;
+        try {
+            if (window.GatewayAuth && window.GatewayAuth.enabled && window.GatewayAuth.hasSession()) {
+                var response = await window.GatewayAuth.fetch('/api/auth/admin/registrations/approve', {
+                    method: 'POST',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ studentId: studentId })
+                });
+                var data = {};
+                try { data = await response.json(); } catch (e) {}
+                if (!response.ok || !data.ok) throw new Error(data.error || ('HTTP ' + response.status));
+                if (currentUser && currentUser.role === 'admin') {
+                    try { await pullGatewayAccountsFromServer(); } catch (ePull) {}
+                } else if (data.account) {
+                    var hit = accountData.find(function(a) { return a && String(a.studentId) === studentId; });
+                    if (hit) Object.assign(hit, data.account);
+                    else accountData.push(data.account);
+                }
+            } else {
+                var account = accountData.find(function(a) { return a && String(a.studentId) === studentId; });
+                if (!account || account.status !== 'pending') throw new Error('申请不存在或已处理');
+                account.status = 'active';
+                account.approvedAt = new Date().toISOString();
+                account.approvedBy = currentUser.studentId || currentUser.realName || '';
+                saveAccountData();
+            }
+            recordOperationLog('账号管理', '审批通过', '同意注册申请：' + studentId, { studentId: studentId }, { success: true }, 1, '', 0);
+            alert('已同意「' + studentId + '」，对方现在可以登录');
+            await loadPendingRegistrations(true);
+            try { renderAccountTable(); } catch (e2) {}
+        } catch (err) {
+            alert('审批失败：' + ((err && err.message) || '未知错误'));
+        }
+    }
+
+    async function rejectPendingRegistration(studentId) {
+        if (!canApproveRegistrations()) { alert('仅导师或组长可审批'); return; }
+        studentId = String(studentId || '').trim();
+        if (!studentId) return;
+        var reason = prompt('拒绝原因（可选）：', '') || '';
+        if (!confirm('确认拒绝并删除账号「' + studentId + '」的注册申请？')) return;
+        try {
+            if (window.GatewayAuth && window.GatewayAuth.enabled && window.GatewayAuth.hasSession()) {
+                var response = await window.GatewayAuth.fetch('/api/auth/admin/registrations/reject', {
+                    method: 'POST',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ studentId: studentId, reason: reason })
+                });
+                var data = {};
+                try { data = await response.json(); } catch (e) {}
+                if (!response.ok || !data.ok) throw new Error(data.error || ('HTTP ' + response.status));
+                accountData = accountData.filter(function(a) {
+                    return !(a && String(a.studentId) === studentId && a.status === 'pending');
+                });
+                if (currentUser && currentUser.role === 'admin') {
+                    try { await pullGatewayAccountsFromServer(); } catch (ePull) {}
+                }
+            } else {
+                var before = accountData.length;
+                accountData = accountData.filter(function(a) {
+                    return !(a && String(a.studentId) === studentId && a.status === 'pending');
+                });
+                if (accountData.length === before) throw new Error('申请不存在或已处理');
+                saveAccountData();
+            }
+            recordOperationLog('账号管理', '审批拒绝', '拒绝注册申请：' + studentId, { studentId: studentId, reason: reason }, { success: true }, 1, '', 0);
+            alert('已拒绝「' + studentId + '」的注册申请');
+            await loadPendingRegistrations(true);
+            try { renderAccountTable(); } catch (e2) {}
+        } catch (err) {
+            alert('操作失败：' + ((err && err.message) || '未知错误'));
+        }
+    }
+
+    window.toggleLoginRegisterPanel = toggleLoginRegisterPanel;
+    window.handlePublicRegister = handlePublicRegister;
+    window.loadPendingRegistrations = loadPendingRegistrations;
+    window.approvePendingRegistration = approvePendingRegistration;
+    window.rejectPendingRegistration = rejectPendingRegistration;
+    window.refreshLoginRegisterVisibility = refreshLoginRegisterVisibility;
+
     function findAccountRecordForUser(user) {
         if (!user || !Array.isArray(accountData)) return null;
-        var byId = accountData.find(function(a) { return a && Number(a.id) === Number(user.id); });
-        if (byId) return byId;
+        // 学号优先：本地自增 id 与服务器/他人账号易撞车
         if (user.studentId) {
             var bySid = accountData.find(function(a) { return a && String(a.studentId || '') === String(user.studentId); });
             if (bySid) return bySid;
         }
+        var byId = accountData.find(function(a) { return a && Number(a.id) === Number(user.id); });
+        if (byId) {
+            if (user.studentId && String(byId.studentId || '') !== String(user.studentId)) return null;
+            return byId;
+        }
         if (user.phone) {
             var digits = String(user.phone).replace(/\D/g, '');
             if (digits.length >= 11) {
-                return accountData.find(function(a) {
+                var phoneHits = accountData.filter(function(a) {
                     return a && String(a.phone || '').replace(/\D/g, '') === digits;
-                }) || null;
+                });
+                if (phoneHits.length === 1) return phoneHits[0];
             }
         }
         return null;
@@ -1202,11 +1589,11 @@
         try { pending = JSON.parse(sessionStorage.getItem('pendingPasswordCommit') || 'null'); } catch (e) { pending = null; }
         if (!pending || (!pending.passwordHash && !pending.password)) return false;
         var acc = null;
-        if (pending.userId != null) {
-            acc = accountData.find(function(a) { return a && Number(a.id) === Number(pending.userId); });
-        }
-        if (!acc && pending.studentId) {
+        if (pending.studentId) {
             acc = accountData.find(function(a) { return a && String(a.studentId || '') === String(pending.studentId); });
+        }
+        if (!acc && pending.userId != null) {
+            acc = accountData.find(function(a) { return a && Number(a.id) === Number(pending.userId); });
         }
         if (!acc) return false;
         var changed = false;
@@ -1249,6 +1636,33 @@
         try { sessionStorage.removeItem('pendingPasswordCommit'); } catch (e) {}
     }
 
+    function readGatewaySessionUser() {
+        try {
+            if (!window.GatewayAuth || !window.GatewayAuth.enabled || !window.GatewayAuth.read) return null;
+            var session = window.GatewayAuth.read();
+            return (session && session.user) || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /** 网关已认证时，改密要求以服务端会话为准，避免被本地团队联动账号的 mustChangePwd 覆盖 */
+    function applyGatewayPasswordGateFlags(account) {
+        if (!account) return account;
+        var gu = readGatewaySessionUser();
+        if (!gu || !gu.studentId) return account;
+        if (String(account.studentId || '') !== String(gu.studentId)) return account;
+        account.mustChangePwd = !!gu.mustChangePwd;
+        if (!gu.mustChangePwd) account.firstLogin = false;
+        if (gu.realName) account.realName = gu.realName;
+        return account;
+    }
+
+    function clearForceChangePasswordModal() {
+        var modal = document.getElementById('forceChangePwdModal');
+        if (modal) modal.remove();
+    }
+
     function enforceMustChangePasswordGate() {
         if (!currentUser) return false;
         // 静态演示站不强制改密（无服务端改密接口，旧缓存账号也直接放行）
@@ -1263,13 +1677,37 @@
                 currentUser.mustChangePwd = false;
                 currentUser.firstLogin = false;
                 localStorage.setItem('accountData', JSON.stringify(list));
-                var modal = document.getElementById('forceChangePwdModal');
-                if (modal) modal.remove();
+                clearForceChangePasswordModal();
             } catch (eStaticPwd) {}
             return false;
         }
+
         var acc = findAccountRecordForUser(currentUser) || currentUser;
-        if (!acc.mustChangePwd) return false;
+        applyGatewayPasswordGateFlags(acc);
+        applyGatewayPasswordGateFlags(currentUser);
+
+        var gu = readGatewaySessionUser();
+        // 服务端明确不要求改密（含自助注册）：直接放行并清掉本地脏标记
+        if (gu && gu.mustChangePwd === false) {
+            if (acc) { acc.mustChangePwd = false; acc.firstLogin = false; }
+            if (currentUser) { currentUser.mustChangePwd = false; currentUser.firstLogin = false; }
+            clearForceChangePasswordModal();
+            try { saveAccountData(); } catch (eSaveGw) {}
+            return false;
+        }
+        // 公开注册账号已自设密码
+        if (acc && acc.registrationRequestedAt) {
+            acc.mustChangePwd = false;
+            acc.firstLogin = false;
+            if (currentUser) {
+                currentUser.mustChangePwd = false;
+                currentUser.firstLogin = false;
+            }
+            clearForceChangePasswordModal();
+            try { saveAccountData(); } catch (eSaveReg) {}
+            return false;
+        }
+        if (!acc || !acc.mustChangePwd) return false;
         currentUser = acc;
         try { window.currentUser = currentUser; } catch (e) {}
         document.getElementById('loginOverlay').classList.remove('active');
@@ -1446,6 +1884,7 @@
                     if (currentUser) {
                         var fresh = findAccountRecordForUser(currentUser);
                         if (fresh) currentUser = fresh;
+                        applyGatewayPasswordGateFlags(currentUser);
                     }
                     if (enforceMustChangePasswordGate()) return;
                     clearPendingPasswordCommit();
@@ -1458,8 +1897,8 @@
             return;
         }
 
-        // 登录后先拉云端；改密后先合并密码再刷新
-        syncFromCloudAndRefresh({ silent: false }).then(function() {
+        // 登录后先全量拉云端，避免学生端曾被过滤成空名单后指纹跳过、一直空白
+        syncFromCloudAndRefresh({ silent: false, full: true }).then(function() {
             applyPendingPasswordCommit();
             try {
                 var rawAcc2 = localStorage.getItem('accountData');
@@ -1470,6 +1909,11 @@
                 if (fresh2) {
                     currentUser = fresh2;
                     try { window.currentUser = currentUser; } catch (e3) {}
+                }
+                applyGatewayPasswordGateFlags(currentUser);
+                // 同步后若本地又被标成待改密，写回 false，防止下次又弹窗
+                if (currentUser && currentUser.mustChangePwd === false) {
+                    try { saveAccountData(); } catch (ePersist) {}
                 }
             }
             if (!options.afterPasswordChange && enforceMustChangePasswordGate()) return;
@@ -1517,20 +1961,93 @@
         window.location.reload();
     }
 
+    /** 纠错：账号姓名与绑定档案不一致时清掉错误 teamMemberId，避免头像串人 */
+    function sanitizeAccountTeamMemberLink(account) {
+        if (!account || !account.teamMemberId) return account;
+        try {
+            if (typeof teamMemberData === 'undefined' || !Array.isArray(teamMemberData)) return account;
+            var linked = teamMemberData.find(function (m) {
+                return m && Number(m.id) === Number(account.teamMemberId);
+            });
+            var aName = String(account.realName || '').trim();
+            var mName = String((linked && linked.name) || '').trim();
+            if (!linked || (aName && mName && aName !== mName)) {
+                account.teamMemberId = null;
+                account.fromTeam = false;
+            }
+        } catch (eSan) {}
+        return account;
+    }
+
     function resolveMemberAvatarUrl(person) {
         if (!person) return '';
         var direct = person.avatar || person.dataUrl || '';
         if (direct && String(direct).length > 20) return String(direct);
         try {
-            var name = person.name || person.realName || '';
             var list = (typeof teamMemberData !== 'undefined' && teamMemberData) ? teamMemberData : [];
+            if (!Array.isArray(list) || !list.length) return '';
             var hit = null;
-            if (person.id != null) hit = list.find(function (m) { return m.id === person.id; });
-            if (!hit && name) hit = list.find(function (m) { return m.name === name; });
+            var personName = String(person.name || person.realName || '').trim();
+
+            function memberNameOk(m) {
+                if (personName) {
+                    var mn = String((m && m.name) || '').trim();
+                    return !mn || mn === personName;
+                }
+                // 无姓名时禁止仅凭 teamMemberId 取头像，除非学号/手机可对上
+                var sid = String(person.studentId || '').trim();
+                var mSid = String((m && m.studentId) || '').trim();
+                if (sid && mSid && sid === mSid) return true;
+                var ph = String(person.phone || person.studentId || '').replace(/\D/g, '');
+                var mph = String((m && m.phone) || '').replace(/\D/g, '');
+                return ph.length >= 11 && mph === ph;
+            }
+
+            // 1) 显式团队成员绑定（禁止用账号 id 冒充成员 id）
+            var teamId = person.teamMemberId != null
+                ? person.teamMemberId
+                : (person.memberId != null ? person.memberId : null);
+            if (teamId != null) {
+                hit = list.find(function (m) {
+                    return m && Number(m.id) === Number(teamId) && memberNameOk(m);
+                }) || null;
+            }
+
+            // 2) 账号对象：走账号↔档案匹配，绝不把 account.id 当成员 id
+            var looksLikeAccount = !!(person.studentId || person.role || person.realName || person.registrationRequestedAt);
+            if (!hit && looksLikeAccount && typeof findTeamMemberForAccount === 'function') {
+                try {
+                    var linked = findTeamMemberForAccount(person);
+                    if (linked && memberNameOk(linked)) hit = linked;
+                } catch (eLink) {}
+            }
+
+            // 3) 成员卡片本身：才允许用 person.id 查档案
+            var looksLikeMember = !looksLikeAccount && !!(
+                person.category
+                || person.bio != null
+                || person.research != null
+                || (person.name && !person.realName)
+            );
+            if (!hit && looksLikeMember && person.id != null) {
+                hit = list.find(function (m) {
+                    return m && Number(m.id) === Number(person.id);
+                }) || null;
+            }
+
+            // 4) 姓名唯一命中
+            if (!hit && personName) {
+                var nameHits = list.filter(function (m) {
+                    return m && String(m.name || '').trim() === personName;
+                });
+                if (nameHits.length === 1) hit = nameHits[0];
+            }
+
             if (hit && hit.avatar && String(hit.avatar).length > 20) return String(hit.avatar);
         } catch (e) {}
         return '';
     }
+    window.resolveMemberAvatarUrl = resolveMemberAvatarUrl;
 
     function renderHomeMemberAvatarHtml(m) {
         var url = window.safeImageUrl ? window.safeImageUrl(resolveMemberAvatarUrl(m)) : '';
@@ -1554,8 +2071,19 @@
         if (nameEl) nameEl.textContent = currentUser.realName || currentUser.studentId || '';
         if (roleEl) roleEl.textContent = (typeof ROLE_LABELS !== 'undefined' && ROLE_LABELS[currentUser.role]) ? ROLE_LABELS[currentUser.role] : (currentUser.role || '');
         if (avEl) {
-            var avUrl = resolveMemberAvatarUrl(currentUser) || resolveMemberAvatarUrl({ name: currentUser.realName, id: currentUser.memberId });
-            avUrl = window.safeImageUrl ? window.safeImageUrl(avUrl) : '';
+            var avUrl = '';
+            try {
+                if (currentUser.avatar && String(currentUser.avatar).length > 20) {
+                    avUrl = String(currentUser.avatar);
+                } else {
+                    var meMember = typeof getCurrentUserTeamMember === 'function'
+                        ? getCurrentUserTeamMember()
+                        : null;
+                    if (meMember) avUrl = resolveMemberAvatarUrl(meMember) || '';
+                    if (!avUrl) avUrl = resolveMemberAvatarUrl(currentUser) || '';
+                }
+            } catch (eAvHdr) {}
+            avUrl = window.safeImageUrl ? window.safeImageUrl(avUrl) : avUrl;
             var ch = String(currentUser.realName || currentUser.studentId || '?').charAt(0);
             if (avUrl) {
                 avEl.innerHTML = '<img src="' + escHtml(avUrl) + '" alt="' + escHtml(ch) + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.remove()">';
@@ -1593,18 +2121,40 @@
                     studentId: currentUser.studentId || session.studentId || ''
                 });
             }
-            if (!user && currentUser && currentUser.realName && Array.isArray(accountData)) {
+            // 禁止仅凭同名把会话切到别人账号（网关学号优先）
+            if (!user && currentUser && currentUser.studentId && Array.isArray(accountData)) {
                 user = accountData.find(function(a) {
-                    return a && a.role !== 'visitor' && String(a.realName || '') === String(currentUser.realName);
+                    return a && String(a.studentId || '') === String(currentUser.studentId);
                 }) || null;
             }
             if (!user) return !!currentUser;
-            if (user.status && user.status !== 'active') {
+            if (user.status && user.status !== 'active' && user.status !== 'pending') {
                 localStorage.removeItem('currentSession');
                 currentUser = null;
                 try { window.currentUser = null; } catch (e3) {}
                 return false;
             }
+            // 保留网关已确认的姓名，避免被本地团队联动串改
+            var preservedName = '';
+            var preservedSid = '';
+            try {
+                if (window.GatewayAuth && window.GatewayAuth.enabled && window.GatewayAuth.read) {
+                    var gw = window.GatewayAuth.read();
+                    if (gw && gw.user) {
+                        preservedName = gw.user.realName || '';
+                        preservedSid = gw.user.studentId || '';
+                    }
+                }
+            } catch (eGw) {}
+            if (preservedSid && String(user.studentId || '') !== String(preservedSid)) {
+                var gwAccount = accountData.find(function(a) {
+                    return a && String(a.studentId || '') === String(preservedSid);
+                });
+                if (gwAccount) user = gwAccount;
+            }
+            if (preservedName) user.realName = preservedName;
+            if (preservedSid) user.studentId = preservedSid;
+            sanitizeAccountTeamMemberLink(user);
             currentUser = user;
             try {
                 localStorage.setItem('currentSession', JSON.stringify({
@@ -1642,17 +2192,41 @@
         try {
             if (typeof findTeamMemberForAccount === 'function') {
                 var linked = findTeamMemberForAccount(currentUser);
+                if (linked) {
+                    // 绑定成员姓名与登录姓名冲突时作废，避免错头像
+                    if (
+                        currentUser.realName
+                        && linked.name
+                        && String(linked.name) !== String(currentUser.realName)
+                    ) {
+                        linked = null;
+                    }
+                }
                 if (linked) return linked;
             }
         } catch (e0) {}
         try {
             if (typeof teamMemberData === 'undefined' || !Array.isArray(teamMemberData)) return null;
             if (currentUser.teamMemberId != null) {
-                var byId = teamMemberData.find(function (m) { return m && Number(m.id) === Number(currentUser.teamMemberId); });
-                if (byId) return byId;
+                var byId = teamMemberData.find(function (m) {
+                    return m && Number(m.id) === Number(currentUser.teamMemberId);
+                });
+                if (
+                    byId
+                    && (
+                        !currentUser.realName
+                        || !byId.name
+                        || String(byId.name) === String(currentUser.realName)
+                    )
+                ) {
+                    return byId;
+                }
             }
             if (currentUser.realName) {
-                return teamMemberData.find(function (m) { return m && m.name === currentUser.realName; }) || null;
+                var byName = teamMemberData.filter(function (m) {
+                    return m && m.name === currentUser.realName;
+                });
+                if (byName.length === 1) return byName[0];
             }
         } catch (e1) {}
         return null;
@@ -1953,19 +2527,23 @@
             } else {
                 linked++;
             }
-            if (!acc.mustChangePwd || !acc.firstLogin) reset++;
-            acc.password = generateTemporaryPassword();
-            acc.mustChangePwd = true;
-            acc.firstLogin = true;
+            var isSelfReg = !!(acc.registrationRequestedAt);
+            if (!isSelfReg) {
+                if (!acc.mustChangePwd || !acc.firstLogin) reset++;
+                acc.password = generateTemporaryPassword();
+                acc.mustChangePwd = true;
+                acc.firstLogin = true;
+            }
             acc.loginFailCount = 0;
             acc.lockedUntil = null;
             acc.status = 'active';
             acc.fromTeam = true;
             acc.teamMemberId = m.id;
-            acc.realName = m.name;
+            if (!isSelfReg || !acc.realName) acc.realName = m.name;
             acc.phone = m.phone || acc.phone || '';
             acc.email = m.email || acc.email || '';
             if (!acc.studentId) acc.studentId = preferred;
+            if (isSelfReg) acc.preserveLoginId = true;
         });
 
         saveAccountData();
@@ -2129,8 +2707,8 @@
 
         let filtered = accountData.filter(a => {
             if (!a) return false;
-            // 全局联动：列表只显示「访客」+「已关联团队成员」的正式账号
-            if (!isVisitorAccount(a)) {
+            // 待审批申请始终可见；访客独立账号可见；正式账号需关联团队成员
+            if (a.status !== 'pending' && !isVisitorAccount(a)) {
                 const linked = findTeamMemberForAccount(a);
                 if (!linked) return false;
             }
@@ -2139,7 +2717,7 @@
             if (roleFilter && a.role !== roleFilter) return false;
             if (statusFilter && a.status !== statusFilter) return false;
             if (currentUser && currentUser.role === 'student' && a.id !== currentUser.id) return false;
-            if (currentUser && currentUser.role === 'leader' && a.group !== currentUser.group && a.id !== currentUser.id) return false;
+            if (currentUser && currentUser.role === 'leader' && a.group !== currentUser.group && a.id !== currentUser.id && a.status !== 'pending') return false;
             return true;
         });
 
@@ -2169,7 +2747,7 @@
                 <td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;${gradStyle}">${escHtml(gradText)}</span></td>
                 <td>${escHtml(a.group || '-')}</td>
                 <td>${getAccountPasswordDisplay(a)}</td>
-                <td><span class="status-dot ${a.status}"></span>${a.status === 'active' ? '已启用' : '已禁用'}</td>
+                <td><span class="status-dot ${a.status === 'pending' ? 'disabled' : a.status}"></span>${a.status === 'active' ? '已启用' : (a.status === 'pending' ? '待审批' : '已禁用')}</td>
                 <td style="font-size:12px;color:#888;">${a.lastLogin || '从未登录'}</td>
                 <td>
                     <button class="btn btn-secondary" style="font-size:12px;padding:4px 10px;" onclick="showEditAccountModal(${a.id})">编辑</button>
@@ -3016,11 +3594,15 @@
 
     // ===== 8. 密码强度 & 策略 =====
     function validatePassword(pwd) {
-        if (pwd.length < passwordPolicy.minLength) return false;
+        if (!pwd || pwd.length < passwordPolicy.minLength) return false;
         if (passwordPolicy.requireUpper && !/[A-Z]/.test(pwd)) return false;
         if (passwordPolicy.requireLower && !/[a-z]/.test(pwd)) return false;
         if (passwordPolicy.requireDigit && !/[0-9]/.test(pwd)) return false;
         if (passwordPolicy.requireSpecial && !/[!@#$%^&*]/.test(pwd)) return false;
+        // 与网关策略对齐：至少含字母+数字，并拒绝常见弱口令
+        if (!/[A-Za-z]/.test(pwd) || !/[0-9]/.test(pwd)) return false;
+        var weak = String(pwd).toLowerCase();
+        if (weak === '123456' || weak === 'password' || weak === 'password123') return false;
         return true;
     }
 
@@ -3186,6 +3768,7 @@
         if (tabEl) tabEl.style.display = 'block';
         if (btn) btn.classList.add('active');
         if (tabId === 'accountList') renderAccountTable();
+        if (tabId === 'accountPending') loadPendingRegistrations(true);
         if (tabId === 'loginSecurity') {
             document.getElementById('securityMaxAttempts').value = getConfigInt('user.passwordErrorLockCount', 5);
             document.getElementById('securityLockDuration').value = getConfigInt('user.lockTime', 30);
@@ -3233,7 +3816,19 @@
     const _origShowModule = showModule;
     showModule = function(moduleId) {
         _origShowModule(moduleId);
-        if (moduleId === 'account_permission') { renderAccountTable(); renderPermissionMatrix(); }
+        if (moduleId === 'account_permission') {
+            renderAccountTable();
+            renderPermissionMatrix();
+            loadPendingRegistrations(true);
+            if (currentUser && currentUser.role === 'admin' && window.GatewayAuth && window.GatewayAuth.enabled) {
+                pullGatewayAccountsFromServer().then(function() {
+                    try { renderAccountTable(); } catch (e1) {}
+                    loadPendingRegistrations(true);
+                }).catch(function(err) {
+                    console.warn('[auth] account list refresh failed', err);
+                });
+            }
+        }
         if (moduleId === 'role_permission') renderPermissionMatrix();
         if (moduleId === 'task_management') { initTaskManagement(); }
     };
@@ -3818,8 +4413,13 @@
 
     function isMyWeeklyReport(report) {
         if (!currentUser || !report) return false;
+        var sid = String(currentUser.studentId || '').trim();
+        if (sid) {
+            if (String(report.studentId || '').trim() === sid) return true;
+            if (String(report.ownerId || '').trim() === sid) return true;
+        }
         const myName = currentUser.realName || currentUser.username || '';
-        return report.owner === myName;
+        return !!(myName && report.owner === myName);
     }
 
     function initWeeklyReport() {
@@ -3841,6 +4441,34 @@
             weeklyReportData = buildRealTeamDefaultWeeklyReports();
             saveWeeklyReportData();
         }
+        backfillWeeklyReportOwnerIds();
+    }
+
+    /** 历史周报仅有姓名时，尽量补齐学号，避免同名/改名导致归属错乱 */
+    function backfillWeeklyReportOwnerIds() {
+        if (!Array.isArray(weeklyReportData) || !weeklyReportData.length) return;
+        var accounts = Array.isArray(accountData) ? accountData : [];
+        if (!accounts.length) return;
+        var byName = {};
+        accounts.forEach(function(a) {
+            if (!a || !a.realName || !a.studentId) return;
+            var key = String(a.realName).trim();
+            if (!key) return;
+            if (!byName[key]) byName[key] = [];
+            byName[key].push(String(a.studentId).trim());
+        });
+        var changed = false;
+        weeklyReportData.forEach(function(r) {
+            if (!r || r.studentId || r.ownerId) return;
+            var name = String(r.owner || '').trim();
+            var sids = byName[name] || [];
+            if (sids.length === 1) {
+                r.studentId = sids[0];
+                r.ownerId = sids[0];
+                changed = true;
+            }
+        });
+        if (changed) saveWeeklyReportData();
     }
 
     function getCurrentWeekRangeText() {
@@ -4108,8 +4736,9 @@
             return;
         }
         const weekRange = getCurrentWeekRangeText();
-        const myName = currentUser ? (currentUser.realName || currentUser.username) : '';
-        const existing = weeklyReportData.find(r => r.owner === myName && r.weekRange === weekRange);
+        const existing = weeklyReportData.find(function(r) {
+            return r && r.weekRange === weekRange && isMyWeeklyReport(r);
+        });
         if (existing) {
             editWeeklyReport(existing.id);
             return;
@@ -4168,6 +4797,7 @@
         }
 
         const submitter = currentUser ? currentUser.realName || currentUser.username : '未知用户';
+        const submitterSid = currentUser ? String(currentUser.studentId || '').trim() : '';
 
         if (editingWeeklyReportId) {
             const idx = weeklyReportData.findIndex(r => r.id === editingWeeklyReportId);
@@ -4175,6 +4805,9 @@
                 weeklyReportData[idx] = {
                     ...weeklyReportData[idx],
                     weekRange, content, nextWeek, problems, notes,
+                    owner: weeklyReportData[idx].owner || submitter,
+                    studentId: weeklyReportData[idx].studentId || submitterSid,
+                    ownerId: weeklyReportData[idx].ownerId || submitterSid,
                     status: 'pending',
                     reviewComment: '',
                     submitTime: new Date().toLocaleString('zh-CN'),
@@ -4182,7 +4815,14 @@
                 };
             }
         } else {
-            const dup = weeklyReportData.find(r => r.owner === submitter && r.weekRange === weekRange);
+            const dup = weeklyReportData.find(function(r) {
+                if (!r || r.weekRange !== weekRange) return false;
+                if (submitterSid && (
+                    String(r.studentId || '').trim() === submitterSid
+                    || String(r.ownerId || '').trim() === submitterSid
+                )) return true;
+                return !submitterSid && r.owner === submitter;
+            });
             if (dup) {
                 alert('本周已提交过周报，已为你打开编辑');
                 editWeeklyReport(dup.id);
@@ -4193,6 +4833,8 @@
                 id: newId,
                 weekRange,
                 owner: submitter,
+                studentId: submitterSid,
+                ownerId: submitterSid,
                 content,
                 nextWeek,
                 problems,
@@ -6550,9 +7192,20 @@
             var ch = String(name || '研').charAt(0);
             var avUrl = '';
             try {
-                if (typeof resolveMemberAvatarUrl === 'function') {
-                    avUrl = resolveMemberAvatarUrl(user) || resolveMemberAvatarUrl({ name: name });
+                if (user && user.avatar && String(user.avatar).length > 20) {
+                    avUrl = String(user.avatar);
+                } else {
+                    var meMember = typeof getCurrentUserTeamMember === 'function'
+                        ? getCurrentUserTeamMember()
+                        : null;
+                    if (meMember && typeof resolveMemberAvatarUrl === 'function') {
+                        avUrl = resolveMemberAvatarUrl(meMember) || '';
+                    }
+                    if (!avUrl && typeof resolveMemberAvatarUrl === 'function') {
+                        avUrl = resolveMemberAvatarUrl(user) || '';
+                    }
                 }
+                if (avUrl && window.safeImageUrl) avUrl = window.safeImageUrl(avUrl) || '';
             } catch (eAv) {}
             if (avUrl) heroAv.innerHTML = '<img src="' + String(avUrl).replace(/"/g, '&quot;') + '" alt="' + ch + '">';
             else { heroAv.innerHTML = ''; heroAv.textContent = ch; }
@@ -8901,7 +9554,19 @@
     // 更新路由钩子
     showModule = function(moduleId) {
         _origShowModule(moduleId);
-        if (moduleId === 'account_permission') { renderAccountTable(); renderPermissionMatrix(); }
+        if (moduleId === 'account_permission') {
+            renderAccountTable();
+            renderPermissionMatrix();
+            loadPendingRegistrations(true);
+            if (currentUser && currentUser.role === 'admin' && window.GatewayAuth && window.GatewayAuth.enabled) {
+                pullGatewayAccountsFromServer().then(function() {
+                    try { renderAccountTable(); } catch (e1) {}
+                    loadPendingRegistrations(true);
+                }).catch(function(err) {
+                    console.warn('[auth] account list refresh failed', err);
+                });
+            }
+        }
         if (moduleId === 'role_permission') renderPermissionMatrix();
         if (moduleId === 'task_management') { initTaskManagement(); }
         if (moduleId === 'weekly_report') { initWeeklyReport(); }
@@ -12464,7 +13129,7 @@
         'system.name': '城市安全数智创新团队管理系统',
         'system.copyright': '© 2026 城市安全数智创新团队 版权所有',
         'system.loginNotice': '欢迎使用课题组管理系统',
-        'system.enableRegister': 'false',
+        'system.enableRegister': 'true',
         
         'user.defaultPassword': '123456',
         'user.passwordErrorLockCount': '5',

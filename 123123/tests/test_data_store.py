@@ -195,8 +195,27 @@ class DataStoreTests(unittest.TestCase):
             side_effect=AssertionError("database should not be opened"),
         ):
             self.assertEqual(self.store.list_sync_values([]), [])
+            self.assertEqual(self.store.list_sync_versions([]), [])
         with self.assertRaises(TypeError):
             self.store.list_sync_values("noticeData")
+        with self.assertRaises(TypeError):
+            self.store.list_sync_versions("noticeData")
+
+    def test_list_sync_versions_returns_key_and_version_only(self):
+        connection = FakeConnection([{"all": [("noticeData", 3), ("taskData", 9)]}])
+        with self.patch_connection(connection):
+            items = self.store.list_sync_versions(["noticeData", "taskData"])
+        self.assertEqual(
+            items,
+            [
+                {"syncKey": "noticeData", "version": 3},
+                {"syncKey": "taskData", "version": 9},
+            ],
+        )
+        query, params = connection.cursor_instance.statements[0]
+        self.assertIn("SELECT sync_key, version", query)
+        self.assertNotIn("value", query.split("FROM", 1)[0].lower())
+        self.assertEqual(params[0], ["noticeData", "taskData"])
 
     def test_record_filters_are_json_parameters_not_sql_fragments(self):
         now = datetime(2026, 7, 26, tzinfo=timezone.utc)

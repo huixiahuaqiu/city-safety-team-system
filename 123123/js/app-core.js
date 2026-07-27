@@ -511,10 +511,10 @@
 
         let cloudSyncReady = false;
         let cloudSyncEnabled = GATEWAY_DATA_BACKEND || Boolean(SUPABASE_URL && SUPABASE_KEY);
-        const CLOUD_HOME_POLL_MS = Math.max(10000, Number(getAppConfig('CLOUD_HOME_POLL_MS', 15000)) || 15000);
+        const CLOUD_HOME_POLL_MS = Math.max(3000, Number(getAppConfig('CLOUD_HOME_POLL_MS', 5000)) || 5000);
         const CLOUD_BACKGROUND_POLL_MS = Math.max(
             CLOUD_HOME_POLL_MS,
-            Number(getAppConfig('CLOUD_BACKGROUND_POLL_MS', 60000)) || 60000
+            Number(getAppConfig('CLOUD_BACKGROUND_POLL_MS', 10000)) || 10000
         );
         const CLOUD_RETRY_MAX_MS = Math.max(
             30000,
@@ -723,6 +723,7 @@
             delete outbox[key].currentVersion;
             delete outbox[key].retryAt;
             delete outbox[key].failures;
+            delete outbox[key].rebaseAttempts;
             saveCloudMap(storageKey, outbox);
             return Object.assign({}, outbox[key]);
         }
@@ -753,6 +754,38 @@
             saveCloudMap(storageKey, outbox);
             return true;
         }
+
+        /** 同一条待同步写在 CAS 冲突后抬升 baseVersion 并立刻重试（全局合并由服务端完成） */
+        function rebaseCloudMutationVersion(key, expectedRevision, nextVersion) {
+            var storageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
+            if (!storageKey) return false;
+            var outbox = loadCloudMap(storageKey);
+            var entry = outbox[key];
+            if (!entry) return false;
+            if (
+                expectedRevision != null
+                && Number(entry.revision) !== Number(expectedRevision)
+            ) return false;
+            var attempts = Math.max(0, Number(entry.rebaseAttempts) || 0) + 1;
+            if (attempts > 6) return false;
+            entry.rebaseAttempts = attempts;
+            entry.baseVersion = Math.max(0, Number(nextVersion) || 0);
+            delete entry.conflictedAt;
+            delete entry.currentVersion;
+            delete entry.retryAt;
+            delete entry.failures;
+            saveCloudMap(storageKey, outbox);
+            return true;
+        }
+
+        function scheduleCloudPullSoon(delayMs) {
+            clearTimeout(window.__cloudPullSoonTimer);
+            window.__cloudPullSoonTimer = setTimeout(function() {
+                if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
+                syncFromCloudAndRefresh({ silent: true, full: false });
+            }, Math.max(200, Number(delayMs) || 600));
+        }
+        window.scheduleCloudPullSoon = scheduleCloudPullSoon;
 
         function markCloudMutationConflict(key, currentVersion, expectedRevision) {
             var storageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
@@ -925,14 +958,43 @@
 
             var merged = cloudAccounts.map(function(c) {
                 if (!c) return c;
-                var loc = (c.studentId && localMap['sid:' + String(c.studentId)])
-                    || (c.id != null && localMap['id:' + String(c.id)])
-                    || (c.phone && localMap['ph:' + String(c.phone).replace(/\D/g, '')])
-                    || null;
+                var loc = null;
+                if (c.studentId && localMap['sid:' + String(c.studentId)]) {
+                    loc = localMap['sid:' + String(c.studentId)];
+                } else if (c.id != null && localMap['id:' + String(c.id)]) {
+                    var byId = localMap['id:' + String(c.id)];
+                    if (
+                        !c.studentId
+                        || !byId.studentId
+                        || String(c.studentId) === String(byId.studentId)
+                    ) {
+                        loc = byId;
+                    }
+                } else if (c.phone) {
+                    var ph = String(c.phone).replace(/\D/g, '');
+                    var byPh = ph.length >= 11 ? localMap['ph:' + ph] : null;
+                    // 仅当学号也一致时才用手机合并，避免撞号串密码
+                    if (
+                        byPh
+                        && c.studentId
+                        && byPh.studentId
+                        && String(c.studentId) === String(byPh.studentId)
+                    ) {
+                        loc = byPh;
+                    }
+                }
                 var out = Object.assign({}, c);
                 if (pending && (
                     (pending.studentId && String(pending.studentId) === String(c.studentId))
-                    || (pending.userId != null && Number(pending.userId) === Number(c.id))
+                    || (
+                        pending.userId != null
+                        && Number(pending.userId) === Number(c.id)
+                        && (
+                            !pending.studentId
+                            || !c.studentId
+                            || String(pending.studentId) === String(c.studentId)
+                        )
+                    )
                 )) {
                     copyPasswordVerifier(out, pending);
                     out.mustChangePwd = false;
@@ -1074,6 +1136,12 @@
                             advanceCloudMutationBase(key, revision, savedVersion);
                             continue;
                         }
+                        scheduleCloudPullSoon(500);
+                        try {
+                            if (typeof window.__homeRealtimeBroadcast === 'function') {
+                                window.__homeRealtimeBroadcast({ type: 'cloud-upsert', key: key, version: savedVersion });
+                            }
+                        } catch (eBcUp) {}
                         return { ok: true, key: key };
                     } catch (err) {
                         console.warn('cloud upsert failed', key, err);
@@ -1099,11 +1167,43 @@
                                             advanceCloudMutationBase(key, revision, currentItem.version);
                                             continue;
                                         }
+                                        scheduleCloudPullSoon(400);
                                         return { ok: true, key: key, deduplicated: true };
+                                    }
+                                    // 服务端已有更新：学生 scoped 键可安全 rebase；
+                                    // 全量文档禁止盲写覆盖，先拉远端并标记冲突。
+                                    var canAutoRebase = CLOUD_STUDENT_SCOPED_KEYS.has(key);
+                                    if (
+                                        canAutoRebase
+                                        && Number.isFinite(currentVersion)
+                                        && rebaseCloudMutationVersion(key, revision, currentVersion)
+                                    ) {
+                                        continue;
+                                    }
+                                    if (
+                                        canAutoRebase
+                                        && currentItem
+                                        && Number.isFinite(Number(currentItem.version))
+                                        && rebaseCloudMutationVersion(key, revision, currentItem.version)
+                                    ) {
+                                        continue;
                                     }
                                 } catch (compareError) {
                                     console.warn('sync conflict comparison failed', key, compareError);
+                                    if (
+                                        CLOUD_STUDENT_SCOPED_KEYS.has(key)
+                                        && Number.isFinite(currentVersion)
+                                        && rebaseCloudMutationVersion(key, revision, currentVersion)
+                                    ) {
+                                        continue;
+                                    }
                                 }
+                            } else if (
+                                CLOUD_STUDENT_SCOPED_KEYS.has(key)
+                                && Number.isFinite(currentVersion)
+                                && rebaseCloudMutationVersion(key, revision, currentVersion)
+                            ) {
+                                continue;
                             }
                             markCloudMutationConflict(key, currentVersion, revision);
                             markCloudSyncState({
@@ -1112,7 +1212,13 @@
                                 lastReason: 'conflict',
                                 lastError: '数据版本冲突：' + key
                             });
-                            showCloudSyncBanner('检测到多人同时修改“' + key + '”，已保留本机版本；可点“全量同步”采用服务器版本', true);
+                            showCloudSyncBanner(
+                                CLOUD_STUDENT_SCOPED_KEYS.has(key)
+                                    ? ('检测到多人同时修改“' + key + '”，正在自动合并重试；若仍失败请点“全量同步”')
+                                    : ('检测到多人同时修改“' + key + '”，已保留双方版本，请点“全量同步”后再保存，避免覆盖他人修改'),
+                                true
+                            );
+                            scheduleCloudPullSoon(800);
                             return;
                         }
                         if (status === 400 || status === 403 || status === 413) {
@@ -1221,10 +1327,59 @@
             try {
                 cloudPulling = true;
                 var rows;
+                var forceFull = !!options.full;
+                var changedKeyHint = null;
+                if (GATEWAY_DATA_BACKEND && !forceFull) {
+                    try {
+                        var versionPayload = await gatewayJsonRequest('/api/sync/versions', { method: 'GET' });
+                        var versionItems = (versionPayload && versionPayload.items) || [];
+                        changedKeyHint = [];
+                        versionItems.forEach(function(item) {
+                            if (!item || !item.syncKey) return;
+                            var remoteVer = Math.max(0, Number(item.version) || 0);
+                            var localVer = getCloudVersion(item.syncKey);
+                            // 仅探测变更，绝不提前抬升本地版本（否则拉失败会永久漏同步）
+                            if (remoteVer !== localVer) changedKeyHint.push(item.syncKey);
+                        });
+                        if (changedKeyHint.length === 0) {
+                            cloudSyncReady = true;
+                            markCloudSyncState({
+                                lastAt: Date.now(),
+                                lastOk: true,
+                                lastApplied: 0,
+                                lastSkipped: versionItems.length,
+                                lastMode: 'versions',
+                                lastChangedKeys: [],
+                                lastError: '',
+                                lastReason: 'ok',
+                                consecutiveFailures: 0,
+                                retryAt: 0
+                            });
+                            return {
+                                ok: true,
+                                applied: 0,
+                                skipped: versionItems.length,
+                                changedKeys: [],
+                                full: false,
+                                versionsOnly: true
+                            };
+                        }
+                    } catch (versionErr) {
+                        console.warn('sync versions probe failed, falling back to full pull', versionErr);
+                        changedKeyHint = null;
+                    }
+                }
                 if (GATEWAY_DATA_BACKEND) {
-                    var syncPayload = await gatewayJsonRequest('/api/sync', { method: 'GET' });
+                    var syncUrl = '/api/sync';
+                    if (!forceFull && Array.isArray(changedKeyHint) && changedKeyHint.length && changedKeyHint.length <= 40) {
+                        syncUrl += '?' + changedKeyHint.map(function(k) {
+                            return 'key=' + encodeURIComponent(k);
+                        }).join('&');
+                    }
+                    var syncPayload = await gatewayJsonRequest(syncUrl, { method: 'GET' });
                     rows = ((syncPayload && syncPayload.items) || []).map(function(item, index) {
-                        setCloudVersion(item.syncKey, item.version);
+                        // 版本号必须在成功应用（或确认本地已与远端一致）后再写入，
+                        // 否则 apply 失败会导致 versions 探测永久跳过该键。
                         return {
                             id: index + 1,
                             patent_number: syncKeyToPatentNumber(item.syncKey),
@@ -1247,7 +1402,6 @@
                 var fingerprints = loadSyncFingerprints();
                 var outboxStorageKey = principalStorageKey(CLOUD_OUTBOX_KEY);
                 var pendingMutations = outboxStorageKey ? loadCloudMap(outboxStorageKey) : {};
-                var forceFull = !!options.full;
                 var latestByKey = {};
                 (rows || []).forEach(function(row) {
                     var key = patentNumberToSyncKey(row.patent_number);
@@ -1277,6 +1431,7 @@
                         var localRaw = null;
                         try { localRaw = localStorage.getItem(key); } catch (eL) { localRaw = null; }
                         if (!forceFull && fingerprints[key] === hash && localRaw != null) {
+                            if (row.syncVersion != null) setCloudVersion(key, row.syncVersion);
                             skipped++;
                             return;
                         }
@@ -1290,11 +1445,13 @@
                         var nextRaw = JSON.stringify(parsed);
                         if (!forceFull && localRaw === nextRaw) {
                             fingerprints[key] = hash;
+                            if (row.syncVersion != null) setCloudVersion(key, row.syncVersion);
                             skipped++;
                             return;
                         }
                         Storage.prototype.setItem.call(localStorage, key, nextRaw);
                         fingerprints[key] = hash;
+                        if (row.syncVersion != null) setCloudVersion(key, row.syncVersion);
                         applied++;
                         changedKeys.push(key);
                     } catch (e) {
@@ -1526,6 +1683,30 @@
             });
         } catch (eStorageSync) {}
 
+        // 切回前台 / 网络恢复：立刻增量同步，保证全局近实时
+        try {
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) return;
+                if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
+                scheduleCloudPullSoon(250);
+            });
+            window.addEventListener('focus', function() {
+                if (document.hidden) return;
+                if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
+                scheduleCloudPullSoon(350);
+            });
+            window.addEventListener('online', function() {
+                if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
+                syncFromCloudAndRefresh({ silent: true, full: false });
+            });
+            window.addEventListener('pageshow', function(ev) {
+                if (ev && ev.persisted) {
+                    if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
+                    scheduleCloudPullSoon(200);
+                }
+            });
+        } catch (eWakeSync) {}
+
         setInterval(function() {
             if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
             if (document.hidden) return;
@@ -1535,7 +1716,7 @@
             syncFromCloudAndRefresh({ silent: true, full: false });
         }, CLOUD_BACKGROUND_POLL_MS);
 
-        // 首页激活时增量同步；默认 15 秒，兼顾协作时效与网络/浏览器负载。
+        // 首页激活时增量同步；默认 5 秒，先 versions 探测再按需拉全量。
         setInterval(function() {
             if (!cloudSyncEnabled || !gatewaySyncHasSession()) return;
             if (document.hidden) return;
@@ -1678,10 +1859,10 @@
             currentModuleId = moduleId;
             updateModuleBackButton();
 
-            if (cloudSyncEnabled && Date.now() - Number(cloudSyncState.lastAt || 0) >= 10000) {
+            if (cloudSyncEnabled && Date.now() - Number(cloudSyncState.lastAt || 0) >= 3000) {
                 clearTimeout(window.__cloudModuleSyncTimer);
                 window.__cloudModuleSyncTimer = setTimeout(function() {
-                    syncFromCloudAndRefresh({ silent: true });
+                    syncFromCloudAndRefresh({ silent: true, full: false });
                 }, 200);
             }
 

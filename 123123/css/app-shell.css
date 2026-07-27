@@ -2300,6 +2300,33 @@
             transform: none;
             box-shadow: none;
         }
+        .login-box select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.55);
+            color: #e2e8f0;
+            font-size: 14px;
+            outline: none;
+        }
+        .login-box .req { color: #fb7185; }
+        .login-success {
+            margin: 0 0 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.16);
+            border: 1px solid rgba(52, 211, 153, 0.35);
+            color: #a7f3d0;
+            font-size: 13px;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+        .login-register-box {
+            max-height: min(86vh, 760px);
+            overflow-y: auto;
+        }
         /* —— 登录页动感增强（克制、支持 prefers-reduced-motion 关闭）—— */
         .login-hero-title {
             background: linear-gradient(100deg, #f8fafc 0%, #f8fafc 38%, #a5f3fc 50%, #f8fafc 62%, #f8fafc 100%);
@@ -2361,6 +2388,11 @@
             z-index: 1;
         }
         .login-footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            align-items: center;
+            justify-content: center;
             text-align: center;
             margin-top: 18px;
             position: relative;

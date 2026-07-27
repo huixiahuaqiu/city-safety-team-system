@@ -4,6 +4,7 @@
                     <!-- 子标签页 -->
                     <div class="tab-nav" id="accountTabNav">
                         <button class="tab-btn active" onclick="switchAccountTab('accountList', this)">账号管理</button>
+                        <button class="tab-btn" onclick="switchAccountTab('accountPending', this)">注册审批 <span id="accountPendingBadge" style="display:none;margin-left:4px;padding:1px 7px;border-radius:999px;background:#ff4d4f;color:#fff;font-size:11px;">0</span></button>
                         <button class="tab-btn" onclick="switchAccountTab('accountRegister', this)">账号注册</button>
                         <button class="tab-btn" onclick="switchAccountTab('accountImport', this)">账号导入</button>
                         <button class="tab-btn" onclick="switchAccountTab('passwordManage', this)">密码管理</button>
@@ -25,6 +26,7 @@
                                 <select id="accountStatusFilter" style="padding:8px 12px; border:1px solid #ddd; border-radius:6px; font-size:13px;" onchange="filterAccountTable()">
                                     <option value="">全部状态</option>
                                     <option value="active">已启用</option>
+                                    <option value="pending">待审批</option>
                                     <option value="disabled">已禁用</option>
                                 </select>
                             </div>
@@ -64,6 +66,36 @@
                             </table>
                         </div>
                         <div id="accountPagination" style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:16px; font-size:13px; color:#666;"></div>
+                    </div>
+
+                    <!-- 标签页: 注册审批 -->
+                    <div id="accountTab_accountPending" class="account-tab-content" style="display:none;">
+                        <div style="margin:0 0 12px;padding:10px 14px;background:#fff7e6;border:1px solid #ffd591;border-radius:8px;font-size:13px;color:#ad6800;line-height:1.7;">
+                            登录页提交的注册申请会出现在这里。导师或组长<strong>同意</strong>后，申请人即可用原密码登录；拒绝后账号将被删除，需重新申请。
+                        </div>
+                        <div class="account-toolbar" style="margin-bottom:12px;">
+                            <div class="toolbar-right" style="display:flex;gap:8px;">
+                                <button class="btn btn-secondary" type="button" onclick="loadPendingRegistrations(true)">刷新申请列表</button>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="table" id="pendingRegisterTable">
+                                <thead>
+                                    <tr>
+                                        <th>申请账号</th>
+                                        <th>姓名</th>
+                                        <th>角色</th>
+                                        <th>手机/邮箱</th>
+                                        <th>申请说明</th>
+                                        <th>申请时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pendingRegisterTableBody">
+                                    <tr><td colspan="7" style="text-align:center;color:#888;padding:24px;">暂无待审批申请</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- 标签页2: 账号注册 -->

@@ -57,6 +57,38 @@ class SyncPolicyTests(unittest.TestCase):
         )
         self.assertEqual([1], [row["id"] for row in filtered])
 
+    def test_student_reads_weekly_by_student_id_even_if_name_differs(self):
+        rows = [
+            {"id": 1, "owner": "旧名", "studentId": "S01", "content": "mine"},
+            {"id": 2, "owner": "别人", "studentId": "S99", "content": "other"},
+        ]
+        filtered = sync_policy.filter_read_value(
+            "weeklyReportData", rows, self.student
+        )
+        self.assertEqual([1], [row["id"] for row in filtered])
+
+    def test_student_receives_full_team_roster(self):
+        rows = [
+            {"id": 1, "name": "导师"},
+            {"id": 2, "name": "学生甲"},
+            {"id": 3, "name": "学生乙"},
+        ]
+        filtered = sync_policy.filter_read_value(
+            "teamMemberData", rows, self.student
+        )
+        self.assertEqual(3, len(filtered))
+        self.assertTrue(sync_policy.can_read(self.student, "approvalFlowConfig"))
+        self.assertTrue(sync_policy.can_read(self.student, "holidayLeaveCampaigns"))
+
+    def test_student_sees_team_visible_tasks(self):
+        rows = [
+            {"id": 1, "owner": "学生甲", "visibility": "private"},
+            {"id": 2, "owner": "导师", "visibility": "all"},
+            {"id": 3, "owner": "学生乙", "visibility": "private"},
+        ]
+        filtered = sync_policy.filter_read_value("taskData", rows, self.student)
+        self.assertEqual([1, 2], [row["id"] for row in filtered])
+
     def test_student_scoped_write_preserves_other_users(self):
         current = [
             {"id": 1, "owner": "学生甲", "content": "old"},

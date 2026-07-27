@@ -656,6 +656,71 @@ class GatewaySecurityTests(unittest.TestCase):
                 with self.assertRaises(PermissionError):
                     self.gateway.resolve_static_file_path(unsafe_path)
 
+    def test_public_registration_requires_mentor_approval(self):
+        accounts = []
+
+        def load_accounts(force=False):
+            return list(accounts)
+
+        def save_accounts(next_accounts, actor='gateway-auth'):
+            accounts[:] = list(next_accounts)
+
+        with (
+            mock.patch.object(self.gateway, "POSTGRES_DATA_BACKEND", True),
+            mock.patch.object(self.gateway, "load_gateway_accounts", side_effect=load_accounts),
+            mock.patch.object(self.gateway, "save_gateway_accounts", side_effect=save_accounts),
+            mock.patch.object(self.gateway, "validate_new_password", return_value=True),
+            mock.patch.object(
+                self.gateway,
+                "create_gateway_password_record",
+                return_value={
+                    "passwordScheme": "pbkdf2-sha256",
+                    "passwordSalt": "c2FsdA==",
+                    "passwordIterations": 120000,
+                    "passwordHash": "aGFzaA==",
+                    "passwordUpdatedAt": 1,
+                },
+            ),
+            mock.patch.object(self.gateway, "verify_gateway_password", return_value=True),
+        ):
+            created = self.gateway.register_gateway_account({
+                "username": "newstu01",
+                "realName": "新同学",
+                "password": "SafePass12",
+                "role": "student",
+                "note": "请导师批准",
+            }, client_ip="127.0.0.1")
+            self.assertEqual(created["status"], "pending")
+            self.assertFalse(created.get("mustChangePwd"))
+            self.assertFalse(created.get("firstLogin"))
+            self.assertEqual(len(accounts), 1)
+            self.assertEqual(accounts[0]["studentId"], "newstu01")
+
+            approved = self.gateway.approve_gateway_registration("newstu01", "admin")
+            self.assertEqual(approved["status"], "active")
+            self.assertFalse(approved.get("mustChangePwd"))
+            self.assertFalse(approved.get("firstLogin"))
+            self.assertEqual(accounts[0]["status"], "active")
+
+            accounts[0]["status"] = "pending"
+            rejected = self.gateway.reject_gateway_registration("newstu01", "admin", reason="信息不符")
+            self.assertEqual(rejected["studentId"], "newstu01")
+            self.assertEqual(accounts, [])
+
+    def test_prepare_gateway_accounts_allows_pending_status(self):
+        prepared = self.gateway._prepare_gateway_accounts(
+            [{
+                "studentId": "pending01",
+                "realName": "待审",
+                "role": "student",
+                "status": "pending",
+                "password": "SafePass12",
+            }],
+            [],
+        )
+        self.assertEqual(prepared[0]["status"], "pending")
+        self.assertTrue(prepared[0].get("passwordHash"))
+
     def test_server_password_policy_can_be_tightened_but_not_weakened(self):
         strict_policy = {
             "value": {

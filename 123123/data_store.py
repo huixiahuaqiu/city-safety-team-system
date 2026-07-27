@@ -337,6 +337,41 @@ def list_sync_values(keys: Iterable[str] | None = None) -> list[dict[str, Any]]:
     return [_sync_row(row) for row in rows]
 
 
+def list_sync_versions(keys: Iterable[str] | None = None) -> list[dict[str, Any]]:
+    """Return only sync_key + version for cheap realtime change detection."""
+
+    params: list[Any] = []
+    where = ""
+    if keys is not None:
+        if isinstance(keys, (str, bytes)):
+            raise TypeError("keys must be an iterable of sync-key strings")
+        normalized = list(dict.fromkeys(_validate_sync_key(key) for key in keys))
+        if len(normalized) > _MAX_SYNC_KEYS_PER_QUERY:
+            raise ValueError(
+                f"at most {_MAX_SYNC_KEYS_PER_QUERY} sync keys may be requested"
+            )
+        if not normalized:
+            return []
+        where = " WHERE sync_key = ANY(%s)"
+        params.append(normalized)
+
+    query = (
+        "SELECT sync_key, version "
+        f"FROM app_sync{where} ORDER BY sync_key"
+    )
+    with _connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+    return [
+        {
+            "syncKey": str(row[0]),
+            "version": int(row[1] or 0),
+        }
+        for row in rows
+    ]
+
+
 def get_sync_value(sync_key: str) -> dict[str, Any] | None:
     """Return one sync value, or ``None`` when the key does not exist."""
 
@@ -832,6 +867,7 @@ __all__ = [
     "database_enabled",
     "healthcheck",
     "list_sync_values",
+    "list_sync_versions",
     "get_sync_value",
     "put_sync_value",
     "load_accounts",

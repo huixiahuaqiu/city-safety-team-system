@@ -33,7 +33,7 @@
         }
     </script>
     <link href="vendor/fonts/fonts-local.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/app-shell.css?v=475ae70489">
+    <link rel="stylesheet" href="css/app-shell.css?v=e7764556ba">
     <link rel="stylesheet" href="css/portal-public.css?v=2cf647d824">
     <script src="js/vendor-lazy.js?v=960c38a41e"></script>
 </head>
@@ -97,8 +97,9 @@
                 </div>
                 <div id="loginError" class="login-error"></div>
                 <div id="loginAttemptWarning" class="login-attempt-warning" style="display:none;"></div>
-                <button class="login-btn" type="button" onclick="handleLogin()"><span>进入系统</span></button>
+                <button class="login-btn" type="button" id="loginSubmitBtn" onclick="handleLogin()"><span>进入系统</span></button>
                 <div class="login-footer">
+                    <button type="button" class="login-demo-toggle" id="loginRegisterToggle" onclick="toggleLoginRegisterPanel()">没有账号？申请注册</button>
                     <button type="button" class="login-demo-toggle" onclick="toggleLoginDemoPanel()">演示账号 ▾</button>
                     <div class="login-demo" id="loginDemoPanel" hidden>
                         <div class="login-demo-note">密码均为 <code>123456</code> · 点击即可填入</div>
@@ -109,6 +110,71 @@
                             <button type="button" onclick="fillLoginDemo('visitor01')">访客 visitor01</button>
                         </div>
                     </div>
+                </div>
+            </div>
+            <div class="login-box login-register-box" id="loginRegisterBox" hidden>
+                <div class="login-brand">
+                    <div class="login-brand-text">
+                        <div class="login-brand-name">申请注册</div>
+                        <div class="login-subtitle">提交后需导师同意方可登录</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regPublicUsername">登录账号 <span class="req">*</span></label>
+                    <div class="login-input-wrap">
+                        <input type="text" id="regPublicUsername" placeholder="学号 / 用户名（3-40位）" autocomplete="username">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regPublicRealName">真实姓名 <span class="req">*</span></label>
+                    <div class="login-input-wrap">
+                        <input type="text" id="regPublicRealName" placeholder="请填写真实姓名" autocomplete="name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regPublicRole">申请角色</label>
+                    <div class="login-input-wrap">
+                        <select id="regPublicRole">
+                            <option value="student">研究生 / 团队成员</option>
+                            <option value="visitor">访客 / 临时访问</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regPublicPhone">手机号</label>
+                    <div class="login-input-wrap">
+                        <input type="text" id="regPublicPhone" placeholder="选填，可用于登录" autocomplete="tel">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regPublicEmail">邮箱</label>
+                    <div class="login-input-wrap">
+                        <input type="text" id="regPublicEmail" placeholder="选填" autocomplete="email">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regPublicPassword">密码 <span class="req">*</span></label>
+                    <div class="login-input-wrap">
+                        <input type="password" id="regPublicPassword" placeholder="至少8位，含字母和数字" autocomplete="new-password">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regPublicPasswordConfirm">确认密码 <span class="req">*</span></label>
+                    <div class="login-input-wrap">
+                        <input type="password" id="regPublicPasswordConfirm" placeholder="再次输入密码" autocomplete="new-password">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="regPublicNote">申请说明</label>
+                    <div class="login-input-wrap">
+                        <input type="text" id="regPublicNote" placeholder="选填，便于导师核对身份" maxlength="200">
+                    </div>
+                </div>
+                <div id="registerError" class="login-error"></div>
+                <div id="registerSuccess" class="login-success" style="display:none;"></div>
+                <button class="login-btn" type="button" onclick="handlePublicRegister()"><span>提交注册申请</span></button>
+                <div class="login-footer">
+                    <button type="button" class="login-demo-toggle" onclick="toggleLoginRegisterPanel(false)">返回登录</button>
                 </div>
             </div>
         </div>
@@ -1177,10 +1243,10 @@
     <script src="config.runtime.js"></script>
     <!-- GitHub Pages：关闭网关鉴权并注入 data/pages-snapshot.json -->
     <script src="js/pages-static-boot.js?v=33f9b797b8"></script>
-    <script src="js/module-manifest.js?v=9990013a8e"></script>
+    <script src="js/module-manifest.js?v=89b25e6ed9"></script>
     <script src="js/module-loader.js?v=5c5afae487"></script>
-    <script src="js/app-core.js?v=feb9adbaaf"></script>
-    <script src="js/achievements-modules.js?v=7e1d17a162"></script>
+    <script src="js/app-core.js?v=b088996f0b"></script>
+    <script src="js/achievements-modules.js?v=c5c37c3776"></script>
     
     <!-- 文献管理模块 -->
     <div id="literature" class="module">
@@ -1398,9 +1464,9 @@
     <script src="js/app-legacy-a.js?v=7a71092496"></script>
 
     <!-- ==================== 账号体系 JavaScript（按规范重写） ==================== -->
-    <script src="js/app-legacy-b.js?v=921ac1ed43"></script>
+    <script src="js/app-legacy-b.js?v=bd7be47332"></script>
     <script src="js/news-management.js?v=73df64f9b8"></script>
-    <script src="js/home-dashboard-p3.js?v=4edbecf70d"></script>
+    <script src="js/home-dashboard-p3.js?v=daa824fc08"></script>
     <script src="js/portal-public.js?v=17f4556571"></script>
     <script>
         (function () {

@@ -127,6 +127,7 @@ sudo bash deploy/scripts/bootstrap-server.sh \
 - 不能把数据库、MinIO、上传、MLOps 或 AI 密钥写入任何前端 JavaScript；
 - 生产配置拒绝通配符跨域、明文外部 MinIO 地址和不安全预签名；
 - 首次管理员、账号管理、密码重置均由服务端保存 PBKDF2 验证器；
+- 登录页可开放自助注册（system.enableRegister）；申请账号为 pending，导师/组长在「账号权限设置 → 注册审批」同意后方可登录；
 - 关键同步采用版本比较，旧版本写入返回冲突，不会覆盖他人新数据；
 - 备份必须同时覆盖 PostgreSQL、MinIO 和应用持久卷，并定期做隔离恢复验证。
 

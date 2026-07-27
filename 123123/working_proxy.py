@@ -9,6 +9,7 @@ import ipaddress
 import json
 import logging
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -2481,11 +2482,233 @@ def _prepare_gateway_accounts(incoming, existing):
             raise ValueError('invalid account role')
         account['role'] = role
         status = str(account.get('status') or 'active')
-        if status not in ('active', 'disabled'):
+        if status not in ('active', 'disabled', 'pending'):
             raise ValueError('invalid account status')
         account['status'] = status
         prepared.append(account)
     return prepared
+
+
+def _validate_register_username(username):
+    text = str(username or '').strip()
+    if not (3 <= len(text) <= 40):
+        return False
+    return bool(re.fullmatch(r'[A-Za-z0-9_\-\.@]{3,40}', text))
+
+
+def _next_gateway_account_id(accounts):
+    max_id = 0
+    for account in accounts or []:
+        try:
+            max_id = max(max_id, int(account.get('id') or 0))
+        except (TypeError, ValueError):
+            continue
+    return max_id + 1
+
+
+def register_gateway_account(payload, client_ip=''):
+    """Public self-registration. Accounts stay pending until mentor approval."""
+    if not isinstance(payload, dict):
+        raise ValueError('JSON object required')
+    username = str(payload.get('username') or payload.get('studentId') or '').strip()
+    real_name = str(payload.get('realName') or '').strip()
+    password = str(payload.get('password') or '')
+    phone = ''.join(c for c in str(payload.get('phone') or '') if c.isdigit())
+    email = str(payload.get('email') or '').strip()
+    note = str(payload.get('note') or payload.get('reason') or '').strip()[:200]
+    role = str(payload.get('role') or 'student').strip().lower()
+    if role not in ('student', 'visitor'):
+        raise ValueError('public registration only allows student or visitor')
+    if not _validate_register_username(username):
+        raise ValueError('username must be 3-40 characters: letters, digits, _ - . @')
+    if not real_name or len(real_name) > 40:
+        raise ValueError('realName is required')
+    if not validate_new_password(password):
+        raise ValueError('password does not meet the password policy')
+    if email and (len(email) > 120 or '@' not in email):
+        raise ValueError('invalid email')
+    if phone and not (7 <= len(phone) <= 15):
+        raise ValueError('invalid phone')
+
+    with _account_write_lock:
+        accounts = load_gateway_accounts(force=True)
+        if _find_gateway_account(accounts, username):
+            raise ValueError('username already exists')
+        if phone and _find_gateway_account(accounts, phone):
+            raise ValueError('phone already registered')
+        if email:
+            needle = email.lower()
+            for existing in accounts:
+                if str(existing.get('email') or '').strip().lower() == needle:
+                    raise ValueError('email already registered')
+        account = {
+            'id': _next_gateway_account_id(accounts),
+            'studentId': username,
+            'realName': real_name,
+            'role': role,
+            'group': '',
+            'grade': '',
+            'research': '',
+            'phone': phone,
+            'email': email,
+            'status': 'pending',
+            'fromTeam': False,
+            'mustChangePwd': False,
+            'firstLogin': False,
+            'lastLogin': '',
+            'lastLoginIp': '',
+            'createdAt': _today(),
+            'loginFailCount': 0,
+            'lockedUntil': None,
+            'registrationRequestedAt': datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z'),
+            'registrationNote': note,
+            'registrationIp': str(client_ip or '')[:64],
+        }
+        account.update(create_gateway_password_record(password))
+        accounts.append(account)
+        save_gateway_accounts(accounts, actor='public-register')
+        return _public_gateway_account(account)
+
+
+def _normalize_phone_digits(value):
+    return ''.join(c for c in str(value or '') if c.isdigit())
+
+
+def _link_registration_to_team_member(account):
+    """Best-effort bind an approved registration to teamMemberData by name/phone/email."""
+    if not POSTGRES_DATA_BACKEND or not isinstance(account, dict):
+        return account
+    real_name = str(account.get('realName') or '').strip()
+    phone = _normalize_phone_digits(account.get('phone') or account.get('studentId'))
+    email = str(account.get('email') or '').strip().lower()
+    student_id = str(account.get('studentId') or '').strip()
+    if not real_name and not phone and not email:
+        return account
+    try:
+        current = data_store.get_sync_value('teamMemberData')
+    except Exception as exc:
+        logger.warning('teamMemberData lookup failed during registration link: %s', exc)
+        return account
+    members = (current or {}).get('value') if current else None
+    if not isinstance(members, list) or not members:
+        return account
+
+    def score(member):
+        if not isinstance(member, dict):
+            return -1
+        points = 0
+        name = str(member.get('name') or '').strip()
+        # 双方都有姓名却不一致：直接否决，避免手机/邮箱撞车绑错人
+        if real_name and name and name != real_name:
+            return -1
+        if real_name and name and name == real_name:
+            points += 100
+        m_phone = _normalize_phone_digits(member.get('phone'))
+        if phone and len(phone) >= 11 and m_phone == phone:
+            points += 80
+        m_email = str(member.get('email') or '').strip().lower()
+        if email and m_email and m_email == email:
+            points += 60
+        return points
+
+    ranked = sorted(
+        ((score(member), member) for member in members),
+        key=lambda item: item[0],
+        reverse=True,
+    )
+    best_score, best = ranked[0] if ranked else (-1, None)
+    # 必须姓名命中（≥100）；禁止仅凭手机/邮箱在无姓名一致时绑错人
+    if not best or best_score < 100:
+        return account
+
+    changed = False
+    if student_id and str(best.get('studentId') or '').strip() != student_id:
+        best['studentId'] = student_id
+        changed = True
+    if phone and len(phone) >= 11 and _normalize_phone_digits(best.get('phone')) != phone:
+        # 仅在档案手机为空时补写，避免覆盖他人错误匹配
+        if not _normalize_phone_digits(best.get('phone')):
+            best['phone'] = phone
+            changed = True
+    if email and not str(best.get('email') or '').strip():
+        best['email'] = account.get('email') or email
+        changed = True
+
+    account['teamMemberId'] = best.get('id')
+    account['fromTeam'] = True
+    # 保留注册姓名；仅在账号尚未填姓名时用档案补全
+    if best.get('name') and not real_name:
+        account['realName'] = best.get('name')
+    if not account.get('phone') and best.get('phone'):
+        account['phone'] = best.get('phone')
+    if not account.get('email') and best.get('email'):
+        account['email'] = best.get('email')
+    if best.get('category') and best.get('category') != 'advisor':
+        account['grade'] = str(best.get('category')) + '级'
+    if best.get('research'):
+        account['research'] = best.get('research')
+
+    if changed and current is not None:
+        try:
+            data_store.put_sync_value(
+                'teamMemberData',
+                members,
+                int(current.get('version') or 0),
+                actor=str(account.get('studentId') or 'registration-link'),
+            )
+        except Exception as exc:
+            logger.warning('teamMemberData link write failed: %s', exc)
+    return account
+
+
+def approve_gateway_registration(student_id, actor, role=None, group=None):
+    with _account_write_lock:
+        accounts = load_gateway_accounts(force=True)
+        account = _find_gateway_account(accounts, student_id)
+        if not account:
+            raise ValueError('registration not found')
+        if str(account.get('status') or '') != 'pending':
+            raise ValueError('account is not pending approval')
+        next_role = str(role or account.get('role') or 'student').strip().lower()
+        if next_role not in ('leader', 'student', 'visitor'):
+            raise ValueError('invalid account role')
+        account['role'] = next_role
+        if group is not None:
+            account['group'] = str(group or '').strip()
+        account['status'] = 'active'
+        # 自助注册已由用户设定密码，审批通过后无需再强制改密
+        account['mustChangePwd'] = False
+        account['firstLogin'] = False
+        account['approvedAt'] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+        account['approvedBy'] = str(actor or '')[:80]
+        if next_role in ('student', 'leader'):
+            try:
+                _link_registration_to_team_member(account)
+            except Exception as link_exc:
+                logger.warning('registration team link skipped: %s', link_exc)
+        save_gateway_accounts(accounts, actor=str(actor or 'mentor-approve'))
+        return _public_gateway_account(account)
+
+
+def reject_gateway_registration(student_id, actor, reason=''):
+    with _account_write_lock:
+        accounts = load_gateway_accounts(force=True)
+        account = _find_gateway_account(accounts, student_id)
+        if not account:
+            raise ValueError('registration not found')
+        if str(account.get('status') or '') != 'pending':
+            raise ValueError('account is not pending approval')
+        remaining = [
+            item for item in accounts
+            if _gateway_account_key(item) != _gateway_account_key(account)
+        ]
+        save_gateway_accounts(remaining, actor=str(actor or 'mentor-reject'))
+        return {
+            'studentId': account.get('studentId'),
+            'realName': account.get('realName'),
+            'rejectedBy': str(actor or '')[:80],
+            'reason': str(reason or '')[:200],
+        }
 
 
 class AccountDigestConflict(RuntimeError):
@@ -2517,18 +2740,24 @@ def replace_gateway_accounts_if_match(incoming, expected_digest, actor):
 def _find_gateway_account(accounts, login_id):
     needle = str(login_id or '').strip().lower()
     digits = ''.join(c for c in needle if c.isdigit())
+    # 先精确匹配登录名/别名/邮箱，避免被同名或短数字误命中
     for account in accounts:
         values = [
             account.get('studentId'),
-            account.get('realName'),
             account.get('email'),
         ]
         values.extend(account.get('loginAliases') or [])
         if any(str(value or '').strip().lower() == needle for value in values):
             return account
-        phone = ''.join(c for c in str(account.get('phone') or '') if c.isdigit())
-        if len(digits) >= 6 and phone and phone == digits:
-            return account
+    # 再匹配完整手机号（≥11 位）；不再用姓名登录，防止串到别人账号
+    if len(digits) >= 11:
+        for account in accounts:
+            phone = ''.join(c for c in str(account.get('phone') or '') if c.isdigit())
+            if phone and phone == digits:
+                return account
+            sid_digits = ''.join(c for c in str(account.get('studentId') or '') if c.isdigit())
+            if sid_digits == digits:
+                return account
     return None
 
 
@@ -3308,11 +3537,27 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             try:
                 accounts = load_gateway_accounts()
                 account = _find_gateway_account(accounts, username)
-                valid = bool(
-                    account
-                    and str(account.get('status') or 'active') == 'active'
-                    and verify_gateway_password(account, password)
-                )
+                account_status = str((account or {}).get('status') or 'active')
+                password_ok = bool(account and verify_gateway_password(account, password))
+                if account and password_ok and account_status == 'pending':
+                    record_auth_attempt(self, username, False)
+                    audit_event('gateway_login_pending', ip=request_client_ip(self), username=username[:120])
+                    self._json(403, {
+                        'ok': False,
+                        'error': 'registration pending approval',
+                        'code': 'registration_pending',
+                    })
+                    return
+                if account and password_ok and account_status == 'disabled':
+                    record_auth_attempt(self, username, False)
+                    audit_event('gateway_login_disabled', ip=request_client_ip(self), username=username[:120])
+                    self._json(403, {
+                        'ok': False,
+                        'error': 'account disabled',
+                        'code': 'account_disabled',
+                    })
+                    return
+                valid = bool(account and password_ok and account_status == 'active')
             except Exception as exc:
                 logger.warning('gateway auth account source failed: %s', exc)
                 self._json(503, {'ok': False, 'error': 'account service unavailable'})
@@ -3345,6 +3590,131 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                     'mustChangePwd': bool(account.get('mustChangePwd')),
                 },
             })
+            return
+
+        if path == '/api/auth/register':
+            try:
+                body = json.loads((post_data or b'{}').decode('utf-8'))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._json(400, {'ok': False, 'error': 'invalid JSON body'})
+                return
+            username = str((body or {}).get('username') or (body or {}).get('studentId') or '').strip()
+            allowed, retry_after = auth_attempt_status(self, 'register:' + username.lower())
+            if not allowed:
+                self.send_response(429)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Cache-Control', 'no-store')
+                self.send_header('Retry-After', str(retry_after))
+                self._cors()
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    'ok': False,
+                    'error': 'too many registration attempts',
+                    'retryAfter': retry_after,
+                }, ensure_ascii=False).encode('utf-8'))
+                return
+            try:
+                created = register_gateway_account(body, client_ip=request_client_ip(self))
+                record_auth_attempt(self, 'register:' + username.lower(), True)
+                try:
+                    data_store.append_audit(
+                        'account_registered',
+                        created.get('studentId') or username,
+                        subject_type='account',
+                        subject_id=str(created.get('studentId') or username),
+                        details={'status': 'pending', 'role': created.get('role')},
+                    )
+                except Exception as audit_exc:
+                    logger.warning('database audit append failed: %s', audit_exc)
+                audit_event(
+                    'gateway_register_ok',
+                    ip=request_client_ip(self),
+                    username=str(created.get('studentId') or username)[:120],
+                )
+                self._json(201, {
+                    'ok': True,
+                    'message': 'registration submitted; waiting for mentor approval',
+                    'account': created,
+                })
+            except ValueError as exc:
+                record_auth_attempt(self, 'register:' + username.lower(), False)
+                self._json(400, {'ok': False, 'error': str(exc)})
+            except Exception as exc:
+                logger.exception('public registration failed: %s', exc)
+                self._json(503, {'ok': False, 'error': 'account service unavailable'})
+            return
+
+        if path == '/api/auth/admin/registrations/approve':
+            claims = check_gateway_session(self, ('admin', 'leader'))
+            if not claims:
+                self._json(403, {'ok': False, 'error': 'mentor session required'})
+                return
+            try:
+                body = json.loads((post_data or b'{}').decode('utf-8'))
+                if not isinstance(body, dict):
+                    raise ValueError('JSON object required')
+                student_id = str(body.get('studentId') or body.get('username') or '').strip()
+                if not student_id:
+                    raise ValueError('studentId is required')
+                actor = _claims_actor(claims)
+                approved = approve_gateway_registration(
+                    student_id,
+                    actor,
+                    role=body.get('role'),
+                    group=body.get('group'),
+                )
+                try:
+                    data_store.append_audit(
+                        'account_registration_approved',
+                        actor,
+                        subject_type='account',
+                        subject_id=str(approved.get('studentId') or student_id),
+                        details={'role': approved.get('role')},
+                    )
+                except Exception as audit_exc:
+                    logger.warning('database audit append failed: %s', audit_exc)
+                self._json(200, {'ok': True, 'account': approved})
+            except ValueError as exc:
+                self._json(400, {'ok': False, 'error': str(exc)})
+            except Exception as exc:
+                logger.exception('registration approve failed: %s', exc)
+                self._json(503, {'ok': False, 'error': 'account service unavailable'})
+            return
+
+        if path == '/api/auth/admin/registrations/reject':
+            claims = check_gateway_session(self, ('admin', 'leader'))
+            if not claims:
+                self._json(403, {'ok': False, 'error': 'mentor session required'})
+                return
+            try:
+                body = json.loads((post_data or b'{}').decode('utf-8'))
+                if not isinstance(body, dict):
+                    raise ValueError('JSON object required')
+                student_id = str(body.get('studentId') or body.get('username') or '').strip()
+                if not student_id:
+                    raise ValueError('studentId is required')
+                actor = _claims_actor(claims)
+                rejected = reject_gateway_registration(
+                    student_id,
+                    actor,
+                    reason=str(body.get('reason') or ''),
+                )
+                try:
+                    data_store.append_audit(
+                        'account_registration_rejected',
+                        actor,
+                        subject_type='account',
+                        subject_id=str(rejected.get('studentId') or student_id),
+                        details={'reason': rejected.get('reason') or ''},
+                    )
+                except Exception as audit_exc:
+                    logger.warning('database audit append failed: %s', audit_exc)
+                self._json(200, {'ok': True, 'rejected': rejected})
+            except ValueError as exc:
+                self._json(400, {'ok': False, 'error': str(exc)})
+            except Exception as exc:
+                logger.exception('registration reject failed: %s', exc)
+                self._json(503, {'ok': False, 'error': 'account service unavailable'})
             return
 
         if path == '/api/auth/change-password':
@@ -3883,6 +4253,55 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             except Exception as exc:
                 logger.exception('account list failed: %s', exc)
                 self._json(503, {'ok': False, 'error': 'account service unavailable'})
+            return
+
+        if path == '/api/auth/admin/registrations':
+            claims = check_gateway_session(self, ('admin', 'leader'))
+            if not claims:
+                self._json(403, {'ok': False, 'error': 'mentor session required'})
+                return
+            try:
+                accounts = load_gateway_accounts(force=True)
+                pending = [
+                    _public_gateway_account(item)
+                    for item in accounts
+                    if str(item.get('status') or '') == 'pending'
+                ]
+                pending.sort(
+                    key=lambda item: str(item.get('registrationRequestedAt') or item.get('createdAt') or ''),
+                    reverse=True,
+                )
+                self._json(200, {'ok': True, 'registrations': pending, 'count': len(pending)})
+            except Exception as exc:
+                logger.exception('registration list failed: %s', exc)
+                self._json(503, {'ok': False, 'error': 'account service unavailable'})
+            return
+
+        if path == '/api/sync/versions':
+            if not POSTGRES_DATA_BACKEND:
+                self._json(503, {'ok': False, 'error': 'gateway sync backend is not enabled'})
+                return
+            claims = _request_claims(self)
+            if not claims:
+                status, body = _auth_denied_response(self)
+                self._json(status, body)
+                return
+            try:
+                requested_keys = [
+                    value.strip()
+                    for value in (qs.get('key') or [])
+                    if value.strip() in APP_SYNC_KEYS
+                ]
+                keys = requested_keys or sorted(APP_SYNC_KEYS)
+                keys = [
+                    key for key in keys
+                    if sync_policy.can_read(claims, key)
+                ]
+                items = data_store.list_sync_versions(keys)
+                self._json(200, {'ok': True, 'items': items})
+            except Exception as exc:
+                logger.exception('sync versions failed: %s', exc)
+                self._json(503, {'ok': False, 'error': 'sync storage unavailable'})
             return
 
         if path == '/api/sync':

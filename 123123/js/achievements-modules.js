@@ -1562,16 +1562,46 @@
 
         function accountMatchesTeamMember(a, m, preferredStudentId) {
             if (!a || !m || a.role === 'visitor') return false;
-            if (a.teamMemberId != null && Number(a.teamMemberId) === Number(m.id)) return true;
-            if (a.realName && m.name && a.realName === m.name) return true;
-            if (m.email && a.email && String(a.email).toLowerCase() === String(m.email).toLowerCase()) return true;
+            var aName = String(a.realName || '').trim();
+            var mName = String(m.name || '').trim();
+            // 姓名冲突时拒绝任何弱绑定（含错误的 teamMemberId），防止头像/档案串人
+            if (aName && mName && aName !== mName) {
+                return false;
+            }
+            if (a.teamMemberId != null && Number(a.teamMemberId) === Number(m.id)) {
+                if (aName || mName) return true;
+                var sid = String(a.studentId || '').trim();
+                var mSid = String(m.studentId || '').trim();
+                if (sid && mSid && sid === mSid) return true;
+                var aPh = String(a.phone || a.studentId || '').replace(/\D/g, '');
+                var mPh = String(m.phone || '').replace(/\D/g, '');
+                return aPh.length >= 11 && aPh === mPh;
+            }
+            if (aName && mName && aName === mName) return true;
+            if (m.email && a.email && String(a.email).toLowerCase() === String(m.email).toLowerCase()) {
+                if (!aName || !mName || aName === mName) return true;
+                return false;
+            }
             const mPhone = String(m.phone || '').replace(/\D/g, '');
             const aPhone = String(a.phone || '').replace(/\D/g, '');
-            if (mPhone.length >= 6 && (aPhone === mPhone || String(a.studentId || '').replace(/\D/g, '') === mPhone)) return true;
-            if (preferredStudentId && a.studentId === preferredStudentId) return true;
-            if (Array.isArray(a.loginAliases) && preferredStudentId && a.loginAliases.indexOf(preferredStudentId) >= 0) return true;
+            if (mPhone.length >= 11 && (aPhone === mPhone || String(a.studentId || '').replace(/\D/g, '') === mPhone)) {
+                // 禁止「一方无姓名」的纯手机弱绑定
+                if (aName && mName && aName === mName) return true;
+                return false;
+            }
+            if (preferredStudentId && a.studentId === preferredStudentId) {
+                if (aName && mName && aName !== mName) return false;
+                return true;
+            }
+            if (Array.isArray(a.loginAliases) && preferredStudentId && a.loginAliases.indexOf(preferredStudentId) >= 0) {
+                if (aName && mName && aName !== mName) return false;
+                return true;
+            }
             const autoId = getMemberStudentId(m);
-            if (autoId && a.studentId === autoId) return true;
+            if (autoId && a.studentId === autoId) {
+                if (aName && mName && aName !== mName) return false;
+                return true;
+            }
             return false;
         }
 
@@ -1580,6 +1610,9 @@
             try {
                 if (typeof currentUser !== 'undefined' && currentUser && Number(currentUser.id) === Number(a.id)) s += 10000;
             } catch (e0) {}
+            // 自助注册账号优先保留，避免被团队自动生成的「待改密」空壳账号覆盖
+            if (a.registrationRequestedAt) s += 2000;
+            if (a.mustChangePwd === false) s += 300;
             if (preferredStudentId && a.studentId === preferredStudentId) s += 500;
             if (a.studentId === 'admin') s += 200;
             if (a.lastLogin) s += 80;
@@ -1681,12 +1714,38 @@
                             primary.password = dup.password;
                             primary.mustChangePwd = dup.mustChangePwd;
                         }
+                        if (dup.registrationRequestedAt && !primary.registrationRequestedAt) {
+                            primary.registrationRequestedAt = dup.registrationRequestedAt;
+                            primary.registrationNote = dup.registrationNote || primary.registrationNote || '';
+                            primary.mustChangePwd = false;
+                            primary.firstLogin = false;
+                        }
+                        if (dup.mustChangePwd === false) {
+                            primary.mustChangePwd = false;
+                            primary.firstLogin = false;
+                        }
                         if (dup.group && !primary.group) primary.group = dup.group;
                         removeAccountIds.add(dup.id);
                         changed = true;
                     });
+                    if (primary.registrationRequestedAt) {
+                        if (primary.mustChangePwd !== false) {
+                            primary.mustChangePwd = false;
+                            changed = true;
+                        }
+                        if (primary.firstLogin) {
+                            primary.firstLogin = false;
+                            changed = true;
+                        }
+                    }
                     // 若主账号不是首选登录名，且首选名未被占用，则改用首选学号（如王丽萍→admin）
-                    if (preferredStudentId && primary.studentId !== preferredStudentId) {
+                    // 自助注册 / 显式保留登录名的账号禁止改写 studentId，避免 JWT sid 与本地脱节
+                    if (
+                        preferredStudentId
+                        && primary.studentId !== preferredStudentId
+                        && !primary.registrationRequestedAt
+                        && primary.preserveLoginId !== true
+                    ) {
                         const preferredTaken = accountData.some(function(a) {
                             return a && a.id !== primary.id && !removeAccountIds.has(a.id) && a.studentId === preferredStudentId;
                         });
@@ -1696,6 +1755,11 @@
                         }
                     }
                     Object.keys(patch).forEach(function(k) {
+                        // 自助注册账号保留用户填写的姓名，不被团队档案覆盖串名
+                        if (k === 'realName' && primary.registrationRequestedAt && primary.realName && patch.realName
+                            && String(primary.realName) !== String(patch.realName)) {
+                            return;
+                        }
                         if (k === 'graduated' || k === 'fromTeam' || k === 'teamOrphan' || typeof patch[k] === 'boolean' || typeof patch[k] === 'number') {
                             if (patch[k] !== primary[k]) {
                                 primary[k] = patch[k];
@@ -1839,7 +1903,8 @@
             if (renameMap[clean] && names.includes(renameMap[clean])) return renameMap[clean];
             if (names.includes(clean)) return clean;
             const samePrefix = names.find(function(n) { return clean && (n.indexOf(clean) === 0 || clean.indexOf(n) === 0); });
-            return samePrefix || names[0];
+            // 禁止回退到名单第一人，避免外协/笔误被改成王丽萍等
+            return samePrefix || (ownerName || clean || '');
         }
 
         function reconcilePeopleFieldList(list, fields, key) {

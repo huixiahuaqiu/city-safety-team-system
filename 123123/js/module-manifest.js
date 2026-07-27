@@ -1,7 +1,7 @@
 // 本文件由 build_assets.py 自动生成，请勿手动修改。
 // modules/*.html 的内容哈希，供 module-loader.js 做精准缓存控制。
 window.__MODULE_VERSIONS = {
-  "account_permission": "8daa7bd938",
+  "account_permission": "891f01c22d",
   "application_center": "54ad982cac",
   "chat": "4899b6eb36",
   "collection": "857181bbfc",
@@ -19,8 +19,8 @@ window.__MODULE_VERSIONS = {
   "meeting_management": "73f82e7ce1",
   "member_archive": "0be0ef580b",
   "model_training": "1eaddd4152",
-  "my_achievements": "f8cf59a829",
-  "my_projects": "dacd56c2b2",
+  "my_achievements": "b8dc71761f",
+  "my_projects": "0fa5edbae9",
   "news_management": "91dc4033b2",
   "notice_publish": "9fd5d555fe",
   "openai": "8f36800765",
@@ -41,22 +41,22 @@ window.__MODULE_VERSIONS = {
 
 // js/*.js 的内容哈希，供按模块加载的脚本做精准缓存控制。
 window.__ASSET_VERSIONS = {
-  "js/achievements-modules.js": "7e1d17a162",
-  "js/app-core.js": "feb9adbaaf",
+  "js/achievements-modules.js": "c5c37c3776",
+  "js/app-core.js": "b088996f0b",
   "js/app-legacy-a.js": "7a71092496",
-  "js/app-legacy-b.js": "921ac1ed43",
+  "js/app-legacy-b.js": "bd7be47332",
   "js/application-center.js": "a8046caf79",
   "js/competition-management.js": "89100d10bf",
   "js/dataset-library.js": "1c4915d013",
   "js/document-analysis.js": "a63bba8f28",
   "js/excel-tools.js": "a43a7ef85a",
   "js/holiday-leave.js": "a1b8b224c2",
-  "js/home-dashboard-p3.js": "4edbecf70d",
+  "js/home-dashboard-p3.js": "daa824fc08",
   "js/literature-compare.js": "f1050efd9a",
   "js/literature-library.js": "cd9034ea0a",
   "js/module-loader.js": "5c5afae487",
-  "js/my-achievements.js": "35dfc0eecb",
-  "js/my-projects.js": "c06536a6c7",
+  "js/my-achievements.js": "c33b0abb22",
+  "js/my-projects.js": "4888403498",
   "js/news-management.js": "73df64f9b8",
   "js/notice-enhance.js": "2131737780",
   "js/pages-static-boot.js": "33f9b797b8",
