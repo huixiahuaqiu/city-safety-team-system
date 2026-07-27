@@ -67,7 +67,6 @@ APP_SYNC_KEYS = frozenset(
 SERVER_OWNED_AUDIT_KEYS = frozenset({"loginLogData", "operationLogData"})
 ADMIN_PRIVATE_KEYS = frozenset(
     {
-        "passwordPolicy",
         "systemConfigData",
         "backupData",
         "autoBackupConfig",
@@ -79,6 +78,8 @@ ADMIN_PRIVATE_KEYS = frozenset(
 
 PUBLIC_READ_KEYS = frozenset(
     {
+        "permissionMatrix",
+        "passwordPolicy",
         "noticeData",
         "newsData",
         "meetingData",
@@ -225,6 +226,7 @@ ARRAY_KEYS = APP_SYNC_KEYS - frozenset(
         "portalTeamIntro_v1",
         "literatureCompareDimTemplate",
         "literatureCompareNamedDimTemplates",
+        "customInstructionTemplates",
         "autoBackupConfig",
         "systemConfigData",
     }
@@ -352,8 +354,19 @@ def validate_value(key: str, value: Any) -> Any:
     if key in ARRAY_KEYS and not isinstance(value, list):
         raise SyncPolicyError(f"{key} must be a JSON array")
     if key == "permissionMatrix":
+        expected_names = {row[0] for row in DEFAULT_PERMISSION_ROWS}
+        supplied_names = {
+            row[0]
+            for row in value
+            if isinstance(row, (list, tuple)) and len(row) == 5 and isinstance(row[0], str)
+        } if isinstance(value, list) else set()
         normalized = normalize_permission_matrix(value)
-        if not isinstance(value, list) or len(normalized) != len(DEFAULT_PERMISSION_ROWS):
+        if (
+            not isinstance(value, list)
+            or len(value) != len(DEFAULT_PERMISSION_ROWS)
+            or supplied_names != expected_names
+            or len(normalized) != len(DEFAULT_PERMISSION_ROWS)
+        ):
             raise SyncPolicyError("permissionMatrix is invalid or incomplete")
         value = normalized
     elif key == "passwordPolicy":

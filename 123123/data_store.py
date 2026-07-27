@@ -65,6 +65,33 @@ class VersionConflict(DataStoreError):
         }
 
 
+class RecordVersionConflict(DataStoreError):
+    """Raised when one or more record mutations use stale row versions."""
+
+    def __init__(
+        self,
+        record_type: str,
+        expected_versions: Mapping[int, int],
+        current_versions: Mapping[int, int],
+    ) -> None:
+        self.record_type = record_type
+        self.expected_versions = dict(expected_versions)
+        self.current_versions = dict(current_versions)
+        super().__init__(f"record version conflict for {record_type!r}")
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "error": "record_version_conflict",
+            "recordType": self.record_type,
+            "expectedVersions": {
+                str(key): value for key, value in self.expected_versions.items()
+            },
+            "currentVersions": {
+                str(key): value for key, value in self.current_versions.items()
+            },
+        }
+
+
 _SYNC_KEY_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,120}$")
 _RECORD_TYPE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_.:-]{0,79}$")
 _MAX_ACTOR_LENGTH = 200
@@ -232,6 +259,43 @@ def _iso(value: Any) -> Any:
     if isinstance(value, (datetime, date)):
         return value.isoformat()
     return value
+
+
+def _validate_expected_versions(
+    expected_versions: Mapping[int, int] | None,
+) -> dict[int, int] | None:
+    if expected_versions is None:
+        return None
+    if not isinstance(expected_versions, Mapping) or not expected_versions:
+        raise ValueError("expected_versions must be a non-empty mapping")
+    normalized: dict[int, int] = {}
+    for raw_id, raw_version in expected_versions.items():
+        if isinstance(raw_id, bool) or isinstance(raw_version, bool):
+            raise ValueError("record ids and versions must be positive integers")
+        record_id = int(raw_id)
+        version = int(raw_version)
+        if record_id <= 0 or version <= 0:
+            raise ValueError("record ids and versions must be positive integers")
+        normalized[record_id] = version
+    if len(normalized) > _MAX_RECORD_IDS_PER_QUERY:
+        raise ValueError(
+            f"at most {_MAX_RECORD_IDS_PER_QUERY} expected versions may be supplied"
+        )
+    return normalized
+
+
+def _record_version_clause(
+    expected_versions: Mapping[int, int] | None,
+) -> tuple[str, list[Any]]:
+    normalized = _validate_expected_versions(expected_versions)
+    if normalized is None:
+        return "", []
+    clauses: list[str] = []
+    params: list[Any] = []
+    for record_id, version in normalized.items():
+        clauses.append("(id = %s AND version = %s)")
+        params.extend((record_id, version))
+    return " AND (" + " OR ".join(clauses) + ")", params
 
 
 def _sync_row(row: Sequence[Any]) -> dict[str, Any]:
@@ -588,6 +652,7 @@ def update_records(
     record_ids: Iterable[int] | None = None,
     filters: Mapping[str, Any] | None = None,
     replace: bool = False,
+    expected_versions: Mapping[int, int] | None = None,
 ) -> list[dict[str, Any]]:
     """Update selected records, merging JSON by default.
 
@@ -605,17 +670,42 @@ def update_records(
         filters=filters,
         require_selector=True,
     )
+    normalized_versions = _validate_expected_versions(expected_versions)
+    version_clause, version_params = _record_version_clause(normalized_versions)
+    if normalized_versions is not None:
+        selected_ids = set(_normalize_record_ids(record_ids or normalized_versions.keys()) or [])
+        if selected_ids != set(normalized_versions):
+            raise ValueError("expected_versions must cover every selected record id")
     payload_expression = "%s::jsonb" if replace else "payload || %s::jsonb"
     query = (
         f"UPDATE app_records SET payload = {payload_expression}, "
         "version = version + 1, updated_at = now(), updated_by = %s "
-        f"WHERE {where} RETURNING {_RECORD_RETURNING}"
+        f"WHERE {where}{version_clause} RETURNING {_RECORD_RETURNING}"
     )
-    query_params = [_json_text(patch, "payload"), updated_by, *params]
+    query_params = [
+        _json_text(patch, "payload"),
+        updated_by,
+        *params,
+        *version_params,
+    ]
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(query, query_params)
             rows = cursor.fetchall()
+            if normalized_versions is not None and len(rows) != len(normalized_versions):
+                cursor.execute(
+                    "SELECT id, version FROM app_records "
+                    "WHERE record_type = %s AND id = ANY(%s)",
+                    (record_type, list(normalized_versions)),
+                )
+                current_versions = {
+                    int(row[0]): int(row[1]) for row in cursor.fetchall()
+                }
+                raise RecordVersionConflict(
+                    record_type,
+                    normalized_versions,
+                    current_versions,
+                )
     return [_record_row(row) for row in rows]
 
 
@@ -625,6 +715,7 @@ def delete_records(
     actor: str,
     record_ids: Iterable[int] | None = None,
     filters: Mapping[str, Any] | None = None,
+    expected_versions: Mapping[int, int] | None = None,
 ) -> int:
     """Delete selected records and return the number removed.
 
@@ -639,13 +730,33 @@ def delete_records(
         filters=filters,
         require_selector=True,
     )
+    normalized_versions = _validate_expected_versions(expected_versions)
+    version_clause, version_params = _record_version_clause(normalized_versions)
+    if normalized_versions is not None:
+        selected_ids = set(_normalize_record_ids(record_ids or normalized_versions.keys()) or [])
+        if selected_ids != set(normalized_versions):
+            raise ValueError("expected_versions must cover every selected record id")
     with _connection() as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                f"DELETE FROM app_records WHERE {where} RETURNING id",
-                params,
+                f"DELETE FROM app_records WHERE {where}{version_clause} RETURNING id",
+                [*params, *version_params],
             )
             rows = cursor.fetchall()
+            if normalized_versions is not None and len(rows) != len(normalized_versions):
+                cursor.execute(
+                    "SELECT id, version FROM app_records "
+                    "WHERE record_type = %s AND id = ANY(%s)",
+                    (record_type, list(normalized_versions)),
+                )
+                current_versions = {
+                    int(row[0]): int(row[1]) for row in cursor.fetchall()
+                }
+                raise RecordVersionConflict(
+                    record_type,
+                    normalized_versions,
+                    current_versions,
+                )
     return len(rows)
 
 
@@ -717,6 +828,7 @@ __all__ = [
     "DatabaseNotConfigured",
     "DatabaseDriverUnavailable",
     "VersionConflict",
+    "RecordVersionConflict",
     "database_enabled",
     "healthcheck",
     "list_sync_values",

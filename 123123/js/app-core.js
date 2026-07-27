@@ -540,11 +540,52 @@
             'permissionMatrix', 'passwordPolicy', 'systemConfigData',
             'backupData', 'autoBackupConfig', 'loginLogData', 'operationLogData'
         ]);
-        const CLOUD_LEADER_ONLY_KEYS = new Set([
-            'teamMemberData', 'memberGradeYears', 'approvalFlowConfig',
-            'holidayLeaveCampaigns', 'portalContentConfig_v1',
-            'portalHomeCarousel_v1', 'portalContactConfig_v1', 'portalTeamIntro_v1'
+        const CLOUD_STUDENT_SCOPED_KEYS = new Set([
+            'taskData', 'weeklyReportData', 'applicationData', 'annotationData'
         ]);
+        const CLOUD_KEY_WRITE_FEATURES = {
+            teamMemberData: ['团队成员档案（编辑）'],
+            memberGradeYears: ['团队成员档案（编辑）'],
+            taskData: ['内部任务待办（创建/分配）', '内部任务待办（查看自己的）'],
+            weeklyReportData: ['团队工作周报（提交自己的）', '团队工作周报（审核）'],
+            applicationData: ['请假与申请（提交自己的）', '请假与申请（本组审批）', '请假与申请（审批/查看全部）'],
+            approvalFlowConfig: ['请假与申请（流程配置）'],
+            holidayLeaveCampaigns: ['请假与申请（流程配置）'],
+            longitudinalData: ['项目管理（编辑）'],
+            horizontalData: ['项目管理（编辑）'],
+            schoolData: ['项目管理（编辑）'],
+            researchProjectExtra: ['项目管理（编辑）'],
+            patentData: ['成果管理（编辑）'],
+            patentMgmtData: ['成果管理（编辑）'],
+            paperData: ['成果管理（编辑）'],
+            standardData: ['成果管理（编辑）'],
+            copyrightData: ['成果管理（编辑）'],
+            competitionData: ['成果管理（编辑）'],
+            researchAchievementExtra: ['成果管理（编辑）'],
+            categoryData: ['成果管理（编辑）'],
+            memberData: ['成果管理（编辑）'],
+            literatureData: ['资源中心（上传/编辑）'],
+            datasetData: ['资源中心（上传/编辑）'],
+            reportData: ['资源中心（上传/编辑）'],
+            sharedFileData: ['资源中心（上传/编辑）'],
+            modelTrainingData: ['智能工具（全部）'],
+            annotationTypes: ['智能工具（全部）'],
+            annotationData: ['智能工具（全部）'],
+            knowledgeData: ['智能工具（全部）'],
+            compareLiteratureData: ['智能工具（全部）'],
+            literatureCompareDimTemplate: ['智能工具（全部）'],
+            literatureCompareNamedDimTemplates: ['智能工具（全部）'],
+            customInstructionTemplates: ['智能工具（全部）'],
+            noticeData: ['系统设置'],
+            newsData: ['系统设置'],
+            meetingData: ['系统设置'],
+            portalContentConfig_v1: ['系统设置'],
+            portalHomeCarousel_v1: ['系统设置'],
+            portalContactConfig_v1: ['系统设置'],
+            portalTeamIntro_v1: ['系统设置'],
+            portalFeedbackData_v1: ['系统设置'],
+            devlogEntries: ['系统设置']
+        };
 
         function currentCloudPrincipal() {
             if (!GATEWAY_DATA_BACKEND || !GATEWAY_AUTH_ENABLED) return 'legacy';
@@ -573,8 +614,19 @@
             var role = String(session && session.user && session.user.role || 'visitor').toLowerCase();
             if (role === 'visitor') return false;
             if (CLOUD_ADMIN_ONLY_KEYS.has(key)) return role === 'admin';
-            if (CLOUD_LEADER_ONLY_KEYS.has(key)) return role === 'admin' || role === 'leader';
-            return role === 'admin' || role === 'leader' || role === 'student';
+            if (role === 'admin') return true;
+            if (role === 'student' && !CLOUD_STUDENT_SCOPED_KEYS.has(key)) return false;
+            var features = CLOUD_KEY_WRITE_FEATURES[key] || [];
+            if (!features.length) return false;
+            var matrix = [];
+            try { matrix = JSON.parse(localStorage.getItem('permissionMatrix') || '[]'); } catch (e) {}
+            var column = { admin: 1, leader: 2, student: 3, visitor: 4 }[role];
+            return Array.isArray(matrix) && features.some(function(feature) {
+                var row = matrix.find(function(item) {
+                    return Array.isArray(item) && item[0] === feature;
+                });
+                return !!(row && row[column] === true);
+            });
         }
 
         // Older builds used one global outbox. It is deliberately discarded instead
@@ -1040,7 +1092,7 @@
                                     console.warn('sync conflict comparison failed', key, compareError);
                                 }
                             }
-                            markCloudMutationConflict(key, currentVersion);
+                            markCloudMutationConflict(key, currentVersion, revision);
                             markCloudSyncState({
                                 lastAt: Date.now(),
                                 lastOk: false,
@@ -1490,6 +1542,11 @@
         var moduleNavHistory = [];
         var currentModuleId = 'home';
         var moduleNavSkipHistory = false;
+        Object.defineProperty(window, 'moduleNavSkipHistory', {
+            configurable: true,
+            get: function () { return moduleNavSkipHistory; },
+            set: function (value) { moduleNavSkipHistory = !!value; }
+        });
         var MODULE_LABEL_MAP = {
             home: '首页',
             about: '团队介绍',

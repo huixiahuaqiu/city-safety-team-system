@@ -72,6 +72,30 @@ class GatewaySecurityTests(unittest.TestCase):
             )
         )
 
+    def test_mlops_secret_is_header_only_and_query_is_redacted_from_logs(self):
+        query_handler = FakeHandler(
+            path="/api/mlops/jobs?token=mlops-test-token&other=value"
+        )
+        self.assertFalse(self.gateway.check_token(query_handler))
+        self.assertTrue(
+            self.gateway.check_token(
+                FakeHandler(
+                    {"X-MLOps-Token": "mlops-test-token"},
+                    path="/api/mlops/jobs",
+                )
+            )
+        )
+        with mock.patch.object(self.gateway.logger, "info") as log:
+            self.gateway.WorkingProxyHandler.log_message(
+                query_handler,
+                '"%s" %s',
+                "GET /api/mlops/jobs?token=mlops-test-token&other=value HTTP/1.1",
+                "200",
+            )
+        rendered = " ".join(str(arg) for arg in log.call_args.args)
+        self.assertNotIn("mlops-test-token", rendered)
+        self.assertIn("/api/mlops/jobs", rendered)
+
     def test_dataset_identifier_rejects_empty_or_unsafe_value(self):
         with self.assertRaises(ValueError):
             self.gateway._safe_dataset_id("../")
@@ -472,9 +496,11 @@ class GatewaySecurityTests(unittest.TestCase):
             "role": "student",
             "status": "active",
             "passwordUpdatedAt": 1700000000000,
+            "sessionVersion": 3,
         }
         token, claims = self.gateway.issue_session_token(account)
         self.assertEqual(claims["pwu"], account["passwordUpdatedAt"])
+        self.assertEqual(claims["sv"], account["sessionVersion"])
         handler = FakeHandler({"Authorization": "Bearer " + token})
 
         with (
@@ -492,6 +518,7 @@ class GatewaySecurityTests(unittest.TestCase):
             },
             "account disabled": {**account, "status": "disabled"},
             "role change": {**account, "role": "leader"},
+            "logout": {**account, "sessionVersion": account["sessionVersion"] + 1},
         }
         for reason, changed_account in changed_accounts.items():
             with self.subTest(reason=reason):
@@ -562,7 +589,7 @@ class GatewaySecurityTests(unittest.TestCase):
         }
         self.assertEqual(
             leader_write,
-            {"admin": True, "leader": True, "student": False, "visitor": False},
+            {"admin": True, "leader": False, "student": False, "visitor": False},
         )
 
         member_write = {
@@ -571,9 +598,18 @@ class GatewaySecurityTests(unittest.TestCase):
         }
         self.assertEqual(
             member_write,
-            {"admin": True, "leader": True, "student": True, "visitor": False},
+            {"admin": True, "leader": False, "student": False, "visitor": False},
         )
         self.assertFalse(self.gateway._sync_write_allowed({}, "patentData"))
+
+        scoped_write = {
+            role: self.gateway._sync_write_allowed({"role": role}, "taskData")
+            for role in roles
+        }
+        self.assertEqual(
+            scoped_write,
+            {"admin": True, "leader": True, "student": True, "visitor": False},
+        )
 
     def test_server_verifies_browser_pbkdf2_record(self):
         import base64
@@ -662,6 +698,33 @@ class GatewaySecurityTests(unittest.TestCase):
         ):
             self.assertFalse(self.gateway.validate_new_password("onlytext"))
             self.assertTrue(self.gateway.validate_new_password("safe1234"))
+
+    def test_request_client_ip_honors_trusted_proxy_headers(self):
+        edge = FakeHandler(
+            {"X-Real-IP": "203.0.113.50"},
+            client_ip="172.18.0.2",
+        )
+        self.assertEqual(self.gateway.request_client_ip(edge), "203.0.113.50")
+
+        spoofed = FakeHandler(
+            {"X-Real-IP": "203.0.113.50"},
+            client_ip="198.51.100.9",
+        )
+        self.assertEqual(self.gateway.request_client_ip(spoofed), "198.51.100.9")
+
+    def test_password_change_gate_blocks_sync_but_allows_me(self):
+        claims = {
+            "sub": "u1",
+            "sid": "student01",
+            "role": "student",
+            "mustChangePwd": True,
+        }
+        sync_handler = FakeHandler(path="/api/sync/upsert")
+        self.assertTrue(self.gateway._password_change_required(sync_handler, claims))
+        me_handler = FakeHandler(path="/api/auth/me")
+        self.assertFalse(self.gateway._password_change_required(me_handler, claims))
+        change_handler = FakeHandler(path="/api/auth/change-password")
+        self.assertFalse(self.gateway._password_change_required(change_handler, claims))
 
 
 if __name__ == "__main__":

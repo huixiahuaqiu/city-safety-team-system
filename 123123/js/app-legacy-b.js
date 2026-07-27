@@ -8675,20 +8675,24 @@
                 console.warn('[showModule] 模块不存在:', moduleId);
                 return;
             }
-            if (!moduleNavSkipHistory) {
+            if (!window.moduleNavSkipHistory) {
                 var active = document.querySelector('.module.active');
                 var fromId = (active && active.id) || currentModuleId || '';
                 if (fromId && fromId !== moduleId) {
-                    pushModuleHistory(fromId);
+                    if (typeof window.pushModuleHistory === 'function') {
+                        window.pushModuleHistory(fromId);
+                    }
                 }
             }
             var ret = innerShow(moduleId);
             currentModuleId = moduleId;
-            updateModuleBackButton();
+            if (typeof window.updateModuleBackButton === 'function') {
+                window.updateModuleBackButton();
+            }
             return ret;
         };
         window.showModule = showModule;
-        window.goBackModule = goBackModule;
+        // goBackModule 由 app-core 导出，勿用未定义的局部变量覆盖
     })();
 
     // ===== 智能工具模块 =====
@@ -10189,16 +10193,19 @@
 
     async function shareAnnotationTaskToCloud(taskId) {
         const uploadToken = String(getAppConfig('ANNOTATION_UPLOAD_TOKEN', '') || '').trim();
-        if (!uploadToken) {
+        const gatewayOk = !!(window.GatewayAuth && window.GatewayAuth.enabled && window.GatewayAuth.hasSession());
+        if (!uploadToken && !gatewayOk) {
             return { ok: false, error: 'ANNOTATION_UPLOAD_TOKEN 未配置' };
         }
         try {
-            const resp = await fetch('/api/annotation/share-cloud', {
+            const headers = { 'Content-Type': 'application/json' };
+            if (uploadToken) headers['X-Upload-Token'] = uploadToken;
+            const fetchFn = (window.GatewayAuth && typeof window.GatewayAuth.fetch === 'function')
+                ? window.GatewayAuth.fetch
+                : fetch;
+            const resp = await fetchFn('/api/annotation/share-cloud', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Upload-Token': uploadToken
-                },
+                headers: headers,
                 body: JSON.stringify({ taskId: String(taskId) })
             });
             const data = await resp.json().catch(function() { return null; });
@@ -10253,23 +10260,28 @@
     async function uploadAnnotationFilesToServer(taskId, files) {
         if (!files || !files.length) return { ok: false, uploaded: 0, error: 'no files' };
         const uploadToken = String(getAppConfig('ANNOTATION_UPLOAD_TOKEN', '') || '').trim();
-        if (!uploadToken) {
+        const gatewayOk = !!(window.GatewayAuth && window.GatewayAuth.enabled && window.GatewayAuth.hasSession());
+        if (!uploadToken && !gatewayOk) {
             return { ok: false, uploaded: 0, total: files.length, errors: ['ANNOTATION_UPLOAD_TOKEN 未配置'] };
         }
         let uploaded = 0;
         const errors = [];
+        const fetchFn = (window.GatewayAuth && typeof window.GatewayAuth.fetch === 'function')
+            ? window.GatewayAuth.fetch
+            : fetch;
         for (let i = 0; i < files.length; i++) {
             const f = files[i];
             const rel = f.webkitRelativePath || f.name;
             try {
-                const resp = await fetch('/api/annotation/upload', {
+                const headers = {
+                    'X-Task-Id': String(taskId),
+                    'X-Rel-Path': encodeURIComponent(rel),
+                    'Content-Type': f.type || 'application/octet-stream'
+                };
+                if (uploadToken) headers['X-Upload-Token'] = uploadToken;
+                const resp = await fetchFn('/api/annotation/upload', {
                     method: 'POST',
-                    headers: {
-                        'X-Task-Id': String(taskId),
-                        'X-Rel-Path': encodeURIComponent(rel),
-                        'X-Upload-Token': uploadToken,
-                        'Content-Type': f.type || 'application/octet-stream'
-                    },
+                    headers: headers,
                     body: f
                 });
                 if (!resp.ok) {

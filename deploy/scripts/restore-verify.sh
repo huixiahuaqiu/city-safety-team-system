@@ -21,6 +21,8 @@ ENCRYPT_KEY_FILE="${BACKUP_ENCRYPT_KEY_FILE:-}"
 HEALTH_TIMEOUT="${RESTORE_VERIFY_HEALTH_TIMEOUT_SECONDS:-180}"
 MAX_AGE_HOURS="${RESTORE_VERIFY_MAX_AGE_HOURS:-26}"
 WEBHOOK="${HEALTH_WEBHOOK_URL:-}"
+MAINTENANCE_LOCK_DIR="/run/lock/citysafe"
+MAINTENANCE_LOCK_FILE="${MAINTENANCE_LOCK_DIR}/maintenance.lock"
 
 log() {
   printf '[%s] %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*"
@@ -47,14 +49,37 @@ require_safe_file() {
   [[ -f "${path}" && ! -L "${path}" ]] || die "${label} must be a regular, non-symlink file: ${path}"
 }
 
+prepare_maintenance_lock() {
+  if [[ ! -e "${MAINTENANCE_LOCK_DIR}" && ! -L "${MAINTENANCE_LOCK_DIR}" ]]; then
+    mkdir -- "${MAINTENANCE_LOCK_DIR}" 2>/dev/null || true
+  fi
+  [[ -d "${MAINTENANCE_LOCK_DIR}" && ! -L "${MAINTENANCE_LOCK_DIR}" ]] \
+    || die "maintenance lock directory is not a real directory"
+  [[ "$(stat -c '%u' -- "${MAINTENANCE_LOCK_DIR}")" == "0" ]] \
+    || die "maintenance lock directory must be owned by root"
+  chmod 0700 -- "${MAINTENANCE_LOCK_DIR}"
+  [[ ! -L "${MAINTENANCE_LOCK_FILE}" ]] \
+    || die "maintenance lock file may not be a symlink"
+  [[ ! -e "${MAINTENANCE_LOCK_FILE}" || -f "${MAINTENANCE_LOCK_FILE}" ]] \
+    || die "maintenance lock path must be a regular file"
+}
+
+[[ "${EUID}" -eq 0 ]] || die "run restore verification with sudo/root"
 require_command docker
 require_command sha256sum
 require_command tar
+require_command flock
+require_command stat
 require_uint "RESTORE_VERIFY_HEALTH_TIMEOUT_SECONDS" "${HEALTH_TIMEOUT}"
 require_uint "RESTORE_VERIFY_MAX_AGE_HOURS" "${MAX_AGE_HOURS}"
 require_safe_file "${COMPOSE_FILE}" "base Compose file"
 require_safe_file "${SERVER_OVERRIDE}" "server Compose override"
 require_safe_file "${ENV_FILE}" "external environment file"
+
+prepare_maintenance_lock
+exec 8>"${MAINTENANCE_LOCK_FILE}"
+chmod 0600 -- "${MAINTENANCE_LOCK_FILE}"
+flock -n 8 || die "another CitySafe deployment, backup, or restore verification is in progress"
 
 mkdir -p -- "${BACKUP_ROOT_INPUT}" "${VERIFY_TMP_ROOT_INPUT}"
 BACKUP_ROOT="$(cd -- "${BACKUP_ROOT_INPUT}" && pwd -P)"
@@ -65,6 +90,12 @@ case "${VERIFY_TMP_ROOT}" in
     die "RESTORE_VERIFY_TMP_ROOT may not be inside Docker's internal storage"
     ;;
 esac
+
+# Share the backup-root lock with backup/retention: exclusive writers there,
+# shared readers here, so a concurrent prune cannot delete the archive mid-run.
+exec 9>"${BACKUP_ROOT}/.backup.lock"
+chmod 0600 -- "${BACKUP_ROOT}/.backup.lock" 2>/dev/null || true
+flock -s -n 9 || die "another backup or retention job holds ${BACKUP_ROOT}/.backup.lock"
 
 docker compose version >/dev/null
 
@@ -525,15 +556,15 @@ client = Minio(
 )
 bucket = os.environ.get("MINIO_BUCKET", "team-shared")
 assert client.bucket_exists(bucket), "restored MinIO bucket is missing"
-objects = list(client.list_objects(bucket, recursive=True))
-if objects:
-    response = client.get_object(bucket, objects[0].object_name, offset=0, length=1)
+first_object = next(iter(client.list_objects(bucket, recursive=True)), None)
+if first_object is not None:
+    response = client.get_object(bucket, first_object.object_name, offset=0, length=1)
     try:
         response.read(1)
     finally:
         response.close()
         response.release_conn()
-print("MinIO object check PASS: objects=%d" % len(objects))
+print("MinIO object check PASS: sampled=%d" % (1 if first_object is not None else 0))
 '
 
 RTO_SECONDS=$(( $(date +%s) - START_SECONDS ))

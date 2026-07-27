@@ -12,10 +12,14 @@ upstream citysafe_gateway {
     keepalive 16;
 }
 
+log_format citysafe_safe '$remote_addr [$time_local] "$request_method $uri $server_protocol" '
+                         '$status $body_bytes_sent $request_time';
+
 server {
     listen 8080;
     server_name ${SERVER_NAME};
     server_tokens off;
+    access_log /var/log/nginx/access.log citysafe_safe;
 
     client_max_body_size 220m;
     client_body_timeout 600s;
@@ -25,7 +29,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-    add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; report-uri /api/csp-report;" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; report-uri /api/csp-report;" always;
 
     include /etc/nginx/citysafe-locations.conf;
 }

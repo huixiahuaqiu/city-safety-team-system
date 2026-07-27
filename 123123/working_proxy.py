@@ -5,6 +5,7 @@ import binascii
 import hashlib
 import hmac
 import io
+import ipaddress
 import json
 import logging
 import os
@@ -24,6 +25,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 import data_store
+import sync_policy
 
 ENV_PATH = os.path.join(BASE_DIR, '.env')
 MLOPS_STORE_PATH = os.path.join(BASE_DIR, 'mlops_store.json')
@@ -124,6 +126,22 @@ AUTH_ACCOUNT_CACHE_SECONDS = max(
 )
 AUTH_LOGIN_MAX_ATTEMPTS = max(3, min(int(os.environ.get('AUTH_LOGIN_MAX_ATTEMPTS', '5')), 20))
 AUTH_LOGIN_LOCK_SECONDS = max(30, min(int(os.environ.get('AUTH_LOGIN_LOCK_SECONDS', '900')), 86400))
+# Only honor X-Real-IP / X-Forwarded-For when the immediate peer is a trusted
+# reverse proxy (Compose edge by default). Comma-separated IPs or CIDRs.
+_TRUSTED_PROXY_RAW = (
+    os.environ.get('TRUSTED_PROXY_IPS')
+    or os.environ.get('TRUSTED_PROXY_CIDRS')
+    or '127.0.0.1,::1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16'
+)
+PASSWORD_CHANGE_ALLOWED_PATHS = frozenset(
+    {
+        '/api/auth/me',
+        '/api/auth/change-password',
+        '/api/auth/logout',
+        '/api/health',
+        '/api/ready',
+    }
+)
 BOOTSTRAP_ADMIN_USERNAME = (os.environ.get('BOOTSTRAP_ADMIN_USERNAME') or '').strip()
 BOOTSTRAP_ADMIN_NAME = (os.environ.get('BOOTSTRAP_ADMIN_NAME') or '系统管理员').strip()
 BOOTSTRAP_ADMIN_PASSWORD = os.environ.get('BOOTSTRAP_ADMIN_PASSWORD', '')
@@ -187,34 +205,7 @@ CLOUD_SYNC_MARK = '__APP_SYNC__'
 CLOUD_SYNC_PN = '__SYNC_KV__modelTrainingData'
 DATA_BACKEND = (os.environ.get('DATA_BACKEND') or 'postgres').strip().lower()
 POSTGRES_DATA_BACKEND = DATA_BACKEND in ('postgres', 'postgresql', 'gateway', 'local')
-APP_SYNC_KEYS = {
-    'teamMemberData', 'memberGradeYears', 'permissionMatrix', 'passwordPolicy', 'loginLogData',
-    'longitudinalData', 'horizontalData', 'schoolData', 'researchProjectExtra',
-    'taskData', 'weeklyReportData', 'applicationData', 'approvalFlowConfig',
-    'holidayLeaveCampaigns', 'noticeData', 'newsData', 'meetingData',
-    'literatureData', 'datasetData', 'reportData', 'sharedFileData',
-    'standardData', 'copyrightData', 'competitionData',
-    'modelTrainingData', 'annotationTypes', 'annotationData',
-    'knowledgeData', 'compareLiteratureData',
-    'patentData', 'patentMgmtData', 'paperData',
-    'categoryData', 'memberData', 'systemConfigData', 'operationLogData',
-    'portalContentConfig_v1', 'portalHomeCarousel_v1',
-    'portalContactConfig_v1', 'portalTeamIntro_v1',
-    'backupData', 'autoBackupConfig',
-}
-SYNC_ADMIN_ONLY_KEYS = {
-    'permissionMatrix', 'passwordPolicy', 'systemConfigData',
-    'backupData', 'autoBackupConfig', 'loginLogData', 'operationLogData',
-}
-SYNC_ADMIN_READ_KEYS = {
-    'passwordPolicy', 'systemConfigData', 'backupData', 'autoBackupConfig',
-    'loginLogData', 'operationLogData',
-}
-SYNC_LEADER_WRITE_KEYS = {
-    'teamMemberData', 'memberGradeYears', 'approvalFlowConfig',
-    'holidayLeaveCampaigns', 'portalContentConfig_v1',
-    'portalHomeCarousel_v1', 'portalContactConfig_v1', 'portalTeamIntro_v1',
-}
+APP_SYNC_KEYS = set(sync_policy.APP_SYNC_KEYS)
 
 _baidu_ocr_token = {'access_token': '', 'expire_at': 0}
 _store_lock = threading.Lock()
@@ -655,6 +646,7 @@ def issue_session_token(account):
         'name': str(account.get('realName') or '')[:80],
         'role': str(account.get('role') or 'visitor'),
         'pwu': int(account.get('passwordUpdatedAt') or 0),
+        'sv': int(account.get('sessionVersion') or 0),
         'iat': now,
         'exp': now + AUTH_SESSION_TTL_SECONDS,
         'jti': secrets.token_urlsafe(12),
@@ -703,24 +695,45 @@ def check_gateway_session(handler, roles=None):
     payload = verify_session_token(_bearer_token(handler))
     if not payload:
         return None
+    account = None
+    try:
+        account = _find_gateway_account(
+            load_gateway_accounts(),
+            payload.get('sid') or payload.get('sub'),
+        )
+    except Exception:
+        account = None
     if AUTH_REQUIRED:
-        try:
-            account = _find_gateway_account(
-                load_gateway_accounts(),
-                payload.get('sid') or payload.get('sub'),
-            )
-            if (
-                not account
-                or str(account.get('status') or 'active') != 'active'
-                or str(account.get('role') or 'visitor') != str(payload.get('role') or '')
-                or int(account.get('passwordUpdatedAt') or 0) != int(payload.get('pwu') or 0)
-            ):
-                return None
-        except Exception:
+        if (
+            not account
+            or str(account.get('status') or 'active') != 'active'
+            or str(account.get('role') or 'visitor') != str(payload.get('role') or '')
+            or int(account.get('passwordUpdatedAt') or 0) != int(payload.get('pwu') or 0)
+            or int(account.get('sessionVersion') or 0) != int(payload.get('sv') or 0)
+        ):
             return None
     if roles and payload.get('role') not in set(roles):
         return None
-    return payload
+    out = dict(payload)
+    out['mustChangePwd'] = bool(account.get('mustChangePwd')) if account else False
+    return out
+
+
+def _password_change_required(handler, claims):
+    if not claims or not bool(claims.get('mustChangePwd')):
+        return False
+    path = urllib.parse.urlparse(getattr(handler, 'path', '') or '').path
+    return path.startswith('/api/') and path not in PASSWORD_CHANGE_ALLOWED_PATHS
+
+
+def _auth_denied_response(handler):
+    if getattr(handler, '_password_change_required', False):
+        return 403, {
+            'ok': False,
+            'error': 'password change required',
+            'code': 'password_change_required',
+        }
+    return 401, {'ok': False, 'error': 'valid session required'}
 
 
 def check_token(handler):
@@ -732,16 +745,13 @@ def check_token(handler):
     bearer = _bearer_token(handler)
     if bearer and not verify_session_token(bearer):
         token = bearer
-    q = urllib.parse.urlparse(handler.path).query
-    qs = urllib.parse.parse_qs(q)
-    if qs.get('token'):
-        token = qs['token'][0]
     return secrets.compare_digest(str(token), str(MLOPS_TOKEN))
 
 
 def check_upload_token(handler, roles=('admin', 'leader', 'student')):
-    if check_gateway_session(handler, roles):
-        return True
+    claims = check_gateway_session(handler, roles)
+    if claims:
+        return not _password_change_required(handler, claims)
     if AUTH_REQUIRED:
         return False
     if not ANNOTATION_UPLOAD_TOKEN:
@@ -1663,8 +1673,9 @@ def save_shared_upload(file_name, file_type, remark, content, original_name=''):
 
 def get_shared_file_meta(file_id, allow_deleted=False):
     file_id = _safe_dataset_id(file_id)
-    reg = _shared_registry_load()
-    meta = reg['files'].get(file_id)
+    with _shared_registry_lock:
+        reg = _shared_registry_load()
+        meta = dict(reg['files'].get(file_id) or {})
     if not meta:
         raise FileNotFoundError('shared file not found')
     if meta.get('pendingConfirm'):
@@ -1681,37 +1692,41 @@ def get_shared_file_meta(file_id, allow_deleted=False):
 
 def soft_delete_shared_file(file_id):
     file_id = _safe_dataset_id(file_id)
-    reg = _shared_registry_load()
-    meta = reg['files'].get(file_id)
-    if not meta:
-        raise FileNotFoundError('shared file not found')
-    meta['deletedAt'] = _now_iso()
-    meta['deleted'] = True
-    reg['files'][file_id] = meta
-    _shared_registry_save(reg)
-    return meta
+    with _shared_registry_lock:
+        reg = _shared_registry_load()
+        meta = reg['files'].get(file_id)
+        if not meta:
+            raise FileNotFoundError('shared file not found')
+        meta['deletedAt'] = _now_iso()
+        meta['deleted'] = True
+        reg['files'][file_id] = meta
+        _shared_registry_save(reg)
+        return dict(meta)
 
 
 def restore_shared_file(file_id):
     file_id = _safe_dataset_id(file_id)
-    reg = _shared_registry_load()
-    meta = reg['files'].get(file_id)
-    if not meta:
-        raise FileNotFoundError('shared file not found')
-    meta.pop('deletedAt', None)
-    meta['deleted'] = False
-    reg['files'][file_id] = meta
-    _shared_registry_save(reg)
-    return meta
+    with _shared_registry_lock:
+        reg = _shared_registry_load()
+        meta = reg['files'].get(file_id)
+        if not meta:
+            raise FileNotFoundError('shared file not found')
+        meta.pop('deletedAt', None)
+        meta['deleted'] = False
+        reg['files'][file_id] = meta
+        _shared_registry_save(reg)
+        return dict(meta)
 
 
 def purge_shared_file(file_id):
     """物理删除：磁盘/MinIO + 注册表。"""
     file_id = _safe_dataset_id(file_id)
-    reg = _shared_registry_load()
-    meta = reg['files'].pop(file_id, None)
-    if not meta:
-        raise FileNotFoundError('shared file not found')
+    with _shared_registry_lock:
+        reg = _shared_registry_load()
+        meta = reg['files'].pop(file_id, None)
+        if not meta:
+            raise FileNotFoundError('shared file not found')
+        _shared_registry_save(reg)
     path = meta.get('path') or ''
     if path and os.path.isfile(path):
         try:
@@ -1725,7 +1740,6 @@ def purge_shared_file(file_id):
                 client.remove_object(MINIO_BUCKET, meta['objectKey'])
         except Exception as e:
             logging.warning('minio purge failed: %s', e)
-    _shared_registry_save(reg)
     return {'fileId': file_id, 'purged': True}
 
 
@@ -1904,8 +1918,9 @@ def create_shared_presign(file_name, file_type, remark, size, content_type='', o
 def confirm_shared_presign(file_id, md5='', size=None, owner=''):
     """直传完成后确认：校验对象存在、归属与文件头，再写入注册表。"""
     file_id = _safe_dataset_id(file_id)
-    reg = _shared_registry_load()
-    meta = reg['files'].get(file_id)
+    with _shared_registry_lock:
+        reg = _shared_registry_load()
+        meta = dict(reg['files'].get(file_id) or {})
     if not meta:
         raise FileNotFoundError('shared file not found')
     if not meta.get('pendingConfirm'):
@@ -1944,15 +1959,33 @@ def confirm_shared_presign(file_id, md5='', size=None, owner=''):
             except Exception:
                 pass
             with _shared_registry_lock:
-                reg = _shared_registry_load()
-                reg['files'].pop(file_id, None)
-                _shared_registry_save(reg)
+                latest_reg = _shared_registry_load()
+                latest_reg['files'].pop(file_id, None)
+                _shared_registry_save(latest_reg)
             audit_event('shared_presign_sniff_reject', fileId=file_id, error=str(e))
             raise ValueError('uploaded content rejected by content sniff: %s' % e)
     actual_size = int(getattr(stat, 'size', 0) or 0)
     expected = int(meta.get('size') or 0)
-    if expected and actual_size and actual_size > MINIO_PRESIGN_MAX_BYTES:
-        raise ValueError('uploaded object too large')
+    oversized = (
+        actual_size > MINIO_PRESIGN_MAX_BYTES
+        or (expected > 0 and actual_size > expected)
+    )
+    if oversized:
+        try:
+            client.remove_object(MINIO_BUCKET, object_key)
+        except Exception:
+            pass
+        with _shared_registry_lock:
+            reg = _shared_registry_load()
+            reg['files'].pop(file_id, None)
+            _shared_registry_save(reg)
+        audit_event(
+            'shared_presign_size_reject',
+            fileId=file_id,
+            expected=expected,
+            actual=actual_size,
+        )
+        raise ValueError('uploaded object size mismatch or too large')
     meta['size'] = actual_size or expected
     if md5:
         meta['md5'] = str(md5).strip().lower()
@@ -1964,9 +1997,12 @@ def confirm_shared_presign(file_id, md5='', size=None, owner=''):
         except Exception:
             pass
     with _shared_registry_lock:
-        reg = _shared_registry_load()
-        reg['files'][file_id] = meta
-        _shared_registry_save(reg)
+        latest_reg = _shared_registry_load()
+        latest = latest_reg['files'].get(file_id)
+        if not latest or latest.get('objectKey') != object_key:
+            raise FileNotFoundError('shared file registration changed during confirmation')
+        latest_reg['files'][file_id] = meta
+        _shared_registry_save(latest_reg)
     return meta
 
 
@@ -2381,7 +2417,7 @@ def bootstrap_gateway_admin():
 
 _ACCOUNT_AUTH_FIELDS = {
     'password', 'passwordScheme', 'passwordSalt', 'passwordIterations',
-    'passwordHash', 'passwordUpdatedAt',
+    'passwordHash', 'passwordUpdatedAt', 'sessionVersion',
 }
 
 
@@ -2519,8 +2555,54 @@ def verify_gateway_password(account, password):
         return False
 
 
+def _parse_ip_literal(value):
+    text = str(value or '').strip()
+    if not text or len(text) > 64:
+        return None
+    try:
+        return ipaddress.ip_address(text.split('%', 1)[0])
+    except ValueError:
+        return None
+
+
+def _trusted_proxy_networks():
+    nets = []
+    for item in _TRUSTED_PROXY_RAW.split(','):
+        text = item.strip()
+        if not text:
+            continue
+        try:
+            nets.append(ipaddress.ip_network(text, strict=False))
+        except ValueError:
+            logger.warning('ignoring invalid TRUSTED_PROXY entry: %s', text)
+    return tuple(nets)
+
+
+_TRUSTED_PROXY_NETWORKS = _trusted_proxy_networks()
+
+
+def _is_trusted_proxy(peer_ip):
+    parsed = _parse_ip_literal(peer_ip)
+    if parsed is None:
+        return False
+    return any(parsed in network for network in _TRUSTED_PROXY_NETWORKS)
+
+
+def request_client_ip(handler):
+    """Return the real client IP when the peer is a trusted reverse proxy."""
+    peer = str((handler.client_address or ('',))[0] or '').strip()
+    if _is_trusted_proxy(peer):
+        forwarded = (
+            str(handler.headers.get('X-Real-IP') or '').strip()
+            or str(handler.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
+        )
+        if _parse_ip_literal(forwarded) is not None:
+            return forwarded
+    return peer or 'unknown'
+
+
 def _auth_attempt_key(handler, username):
-    ip = str((handler.client_address or ('',))[0] or 'unknown')
+    ip = request_client_ip(handler)
     return ip + '|' + str(username or '').strip().lower()[:120]
 
 
@@ -2683,8 +2765,18 @@ def fetch_annotation_task_from_cloud(task_id):
 
 
 def _request_claims(handler, roles=None):
+    try:
+        handler._password_change_required = False
+    except Exception:
+        pass
     claims = check_gateway_session(handler, roles)
     if claims:
+        if _password_change_required(handler, claims):
+            try:
+                handler._password_change_required = True
+            except Exception:
+                pass
+            return None
         return claims
     if AUTH_REQUIRED:
         return None
@@ -2695,6 +2787,7 @@ def _request_claims(handler, roles=None):
             'sid': 'local-development',
             'name': 'Local Development',
             'role': 'admin',
+            'mustChangePwd': False,
         }
         if not roles or local_claims['role'] in set(roles):
             return local_claims
@@ -2707,8 +2800,18 @@ def _claims_actor(claims):
 
 def _dataset_request_claims(handler, roles=None):
     """Resolve a session principal while retaining the legacy local token flow."""
+    try:
+        handler._password_change_required = False
+    except Exception:
+        pass
     claims = check_gateway_session(handler, roles)
     if claims:
+        if _password_change_required(handler, claims):
+            try:
+                handler._password_change_required = True
+            except Exception:
+                pass
+            return None
         return claims
     if AUTH_REQUIRED:
         return None
@@ -2722,6 +2825,7 @@ def _dataset_request_claims(handler, roles=None):
         'sid': 'dataset-token',
         'name': 'Dataset Integration',
         'role': 'admin',
+        'mustChangePwd': False,
     }
     if roles and local_claims['role'] not in set(roles):
         return None
@@ -2729,14 +2833,23 @@ def _dataset_request_claims(handler, roles=None):
 
 
 def _sync_write_allowed(claims, key):
-    role = str((claims or {}).get('role') or 'visitor')
-    if role == 'visitor':
-        return False
-    if key in SYNC_ADMIN_ONLY_KEYS:
-        return role == 'admin'
-    if key in SYNC_LEADER_WRITE_KEYS:
-        return role in ('admin', 'leader')
-    return role in ('admin', 'leader', 'student')
+    if str((claims or {}).get('role') or '') == 'admin':
+        return sync_policy.can_write(claims, key, None)
+    matrix_record = None
+    try:
+        if data_store.database_enabled():
+            matrix_record = data_store.get_sync_value('permissionMatrix')
+    except Exception as exc:
+        # Permission checks fail closed to the built-in least-privilege matrix
+        # when the database is unavailable; the write itself will still fail
+        # later rather than silently granting a broader role.
+        logger.warning('permission matrix lookup failed; using secure defaults: %s', exc)
+    permission_matrix = (
+        matrix_record.get('value')
+        if isinstance(matrix_record, dict)
+        else None
+    )
+    return sync_policy.can_write(claims, key, permission_matrix)
 
 
 def _record_selector(resource):
@@ -2887,7 +3000,12 @@ def resolve_static_file_path(request_path):
 
 class WorkingProxyHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
-        logger.info("%s - %s", self.client_address[0], format % args)
+        message = format % args
+        request_target = str(getattr(self, 'path', '') or '')
+        if request_target:
+            safe_target = urllib.parse.urlsplit(request_target).path or '/'
+            message = message.replace(request_target, safe_target)
+        logger.info("%s - %s", self.client_address[0], message)
 
     def _cors(self):
         self.send_header('X-Content-Type-Options', 'nosniff')
@@ -3008,7 +3126,8 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 return
             claims = _request_claims(self)
             if not claims:
-                self._json(401, {'ok': False, 'error': 'valid session required'})
+                status, body = _auth_denied_response(self)
+                self._json(status, body)
                 return
             try:
                 body = json.loads((post_data or b'{}').decode('utf-8'))
@@ -3020,13 +3139,26 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 if not _sync_write_allowed(claims, key):
                     self._json(403, {'ok': False, 'error': 'role cannot update this sync key'})
                     return
+                incoming_value = sync_policy.validate_value(key, body.get('value'))
+                current_item = data_store.get_sync_value(key)
+                current_value = (
+                    current_item.get('value')
+                    if isinstance(current_item, dict)
+                    else []
+                )
+                value = sync_policy.merge_scoped_write(
+                    key,
+                    incoming_value,
+                    current_value,
+                    claims,
+                )
                 base_version = body.get('baseVersion', 0)
                 if isinstance(base_version, bool):
                     raise ValueError('baseVersion must be an integer')
                 base_version = int(base_version)
                 item = data_store.put_sync_value(
                     key,
-                    body.get('value'),
+                    value,
                     base_version,
                     _claims_actor(claims),
                 )
@@ -3043,6 +3175,8 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self._json(200, {'ok': True, 'item': item})
             except data_store.VersionConflict as conflict:
                 self._json(409, {'ok': False, **conflict.as_dict()})
+            except sync_policy.SyncPolicyError as exc:
+                self._json(400, {'ok': False, 'error': str(exc)})
             except (ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
                 self._json(400, {'ok': False, 'error': str(exc)})
             except Exception as exc:
@@ -3056,7 +3190,8 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 return
             claims = _request_claims(self)
             if not claims:
-                self._json(401, {'ok': False, 'error': 'valid session required'})
+                status, body = _auth_denied_response(self)
+                self._json(status, body)
                 return
             try:
                 body = json.loads((post_data or b'{}').decode('utf-8'))
@@ -3187,14 +3322,14 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 if not account:
                     hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), b'citysafe-auth-dummy', 210000)
                 record_auth_attempt(self, username, False)
-                audit_event('gateway_login_failed', ip=self.client_address[0], username=username[:120])
+                audit_event('gateway_login_failed', ip=request_client_ip(self), username=username[:120])
                 self._json(401, {'ok': False, 'error': 'invalid username or password'})
                 return
             record_auth_attempt(self, username, True)
             token, claims = issue_session_token(account)
             audit_event(
                 'gateway_login_ok',
-                ip=self.client_address[0],
+                ip=request_client_ip(self),
                 studentId=claims.get('sid'),
                 role=claims.get('role'),
             )
@@ -3310,6 +3445,31 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             return
 
         if path == '/api/auth/logout':
+            claims = check_gateway_session(self)
+            if not claims:
+                self._json(401, {'ok': False, 'error': 'valid session required'})
+                return
+            try:
+                with _account_write_lock:
+                    accounts = load_gateway_accounts(force=True)
+                    account = _find_gateway_account(
+                        accounts,
+                        claims.get('sid') or claims.get('sub'),
+                    )
+                    if not account:
+                        self._json(401, {'ok': False, 'error': 'valid session required'})
+                        return
+                    account['sessionVersion'] = int(account.get('sessionVersion') or 0) + 1
+                    save_gateway_accounts(accounts, actor=_claims_actor(claims))
+            except Exception as exc:
+                logger.warning('gateway logout revocation failed: %s', exc)
+                self._json(503, {'ok': False, 'error': 'logout service unavailable'})
+                return
+            audit_event(
+                'gateway_logout',
+                ip=self.client_address[0],
+                studentId=claims.get('sid'),
+            )
             self._json(200, {'ok': True})
             return
 
@@ -3702,6 +3862,7 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                     'studentId': claims.get('sid'),
                     'realName': claims.get('name'),
                     'role': claims.get('role'),
+                    'mustChangePwd': bool(claims.get('mustChangePwd')),
                 },
                 'expiresAt': int(claims.get('exp') or 0) * 1000,
             })
@@ -3730,7 +3891,8 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 return
             claims = _request_claims(self)
             if not claims:
-                self._json(401, {'ok': False, 'error': 'valid session required'})
+                status, body = _auth_denied_response(self)
+                self._json(status, body)
                 return
             try:
                 requested_keys = [
@@ -3739,9 +3901,17 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                     if value.strip() in APP_SYNC_KEYS
                 ]
                 keys = requested_keys or sorted(APP_SYNC_KEYS)
-                if claims.get('role') != 'admin':
-                    keys = [key for key in keys if key not in SYNC_ADMIN_READ_KEYS]
+                keys = [
+                    key for key in keys
+                    if sync_policy.can_read(claims, key)
+                ]
                 items = data_store.list_sync_values(keys)
+                for item in items:
+                    item['value'] = sync_policy.filter_read_value(
+                        item.get('syncKey', ''),
+                        item.get('value'),
+                        claims,
+                    )
                 self._json(200, {'ok': True, 'items': items})
             except Exception as exc:
                 logger.exception('sync read failed: %s', exc)

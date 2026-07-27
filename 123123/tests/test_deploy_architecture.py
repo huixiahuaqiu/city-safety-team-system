@@ -56,20 +56,27 @@ class DeployArchitectureTests(unittest.TestCase):
     def test_rollout_and_backup_share_a_maintenance_lock(self):
         bootstrap = read("deploy/scripts/bootstrap-server.sh")
         backup = read("deploy/scripts/backup.sh")
+        restore = read("deploy/scripts/restore-verify.sh")
         remote_deploy = read("deploy/scripts/deploy-server.ps1")
         lock_dir = "/run/lock/citysafe"
         lock_path = "${MAINTENANCE_LOCK_DIR}/maintenance.lock"
 
         self.assertIn(lock_dir, bootstrap)
         self.assertIn(lock_dir, backup)
+        self.assertIn(lock_dir, restore)
         self.assertIn(lock_dir, remote_deploy)
         self.assertIn(lock_path, bootstrap)
         self.assertIn(lock_path, backup)
+        self.assertIn(lock_path, restore)
         self.assertIn("flock -n", bootstrap)
         self.assertIn("flock -n", backup)
+        self.assertIn("flock -n", restore)
+        self.assertIn("flock -s -n 9", restore)
+        self.assertIn("${BACKUP_ROOT}/.backup.lock", restore)
         self.assertIn("flock -n 9", remote_deploy)
         self.assertIn("maintenance lock file may not be a symlink", bootstrap)
         self.assertIn("maintenance lock file may not be a symlink", backup)
+        self.assertIn("maintenance lock file may not be a symlink", restore)
         self.assertIn("maintenance lock file may not be a symlink", remote_deploy)
         self.assertIn("CITYSAFE_MAINTENANCE_LOCK_HELD=1", remote_deploy)
         self.assertLess(
@@ -113,12 +120,32 @@ class DeployArchitectureTests(unittest.TestCase):
         self.assertNotIn('-C "${restore_dir}" -xzf', restore)
         self.assertIn("restore_volume_archive state", restore)
         self.assertIn("restore_volume_archive minio", restore)
+        self.assertIn(
+            "next(iter(client.list_objects(bucket, recursive=True)), None)",
+            restore,
+        )
+        self.assertNotIn(
+            "list(client.list_objects(bucket, recursive=True))",
+            restore,
+        )
+        self.assertIn("/run/lock/citysafe", restore)
+        self.assertIn("flock -n 8", restore)
+        self.assertIn('[[ "${EUID}" -eq 0 ]]', restore)
+        self.assertIn("maintenance lock file may not be a symlink", restore)
 
     def test_runbook_explains_minio_credential_revocation(self):
         runbook = read("deploy/RUNBOOK.md")
 
         self.assertIn("常规轮换保持 `MINIO_ACCESS_KEY` 不变", runbook)
         self.assertIn("显式删除旧应用用户", runbook)
+
+    def test_scheduled_backup_uses_the_root_maintenance_identity(self):
+        cron = read("deploy/cron/citysafe.cron")
+
+        self.assertIn(" root cd ", cron)
+        self.assertIn("deploy/scripts/backup.sh", cron)
+        self.assertIn("deploy/scripts/restore-verify.sh", cron)
+        self.assertNotIn(" appsvc ", cron)
 
 
 if __name__ == "__main__":
