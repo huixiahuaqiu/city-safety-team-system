@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
     <title>城市安全数智创新团队文献管理系统</title>
     <!-- 首屏仅保留 Tailwind + ECharts；xlsx/pdf/mammoth/cropper/wangEditor 见 js/vendor-lazy.js -->
     <script>
@@ -31,7 +33,7 @@
         }
     </script>
     <link href="vendor/fonts/fonts-local.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/app-shell.css?v=0289bc5ac2">
+    <link rel="stylesheet" href="css/app-shell.css?v=475ae70489">
     <link rel="stylesheet" href="css/portal-public.css?v=2cf647d824">
     <script src="js/vendor-lazy.js?v=960c38a41e"></script>
 </head>
@@ -1131,8 +1133,28 @@
     </div>
 
     <script>
+        window.__citysafeBootErrors = window.__citysafeBootErrors || [];
+        window.__citysafeShowBootBanner = function (text) {
+            try {
+                var id = 'citysafeBootBanner';
+                var el = document.getElementById(id);
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = id;
+                    el.setAttribute('role', 'alert');
+                    el.style.cssText = 'position:fixed;left:16px;right:16px;top:16px;z-index:2147483647;padding:14px 16px;border-radius:12px;background:#7f1d1d;color:#fff;font:600 14px/1.5 sans-serif;box-shadow:0 12px 40px rgba(0,0,0,.35);';
+                    document.documentElement.appendChild(el);
+                }
+                el.textContent = text;
+            } catch (e) {}
+        };
         window.onerror = function(msg, url, line, col, error) {
             console.error('Global error:', msg, 'at', url, line, col);
+            var text = String(msg || '');
+            window.__citysafeBootErrors.push(text);
+            if (/Cannot redefine property|moduleNavSkipHistory/i.test(text)) {
+                window.__citysafeShowBootBanner('页面脚本加载失败（缓存了旧版本）。请按 Ctrl+F5 强制刷新，或使用 InPrivate/无密窗口打开 http://127.0.0.1:8080');
+            }
             return true;
         };
         
@@ -1144,9 +1166,9 @@
     
     <script src="config.js"></script>
     <script src="config.runtime.js"></script>
-    <script src="js/module-manifest.js?v=61f1ba9879"></script>
+    <script src="js/module-manifest.js?v=00697b83d5"></script>
     <script src="js/module-loader.js?v=5c5afae487"></script>
-    <script src="js/app-core.js?v=ed838864ee"></script>
+    <script src="js/app-core.js?v=e57aaa5e6a"></script>
     <script src="js/achievements-modules.js?v=7e1d17a162"></script>
     
     <!-- 文献管理模块 -->
@@ -1365,9 +1387,18 @@
     <script src="js/app-legacy-a.js?v=7a71092496"></script>
 
     <!-- ==================== 账号体系 JavaScript（按规范重写） ==================== -->
-    <script src="js/app-legacy-b.js?v=66f62cffde"></script>
+    <script src="js/app-legacy-b.js?v=d71b574edb"></script>
     <script src="js/news-management.js?v=73df64f9b8"></script>
     <script src="js/home-dashboard-p3.js?v=4edbecf70d"></script>
     <script src="js/portal-public.js?v=17f4556571"></script>
+    <script>
+        (function () {
+            if (typeof window.showModule !== 'function' || typeof window.handleLogin !== 'function') {
+                if (typeof window.__citysafeShowBootBanner === 'function') {
+                    window.__citysafeShowBootBanner('关键功能未就绪（多半是浏览器缓存了旧脚本）。请按 Ctrl+F5 强制刷新，或用 InPrivate 窗口打开 http://127.0.0.1:8080');
+                }
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -1005,7 +1005,20 @@
                 var retryText = gatewayError && gatewayError.retryAfter
                     ? '，请 ' + Math.ceil(Number(gatewayError.retryAfter) / 60) + ' 分钟后重试'
                     : '';
-                errorEl.textContent = '服务端身份验证失败' + retryText;
+                var detail = String((gatewayError && gatewayError.message) || '').trim();
+                var friendly = '服务端身份验证失败';
+                if (/not configured|AUTH_SIGNING_SECRET/i.test(detail)) {
+                    friendly = '当前页面连到的网关未配置登录密钥。请改用 Docker 入口 http://127.0.0.1:8080 ，不要用裸进程 :8000';
+                } else if (/account service unavailable|DatabaseDriver|psycopg|database/i.test(detail)) {
+                    friendly = '账号服务不可用（数据库未就绪）。请用 http://127.0.0.1:8080 访问完整栈';
+                } else if (/invalid username or password/i.test(detail)) {
+                    friendly = '账号或密码错误';
+                } else if (/too many login attempts/i.test(detail)) {
+                    friendly = '登录失败次数过多';
+                } else if (detail) {
+                    friendly = '服务端身份验证失败：' + detail;
+                }
+                errorEl.textContent = friendly + retryText;
                 return;
             }
         }
@@ -1672,8 +1685,8 @@
         if (activeModule) {
             const moduleId = activeModule.id;
             if (menuVisibility[moduleId] === false) {
-                moduleNavSkipHistory = true;
-                try { showModule('home'); } finally { moduleNavSkipHistory = false; }
+                window.moduleNavSkipHistory = true;
+                try { showModule('home'); } finally { window.moduleNavSkipHistory = false; }
             }
         }
 

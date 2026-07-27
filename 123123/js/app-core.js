@@ -1541,12 +1541,10 @@
         // 显示模块
         var moduleNavHistory = [];
         var currentModuleId = 'home';
-        var moduleNavSkipHistory = false;
-        Object.defineProperty(window, 'moduleNavSkipHistory', {
-            configurable: true,
-            get: function () { return moduleNavSkipHistory; },
-            set: function (value) { moduleNavSkipHistory = !!value; }
-        });
+        // 注意：不要对已存在的全局 var 再 defineProperty，Chromium 会抛
+        // "Cannot redefine property" 并中断后续脚本（表现为整页点不动）
+        // cache-bust: 2026-07-27-click-fix
+        window.moduleNavSkipHistory = false;
         var MODULE_LABEL_MAP = {
             home: '首页',
             about: '团队介绍',
@@ -1639,11 +1637,11 @@
                 var prev = moduleNavHistory.pop();
                 if (!prev || prev === curId) continue;
                 if (!document.getElementById(prev)) continue;
-                moduleNavSkipHistory = true;
+                window.moduleNavSkipHistory = true;
                 try {
                     showModule(prev);
                 } finally {
-                    moduleNavSkipHistory = false;
+                    window.moduleNavSkipHistory = false;
                     currentModuleId = prev;
                     updateModuleBackButton();
                 }
