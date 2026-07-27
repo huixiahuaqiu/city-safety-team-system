@@ -5537,8 +5537,10 @@
         yearScope: (function () {
             try {
                 var s = localStorage.getItem('homeStatYearScope');
-                return s === 'all' ? 'all' : 'current';
-            } catch (e) { return 'current'; }
+                // 未设置时默认「全部」，与「我的成果」全量列表一致；历史专利/论文多不在当年
+                if (s === 'current' || s === 'all') return s;
+                return 'all';
+            } catch (e) { return 'all'; }
         })()
     };
     window.homeDashUi = homeDashUi;
@@ -6033,6 +6035,27 @@
         var papersAll = getHomePaperList();
         var patents = filterHomeByYearScope(patentsAll, HOME_PATENT_DATE_FIELDS);
         var papers = filterHomeByYearScope(papersAll, HOME_PAPER_DATE_FIELDS);
+        var patentTotal = patents.length;
+        var paperTotal = papers.length;
+        var patentAllTotal = patentsAll.length;
+        var paperAllTotal = papersAll.length;
+        // 与「我的成果」对齐：模块已加载时以同源聚合为准（避免内存空数组导致首页 0）
+        try {
+            if (typeof window.getAchievementOverviewCounts === 'function') {
+                var achAll = window.getAchievementOverviewCounts('all');
+                var achScoped = window.getAchievementOverviewCounts(yearScope);
+                if (achAll) {
+                    if (achAll.patent >= patentAllTotal) {
+                        patentAllTotal = achAll.patent;
+                        patentTotal = achScoped ? achScoped.patent : patentTotal;
+                    }
+                    if (achAll.paper >= paperAllTotal) {
+                        paperAllTotal = achAll.paper;
+                        paperTotal = achScoped ? achScoped.paper : paperTotal;
+                    }
+                }
+            }
+        } catch (eAch) {}
         var projects = getHomeProjectStats();
         var members = getHomeActiveMembers();
         var todos = getHomeUnifiedTodos();
@@ -6051,14 +6074,14 @@
             roleKind: getHomeRoleKind(),
             yearScope: yearScope,
             patents: {
-                total: patents.length,
-                allTotal: patentsAll.length,
+                total: patentTotal,
+                allTotal: patentAllTotal,
                 delta: formatHomeDelta(patentCurr, patentPrev),
                 monthAdd: patentCurr
             },
             papers: {
-                total: papers.length,
-                allTotal: papersAll.length,
+                total: paperTotal,
+                allTotal: paperAllTotal,
                 delta: formatHomeDelta(paperCurr, paperPrev),
                 monthAdd: paperCurr
             },

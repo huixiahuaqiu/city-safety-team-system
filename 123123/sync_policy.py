@@ -229,6 +229,9 @@ ARRAY_KEYS = APP_SYNC_KEYS - frozenset(
         "customInstructionTemplates",
         "autoBackupConfig",
         "systemConfigData",
+        # 扩展元数据为 {id: meta} 对象，不是数组
+        "researchAchievementExtra",
+        "researchProjectExtra",
     }
 )
 
@@ -382,6 +385,9 @@ def validate_value(key: str, value: Any) -> Any:
             length = _strict_nonnegative_int(value["minLength"], "minLength")
             if length < 8 or length > 128:
                 raise SyncPolicyError("minLength must be between 8 and 128")
+    elif key in ("researchAchievementExtra", "researchProjectExtra"):
+        if not isinstance(value, dict):
+            raise SyncPolicyError(f"{key} must be a JSON object")
     elif key == "literatureData":
         for record in value:
             if not isinstance(record, dict):

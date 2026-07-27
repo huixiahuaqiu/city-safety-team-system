@@ -881,6 +881,7 @@
       (canEdit ? '<a class="kx-a" href="javascript:void(0)" data-mp-act="close" data-mp-key="' + k + '">结项</a>' : '') +
       '<a class="kx-a" href="javascript:void(0)" data-mp-act="docs" data-mp-key="' + k + '">文档</a>' +
       '<a class="kx-a" href="javascript:void(0)" data-mp-act="process" data-mp-key="' + k + '">过程</a>' +
+      (canEdit ? '<a class="kx-a kx-a-danger" href="javascript:void(0)" data-mp-act="delete" data-mp-key="' + k + '" style="color:#e5484d">删除</a>' : '') +
       '</div>';
   }
 
@@ -1047,6 +1048,7 @@
       else if (act === 'process') mpOpenTab(key, 'process');
       else if (act === 'docs') mpOpenTab(key, 'docs');
       else if (act === 'audit') mpShowAuditLogKey(key);
+      else if (act === 'delete') mpDelete(key);
     });
   }
 
@@ -1539,17 +1541,51 @@
     alert('保存成功');
   }
 
+  function mpDeleteCurrent() {
+    if (!state.currentKey) {
+      alert('请先打开要删除的项目');
+      return;
+    }
+    mpDelete(state.currentKey);
+  }
+
   function mpDelete(key) {
     var p = findByKey(key);
     if (!p) return;
-    if (!confirm('确定删除项目「' + p.name + '」？')) return;
-    var arr = loadArr(p._store).filter(function (d) { return Number(d.id) !== Number(p.id); });
-    saveArr(p._store, arr);
+    var canEdit = canManageAllProjects() || String(p.leader || '') === currentUserName();
+    if (!canEdit) {
+      alert('仅项目管理员或项目负责人可删除');
+      return;
+    }
+    var tip = '确定删除项目「' + (p.name || '') + '」？\n删除后不可恢复，相关扩展信息与过程记录一并清除。';
+    if (!confirm(tip)) return;
+    var store = p._store;
+    var arr = loadArr(store).filter(function (d) { return Number(d.id) !== Number(p.id); });
+    saveArr(store, arr);
+    try {
+      if (store === 'longitudinalData') {
+        global.longitudinalData = arr;
+        if (typeof longitudinalData !== 'undefined') longitudinalData = arr;
+        if (typeof saveLongitudinalData === 'function') saveLongitudinalData();
+      } else if (store === 'horizontalData') {
+        global.horizontalData = arr;
+        if (typeof horizontalData !== 'undefined') horizontalData = arr;
+        if (typeof saveHorizontalData === 'function') saveHorizontalData();
+      } else if (store === 'schoolData') {
+        global.schoolData = arr;
+        if (typeof schoolData !== 'undefined') schoolData = arr;
+        if (typeof saveSchoolData === 'function') saveSchoolData();
+      }
+    } catch (eSync) {}
     var extraMap = loadExtra();
     delete extraMap[key];
     saveExtra(extraMap);
     if (state.currentKey === key) mpCloseView();
+    try {
+      if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('project-delete');
+    } catch (eHome) {}
     mpRender();
+    alert('已删除项目');
   }
 
   function mpExportCsv() {
@@ -1712,6 +1748,7 @@
   global.mpCloseEdit = mpCloseEdit;
   global.mpSave = mpSave;
   global.mpDelete = mpDelete;
+  global.mpDeleteCurrent = mpDeleteCurrent;
   global.mpExportCsv = mpExportCsv;
   global.mpRender = mpRender;
 

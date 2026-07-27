@@ -67,6 +67,7 @@
     </div>
     <div class="ach-dlg-bd" id="achTabBody"></div>
     <div class="ach-dlg-ft">
+      <button type="button" class="ach-btn-ghost" style="color:#e5484d;border-color:#f3a6ab;margin-right:auto" onclick="achDeleteCurrent()">删除成果</button>
       <button type="button" class="ach-btn-primary" onclick="achCloseView()">关闭</button>
     </div>
   </div>
@@ -121,8 +122,11 @@
 .ach-tab.active{color:var(--ach-blue);font-weight:600;border-bottom-color:var(--ach-blue);background:#fff;}
 .ach-audit-link{color:var(--ach-blue);text-decoration:none;font-size:12px;padding:0 12px;}
 .ach-dlg-bd{padding:14px 16px;overflow:auto;flex:1;}
-.ach-dlg-ft{padding:10px;border-top:1px solid #e8e8e8;display:flex;justify-content:center;background:#fafafa;}
+.ach-dlg-ft{padding:10px;border-top:1px solid #e8e8e8;display:flex;justify-content:flex-end;align-items:center;gap:8px;background:#fafafa;}
 .ach-btn-primary{min-width:88px;height:32px;border:none;background:var(--ach-blue);color:#fff;font-size:13px;cursor:pointer;border-radius:2px;}
+.ach-btn-ghost{min-width:88px;height:32px;border:1px solid #d9d9d9;background:#fff;color:#555;font-size:13px;cursor:pointer;border-radius:2px;}
+.ach-ops{white-space:nowrap;}
+.ach-ops .ach-a{margin-right:6px;}
 .ach-sec{margin-bottom:16px;}
 .ach-sec-h{color:var(--ach-blue);font-size:13px;font-weight:700;margin:0 0 8px;padding-left:8px;border-left:3px solid var(--ach-blue);}
 .ach-info-table{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #d0d0d0;}

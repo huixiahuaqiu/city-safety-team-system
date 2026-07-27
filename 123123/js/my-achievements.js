@@ -32,7 +32,21 @@
 
   function saveArr(key, arr) {
     localStorage.setItem(key, JSON.stringify(arr || []));
+    try {
+      if (key === 'paperData') {
+        window.paperData = arr || [];
+        if (typeof paperData !== 'undefined') paperData = arr || [];
+      }
+      if (key === 'patentMgmtData' || key === 'patentData') {
+        window.patentMgmtData = arr || [];
+        window.patentData = arr || [];
+      }
+      if (key === 'copyrightData') {
+        window.copyrightData = arr || [];
+      }
+    } catch (eW) {}
     try { if (typeof cloudUpsert === 'function') cloudUpsert(key, JSON.stringify(arr || [])); } catch (e) {}
+    notifyHomeAchievementChange(key);
   }
 
   function loadExtra() {
@@ -43,6 +57,7 @@
   function saveExtra(map) {
     localStorage.setItem('researchAchievementExtra', JSON.stringify(map || {}));
     try { if (typeof cloudUpsert === 'function') cloudUpsert('researchAchievementExtra', JSON.stringify(map || {})); } catch (e) {}
+    notifyHomeAchievementChange('researchAchievementExtra');
   }
 
   function itemKey(type, id) { return type + ':' + id; }
@@ -228,6 +243,35 @@
     return list;
   }
 
+  /** 供首页 KPI / 门户同源统计 */
+  function getAchievementOverviewCounts(yearScope) {
+    var y = String(new Date().getFullYear());
+    var scope = yearScope === 'current' ? 'current' : 'all';
+    var counts = { patent: 0, paper: 0, book: 0, award: 0, standard: 0, consult: 0, total: 0 };
+    allAchievements().forEach(function (p) {
+      if (!p) return;
+      if (scope === 'current' && String(p.year) !== y) return;
+      counts.total++;
+      if (p._type === '专利') counts.patent++;
+      else if (p._type === '论文') counts.paper++;
+      else if (p._type === '著作') counts.book++;
+      else if (p._type === '获奖') counts.award++;
+      else if (p._type === '标准') counts.standard++;
+      else if (p._type === '决策咨询报告') counts.consult++;
+    });
+    return counts;
+  }
+
+  function notifyHomeAchievementChange(reason) {
+    try {
+      if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard(reason || 'achievements');
+      else if (typeof invalidateHomeOverviewCache === 'function') {
+        invalidateHomeOverviewCache(reason || 'achievements');
+        if (typeof renderHomeDashboard === 'function') renderHomeDashboard();
+      }
+    } catch (e) {}
+  }
+
   function passFilters(p, opts) {
     opts = opts || {};
     var type = opts.type !== undefined ? opts.type : state.type;
@@ -390,6 +434,14 @@
     return '当前筛选（' + parts.join(' · ') + '）下没有数据。可点侧栏「清除筛选」或改选「全部」。';
   }
 
+  function opsCell(p) {
+    var k = esc(p._key);
+    return '<td class="ach-ops">' +
+      '<a class="ach-a" href="javascript:void(0)" data-ach-act="view" data-ach-key="' + k + '">查看</a> ' +
+      '<a class="ach-a" href="javascript:void(0)" data-ach-act="delete" data-ach-key="' + k + '" style="color:#e5484d">删除</a>' +
+      '</td>';
+  }
+
   function headHtml() {
     var t = state.type;
     if (t === '专利') {
@@ -401,7 +453,7 @@
         achColTh('unit', '所属单位', '16%') +
         achColTh('agentStatus', '代理状态', '9%') +
         achColTh('audit', '审核状态', '10%') +
-        '</tr>';
+        '<th style="width:10%">操作</th></tr>';
     }
     if (t === '论文' || t === '') {
       return '<tr>' +
@@ -411,7 +463,7 @@
         achColTh('date', '发表/出版日期', '11%') +
         achColTh('audit', '审核状态', '10%') +
         achColTh('unit', '所属单位', '14%') +
-        '<th style="width:8%">操作</th></tr>';
+        '<th style="width:10%">操作</th></tr>';
     }
     return '<tr>' +
       achColTh('title', '名称') +
@@ -420,7 +472,7 @@
       achColTh('unit', '所属单位', '14%') +
       achColTh('audit', '审核状态', '10%') +
       achColTh('roleType', '参与形式', '10%') +
-      '</tr>';
+      '<th style="width:10%">操作</th></tr>';
   }
 
   function rowHtml(p) {
@@ -434,6 +486,7 @@
         '<td>' + esc(p.unit || '-') + '</td>' +
         '<td>' + esc(p.agentStatus || '未处理') + '</td>' +
         '<td><a class="ach-a" href="javascript:void(0)" data-ach-act="audit" data-ach-key="' + k + '">' + esc(p.audit) + '</a></td>' +
+        opsCell(p) +
         '</tr>';
     }
     if (state.type === '论文') {
@@ -444,7 +497,8 @@
         '<td>' + esc(p.date || '-') + '</td>' +
         '<td><a class="ach-a" href="javascript:void(0)" data-ach-act="audit" data-ach-key="' + k + '">' + esc(p.audit) + '</a></td>' +
         '<td>' + esc(p.unit || '-') + '</td>' +
-        '<td></td></tr>';
+        opsCell(p) +
+        '</tr>';
     }
     return '<tr>' +
       '<td><a class="ach-a" href="javascript:void(0)" data-ach-act="view" data-ach-key="' + k + '">' + esc(p.title || '-') + '</a></td>' +
@@ -452,7 +506,9 @@
       '<td>' + esc(p.journal || p.status || p.authors || '-') + '</td>' +
       '<td>' + esc(p.unit || '-') + '</td>' +
       '<td>' + esc(p.audit) + '</td>' +
-      '<td>' + esc(p.roleType) + '</td></tr>';
+      '<td>' + esc(p.roleType) + '</td>' +
+      opsCell(p) +
+      '</tr>';
   }
 
   function bindTableClicks() {
@@ -467,6 +523,7 @@
       var key = a.getAttribute('data-ach-key') || '';
       if (act === 'view') achView(key);
       else if (act === 'audit') achShowAuditLogKey(key);
+      else if (act === 'delete') achDelete(key);
     });
   }
 
@@ -490,18 +547,18 @@
     var empty = document.getElementById('achEmpty');
     if (!thead || !tbody) return;
 
-    if (!state.type) {
-      thead.innerHTML = '<tr>' +
-        achColTh('_type', '类型', '10%') +
-        achColTh('title', '名称') +
-        achColTh('date', '日期', '12%') +
-        achColTh('unit', '所属单位', '14%') +
-        achColTh('audit', '审核状态', '10%') +
-        '</tr>';
-    } else {
-      thead.innerHTML = headHtml();
-    }
-    if (typeof acUpdateColIndicators === 'function') acUpdateColIndicators('myachievements');
+      if (!state.type) {
+        thead.innerHTML = '<tr>' +
+          achColTh('_type', '类型', '10%') +
+          achColTh('title', '名称') +
+          achColTh('date', '日期', '12%') +
+          achColTh('unit', '所属单位', '14%') +
+          achColTh('audit', '审核状态', '10%') +
+          '<th style="width:10%">操作</th></tr>';
+      } else {
+        thead.innerHTML = headHtml();
+      }
+      if (typeof acUpdateColIndicators === 'function') acUpdateColIndicators('myachievements');
 
     var total = list.length;
     var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -524,7 +581,9 @@
             '<td><a class="ach-a" href="javascript:void(0)" data-ach-act="view" data-ach-key="' + k + '">' + esc(p.title || '-') + '</a></td>' +
             '<td>' + esc(p.date || '-') + '</td>' +
             '<td>' + esc(p.unit || '-') + '</td>' +
-            '<td>' + esc(p.audit) + '</td></tr>';
+            '<td>' + esc(p.audit) + '</td>' +
+            opsCell(p) +
+            '</tr>';
         }).join('');
       } else {
         tbody.innerHTML = rows.map(rowHtml).join('');
@@ -685,6 +744,74 @@
     alert('新增请使用左侧「成果管理」下的专利/论文等原模块录入，将自动汇总到「我的成果」。\n也可点「示例成果」生成演示数据。');
   }
 
+  function achDelete(key) {
+    var p = findByKey(key);
+    if (!p) return;
+    var tip = '确定删除「' + (p._type || '成果') + '：' + (p.title || '') + '」？\n将从对应台账中移除，且不可恢复。';
+    if (!confirm(tip)) return;
+
+    var store = p._store || '';
+    var id = Number(p.id);
+    var arr = loadArr(store).filter(function (d) { return Number(d && d.id) !== id; });
+
+    if (store === 'patentMgmtData' || store === 'patentData') {
+      saveArr('patentMgmtData', arr);
+      saveArr('patentData', arr);
+      try {
+        window.patentMgmtData = arr;
+        window.patentData = arr;
+        if (typeof patentMgmtData !== 'undefined') patentMgmtData = arr;
+        if (typeof patentData !== 'undefined') patentData = arr;
+        if (typeof persistPatentMgmtGlobalMirror === 'function') {
+          // persist 会再写一遍当前 patentMgmtData
+          patentMgmtData = arr;
+          persistPatentMgmtGlobalMirror();
+        }
+      } catch (ePat) {}
+    } else if (store === 'paperData') {
+      saveArr('paperData', arr);
+      try {
+        window.paperData = arr;
+        if (typeof paperData !== 'undefined') paperData = arr;
+        if (typeof persistPaperGlobalMirror === 'function') {
+          paperData = arr;
+          persistPaperGlobalMirror();
+        }
+      } catch (ePaper) {}
+    } else {
+      saveArr(store, arr);
+      try {
+        if (store === 'copyrightData') {
+          window.copyrightData = arr;
+          if (typeof copyrightData !== 'undefined') copyrightData = arr;
+        } else if (store === 'standardData') {
+          window.standardData = arr;
+          if (typeof standardData !== 'undefined') standardData = arr;
+        } else if (store === 'competitionData') {
+          window.competitionData = arr;
+          if (typeof competitionData !== 'undefined') competitionData = arr;
+        }
+      } catch (eStore) {}
+    }
+
+    var extraMap = loadExtra();
+    delete extraMap[key];
+    saveExtra(extraMap);
+
+    if (state.currentKey === key) achCloseView();
+    notifyHomeAchievementChange('ach-delete');
+    achRender();
+    alert('已删除');
+  }
+
+  function achDeleteCurrent() {
+    if (!state.currentKey) {
+      alert('请先打开要删除的成果');
+      return;
+    }
+    achDelete(state.currentKey);
+  }
+
   function achExportCsv() {
     var list = filteredList();
     if (!list.length) { alert('没有可导出的数据'); return; }
@@ -814,7 +941,11 @@
   global.achShowAuditLog = achShowAuditLog;
   global.achShowAuditLogKey = achShowAuditLogKey;
   global.achShowAddHint = achShowAddHint;
+  global.achDelete = achDelete;
+  global.achDeleteCurrent = achDeleteCurrent;
   global.achExportCsv = achExportCsv;
   global.achSeedDemo = achSeedDemo;
   global.openAchColFilter = openAchColFilter;
+  global.allAchievements = allAchievements;
+  global.getAchievementOverviewCounts = getAchievementOverviewCounts;
 })(typeof window !== 'undefined' ? window : this);

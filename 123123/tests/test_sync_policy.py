@@ -104,6 +104,18 @@ class SyncPolicyTests(unittest.TestCase):
         ):
             self.assertIn(key, sync_policy.APP_SYNC_KEYS)
 
+    def test_achievement_extra_accepts_object_map(self):
+        value = sync_policy.validate_value(
+            "researchAchievementExtra",
+            {"论文:1": {"roleType": "主持", "doi": "10.1/x"}},
+        )
+        self.assertIsInstance(value, dict)
+        with self.assertRaises(sync_policy.SyncPolicyError):
+            sync_policy.validate_value("researchAchievementExtra", [])
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_project_extra_accepts_object_map(self):
+        value = sync_policy.validate_value(
+            "researchProjectExtra",
+            {"lon:1": {"note": "ok"}},
+        )
+        self.assertIsInstance(value, dict)
