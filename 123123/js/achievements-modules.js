@@ -127,7 +127,10 @@
             renderLongitudinalTable();
         }
         
-        function saveLongitudinalData() { localStorage.setItem('longitudinalData', JSON.stringify(longitudinalData)); }
+        function saveLongitudinalData() {
+            localStorage.setItem('longitudinalData', JSON.stringify(longitudinalData));
+            try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('longitudinal'); } catch (eHome) {}
+        }
         
         function updateLongitudinalFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
@@ -447,7 +450,10 @@
             renderHorizontalTable();
         }
         
-        function saveHorizontalData() { localStorage.setItem('horizontalData', JSON.stringify(horizontalData)); }
+        function saveHorizontalData() {
+            localStorage.setItem('horizontalData', JSON.stringify(horizontalData));
+            try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('horizontal'); } catch (eHome) {}
+        }
         
         function updateHorizontalFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
@@ -767,7 +773,10 @@
             renderSchoolTable();
         }
         
-        function saveSchoolData() { localStorage.setItem('schoolData', JSON.stringify(schoolData)); }
+        function saveSchoolData() {
+            localStorage.setItem('schoolData', JSON.stringify(schoolData));
+            try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('school'); } catch (eHome) {}
+        }
         
         function updateSchoolFilterCounts() {
             const currentYear = new Date().getFullYear().toString();
@@ -1206,7 +1215,10 @@
             if (typeof populateOwnerSelects === 'function') populateOwnerSelects();
             if (typeof populateWeeklyReportOwnerFilter === 'function') populateWeeklyReportOwnerFilter();
             if (typeof renderAccountTable === 'function') renderAccountTable();
-            try { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); } catch (eHome) {}
+            try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('teamMember'); }
+            catch (eHome) {
+                try { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); } catch (e2) {}
+            }
         }
 
         var DEFAULT_MEMBER_GRADE_YEARS = ['2026', '2025', '2024', '2023', '2022'];
@@ -3251,7 +3263,10 @@
                 if (typeof patentData !== 'undefined') patentData = patentMgmtData;
             } catch (e3) {}
             try { if (typeof invalidatePortalCache === 'function') invalidatePortalCache(); } catch (e4) {}
-            try { if (typeof invalidateHomeOverviewCache === 'function') invalidateHomeOverviewCache('patent'); } catch (e5) {}
+            try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('patent'); }
+            catch (e5) {
+                try { if (typeof invalidateHomeOverviewCache === 'function') invalidateHomeOverviewCache('patent'); } catch (e6) {}
+            }
         }
         
         async function savePatentMgmtData() {
@@ -3849,7 +3864,10 @@ ${ocrText}`
             } catch (e) {}
             try { window.paperData = paperData; } catch (e2) {}
             try { if (typeof invalidatePortalCache === 'function') invalidatePortalCache(); } catch (e3) {}
-            try { if (typeof invalidateHomeOverviewCache === 'function') invalidateHomeOverviewCache('paper'); } catch (e4) {}
+            try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('paper'); }
+            catch (e4) {
+                try { if (typeof invalidateHomeOverviewCache === 'function') invalidateHomeOverviewCache('paper'); } catch (e5) {}
+            }
         }
         
         async function savePaperData() {

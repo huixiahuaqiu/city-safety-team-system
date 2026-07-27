@@ -3324,7 +3324,10 @@
         taskData = (taskData || []).map(t => ({ ...t, visibility: 'all', publisher: t.publisher || (currentUser?.realName || '系统') }));
         localStorage.setItem('taskData', JSON.stringify(taskData));
         try { if (typeof cloudUpsert === 'function') cloudUpsert('taskData', JSON.stringify(taskData)); } catch (e) {}
-        try { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); } catch (e2) {}
+        try {
+            if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('task');
+            else if (typeof renderHomeDashboard === 'function') renderHomeDashboard();
+        } catch (e2) {}
     }
 
     function populateOwnerSelects() {
@@ -4464,6 +4467,7 @@
         if (options.silent !== true) {
             refreshGlobalNoticeCenter();
             updateHomeNoticeBanner();
+            try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('notice'); } catch (eHome) {}
         }
         try {
             if (typeof recordOperationLog === 'function' && options.log) {
@@ -5529,11 +5533,41 @@
         memberGroup: 'all',
         memberQuery: '',
         syncing: false,
-        lastOverview: null
+        lastOverview: null,
+        yearScope: (function () {
+            try {
+                var s = localStorage.getItem('homeStatYearScope');
+                return s === 'all' ? 'all' : 'current';
+            } catch (e) { return 'current'; }
+        })()
     };
+    window.homeDashUi = homeDashUi;
 
     var HOME_QUICK_PREF_KEY = 'homeQuickNavPrefs_v1';
     var HOME_SYNC_LOG_KEY = 'homeCloudSyncLogs_v1';
+    var HOME_PATENT_DATE_FIELDS = ['application_date', 'applicationDate', 'grant_date', 'grantDate', 'createTime', 'createdAt', 'date'];
+    var HOME_PAPER_DATE_FIELDS = ['publish_date', 'publishDate', 'year', 'createTime', 'createdAt', 'date'];
+    var HOME_PROJECT_DATE_FIELDS = ['startDate', 'start_date', 'year', 'createTime', 'createdAt'];
+
+    function getHomeYearScope() {
+        return homeDashUi.yearScope === 'all' ? 'all' : 'current';
+    }
+
+    function setHomeYearScope(scope) {
+        homeDashUi.yearScope = scope === 'all' ? 'all' : 'current';
+        try { localStorage.setItem('homeStatYearScope', homeDashUi.yearScope); } catch (e) {}
+        try {
+            if (typeof invalidateHomeOverviewCache === 'function') invalidateHomeOverviewCache('year-scope');
+        } catch (e2) {}
+        try {
+            if (typeof window.__homeRealtimeBroadcast === 'function') {
+                window.__homeRealtimeBroadcast({ type: 'data-changed', reason: 'year-scope' });
+            }
+        } catch (e3) {}
+        renderHomeDashboard();
+    }
+    window.setHomeYearScope = setHomeYearScope;
+    window.getHomeYearScope = getHomeYearScope;
 
     function getHomeRoleKind() {
         var role = (typeof currentUser !== 'undefined' && currentUser && currentUser.role) ? currentUser.role : '';
@@ -5542,10 +5576,57 @@
         if (role === 'student') return 'student';
         return 'guest';
     }
+    window.getHomeRoleKind = getHomeRoleKind;
 
     function canViewHomeSensitiveStats() {
         var kind = getHomeRoleKind();
         return kind === 'mentor';
+    }
+
+    function isHomeSyncPlaceholder(item) {
+        if (!item) return true;
+        if (item.classification === '__APP_SYNC__') return true;
+        var pn = item.patent_number != null ? String(item.patent_number) : '';
+        return pn.indexOf('__SYNC_KV__') === 0;
+    }
+
+    function itemMatchesHomeYear(item, fields, yearStr) {
+        if (!item || !yearStr) return false;
+        for (var i = 0; i < fields.length; i++) {
+            var v = item[fields[i]];
+            if (v == null || v === '') continue;
+            var s = String(v);
+            if (s.indexOf(yearStr) === 0) return true;
+            var d = parseHomeDate(v);
+            if (d && String(d.getFullYear()) === yearStr) return true;
+        }
+        return false;
+    }
+
+    function filterHomeByYearScope(list, fields) {
+        list = Array.isArray(list) ? list : [];
+        if (getHomeYearScope() === 'all') return list.slice();
+        var y = String(new Date().getFullYear());
+        return list.filter(function (item) { return itemMatchesHomeYear(item, fields, y); });
+    }
+
+    function summarizeHomeProjectList(list) {
+        list = Array.isArray(list) ? list : [];
+        var funding = list.reduce(function (sum, d) { return sum + (parseFloat(d && d.funding) || 0); }, 0);
+        var used = list.reduce(function (sum, d) {
+            return sum + (parseFloat(d && (d.usedFunding || d.spent || d.used)) || 0);
+        }, 0);
+        var active = list.filter(function (d) {
+            var st = String((d && (d.status || d.projectStatus)) || '');
+            return !/结题|完成|结束|closed|done/i.test(st);
+        }).length;
+        return {
+            count: list.length,
+            funding: funding,
+            used: used,
+            active: active || list.length,
+            list: list
+        };
     }
 
     function homeCanAccessModule(moduleId) {
@@ -5577,27 +5658,37 @@
     }
 
     function getHomePatentList() {
+        var list = null;
         try {
             if (typeof patentMgmtData !== 'undefined' && Array.isArray(patentMgmtData) && patentMgmtData.length) {
-                return patentMgmtData;
+                list = patentMgmtData;
             }
         } catch (e0) {}
-        try {
-            if (typeof window !== 'undefined' && Array.isArray(window.patentMgmtData) && window.patentMgmtData.length) {
-                return window.patentMgmtData;
-            }
-        } catch (e1) {}
-        try {
-            if (typeof patentData !== 'undefined' && Array.isArray(patentData)) return patentData;
-        } catch (e) {}
-        try {
-            var rawMgmt = JSON.parse(localStorage.getItem('patentMgmtData') || 'null');
-            if (Array.isArray(rawMgmt) && rawMgmt.length) return rawMgmt;
-        } catch (eMgmt) {}
-        try {
-            var raw = JSON.parse(localStorage.getItem('patentData') || '[]');
-            return Array.isArray(raw) ? raw : [];
-        } catch (e2) { return []; }
+        if (!list) {
+            try {
+                if (typeof window !== 'undefined' && Array.isArray(window.patentMgmtData) && window.patentMgmtData.length) {
+                    list = window.patentMgmtData;
+                }
+            } catch (e1) {}
+        }
+        if (!list) {
+            try {
+                if (typeof patentData !== 'undefined' && Array.isArray(patentData) && patentData.length) list = patentData;
+            } catch (e) {}
+        }
+        if (!list) {
+            try {
+                var rawMgmt = JSON.parse(localStorage.getItem('patentMgmtData') || 'null');
+                if (Array.isArray(rawMgmt) && rawMgmt.length) list = rawMgmt;
+            } catch (eMgmt) {}
+        }
+        if (!list) {
+            try {
+                var raw = JSON.parse(localStorage.getItem('patentData') || '[]');
+                list = Array.isArray(raw) ? raw : [];
+            } catch (e2) { list = []; }
+        }
+        return (list || []).filter(function (p) { return !isHomeSyncPlaceholder(p); });
     }
 
     function getHomePaperList() {
@@ -5615,28 +5706,36 @@
         } catch (e2) { return []; }
     }
 
-    function getHomePatentCount() { return getHomePatentList().length; }
-    function getHomePaperCount() { return getHomePaperList().length; }
+    function getHomePatentCount() { return filterHomeByYearScope(getHomePatentList(), HOME_PATENT_DATE_FIELDS).length; }
+    function getHomePaperCount() { return filterHomeByYearScope(getHomePaperList(), HOME_PAPER_DATE_FIELDS).length; }
 
     function getHomeProjectStats() {
-        var lon = (typeof longitudinalData !== 'undefined' && Array.isArray(longitudinalData)) ? longitudinalData : [];
-        var hor = (typeof horizontalData !== 'undefined' && Array.isArray(horizontalData)) ? horizontalData : [];
-        var sch = (typeof schoolData !== 'undefined' && Array.isArray(schoolData)) ? schoolData : [];
-        var all = [].concat(lon, hor, sch);
-        var count = all.length;
-        var funding = all.reduce(function (sum, d) { return sum + (parseFloat(d && d.funding) || 0); }, 0);
-        var used = all.reduce(function (sum, d) {
-            return sum + (parseFloat(d && (d.usedFunding || d.spent || d.used)) || 0);
-        }, 0);
-        var active = all.filter(function (d) {
-            var st = String((d && (d.status || d.projectStatus)) || '');
-            return !/结题|完成|结束|closed|done/i.test(st);
-        }).length;
-        return { count: count, funding: funding, used: used, active: active || count, list: all };
+        var lon = [];
+        var hor = [];
+        var sch = [];
+        try {
+            if (typeof longitudinalData !== 'undefined' && Array.isArray(longitudinalData)) lon = longitudinalData;
+            else lon = JSON.parse(localStorage.getItem('longitudinalData') || '[]') || [];
+        } catch (eLon) { lon = []; }
+        try {
+            if (typeof horizontalData !== 'undefined' && Array.isArray(horizontalData)) hor = horizontalData;
+            else hor = JSON.parse(localStorage.getItem('horizontalData') || '[]') || [];
+        } catch (eHor) { hor = []; }
+        try {
+            if (typeof schoolData !== 'undefined' && Array.isArray(schoolData)) sch = schoolData;
+            else sch = JSON.parse(localStorage.getItem('schoolData') || '[]') || [];
+        } catch (eSch) { sch = []; }
+        var all = [].concat(lon, hor, sch).filter(Boolean);
+        var scoped = filterHomeByYearScope(all, HOME_PROJECT_DATE_FIELDS);
+        return summarizeHomeProjectList(scoped);
     }
 
     function getHomeActiveMembers() {
-        var members = (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData)) ? teamMemberData : [];
+        var members = [];
+        try {
+            if (typeof teamMemberData !== 'undefined' && Array.isArray(teamMemberData)) members = teamMemberData;
+            else members = JSON.parse(localStorage.getItem('teamMemberData') || '[]') || [];
+        } catch (eMem) { members = []; }
         var active = members.filter(function (m) {
             if (!m) return false;
             if (m.category === 'advisor') return true;
@@ -5657,6 +5756,12 @@
             d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3] || 1));
             if (!isNaN(d.getTime())) return d;
         }
+        // 仅有年份时按当年 1 月 1 日计入年度筛选，不计入月环比
+        var yOnly = String(val).match(/^(\d{4})$/);
+        if (yOnly) {
+            d = new Date(Number(yOnly[1]), 0, 1);
+            if (!isNaN(d.getTime())) return d;
+        }
         return null;
     }
 
@@ -5665,7 +5770,10 @@
         (list || []).forEach(function (item) {
             if (!item) return;
             for (var i = 0; i < dateFields.length; i++) {
-                var d = parseHomeDate(item[dateFields[i]]);
+                var raw = item[dateFields[i]];
+                // 纯年份字段不参与「较上月」
+                if (raw != null && /^\d{4}$/.test(String(raw).trim())) continue;
+                var d = parseHomeDate(raw);
                 if (d && d.getFullYear() === year && d.getMonth() === month) { n++; return; }
             }
         });
@@ -5678,6 +5786,23 @@
         if (diff < 0) return { text: '较上月 ' + diff, cls: 'delta neg' };
         return { text: '较上月持平', cls: 'delta flat' };
     }
+
+    function bumpHomeDashboard(reason) {
+        try {
+            if (typeof invalidateHomeOverviewCache === 'function') invalidateHomeOverviewCache(reason || 'data-changed');
+        } catch (e) {}
+        try {
+            if (typeof window.__homeRealtimeBroadcast === 'function') {
+                window.__homeRealtimeBroadcast({ type: 'data-changed', reason: reason || '' });
+            }
+        } catch (e2) {}
+        try {
+            if (document.getElementById('home') && document.getElementById('home').classList.contains('active')) {
+                renderHomeDashboard();
+            }
+        } catch (e3) {}
+    }
+    window.bumpHomeDashboard = bumpHomeDashboard;
 
     function getUnreadNoticeCount() {
         try {
@@ -5896,33 +6021,54 @@
         return items.slice(0, 20);
     }
 
-    /** 统一聚合：模拟 /dashboard/overview，所有首页数字同源 */
+    /** 统一聚合：模拟 /dashboard/overview，所有首页数字同源；受「本年/全部」全局范围驱动 */
     function getHomeDashboardOverview() {
         var now = new Date();
         var y = now.getFullYear();
         var m = now.getMonth();
         var prevY = m === 0 ? y - 1 : y;
         var prevM = m === 0 ? 11 : m - 1;
-        var patents = getHomePatentList();
-        var papers = getHomePaperList();
+        var yearScope = getHomeYearScope();
+        var patentsAll = getHomePatentList();
+        var papersAll = getHomePaperList();
+        var patents = filterHomeByYearScope(patentsAll, HOME_PATENT_DATE_FIELDS);
+        var papers = filterHomeByYearScope(papersAll, HOME_PAPER_DATE_FIELDS);
         var projects = getHomeProjectStats();
         var members = getHomeActiveMembers();
         var todos = getHomeUnifiedTodos();
         var taskTodos = todos.filter(function (t) { return t.category === 'task'; });
         var urgentTodos = todos.filter(function (t) { return t.priority === 'high'; });
-        var patentCurr = countItemsInMonth(patents, ['applicationDate', 'createTime', 'createdAt', 'date'], y, m);
-        var patentPrev = countItemsInMonth(patents, ['applicationDate', 'createTime', 'createdAt', 'date'], prevY, prevM);
-        var paperCurr = countItemsInMonth(papers, ['publishDate', 'year', 'createTime', 'createdAt'], y, m);
-        var paperPrev = countItemsInMonth(papers, ['publishDate', 'year', 'createTime', 'createdAt'], prevY, prevM);
+        // 环比始终基于「当前范围内」的列表，并兼容 snake_case / camelCase 台账字段
+        var patentCurr = countItemsInMonth(patents, HOME_PATENT_DATE_FIELDS, y, m);
+        var patentPrev = countItemsInMonth(patents, HOME_PATENT_DATE_FIELDS, prevY, prevM);
+        var paperCurr = countItemsInMonth(papers, HOME_PAPER_DATE_FIELDS, y, m);
+        var paperPrev = countItemsInMonth(papers, HOME_PAPER_DATE_FIELDS, prevY, prevM);
         var weekly = getWeeklySubmitRate();
         var unread = getUnreadNoticeCount();
         var budgetRate = projects.funding > 0 ? Math.round((projects.used / projects.funding) * 100) : 0;
         if (!projects.used && projects.funding) budgetRate = 0;
         var overview = {
             roleKind: getHomeRoleKind(),
-            patents: { total: patents.length, delta: formatHomeDelta(patentCurr, patentPrev), monthAdd: patentCurr },
-            papers: { total: papers.length, delta: formatHomeDelta(paperCurr, paperPrev), monthAdd: paperCurr },
-            projects: { total: projects.count, active: projects.active, budgetRate: budgetRate, funding: projects.funding, used: projects.used },
+            yearScope: yearScope,
+            patents: {
+                total: patents.length,
+                allTotal: patentsAll.length,
+                delta: formatHomeDelta(patentCurr, patentPrev),
+                monthAdd: patentCurr
+            },
+            papers: {
+                total: papers.length,
+                allTotal: papersAll.length,
+                delta: formatHomeDelta(paperCurr, paperPrev),
+                monthAdd: paperCurr
+            },
+            projects: {
+                total: projects.count,
+                active: projects.active,
+                budgetRate: budgetRate,
+                funding: projects.funding,
+                used: projects.used
+            },
             members: members,
             todos: todos,
             taskCount: taskTodos.length,
@@ -5936,6 +6082,12 @@
         return overview;
     }
     window.getHomeDashboardOverview = getHomeDashboardOverview;
+    window.getHomePatentList = getHomePatentList;
+    window.getHomePaperList = getHomePaperList;
+    window.getHomePatentCount = getHomePatentCount;
+    window.getHomePaperCount = getHomePaperCount;
+    window.getHomeProjectStats = getHomeProjectStats;
+    window.getHomeActiveMembers = getHomeActiveMembers;
 
     function animateHomeStatValue(el, targetText) {
         if (!el) return;
@@ -5997,18 +6149,41 @@
     }
 
     function homeJumpStat(key) {
+        var yearScope = getHomeYearScope();
+        var clickFilterTag = function (containerSel, tag) {
+            var root = document.querySelector(containerSel);
+            if (!root) return;
+            var nodes = root.querySelectorAll('.filter-tag');
+            var target = null;
+            for (var i = 0; i < nodes.length; i++) {
+                var onclick = nodes[i].getAttribute('onclick') || '';
+                if (onclick.indexOf("'" + tag + "'") >= 0 || onclick.indexOf('"' + tag + '"') >= 0) {
+                    target = nodes[i];
+                    break;
+                }
+            }
+            if (!target) target = nodes[0];
+            if (!target) return;
+            try { target.click(); } catch (eClick) {}
+        };
         if (key === 'patent') {
-            showModule('my_achievements');
-            setTimeout(function () { try { if (typeof achSetFilter === 'function') achSetFilter('type', '专利'); } catch (e) {} }, 120);
+            showModule('patent_management');
+            setTimeout(function () {
+                clickFilterTag('#patentMgmtFilterTags', yearScope === 'current' ? 'current_year' : 'all');
+            }, 160);
             return;
         }
         if (key === 'paper') {
-            showModule('my_achievements');
-            setTimeout(function () { try { if (typeof achSetFilter === 'function') achSetFilter('type', '论文'); } catch (e) {} }, 120);
+            showModule('paper_management');
+            setTimeout(function () {
+                clickFilterTag('#paperFilterTags', yearScope === 'current' ? 'current_year' : 'all');
+            }, 160);
             return;
         }
-        if (key === 'project') { showModule('my_projects'); return; }
-        if (key === 'funding') { showModule('achievements'); return; }
+        if (key === 'project' || key === 'funding') {
+            showModule('my_projects');
+            return;
+        }
         if (key === 'member') { showModule('member_archive'); return; }
         if (key === 'task') { showModule('task_management'); return; }
     }
@@ -6374,13 +6549,31 @@
         renderHomeQuickLaunch(overview);
         renderHomeRingChart(overview.patents.total, overview.papers.total, overview.projects.total);
 
+        var scopeLabel = overview.yearScope === 'current' ? '本年度' : '全部';
+        var scopeBar = document.getElementById('homeStatYearScope');
+        if (scopeBar) {
+            scopeBar.querySelectorAll('[data-scope]').forEach(function (btn) {
+                btn.classList.toggle('active', btn.getAttribute('data-scope') === overview.yearScope);
+            });
+        }
+
         var setHint = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
         animateHomeStatValue(document.getElementById('homeStatPatent'), String(overview.patents.total));
         animateHomeStatValue(document.getElementById('homeStatPaper'), String(overview.papers.total));
         animateHomeStatValue(document.getElementById('homeStatProject'), String(overview.projects.active));
-        setHint('homeStatPatentHint', overview.patents.delta.text + ' · 本年度筛选');
-        setHint('homeStatPaperHint', overview.papers.delta.text);
-        setHint('homeStatProjectHint', overview.projects.total + ' 项合计 · 预算使用率 ' + overview.projects.budgetRate + '%');
+        setHint(
+            'homeStatPatentHint',
+            overview.patents.delta.text + ' · ' + scopeLabel +
+            (overview.yearScope === 'current' && overview.patents.allTotal !== overview.patents.total
+                ? '（全库 ' + overview.patents.allTotal + '）' : '')
+        );
+        setHint(
+            'homeStatPaperHint',
+            overview.papers.delta.text + ' · ' + scopeLabel +
+            (overview.yearScope === 'current' && overview.papers.allTotal !== overview.papers.total
+                ? '（全库 ' + overview.papers.allTotal + '）' : '')
+        );
+        setHint('homeStatProjectHint', overview.projects.total + ' 项合计 · 预算使用率 ' + overview.projects.budgetRate + '% · ' + scopeLabel);
 
         var fundingEl = document.getElementById('homeStatFunding');
         var fundingCard = document.querySelector('.home-stat[data-stat="funding"]');
@@ -6395,7 +6588,7 @@
         var fundingWan = overview.projects.funding;
         var fundingText = (Math.round(fundingWan * 10) / 10) + '';
         if (fundingEl) fundingEl.textContent = fundingText;
-        setHint('homeStatFundingHint', '总预算 ' + fundingText + ' 万 · 已用 ' + (Math.round(overview.projects.used * 10) / 10));
+        setHint('homeStatFundingHint', '总预算 ' + fundingText + ' 万 · 已用 ' + (Math.round(overview.projects.used * 10) / 10) + ' · ' + scopeLabel);
 
         animateHomeStatValue(document.getElementById('homeStatMember'), String(overview.members.active.length));
         setHint('homeStatMemberHint', overview.members.active.length + ' 人在读 · ' + overview.members.graduatedCount + ' 人已毕业');
@@ -6587,6 +6780,7 @@
     function saveMeetingData() {
         localStorage.setItem('meetingData', JSON.stringify(meetingData));
         try { if (typeof cloudUpsert === 'function') cloudUpsert('meetingData', JSON.stringify(meetingData)); } catch (e) {}
+        try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('meeting'); } catch (e2) {}
     }
 
     function getMeetingStatus(meeting) {

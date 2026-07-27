@@ -45,12 +45,14 @@
         var raw = global.getHomeDashboardOverview;
         global.getHomeDashboardOverview = function () {
             var role = getRoleKind();
+            var yearScope = typeof global.getHomeYearScope === 'function' ? global.getHomeYearScope() : 'current';
             var now = Date.now();
             var fresh = raw();
-            // 待办 / 通知 / 动态始终用最新；统计可走缓存
+            // 待办 / 通知 / 动态始终用最新；统计可走缓存（按角色 + 年度范围）
             if (
                 overviewCache.stats &&
                 overviewCache.role === role &&
+                overviewCache.yearScope === yearScope &&
                 now - overviewCache.at < OVERVIEW_CACHE_TTL
             ) {
                 fresh.patents = overviewCache.stats.patents;
@@ -63,6 +65,7 @@
                 overviewCache = {
                     at: now,
                     role: role,
+                    yearScope: yearScope,
                     stats: {
                         patents: fresh.patents,
                         papers: fresh.papers,
@@ -118,7 +121,7 @@
             return;
         }
         var hot = {
-            patentData: 1, paperData: 1, taskData: 1, noticeData: 1, newsData: 1,
+            patentData: 1, patentMgmtData: 1, paperData: 1, taskData: 1, noticeData: 1, newsData: 1,
             weeklyReportData: 1, applicationData: 1, meetingData: 1, teamMemberData: 1,
             longitudinalData: 1, horizontalData: 1, schoolData: 1
         };

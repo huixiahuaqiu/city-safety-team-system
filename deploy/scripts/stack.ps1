@@ -46,10 +46,26 @@ function Align-LocalPublicUrls {
     if ([int]$port -lt 1 -or [int]$port -gt 65535) {
         throw 'CITYSAFE_HTTP_PORT must be between 1 and 65535.'
     }
+
+    # 若已配置公网/隧道地址（如 Cloudflare Tunnel），不要强行改回 127.0.0.1
+    $originMatch = [regex]::Match($Content, '(?m)^PUBLIC_ORIGIN=(.+)$')
+    $existingOrigin = if ($originMatch.Success) { $originMatch.Groups[1].Value.Trim() } else { '' }
+    $keepSharedOrigin = $existingOrigin -match '^https://' -or (
+        $existingOrigin -match '^http://' -and
+        $existingOrigin -notmatch '(?i)^http://(127\.0\.0\.1|localhost)(:\d+)?/?$'
+    )
+
+    $localOrigin = "http://127.0.0.1:$port"
+    $publicOrigin = if ($keepSharedOrigin) { $existingOrigin.TrimEnd('/') } else { $localOrigin }
+    $corsParts = @(
+        "http://127.0.0.1:$port",
+        "http://localhost:$port",
+        $publicOrigin
+    ) | Select-Object -Unique
     $desired = @{
-        'PUBLIC_ORIGIN'              = "http://127.0.0.1:$port"
-        'CORS_ALLOW_ORIGINS'         = "http://127.0.0.1:$port,http://localhost:$port"
-        'MINIO_PUBLIC_UPLOAD_PREFIX' = "http://127.0.0.1:$port/minio-upload"
+        'PUBLIC_ORIGIN'              = $publicOrigin
+        'CORS_ALLOW_ORIGINS'         = ($corsParts -join ',')
+        'MINIO_PUBLIC_UPLOAD_PREFIX' = ($publicOrigin.TrimEnd('/') + '/minio-upload')
     }
     foreach ($key in $desired.Keys) {
         $pattern = '(?m)^' + [regex]::Escape($key) + '=.*$'

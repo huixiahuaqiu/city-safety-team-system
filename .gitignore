@@ -107,6 +107,9 @@ tools/minio/*.exe
 tools/minio/minio.exe
 tools/minio/mc.exe
 
+# ---- Cloudflare tunnel 便携二进制（本机下载，勿提交）----
+deploy/bin/
+
 # ---- 巨型 HTML 瘦身备份（勿提交）----
 123123/index.html.bak*
 123123/_verify_*.py

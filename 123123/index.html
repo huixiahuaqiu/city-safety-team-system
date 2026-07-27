@@ -399,13 +399,22 @@
                         </div>
                     </div>
 
-                    <div class="home-ledger" id="homeStatsGrid">
-                        <div class="home-stat accent-a" data-stat="patent" onclick="homeJumpStat('patent')"><div class="k">专利</div><div class="v" id="homeStatPatent">-</div><div class="h" id="homeStatPatentHint">进入专利档案</div></div>
-                        <div class="home-stat accent-b" data-stat="paper" onclick="homeJumpStat('paper')"><div class="k">论文</div><div class="v" id="homeStatPaper">-</div><div class="h" id="homeStatPaperHint">进入论文成果</div></div>
-                        <div class="home-stat accent-c" data-stat="project" onclick="homeJumpStat('project')"><div class="k">项目</div><div class="v" id="homeStatProject">-</div><div class="h" id="homeStatProjectHint">进入项目管理</div></div>
-                        <div class="home-stat accent-d" data-stat="funding" onclick="homeJumpStat('funding')"><div class="k">经费</div><div class="v" id="homeStatFunding">-</div><div class="h" id="homeStatFundingHint">单位：万元</div></div>
-                        <div class="home-stat accent-e" data-stat="member" onclick="homeJumpStat('member')"><div class="k">在籍成员</div><div class="v" id="homeStatMember">-</div><div class="h" id="homeStatMemberHint">进入团队档案</div></div>
-                        <div class="home-stat accent-f" data-stat="task" onclick="homeJumpStat('task')"><div class="k">待办</div><div class="v" id="homeStatTask">-</div><div class="h" id="homeStatTaskHint">未完成任务</div></div>
+                    <div class="home-ledger-wrap">
+                        <div class="home-ledger-toolbar">
+                            <span class="home-ledger-title">团队概览 · 全局联动</span>
+                            <div class="home-year-scope" id="homeStatYearScope" role="group" aria-label="统计年度范围">
+                                <button type="button" data-scope="current" onclick="setHomeYearScope('current')">本年</button>
+                                <button type="button" data-scope="all" onclick="setHomeYearScope('all')">全部</button>
+                            </div>
+                        </div>
+                        <div class="home-ledger" id="homeStatsGrid">
+                            <div class="home-stat accent-a" data-stat="patent" onclick="homeJumpStat('patent')"><div class="k">专利</div><div class="v" id="homeStatPatent">-</div><div class="h" id="homeStatPatentHint">进入专利档案</div></div>
+                            <div class="home-stat accent-b" data-stat="paper" onclick="homeJumpStat('paper')"><div class="k">论文</div><div class="v" id="homeStatPaper">-</div><div class="h" id="homeStatPaperHint">进入论文成果</div></div>
+                            <div class="home-stat accent-c" data-stat="project" onclick="homeJumpStat('project')"><div class="k">项目</div><div class="v" id="homeStatProject">-</div><div class="h" id="homeStatProjectHint">进入项目管理</div></div>
+                            <div class="home-stat accent-d" data-stat="funding" onclick="homeJumpStat('funding')"><div class="k">经费</div><div class="v" id="homeStatFunding">-</div><div class="h" id="homeStatFundingHint">单位：万元</div></div>
+                            <div class="home-stat accent-e" data-stat="member" onclick="homeJumpStat('member')"><div class="k">在籍成员</div><div class="v" id="homeStatMember">-</div><div class="h" id="homeStatMemberHint">进入团队档案</div></div>
+                            <div class="home-stat accent-f" data-stat="task" onclick="homeJumpStat('task')"><div class="k">待办</div><div class="v" id="homeStatTask">-</div><div class="h" id="homeStatTaskHint">未完成任务</div></div>
+                        </div>
                     </div>
 
                     <div class="home-quick" id="homeQuickNav"></div>

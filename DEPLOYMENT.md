@@ -43,6 +43,28 @@
 
 `down` 不删除数据卷。需要查看 MinIO 控制台时，显式加 `-WithMinioConsole`，控制台也只绑定本机。
 
+## 本机部署并让外地同事访问（临时公网）
+
+本机 Docker 默认只在 `127.0.0.1:8080`。若需要**同一套真实数据**给外地同事用，可开 Cloudflare 临时隧道：
+
+```powershell
+# 1) 先保证本机栈已起来
+.\deploy\scripts\stack.ps1 -Action up
+
+# 2) 再开公网分享（窗口保持打开）
+.\deploy\scripts\share-tunnel.ps1
+```
+
+脚本会安装/调用 `cloudflared`，生成形如 `https://xxxx.trycloudflare.com` 的地址，并自动写入 `PUBLIC_ORIGIN` / CORS 后重启入口。把该地址和本机账号发给同事即可。
+
+注意：
+
+- 你的电脑必须保持开机、Docker 与隧道窗口不能关；睡眠或断网后链接失效；
+- 每次重新运行，公网地址可能变化；
+- 仅适合演示/内测。长期多人使用请部署到公司云服务器（见下一节）。
+
+局域网同事若在同一 Wi‑Fi，也可直接用 `http://你的局域网IP:8080`（需防火墙放行 8080），但外地访问仍需隧道或云服务器。
+
 ## 公司服务器一键部署（Linux）
 
 前置条件：

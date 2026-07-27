@@ -550,6 +550,30 @@
         .home-ring-legend button:hover { color: #7c3aed; }
         .home-ring-legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 
+        .home-ledger-wrap {
+            display: flex; flex-direction: column; gap: 8px; width: 100%;
+        }
+        .home-ledger-toolbar {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 0 2px;
+        }
+        .home-ledger-title {
+            font-size: 12px; font-weight: 750; letter-spacing: 0.04em; color: var(--home-muted);
+        }
+        .home-year-scope {
+            display: inline-flex; border: 1px solid var(--home-line); border-radius: 8px;
+            overflow: hidden; background: #fff;
+        }
+        .home-year-scope button {
+            border: 0; background: transparent; padding: 5px 12px; font-size: 12px;
+            font-weight: 650; color: #64748b; cursor: pointer;
+        }
+        .home-year-scope button + button { border-left: 1px solid var(--home-line); }
+        .home-year-scope button.active {
+            background: #f5f3ff; color: #5b21b6;
+        }
+        .home-year-scope button:hover { color: #5b21b6; }
+
         .home-ledger {
             display: flex !important; flex-direction: row !important; flex-wrap: nowrap; width: 100%;
             background: #fff; border: 1px solid var(--home-line); border-radius: 10px; overflow: hidden;
