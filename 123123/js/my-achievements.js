@@ -15,7 +15,9 @@
     page: 1,
     currentKey: '',
     yearsCollapsed: false,
-    sub: 'all'
+    sub: 'all',
+    pushFilter: '',
+    verifyFilter: ''
   };
 
   function esc(s) {
@@ -80,6 +82,77 @@
     if (raw === '审核中' || raw === '实质审查') return '审核中';
     if (raw === '已驳回' || raw === '无效') return '学校不通过';
     return raw;
+  }
+
+  function nowUser() {
+    try {
+      var u = global.currentUser;
+      if (u) return u.realName || u.name || u.username || '当前用户';
+    } catch (e) {}
+    return '当前用户';
+  }
+
+  function nowStamp() {
+    var d = new Date();
+    function p(n) { return n < 10 ? '0' + n : '' + n; }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' +
+      p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function patchExtra(key, patch) {
+    var map = loadExtra();
+    map[key] = Object.assign({}, map[key] || {}, patch || {});
+    saveExtra(map);
+  }
+
+  function computeVerifyIssues(p) {
+    var issues = [];
+    if (!p) return issues;
+    if (!p.title) issues.push('缺少成果名称');
+    if (!p.date) issues.push('缺少日期');
+    if (!p.unit) issues.push('缺少所属单位');
+    if (p._type === '论文') {
+      if (!p.journal) issues.push('缺少刊物/论文集');
+      if (!p.authors) issues.push('缺少作者');
+      if (!p.doi && !(p.extra && p.extra.doi)) issues.push('缺少 DOI');
+    }
+    if (p._type === '专利') {
+      if (!p.no) issues.push('缺少专利号/申请号');
+      if (!p.inventors && !p.authors) issues.push('缺少发明人');
+    }
+    if (p._type === '著作' && !p.title) issues.push('缺少软著/著作名称');
+    if (p.audit === '审核中') issues.push('仍在审核中');
+    if (p.audit === '学校不通过') issues.push('审核未通过');
+    return issues;
+  }
+
+  function pushStatusLabel(st) {
+    if (st === 'pushed') return '已推送';
+    if (st === 'pending') return '待推送';
+    return '未推送';
+  }
+
+  function verifyStatusLabel(st) {
+    if (st === 'passed') return '核验通过';
+    if (st === 'failed') return '核验未通过';
+    if (st === 'pending') return '待核验';
+    return '未核验';
+  }
+
+  function attachWorkflow(p) {
+    if (!p) return p;
+    var extra = p.extra || {};
+    p.pushStatus = extra.pushStatus || 'none';
+    p.pushTime = extra.pushTime || '';
+    p.pushBy = extra.pushBy || '';
+    p.pushNote = extra.pushNote || '';
+    p.verifyStatus = extra.verifyStatus || 'none';
+    p.verifyTime = extra.verifyTime || '';
+    p.verifyNote = extra.verifyNote || '';
+    p.verifyIssues = Array.isArray(extra.verifyIssues) && extra.verifyIssues.length
+      ? extra.verifyIssues
+      : computeVerifyIssues(p);
+    return p;
   }
 
   function unifyPatent(raw) {
@@ -240,7 +313,7 @@
       list.push(unifyGeneric(d, '决策咨询报告', 'consultReportData', 'name', 'date'));
     });
     list.sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
-    return list;
+    return list.map(attachWorkflow);
   }
 
   /** 供首页 KPI / 门户同源统计 */
@@ -283,8 +356,28 @@
     return true;
   }
 
+  function passSubFilters(p) {
+    if (!p) return false;
+    if (state.sub === 'push') {
+      if (state.pushFilter === 'pushed') return p.pushStatus === 'pushed';
+      if (state.pushFilter === 'pending') return p.pushStatus === 'pending' || p.pushStatus === 'none';
+      return true;
+    }
+    if (state.sub === 'verify') {
+      if (state.verifyFilter === 'passed') return p.verifyStatus === 'passed';
+      if (state.verifyFilter === 'failed') return p.verifyStatus === 'failed';
+      if (state.verifyFilter === 'pending') {
+        return p.verifyStatus === 'pending' || p.verifyStatus === 'none' || (p.verifyIssues && p.verifyIssues.length);
+      }
+      return true;
+    }
+    return true;
+  }
+
   function filteredList() {
-    var list = allAchievements().filter(function (p) { return passFilters(p); });
+    var list = allAchievements().filter(function (p) {
+      return passFilters(p) && passSubFilters(p);
+    });
     if (typeof acColRows === 'function') list = acColRows('myachievements', list);
     return list;
   }
@@ -351,6 +444,8 @@
     state.type = '';
     state.role = '';
     state.year = '';
+    state.pushFilter = '';
+    state.verifyFilter = '';
     state.page = 1;
     if (typeof acClearColFilter === 'function') acClearColFilter('myachievements');
     achRender();
@@ -365,8 +460,23 @@
   function achSetSubNav(el, name) {
     document.querySelectorAll('.ach-subnav-item').forEach(function (a) { a.classList.remove('active'); });
     if (el) el.classList.add('active');
-    state.sub = name;
-    if (name !== 'all') alert('「' + (el ? el.textContent : name) + '」可后续对接推送/核验流程，当前请先使用「所有成果」');
+    state.sub = name || 'all';
+    state.page = 1;
+    state.pushFilter = '';
+    state.verifyFilter = '';
+    achRender();
+  }
+
+  function achSetPushFilter(value) {
+    state.pushFilter = state.pushFilter === value ? '' : (value || '');
+    state.page = 1;
+    achRender();
+  }
+
+  function achSetVerifyFilter(value) {
+    state.verifyFilter = state.verifyFilter === value ? '' : (value || '');
+    state.page = 1;
+    achRender();
   }
 
   function bindSideClicks() {
@@ -416,30 +526,114 @@
       .sort(function (a, b) { return Number(a) - Number(b); });
     if (yearMap['其他']) years.push('其他');
     var box = document.getElementById('achYearList');
-    if (!box) return;
-    box.innerHTML = years.map(function (y) {
-      return '<a href="javascript:void(0)" class="ach-side-a' + (String(state.year) === String(y) ? ' active' : '') +
-        '" data-ach-year="' + esc(y) + '">' +
-        esc(y) + '<span class="ach-badge">' + yearMap[y] + '</span></a>';
-    }).join('');
-    if (state.yearsCollapsed) box.style.display = 'none';
+    if (box) {
+      box.innerHTML = years.map(function (y) {
+        return '<a href="javascript:void(0)" class="ach-side-a' + (String(state.year) === String(y) ? ' active' : '') +
+          '" data-ach-year="' + esc(y) + '">' +
+          esc(y) + '<span class="ach-badge">' + yearMap[y] + '</span></a>';
+      }).join('');
+      if (state.yearsCollapsed) box.style.display = 'none';
+    }
+
+    var flow = document.getElementById('achFlowFilters');
+    if (!flow) {
+      flow = document.createElement('div');
+      flow.id = 'achFlowFilters';
+      flow.className = 'ach-side-sec';
+      var side = document.getElementById('achSide');
+      var foot = side && side.querySelector('.ach-side-foot');
+      if (side && foot) side.insertBefore(flow, foot);
+      else if (side) side.appendChild(flow);
+    }
+    if (!flow) return;
+    if (state.sub === 'push') {
+      var pushedN = all.filter(function (p) { return p.pushStatus === 'pushed'; }).length;
+      var pendingN = all.filter(function (p) { return p.pushStatus !== 'pushed'; }).length;
+      flow.style.display = '';
+      flow.innerHTML =
+        '<div class="ach-side-title">推送状态</div>' +
+        '<a href="javascript:void(0)" class="ach-side-a' + (!state.pushFilter ? ' active' : '') + '" onclick="achSetPushFilter(\'\')">全部<span class="ach-badge">' + all.length + '</span></a>' +
+        '<a href="javascript:void(0)" class="ach-side-a' + (state.pushFilter === 'pending' ? ' active' : '') + '" onclick="achSetPushFilter(\'pending\')">待推送<span class="ach-badge">' + pendingN + '</span></a>' +
+        '<a href="javascript:void(0)" class="ach-side-a' + (state.pushFilter === 'pushed' ? ' active' : '') + '" onclick="achSetPushFilter(\'pushed\')">已推送<span class="ach-badge">' + pushedN + '</span></a>';
+    } else if (state.sub === 'verify') {
+      var passedN = all.filter(function (p) { return p.verifyStatus === 'passed'; }).length;
+      var failedN = all.filter(function (p) { return p.verifyStatus === 'failed'; }).length;
+      var pendingV = all.filter(function (p) {
+        return p.verifyStatus === 'pending' || p.verifyStatus === 'none' || (p.verifyIssues && p.verifyIssues.length && p.verifyStatus !== 'passed');
+      }).length;
+      flow.style.display = '';
+      flow.innerHTML =
+        '<div class="ach-side-title">核验状态</div>' +
+        '<a href="javascript:void(0)" class="ach-side-a' + (!state.verifyFilter ? ' active' : '') + '" onclick="achSetVerifyFilter(\'\')">全部<span class="ach-badge">' + all.length + '</span></a>' +
+        '<a href="javascript:void(0)" class="ach-side-a' + (state.verifyFilter === 'pending' ? ' active' : '') + '" onclick="achSetVerifyFilter(\'pending\')">待核验<span class="ach-badge">' + pendingV + '</span></a>' +
+        '<a href="javascript:void(0)" class="ach-side-a' + (state.verifyFilter === 'passed' ? ' active' : '') + '" onclick="achSetVerifyFilter(\'passed\')">通过<span class="ach-badge">' + passedN + '</span></a>' +
+        '<a href="javascript:void(0)" class="ach-side-a' + (state.verifyFilter === 'failed' ? ' active' : '') + '" onclick="achSetVerifyFilter(\'failed\')">未通过<span class="ach-badge">' + failedN + '</span></a>';
+    } else {
+      flow.style.display = 'none';
+      flow.innerHTML = '';
+    }
   }
 
   function emptyHint() {
     var parts = [];
+    if (state.sub === 'push') parts.push('页签「所内推送」');
+    if (state.sub === 'verify') parts.push('页签「自助核验」');
+    if (state.pushFilter === 'pushed') parts.push('已推送');
+    if (state.pushFilter === 'pending') parts.push('待推送');
+    if (state.verifyFilter === 'passed') parts.push('核验通过');
+    if (state.verifyFilter === 'failed') parts.push('核验未通过');
+    if (state.verifyFilter === 'pending') parts.push('待核验');
     if (state.type) parts.push('类型「' + state.type + '」');
     if (state.year) parts.push('年度「' + state.year + '」');
     if (state.role) parts.push('参与形式「' + state.role + '」');
     if (!parts.length) return '暂无成果数据';
-    return '当前筛选（' + parts.join(' · ') + '）下没有数据。可点侧栏「清除筛选」或改选「全部」。';
+    return '当前筛选（' + parts.join(' · ') + '）下没有数据。可点侧栏「清除筛选」或切换页签。';
   }
 
   function opsCell(p) {
     var k = esc(p._key);
-    return '<td class="ach-ops">' +
-      '<a class="ach-a" href="javascript:void(0)" data-ach-act="view" data-ach-key="' + k + '">查看</a> ' +
-      '<a class="ach-a" href="javascript:void(0)" data-ach-act="delete" data-ach-key="' + k + '" style="color:#e5484d">删除</a>' +
-      '</td>';
+    var html = '<td class="ach-ops">' +
+      '<a class="ach-a" href="javascript:void(0)" data-ach-act="view" data-ach-key="' + k + '">查看</a> ';
+    if (state.sub === 'push') {
+      if (p.pushStatus === 'pushed') {
+        html += '<a class="ach-a" href="javascript:void(0)" data-ach-act="unpush" data-ach-key="' + k + '">撤回</a> ';
+      } else {
+        html += '<a class="ach-a" href="javascript:void(0)" data-ach-act="push" data-ach-key="' + k + '">推送</a> ';
+      }
+    } else if (state.sub === 'verify') {
+      html += '<a class="ach-a" href="javascript:void(0)" data-ach-act="verify" data-ach-key="' + k + '">核验</a> ';
+      html += '<a class="ach-a" href="javascript:void(0)" data-ach-act="pass" data-ach-key="' + k + '">通过</a> ';
+      html += '<a class="ach-a" href="javascript:void(0)" data-ach-act="fail" data-ach-key="' + k + '" style="color:#e5484d">未通过</a> ';
+    } else {
+      html += '<a class="ach-a" href="javascript:void(0)" data-ach-act="delete" data-ach-key="' + k + '" style="color:#e5484d">删除</a>';
+    }
+    html += '</td>';
+    return html;
+  }
+
+  function updatePanelChrome() {
+    var title = document.querySelector('#my_achievements .ach-panel-title') || document.querySelector('.ach-panel-title');
+    var tools = document.querySelector('#my_achievements .ach-panel-tools') || document.querySelector('.ach-panel-tools');
+    if (title) {
+      title.textContent = state.sub === 'push' ? '所内推送列表' : (state.sub === 'verify' ? '自助核验列表' : '成果列表');
+    }
+    if (!tools) return;
+    if (state.sub === 'push') {
+      tools.innerHTML =
+        '<button type="button" class="ach-btn-sm ach-btn-add" onclick="achBatchPush()">批量推送待办</button>' +
+        '<button type="button" class="ach-btn-sm" onclick="achExportCsv()">导出</button>' +
+        '<button type="button" class="ach-btn-sm" onclick="achRender()">刷新</button>';
+    } else if (state.sub === 'verify') {
+      tools.innerHTML =
+        '<button type="button" class="ach-btn-sm ach-btn-add" onclick="achBatchVerify()">一键核验全部</button>' +
+        '<button type="button" class="ach-btn-sm" onclick="achExportCsv()">导出</button>' +
+        '<button type="button" class="ach-btn-sm" onclick="achRender()">刷新</button>';
+    } else {
+      tools.innerHTML =
+        '<button type="button" class="ach-btn-sm ach-btn-add" onclick="achShowAddHint()">＋ 新增</button>' +
+        '<button type="button" class="ach-btn-sm" onclick="achExportCsv()">导出</button>' +
+        '<button type="button" class="ach-btn-sm" onclick="achRender()">刷新</button>';
+    }
   }
 
   function headHtml() {
@@ -524,7 +718,35 @@
       if (act === 'view') achView(key);
       else if (act === 'audit') achShowAuditLogKey(key);
       else if (act === 'delete') achDelete(key);
+      else if (act === 'push') achPush(key);
+      else if (act === 'unpush') achUnpush(key);
+      else if (act === 'verify') achVerifyRun(key);
+      else if (act === 'pass') achVerifyPass(key);
+      else if (act === 'fail') achVerifyFail(key);
     });
+  }
+
+  function workflowRowHtml(p) {
+    var k = esc(p._key);
+    if (state.sub === 'push') {
+      return '<tr>' +
+        '<td>' + esc(p._type) + '</td>' +
+        '<td><a class="ach-a" href="javascript:void(0)" data-ach-act="view" data-ach-key="' + k + '">' + esc(p.title || '-') + '</a></td>' +
+        '<td>' + esc(p.date || '-') + '</td>' +
+        '<td>' + esc(p.unit || '-') + '</td>' +
+        '<td>' + esc(pushStatusLabel(p.pushStatus)) + (p.pushTime ? '<div style="color:#999;font-size:11px">' + esc(p.pushTime) + '</div>' : '') + '</td>' +
+        opsCell(p) +
+        '</tr>';
+    }
+    var issueText = (p.verifyIssues && p.verifyIssues.length) ? p.verifyIssues.join('；') : '无问题';
+    return '<tr>' +
+      '<td>' + esc(p._type) + '</td>' +
+      '<td><a class="ach-a" href="javascript:void(0)" data-ach-act="view" data-ach-key="' + k + '">' + esc(p.title || '-') + '</a></td>' +
+      '<td>' + esc(verifyStatusLabel(p.verifyStatus)) + '</td>' +
+      '<td title="' + esc(issueText) + '">' + esc(issueText.length > 28 ? issueText.slice(0, 28) + '…' : issueText) + '</td>' +
+      '<td>' + esc(p.verifyTime || '-') + '</td>' +
+      opsCell(p) +
+      '</tr>';
   }
 
   function hoistModal() {
@@ -538,27 +760,35 @@
     bindTableClicks();
     bindSideClicks();
     ensureAchColFilterReady();
+    updatePanelChrome();
     var all = allAchievements();
     updateSide(all);
     var list = filteredList();
-    // 全部类型时用论文列样式展示混合列表（名称优先）
     var thead = document.getElementById('achTableHead');
     var tbody = document.getElementById('achTableBody');
     var empty = document.getElementById('achEmpty');
     if (!thead || !tbody) return;
 
-      if (!state.type) {
-        thead.innerHTML = '<tr>' +
-          achColTh('_type', '类型', '10%') +
-          achColTh('title', '名称') +
-          achColTh('date', '日期', '12%') +
-          achColTh('unit', '所属单位', '14%') +
-          achColTh('audit', '审核状态', '10%') +
-          '<th style="width:10%">操作</th></tr>';
-      } else {
-        thead.innerHTML = headHtml();
-      }
-      if (typeof acUpdateColIndicators === 'function') acUpdateColIndicators('myachievements');
+    if (state.sub === 'push') {
+      thead.innerHTML = '<tr>' +
+        '<th style="width:10%">类型</th><th>名称</th><th style="width:12%">日期</th>' +
+        '<th style="width:14%">所属单位</th><th style="width:14%">推送状态</th><th style="width:16%">操作</th></tr>';
+    } else if (state.sub === 'verify') {
+      thead.innerHTML = '<tr>' +
+        '<th style="width:10%">类型</th><th>名称</th><th style="width:12%">核验状态</th>' +
+        '<th>问题清单</th><th style="width:12%">核验时间</th><th style="width:18%">操作</th></tr>';
+    } else if (!state.type) {
+      thead.innerHTML = '<tr>' +
+        achColTh('_type', '类型', '10%') +
+        achColTh('title', '名称') +
+        achColTh('date', '日期', '12%') +
+        achColTh('unit', '所属单位', '14%') +
+        achColTh('audit', '审核状态', '10%') +
+        '<th style="width:10%">操作</th></tr>';
+    } else {
+      thead.innerHTML = headHtml();
+    }
+    if (typeof acUpdateColIndicators === 'function') acUpdateColIndicators('myachievements');
 
     var total = list.length;
     var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -574,7 +804,9 @@
       }
     } else {
       if (empty) empty.style.display = 'none';
-      if (!state.type) {
+      if (state.sub === 'push' || state.sub === 'verify') {
+        tbody.innerHTML = rows.map(workflowRowHtml).join('');
+      } else if (!state.type) {
         tbody.innerHTML = rows.map(function (p) {
           var k = esc(p._key);
           return '<tr><td>' + esc(p._type) + '</td>' +
@@ -737,11 +969,172 @@
   function achShowAuditLog() { achShowAuditLogKey(state.currentKey); }
   function achShowAuditLogKey(key) {
     var p = findByKey(key);
-    alert(p ? ('审核状态：' + p.audit + '\n成果：' + p.title) : '无记录');
+    if (!p) { alert('无记录'); return; }
+    var lines = [
+      '审核状态：' + (p.audit || '-'),
+      '推送状态：' + pushStatusLabel(p.pushStatus) + (p.pushTime ? '（' + p.pushTime + '）' : ''),
+      '核验状态：' + verifyStatusLabel(p.verifyStatus) + (p.verifyTime ? '（' + p.verifyTime + '）' : ''),
+      '成果：' + (p.title || '-')
+    ];
+    if (p.verifyIssues && p.verifyIssues.length) {
+      lines.push('核验问题：' + p.verifyIssues.join('；'));
+    }
+    if (p.pushNote) lines.push('推送说明：' + p.pushNote);
+    if (p.verifyNote) lines.push('核验说明：' + p.verifyNote);
+    alert(lines.join('\n'));
   }
 
   function achShowAddHint() {
     alert('新增请使用左侧「成果管理」下的专利/论文等原模块录入，将自动汇总到「我的成果」。\n也可点「示例成果」生成演示数据。');
+  }
+
+  function publishPushNotice(p) {
+    try {
+      if (typeof normalizeNoticeRecord !== 'function' || typeof saveNoticeData !== 'function') return;
+      if (!Array.isArray(global.noticeData)) {
+        try { global.noticeData = JSON.parse(localStorage.getItem('noticeData') || '[]') || []; } catch (e) { global.noticeData = []; }
+      }
+      var notice = normalizeNoticeRecord({
+        id: Date.now(),
+        title: '【所内推送】' + (p._type || '成果') + '：' + (p.title || ''),
+        type: 'notice',
+        content: '成果「' + (p.title || '') + '」已推送至所内共享。\n类型：' + (p._type || '') +
+          '\n单位：' + (p.unit || '') + '\n日期：' + (p.date || '') +
+          '\n推送人：' + nowUser(),
+        publisher: nowUser(),
+        publishTime: nowStamp(),
+        audience: 'all',
+        pinned: false
+      });
+      global.noticeData.unshift(notice);
+      saveNoticeData({
+        silent: false,
+        log: { action: '所内推送', desc: (p._type || '') + ' ' + (p.title || '') }
+      });
+    } catch (e) {
+      console.warn('push notice failed', e);
+    }
+  }
+
+  function achPush(key, silent) {
+    var p = findByKey(key);
+    if (!p) return false;
+    if (p.pushStatus === 'pushed') {
+      if (!silent) alert('该成果已推送');
+      return false;
+    }
+    var note = silent ? '批量推送' : prompt('推送说明（可选）', '所内共享');
+    if (note == null && !silent) return false;
+    patchExtra(key, {
+      pushStatus: 'pushed',
+      pushTime: nowStamp(),
+      pushBy: nowUser(),
+      pushNote: note || ''
+    });
+    publishPushNotice(p);
+    if (!silent) {
+      achRender();
+      alert('已推送到所内，并写入通知中心');
+    }
+    return true;
+  }
+
+  function achUnpush(key) {
+    var p = findByKey(key);
+    if (!p) return;
+    if (!confirm('确定撤回「' + (p.title || '') + '」的所内推送？')) return;
+    patchExtra(key, {
+      pushStatus: 'none',
+      pushTime: '',
+      pushBy: '',
+      pushNote: ''
+    });
+    achRender();
+    alert('已撤回推送');
+  }
+
+  function achBatchPush() {
+    var list = allAchievements().filter(function (p) {
+      return passFilters(p) && p.pushStatus !== 'pushed';
+    });
+    if (!list.length) {
+      alert('当前筛选下没有待推送成果');
+      return;
+    }
+    if (!confirm('将推送 ' + list.length + ' 条成果到所内，并发布通知，是否继续？')) return;
+    var n = 0;
+    list.forEach(function (p) {
+      if (achPush(p._key, true)) n++;
+    });
+    achRender();
+    alert('已推送 ' + n + ' 条');
+  }
+
+  function achVerifyRun(key, silent) {
+    var p = findByKey(key);
+    if (!p) return null;
+    var issues = computeVerifyIssues(p);
+    var status = issues.length ? 'failed' : 'passed';
+    patchExtra(key, {
+      verifyStatus: status,
+      verifyIssues: issues,
+      verifyTime: nowStamp(),
+      verifyNote: issues.length ? ('自动核验：' + issues.join('；')) : '自动核验通过'
+    });
+    if (!silent) {
+      achRender();
+      alert(status === 'passed'
+        ? '核验通过'
+        : ('核验未通过：\n- ' + issues.join('\n- ')));
+    }
+    return status;
+  }
+
+  function achVerifyPass(key) {
+    var p = findByKey(key);
+    if (!p) return;
+    var note = prompt('通过说明（可选）', '人工确认通过');
+    if (note == null) return;
+    patchExtra(key, {
+      verifyStatus: 'passed',
+      verifyIssues: [],
+      verifyTime: nowStamp(),
+      verifyNote: note || '人工确认通过'
+    });
+    achRender();
+  }
+
+  function achVerifyFail(key) {
+    var p = findByKey(key);
+    if (!p) return;
+    var note = prompt('未通过原因', (p.verifyIssues && p.verifyIssues.length) ? p.verifyIssues.join('；') : '信息不完整');
+    if (note == null) return;
+    var issues = note ? note.split(/[；;]/).map(function (s) { return s.trim(); }).filter(Boolean) : ['信息不完整'];
+    patchExtra(key, {
+      verifyStatus: 'failed',
+      verifyIssues: issues,
+      verifyTime: nowStamp(),
+      verifyNote: note
+    });
+    achRender();
+  }
+
+  function achBatchVerify() {
+    var list = allAchievements().filter(function (p) { return passFilters(p); });
+    if (!list.length) {
+      alert('当前筛选下没有可核验成果');
+      return;
+    }
+    if (!confirm('将对 ' + list.length + ' 条成果执行自动核验，是否继续？')) return;
+    var passed = 0;
+    var failed = 0;
+    list.forEach(function (p) {
+      var st = achVerifyRun(p._key, true);
+      if (st === 'passed') passed++;
+      else failed++;
+    });
+    achRender();
+    alert('核验完成：通过 ' + passed + ' 条，未通过 ' + failed + ' 条');
   }
 
   function achDelete(key) {
@@ -934,6 +1327,15 @@
   global.achResetFilters = achResetFilters;
   global.achToggleYears = achToggleYears;
   global.achSetSubNav = achSetSubNav;
+  global.achSetPushFilter = achSetPushFilter;
+  global.achSetVerifyFilter = achSetVerifyFilter;
+  global.achPush = achPush;
+  global.achUnpush = achUnpush;
+  global.achBatchPush = achBatchPush;
+  global.achVerifyRun = achVerifyRun;
+  global.achVerifyPass = achVerifyPass;
+  global.achVerifyFail = achVerifyFail;
+  global.achBatchVerify = achBatchVerify;
   global.achGotoPage = achGotoPage;
   global.achView = achView;
   global.achCloseView = achCloseView;
