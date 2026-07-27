@@ -115,3 +115,7 @@ tools/minio/mc.exe
 screenshot_*.png
 console_*_check.png
 login_page_*.png
+
+# Local data recovery dumps (may contain personal data)
+123123/_recovery/
+

@@ -59,6 +59,7 @@ window.__ASSET_VERSIONS = {
   "js/my-projects.js": "c06536a6c7",
   "js/news-management.js": "73df64f9b8",
   "js/notice-enhance.js": "2131737780",
+  "js/pages-static-boot.js": "47b27247c6",
   "js/portal-public.js": "17f4556571",
   "js/project-report.js": "d01933794a",
   "js/shared-file-library.js": "9cc30ee276",
