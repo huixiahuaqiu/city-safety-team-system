@@ -415,7 +415,19 @@
         return legacyOk;
     }
 
+    function isStaticPagesDemoHost() {
+        try {
+            if (window.APP_CONFIG && window.APP_CONFIG.STATIC_PAGES_DEMO) return true;
+            if (String(getAppConfig('DATA_BACKEND', 'gateway') || '').toLowerCase() === 'local') return true;
+            return /\.github\.io$/i.test(String(location.hostname || ''));
+        } catch (e) {
+            return false;
+        }
+    }
+
     async function gatewayPasswordRequest(path, payload) {
+        // GitHub Pages / 纯静态演示没有后端，改密只写本机 localStorage
+        if (isStaticPagesDemoHost()) return { ok: true, disabled: true, localOnly: true };
         if (!window.GatewayAuth || !window.GatewayAuth.enabled) return { ok: true, disabled: true };
         var response = await window.GatewayAuth.fetch(path, {
             method: 'POST',
@@ -434,7 +446,11 @@
                 'invalid or expired session': '登录状态已失效，请重新登录',
                 'account unavailable': '账号不可用，请联系管理员'
             };
-            throw new Error(localizedErrors[rawError] || rawError || ('HTTP ' + response.status));
+            var msg = localizedErrors[rawError] || rawError || ('HTTP ' + response.status);
+            if (response.status === 405 || response.status === 404) {
+                msg = '当前页面没有可用的改密接口（静态站点请用本地改密）。请刷新后重试，或改用 http://127.0.0.1:8080';
+            }
+            throw new Error(msg);
         }
         if (data.token && window.GatewayAuth.acceptSession) {
             window.GatewayAuth.acceptSession(data);
@@ -1290,9 +1306,14 @@
         try {
             await gatewayPasswordRequest('/api/auth/change-password', { newPassword: newPwd });
         } catch (gatewayPwdError) {
-            if (btn) { btn.disabled = false; btn.textContent = '确认修改并进入系统'; }
-            if (errEl) errEl.textContent = gatewayPwdError.message || '服务端密码修改失败';
-            return;
+            // 静态站（GitHub Pages）无改密 API：降级为仅本地保存
+            var gmsg = String((gatewayPwdError && gatewayPwdError.message) || '');
+            if (!isStaticPagesDemoHost() && !/405|404|静态|没有可用的改密/i.test(gmsg)) {
+                if (btn) { btn.disabled = false; btn.textContent = '确认修改并进入系统'; }
+                if (errEl) errEl.textContent = gmsg || '服务端密码修改失败';
+                return;
+            }
+            console.warn('[auth] gateway change-password skipped, local-only', gatewayPwdError);
         }
 
         // 重新从本地加载，避免内存中的 accountData 已被云端旧数据替换

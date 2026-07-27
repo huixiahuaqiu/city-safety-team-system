@@ -62,6 +62,19 @@
             if (SKIP[key]) return;
             var val = payload.data[key];
             try {
+                // 静态站跳过强制改密，避免打到不存在的 /api/auth/change-password
+                if (key === 'accountData') {
+                    var accounts = typeof val === 'string' ? JSON.parse(val) : val;
+                    if (Array.isArray(accounts)) {
+                        accounts.forEach(function (a) {
+                            if (!a || typeof a !== 'object') return;
+                            a.mustChangePwd = false;
+                            a.firstLogin = false;
+                            if (!a.password && !a.passwordHash) a.password = '123456';
+                        });
+                        val = accounts;
+                    }
+                }
                 localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
             } catch (err) {
                 console.warn('[pages-static-boot] setItem failed', key, err);

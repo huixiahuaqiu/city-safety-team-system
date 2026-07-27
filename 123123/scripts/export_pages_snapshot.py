@@ -148,11 +148,13 @@ def main() -> int:
         except Exception as exc:
             print("WARN: recovery account merge skipped:", exc)
 
-    # Pages 无网关：为全部账号写入演示明文密码，供本地校验（登录后会迁移为哈希）。
+    # Pages 无网关：演示明文密码 + 跳过强制改密（静态站改密无后端）。
     if isinstance(data.get("accountData"), list):
         for row in data["accountData"]:
             if isinstance(row, dict):
                 row["password"] = "123456"
+                row["mustChangePwd"] = False
+                row["firstLogin"] = False
 
     version = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     payload = {
