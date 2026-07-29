@@ -21,6 +21,23 @@ systemd、独立 Nginx 或直接启动 Python 的运维命令。
 - 发布代码与迁移数据是两件事。本机数据不会因部署代码而自动进入服务器。
 - 任何生产更新、密钥轮换或恢复操作前，先生成备份并完成隔离恢复验证。
 
+### 1.1 二进制真源与迁移
+
+- 共享文件、数据集、标注三类真实二进制均以 **MinIO 为真源**
+  （`SHARED_STORAGE_BACKEND` / `DATASET_STORAGE_BACKEND` / `ANNOTATION_STORAGE_BACKEND` = `minio`）：
+  - 共享文件：预签名直传或网关代传后写入 `shared/` 前缀；
+  - 数据集：分片先落网关磁盘临时目录，合并校验通过后上传 `datasets/` 并自动清理本地副本；
+  - 标注：双写（本地热缓存 + MinIO），异机导出时自动从 `annotations/` 前缀补齐。
+- 因此 `uploads/` 目录只剩分片缓存与标注热缓存；**服务器迁移只需搬 MinIO 数据卷 + PostgreSQL**。
+- 存量本地文件迁入 MinIO（幂等，先 dry-run）：
+
+  ```bash
+  cd 123123
+  python scripts/migrate_binaries_to_minio.py --dry-run
+  python scripts/migrate_binaries_to_minio.py            # 上传并回写注册表
+  python scripts/migrate_binaries_to_minio.py --purge-local  # 确认后清理本地副本
+  ```
+
 ## 2. Windows 本机运维
 
 在仓库根目录打开 PowerShell。首次启动和日常更新都使用：

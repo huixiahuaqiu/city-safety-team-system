@@ -710,6 +710,32 @@
     } else {
         setTimeout(enhance, 0);
     }
+
+    // 全局联动：云端拉取（同页）/ 其他标签页写入时，刷新共享文件视图。
+    var SF_SYNC_WATCH_KEYS = { sharedFileData: 1, sharedFileDownloadLogs: 1 };
+
+    function refreshSharedLibraryFromSync(changedKey) {
+        if (changedKey === 'sharedFileData') {
+            try {
+                global.sharedFileData = JSON.parse(localStorage.getItem('sharedFileData') || '[]');
+            } catch (e) { /* 保留旧缓存 */ }
+        }
+        try {
+            if (typeof global.renderFileList === 'function') global.renderFileList();
+        } catch (e2) { /* 模块未挂载时忽略 */ }
+    }
+
+    try {
+        global.addEventListener('storage', function (ev) {
+            if (ev && ev.key && SF_SYNC_WATCH_KEYS[ev.key]) refreshSharedLibraryFromSync(ev.key);
+        });
+        global.addEventListener('citysafe:cloud-applied', function (ev) {
+            var keys = (ev && ev.detail && ev.detail.keys) || [];
+            var hit = keys.filter(function (k) { return SF_SYNC_WATCH_KEYS[k]; });
+            if (hit.length) hit.forEach(refreshSharedLibraryFromSync);
+        });
+    } catch (eWatch) { /* ignore */ }
+
     global.SharedFileLibrary = {
         enhance: enhance,
         renameSharedFile: renameSharedFile,

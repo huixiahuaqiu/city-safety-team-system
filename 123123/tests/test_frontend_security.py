@@ -623,7 +623,8 @@ const api = window.__legacyAccountTest;
         self.assertEqual(3, len(imported))
         passwords = [account["password"] for account in imported]
         self.assertEqual(3, len(set(passwords)))
-        self.assertTrue(all(re.fullmatch(r"Tmp-[0-9a-z]{9}A9", pwd) for pwd in passwords))
+        # 生成器已加强：12 位混合大小写/数字（排除易混淆字符）+ 固定 'A9!' 后缀
+        self.assertTrue(all(re.fullmatch(r"Tmp-[0-9a-zA-Z]{12}A9!", pwd) for pwd in passwords))
         self.assertTrue(all(account["mustChangePwd"] for account in imported))
         self.assertEqual(3, result["randomCall"])
 

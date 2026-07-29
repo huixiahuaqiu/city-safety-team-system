@@ -112,8 +112,9 @@ sudo bash deploy/scripts/bootstrap-server.sh \
 ## 数据边界
 
 - 结构化数据：PostgreSQL 持久卷；
-- 共享文件与标注包：MinIO 持久卷；
-- 分片数据集、日志和本地状态：独立持久卷；
+- 真实二进制（共享文件 `shared/`、数据集 `datasets/`、标注 `annotations/`）：统一以 MinIO 持久卷为真源；
+- 分片上传缓存、标注热缓存、日志和本地状态：独立持久卷（可重建，迁移时无需搬运）；
+- 存量本地二进制迁入 MinIO：`123123/scripts/migrate_binaries_to_minio.py`（见 RUNBOOK 1.1）；
 - 数据库结构：`deploy/db/migrations/*.sql`，启动前由迁移容器按哈希校验并执行；
 - 浏览器离线修改：进入本地待同步队列，恢复连接后按版本提交；
 - 多人同时修改：版本不一致时拒绝静默覆盖，保留本机修改并提示处理。

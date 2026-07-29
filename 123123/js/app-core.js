@@ -485,7 +485,7 @@
         // 同步记录标记：classification=__APP_SYNC__，patent_number=__SYNC_KV__{key}
         const CLOUD_SYNC_KEYS = new Set([
             'teamMemberData', 'memberGradeYears', 'accountData', 'permissionMatrix', 'passwordPolicy', 'loginLogData',
-            'longitudinalData', 'horizontalData', 'schoolData', 'researchProjectExtra',
+            'longitudinalData', 'horizontalData', 'schoolData', 'researchProjectExtra', 'projectApplicationData',
             'taskData', 'weeklyReportData', 'applicationData', 'approvalFlowConfig', 'holidayLeaveCampaigns', 'noticeData', 'newsData', 'meetingData',
             'literatureData', 'datasetData', 'reportData', 'sharedFileData',
             'standardData', 'copyrightData', 'competitionData',
@@ -497,7 +497,9 @@
             'portalTeamIntro_v1', 'portalFeedbackData_v1',
             'literatureCompareDimTemplate', 'literatureCompareNamedDimTemplates',
             'customInstructionTemplates', 'devlogEntries',
-            'backupData', 'autoBackupConfig'
+            'backupData', 'autoBackupConfig',
+            'datasetGroups', 'datasetCustomTags', 'datasetDownloadLogs',
+            'sharedFileDownloadLogs', 'datasetFavorites', 'homeQuickNavPrefs_v1'
         ]);
         // 服务端认证模式下，账号验证器只允许 service_role 读取；浏览器不再同步 accountData。
         // Password verifiers and account status are server-private.
@@ -556,6 +558,11 @@
         const CLOUD_STUDENT_SCOPED_KEYS = new Set([
             'taskData', 'weeklyReportData', 'applicationData', 'annotationData'
         ]);
+        // 协作对象键：全员可写，服务端按“只能改自己桶 / 下载记录只增不删”合并。
+        const CLOUD_OBJECT_MERGE_KEYS = new Set([
+            'datasetDownloadLogs', 'sharedFileDownloadLogs',
+            'datasetFavorites', 'homeQuickNavPrefs_v1'
+        ]);
         const CLOUD_KEY_WRITE_FEATURES = {
             teamMemberData: ['团队成员档案（编辑）'],
             memberGradeYears: ['团队成员档案（编辑）'],
@@ -568,6 +575,7 @@
             horizontalData: ['项目管理（编辑）'],
             schoolData: ['项目管理（编辑）'],
             researchProjectExtra: ['项目管理（编辑）'],
+            projectApplicationData: ['项目管理（编辑）'],
             patentData: ['成果管理（编辑）'],
             patentMgmtData: ['成果管理（编辑）'],
             paperData: ['成果管理（编辑）'],
@@ -581,6 +589,8 @@
             datasetData: ['资源中心（上传/编辑）'],
             reportData: ['资源中心（上传/编辑）'],
             sharedFileData: ['资源中心（上传/编辑）'],
+            datasetGroups: ['资源中心（上传/编辑）'],
+            datasetCustomTags: ['资源中心（上传/编辑）'],
             modelTrainingData: ['智能工具（全部）'],
             annotationTypes: ['智能工具（全部）'],
             annotationData: ['智能工具（全部）'],
@@ -626,6 +636,7 @@
                 : null;
             var role = String(session && session.user && session.user.role || 'visitor').toLowerCase();
             if (role === 'visitor') return false;
+            if (CLOUD_OBJECT_MERGE_KEYS.has(key)) return true;
             if (CLOUD_ADMIN_ONLY_KEYS.has(key)) return role === 'admin';
             if (role === 'admin') return true;
             if (role === 'student' && !CLOUD_STUDENT_SCOPED_KEYS.has(key)) return false;
@@ -1170,9 +1181,9 @@
                                         scheduleCloudPullSoon(400);
                                         return { ok: true, key: key, deduplicated: true };
                                     }
-                                    // 服务端已有更新：学生 scoped 键可安全 rebase；
+                                    // 服务端已有更新：学生 scoped 键与协作对象键可安全 rebase（服务端合并）；
                                     // 全量文档禁止盲写覆盖，先拉远端并标记冲突。
-                                    var canAutoRebase = CLOUD_STUDENT_SCOPED_KEYS.has(key);
+                                    var canAutoRebase = CLOUD_STUDENT_SCOPED_KEYS.has(key) || CLOUD_OBJECT_MERGE_KEYS.has(key);
                                     if (
                                         canAutoRebase
                                         && Number.isFinite(currentVersion)
@@ -1485,6 +1496,12 @@
                         window.__homeRealtimeBroadcast({ type: 'cloud-applied', applied: applied, keys: changedKeys });
                     }
                 } catch (eBc) {}
+                try {
+                    // 同页内广播：BroadcastChannel 不会回投本页，各模块靠该事件联动刷新。
+                    if (typeof window !== 'undefined' && applied > 0) {
+                        window.dispatchEvent(new CustomEvent('citysafe:cloud-applied', { detail: { keys: changedKeys } }));
+                    }
+                } catch (eEvt) {}
                 setTimeout(function() { flushCloudOutbox(); }, 0);
                 return { ok: true, applied: applied, skipped: skipped, changedKeys: changedKeys, full: forceFull };
             } catch (err) {
@@ -1645,6 +1662,8 @@
             try { if (typeof updateLongitudinalFilterCounts === 'function') updateLongitudinalFilterCounts(); if (typeof applyLongitudinalFilters === 'function') applyLongitudinalFilters(); } catch (e) {}
             try { if (typeof updateHorizontalFilterCounts === 'function') updateHorizontalFilterCounts(); if (typeof applyHorizontalFilters === 'function') applyHorizontalFilters(); } catch (e) {}
             try { if (typeof updateSchoolFilterCounts === 'function') updateSchoolFilterCounts(); if (typeof applySchoolFilters === 'function') applySchoolFilters(); } catch (e) {}
+            try { if (typeof window.reloadProjectApplicationFromStorage === 'function') window.reloadProjectApplicationFromStorage(); } catch (e) {}
+            try { if (typeof window.migrateProjectLedgerStatuses === 'function') window.migrateProjectLedgerStatuses(); } catch (e) {}
             try { if (typeof renderNewsList === 'function') renderNewsList(); if (typeof updateNewsStats === 'function') updateNewsStats(); if (typeof renderHomeNewsPanel === 'function') renderHomeNewsPanel(); } catch (e) {}
             try { if (typeof renderHomeDashboard === 'function') renderHomeDashboard(); } catch (eHomeDash) {}
             try { if (typeof renderMeetingList === 'function') renderMeetingList(); if (typeof updateMeetingStats === 'function') updateMeetingStats(); } catch (e) {}
@@ -1751,6 +1770,7 @@
             task_management: '任务管理',
             weekly_report: '工作周报',
             application_center: '请假与申请',
+            project_application: '已申请项目',
             longitudinal_project: '纵向项目',
             horizontal_project: '横向项目',
             school_project: '校级项目',
@@ -1929,6 +1949,14 @@
                 initSystemConfigModule();
             } else if (moduleId === 'my_projects') {
                 try { if (typeof initMyProjects === 'function') initMyProjects(); } catch (eMp) {}
+            } else if (moduleId === 'project_application') {
+                try { if (typeof initProjectApplicationData === 'function') initProjectApplicationData(); } catch (ePA) {}
+            } else if (moduleId === 'longitudinal_project') {
+                try { if (typeof updateLongitudinalFilterCounts === 'function') updateLongitudinalFilterCounts(); if (typeof applyLongitudinalFilters === 'function') applyLongitudinalFilters(); } catch (eLon) {}
+            } else if (moduleId === 'horizontal_project') {
+                try { if (typeof updateHorizontalFilterCounts === 'function') updateHorizontalFilterCounts(); if (typeof applyHorizontalFilters === 'function') applyHorizontalFilters(); } catch (eHor) {}
+            } else if (moduleId === 'school_project') {
+                try { if (typeof updateSchoolFilterCounts === 'function') updateSchoolFilterCounts(); if (typeof applySchoolFilters === 'function') applySchoolFilters(); } catch (eSch) {}
             } else if (moduleId === 'my_achievements') {
                 try { if (typeof initMyAchievements === 'function') initMyAchievements(); } catch (eAch) {}
             } else if (moduleId === 'openai') {

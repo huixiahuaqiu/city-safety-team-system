@@ -199,13 +199,44 @@
         return 'table';
     }
 
+    function dsUserBucketKey() {
+        // 与网关会话身份（sid/sub）对齐，服务端据此判定“自己的桶”。
+        try {
+            var session = global.GatewayAuth && global.GatewayAuth.read ? global.GatewayAuth.read() : null;
+            var user = (session && session.user) || global.currentUser || null;
+            var id = user && (user.studentId || user.id);
+            if (id !== undefined && id !== null && String(id).trim()) return String(id).trim();
+        } catch (e) { /* ignore */ }
+        return 'local';
+    }
+
     function loadFavorites() {
-        try { dsState.favorites = JSON.parse(localStorage.getItem(DS_FAV_KEY) || '{}') || {}; }
-        catch (e) { dsState.favorites = {}; }
+        var doc = {};
+        try { doc = JSON.parse(localStorage.getItem(DS_FAV_KEY) || '{}') || {}; }
+        catch (e) { doc = {}; }
+        if (!doc || typeof doc !== 'object' || Array.isArray(doc)) doc = {};
+        var keys = Object.keys(doc);
+        var isLegacyFlat = keys.length > 0 && keys.every(function (k) { return doc[k] === true; });
+        if (isLegacyFlat) {
+            // 旧版扁平格式 {dsId:true} → 迁入本人桶，后续按人同步。
+            var migrated = {};
+            migrated[dsUserBucketKey()] = doc;
+            doc = migrated;
+            try { localStorage.setItem(DS_FAV_KEY, JSON.stringify(doc)); } catch (e2) { /* ignore */ }
+        }
+        var bucket = doc[dsUserBucketKey()];
+        dsState.favorites = (bucket && typeof bucket === 'object' && !Array.isArray(bucket)) ? bucket : {};
     }
 
     function saveFavorites() {
-        localStorage.setItem(DS_FAV_KEY, JSON.stringify(dsState.favorites || {}));
+        var doc = {};
+        try { doc = JSON.parse(localStorage.getItem(DS_FAV_KEY) || '{}') || {}; }
+        catch (e) { doc = {}; }
+        if (!doc || typeof doc !== 'object' || Array.isArray(doc)) doc = {};
+        var bucketKey = dsUserBucketKey();
+        if (dsState.favorites && Object.keys(dsState.favorites).length) doc[bucketKey] = dsState.favorites;
+        else delete doc[bucketKey];
+        localStorage.setItem(DS_FAV_KEY, JSON.stringify(doc));
     }
 
     function loadGroups() {
@@ -2487,6 +2518,29 @@
         }
         renderDatasetList();
     }
+
+    // 全局联动：云端拉取（同页）/ 其他标签页写入时，刷新数据集视图。
+    var DS_SYNC_WATCH_KEYS = {
+        datasetData: 1, datasetGroups: 1, datasetCustomTags: 1,
+        datasetFavorites: 1, datasetDownloadLogs: 1
+    };
+
+    function refreshDatasetLibraryFromSync(changedKey) {
+        if (changedKey === 'datasetData') global.datasetData = null;
+        if (changedKey === 'datasetFavorites') loadFavorites();
+        try { renderDatasetList(); } catch (e) { /* 模块未挂载时忽略 */ }
+    }
+
+    try {
+        global.addEventListener('storage', function (ev) {
+            if (ev && ev.key && DS_SYNC_WATCH_KEYS[ev.key]) refreshDatasetLibraryFromSync(ev.key);
+        });
+        global.addEventListener('citysafe:cloud-applied', function (ev) {
+            var keys = (ev && ev.detail && ev.detail.keys) || [];
+            var hit = keys.filter(function (k) { return DS_SYNC_WATCH_KEYS[k]; });
+            if (hit.length) hit.forEach(refreshDatasetLibraryFromSync);
+        });
+    } catch (eWatch) { /* ignore */ }
 
     function loadDatasetLibraryData() {
         seedIfEmpty();

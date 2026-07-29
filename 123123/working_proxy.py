@@ -90,6 +90,10 @@ MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', '')
 MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'team-shared')
 MINIO_SECURE = (os.environ.get('MINIO_SECURE') or 'false').strip().lower() in ('1', 'true', 'yes')
 MINIO_REGION = os.environ.get('MINIO_REGION', 'us-east-1')
+# 数据集/标注二进制的对象存储后端：默认继承共享文件后端，便于灰度单独关闭。
+DATASET_STORAGE_BACKEND = (os.environ.get('DATASET_STORAGE_BACKEND') or SHARED_STORAGE_BACKEND).strip().lower()
+ANNOTATION_STORAGE_BACKEND = (os.environ.get('ANNOTATION_STORAGE_BACKEND') or SHARED_STORAGE_BACKEND).strip().lower()
+DATASET_MINIO_PART_SIZE = 64 * 1024 * 1024  # SDK 自动 multipart，支持 200GB 级对象
 
 MLOPS_TOKEN = os.environ.get('MLOPS_TOKEN', '')
 ANNOTATION_UPLOAD_TOKEN = os.environ.get('ANNOTATION_UPLOAD_TOKEN', '')
@@ -972,7 +976,11 @@ def find_dataset_file_by_md5(md5):
         return None
     reg = _dataset_registry_load()
     for fid, meta in (reg.get('files') or {}).items():
-        if str(meta.get('md5') or '').lower() == md5 and os.path.isfile(meta.get('path') or ''):
+        if str(meta.get('md5') or '').lower() != md5:
+            continue
+        if meta.get('storage') == 'minio' and meta.get('objectKey'):
+            return dict(meta, fileId=fid)
+        if os.path.isfile(meta.get('path') or ''):
             return dict(meta, fileId=fid)
     return None
 
@@ -1321,18 +1329,50 @@ def complete_dataset_upload(payload, *, actor, role):
         os.replace(assembled_path, final_path)
 
         inspect = inspect_dataset_file(final_path, file_name)
+
+        # 二进制收口 MinIO：校验全部通过后上传对象存储；失败保留本地降级可用。
+        storage = 'local'
+        object_key = ''
+        if DATASET_STORAGE_BACKEND == 'minio':
+            client = _get_minio_client()
+            if client:
+                candidate_key = 'datasets/%s/%s' % (
+                    datetime.now().strftime('%Y%m'),
+                    os.path.basename(final_path),
+                )
+                try:
+                    client.fput_object(
+                        MINIO_BUCKET,
+                        candidate_key,
+                        final_path,
+                        content_type='application/octet-stream',
+                        part_size=DATASET_MINIO_PART_SIZE,
+                    )
+                    storage = 'minio'
+                    object_key = candidate_key
+                except Exception as exc:
+                    logger.warning('dataset MinIO upload failed, keeping local copy: %s', exc)
+
         file_meta = {
             'fileId': file_id,
             'fileName': file_name,
             'size': written,
             'md5': actual_md5,
-            'path': final_path,
-            'savedAs': os.path.relpath(final_path, DATASET_UPLOAD_ROOT).replace('\\', '/'),
+            'path': '' if storage == 'minio' else final_path,
+            'savedAs': (
+                object_key
+                if storage == 'minio'
+                else os.path.relpath(final_path, DATASET_UPLOAD_ROOT).replace('\\', '/')
+            ),
             'createdAt': _now_iso(),
             'chunkSize': chunk_size,
             'owner': str(meta.get('owner') or actor),
             'inspect': inspect,
+            'storage': storage,
         }
+        if storage == 'minio':
+            file_meta['objectKey'] = object_key
+            file_meta['bucket'] = MINIO_BUCKET
 
         def _finalize(reg):
             current = (reg.get('uploads') or {}).get(upload_id)
@@ -1345,6 +1385,13 @@ def complete_dataset_upload(payload, *, actor, role):
             reg.setdefault('uploads', {}).pop(upload_id, None)
 
         _dataset_registry_update(_finalize)
+
+        # 对象存储已持有真源且注册表已提交，本地副本仅为上传缓存，可安全清理。
+        if storage == 'minio':
+            try:
+                os.remove(final_path)
+            except OSError:
+                pass
 
         try:
             for name in os.listdir(up_dir):
@@ -1359,6 +1406,7 @@ def complete_dataset_upload(payload, *, actor, role):
             'size': written,
             'md5': actual_md5,
             'savedAs': file_meta['savedAs'],
+            'storage': storage,
             'inspect': inspect,
         }
 
@@ -1390,7 +1438,11 @@ def get_dataset_file_meta(file_id):
     file_id = _safe_dataset_id(file_id)
     reg = _dataset_registry_load()
     meta = reg['files'].get(file_id)
-    if not meta or not os.path.isfile(meta.get('path') or ''):
+    if not meta:
+        raise FileNotFoundError('dataset file not found')
+    if meta.get('storage') == 'minio' and meta.get('objectKey'):
+        return meta
+    if not os.path.isfile(meta.get('path') or ''):
         raise FileNotFoundError('dataset file not found')
     return meta
 
@@ -1516,14 +1568,89 @@ def inspect_dataset_file(path, file_name=''):
     return result
 
 
-def read_dataset_zip_sample(file_id, member_path, max_bytes=3 * 1024 * 1024):
+class _MinioRangedFile(io.RawIOBase):
+    """MinIO 对象的可 seek 只读视图：供 zipfile 按需读取 zip 成员，避免拉全量。"""
+
+    def __init__(self, client, bucket, object_key):
+        stat = client.stat_object(bucket, object_key)
+        self._client = client
+        self._bucket = bucket
+        self._object_key = object_key
+        self._size = int(getattr(stat, 'size', 0) or 0)
+        self._pos = 0
+
+    def readable(self):
+        return True
+
+    def seekable(self):
+        return True
+
+    def tell(self):
+        return self._pos
+
+    def seek(self, offset, whence=io.SEEK_SET):
+        if whence == io.SEEK_SET:
+            target = offset
+        elif whence == io.SEEK_CUR:
+            target = self._pos + offset
+        elif whence == io.SEEK_END:
+            target = self._size + offset
+        else:
+            raise ValueError('invalid whence: %r' % (whence,))
+        if target < 0:
+            raise ValueError('negative seek position')
+        self._pos = target
+        return self._pos
+
+    def read(self, size=-1):
+        if self._pos >= self._size:
+            return b''
+        if size is None or size < 0:
+            size = self._size - self._pos
+        size = min(int(size), self._size - self._pos)
+        if size <= 0:
+            return b''
+        response = self._client.get_object(
+            self._bucket,
+            self._object_key,
+            offset=self._pos,
+            length=size,
+        )
+        try:
+            data = response.read()
+        finally:
+            close = getattr(response, 'close', None)
+            if callable(close):
+                close()
+            release = getattr(response, 'release_conn', None)
+            if callable(release):
+                release()
+        self._pos += len(data)
+        return data
+
+
+def _open_dataset_zip(meta):
+    """按存储后端打开数据集 zip：minio 走 ranged 读，本地盘直接打开。"""
     import zipfile
+    if meta.get('storage') == 'minio' and meta.get('objectKey'):
+        client = _get_minio_client()
+        if not client:
+            raise FileNotFoundError('minio unavailable')
+        source = _MinioRangedFile(
+            client,
+            meta.get('bucket') or MINIO_BUCKET,
+            meta['objectKey'],
+        )
+        return zipfile.ZipFile(source, 'r')
+    return zipfile.ZipFile(meta.get('path'), 'r')
+
+
+def read_dataset_zip_sample(file_id, member_path, max_bytes=3 * 1024 * 1024):
     meta = get_dataset_file_meta(file_id)
-    path = meta.get('path')
     member_path = str(member_path or '').replace('\\', '/')
     if not member_path or '..' in member_path.split('/'):
         raise ValueError('invalid member path')
-    with zipfile.ZipFile(path, 'r') as zf:
+    with _open_dataset_zip(meta) as zf:
         info = zf.getinfo(member_path)
         if info.file_size > max_bytes:
             raise ValueError('sample too large')
@@ -1746,7 +1873,11 @@ def purge_shared_file(file_id):
 
 def _get_minio_client():
     global _minio_client, _minio_init_tried
-    if SHARED_STORAGE_BACKEND != 'minio':
+    if 'minio' not in (
+        SHARED_STORAGE_BACKEND,
+        DATASET_STORAGE_BACKEND,
+        ANNOTATION_STORAGE_BACKEND,
+    ):
         return None
     if _minio_client is not None:
         return _minio_client
@@ -1841,10 +1972,24 @@ def compute_storage_usage():
     except Exception:
         pass
     anno_bytes, anno_count = _dir_size_and_count(ANNOTATION_UPLOAD_ROOT)
+    # 双写模式下本地盘只是热缓存；异机/新部署时以 MinIO 清单为准取较大值。
+    if ANNOTATION_STORAGE_BACKEND == 'minio':
+        client = _get_minio_client()
+        if client:
+            try:
+                remote_bytes = 0
+                remote_count = 0
+                for obj in client.list_objects(MINIO_BUCKET, prefix='annotations/', recursive=True):
+                    remote_bytes += int(getattr(obj, 'size', 0) or 0)
+                    remote_count += 1
+                if remote_bytes > anno_bytes:
+                    anno_bytes, anno_count = remote_bytes, remote_count
+            except Exception as exc:
+                logger.warning('annotation MinIO usage listing failed: %s', exc)
     return {
-        'shared': {'bytes': shared_bytes, 'count': shared_count},
-        'datasets': {'bytes': dataset_bytes, 'count': dataset_count},
-        'annotations': {'bytes': anno_bytes, 'count': anno_count},
+        'shared': {'bytes': shared_bytes, 'count': shared_count, 'backend': SHARED_STORAGE_BACKEND},
+        'datasets': {'bytes': dataset_bytes, 'count': dataset_count, 'backend': DATASET_STORAGE_BACKEND},
+        'annotations': {'bytes': anno_bytes, 'count': anno_count, 'backend': ANNOTATION_STORAGE_BACKEND},
         'appTotalBytes': shared_bytes + dataset_bytes + anno_bytes,
     }
 
@@ -2090,6 +2235,35 @@ def safe_join_under(root, rel_path):
     return full
 
 
+def _annotation_minio_prefix(task_id):
+    task_dir = safe_annotation_task_dir(task_id)
+    rel = os.path.relpath(task_dir, ANNOTATION_UPLOAD_ROOT).replace('\\', '/')
+    return 'annotations/%s/' % rel
+
+
+def _list_annotation_minio_objects(task_id):
+    """列举 MinIO 上该任务的标注对象（跨机同步回退源）。"""
+    if ANNOTATION_STORAGE_BACKEND != 'minio':
+        return []
+    client = _get_minio_client()
+    if not client:
+        return []
+    prefix = _annotation_minio_prefix(task_id)
+    entries = []
+    try:
+        for obj in client.list_objects(MINIO_BUCKET, prefix=prefix, recursive=True):
+            name = str(getattr(obj, 'object_name', '') or '')
+            if not name.startswith(prefix):
+                continue
+            rel = name[len(prefix):]
+            if not rel:
+                continue
+            entries.append({'path': rel, 'size': int(getattr(obj, 'size', 0) or 0)})
+    except Exception as exc:
+        logger.warning('annotation MinIO listing failed: %s', exc)
+    return entries
+
+
 def save_annotation_file(task_id, rel_path, content):
     ext = os.path.splitext(str(rel_path).lower())[1]
     if ext not in ALLOWED_UPLOAD_EXTENSIONS:
@@ -2102,24 +2276,46 @@ def save_annotation_file(task_id, rel_path, content):
     os.makedirs(os.path.dirname(full), exist_ok=True)
     with open(full, 'wb') as f:
         f.write(content)
+    # 双写 MinIO：本地盘作热缓存（频繁 walk），对象存储作跨机真源。
+    storage = 'local'
+    if ANNOTATION_STORAGE_BACKEND == 'minio':
+        client = _get_minio_client()
+        if client:
+            rel_key = os.path.relpath(full, ANNOTATION_UPLOAD_ROOT).replace('\\', '/')
+            try:
+                client.fput_object(
+                    MINIO_BUCKET,
+                    'annotations/' + rel_key,
+                    full,
+                    content_type='application/octet-stream',
+                )
+                storage = 'minio'
+            except Exception as exc:
+                logger.warning('annotation MinIO upload failed, local copy kept: %s', exc)
     return {
         'taskId': str(task_id),
         'path': str(rel_path).replace('\\', '/'),
         'size': len(content),
+        'storage': storage,
         'savedAs': os.path.relpath(full, ANNOTATION_UPLOAD_ROOT).replace('\\', '/')
     }
 
 
 def list_annotation_files(task_id):
     task_dir = safe_annotation_task_dir(task_id)
-    if not os.path.isdir(task_dir):
-        return []
     files = []
-    for root, _dirs, names in os.walk(task_dir):
-        for name in names:
-            full = os.path.join(root, name)
-            rel = os.path.relpath(full, task_dir).replace('\\', '/')
-            files.append({'path': rel, 'size': os.path.getsize(full)})
+    seen = set()
+    if os.path.isdir(task_dir):
+        for root, _dirs, names in os.walk(task_dir):
+            for name in names:
+                full = os.path.join(root, name)
+                rel = os.path.relpath(full, task_dir).replace('\\', '/')
+                files.append({'path': rel, 'size': os.path.getsize(full)})
+                seen.add(rel)
+    # 本地缺失（异机/新部署）时从 MinIO 补齐，保证跨机可见。
+    for entry in _list_annotation_minio_objects(task_id):
+        if entry['path'] not in seen:
+            files.append(entry)
     return files
 
 
@@ -2127,15 +2323,37 @@ def zip_annotation_task(task_id):
     import io
     import zipfile
     task_dir = safe_annotation_task_dir(task_id)
-    if not os.path.isdir(task_dir):
-        raise FileNotFoundError('task files not found')
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+    local = {}
+    if os.path.isdir(task_dir):
         for root, _dirs, names in os.walk(task_dir):
             for name in names:
                 full = os.path.join(root, name)
-                arc = os.path.relpath(full, task_dir).replace('\\', '/')
-                zf.write(full, arcname=arc)
+                local[os.path.relpath(full, task_dir).replace('\\', '/')] = full
+    remote = [
+        entry for entry in _list_annotation_minio_objects(task_id)
+        if entry['path'] not in local
+    ]
+    if not local and not remote:
+        raise FileNotFoundError('task files not found')
+    buf = io.BytesIO()
+    client = _get_minio_client() if remote else None
+    prefix = _annotation_minio_prefix(task_id) if remote else ''
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for arc in sorted(local):
+            zf.write(local[arc], arcname=arc)
+        for entry in remote:
+            if not client:
+                break
+            response = client.get_object(MINIO_BUCKET, prefix + entry['path'])
+            try:
+                zf.writestr(entry['path'], response.read())
+            finally:
+                close = getattr(response, 'close', None)
+                if callable(close):
+                    close()
+                release = getattr(response, 'release_conn', None)
+                if callable(release):
+                    release()
     return buf.getvalue()
 
 
@@ -3381,6 +3599,12 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                     current_value,
                     claims,
                 )
+                value = sync_policy.merge_object_write(
+                    key,
+                    value,
+                    current_value,
+                    claims,
+                )
                 base_version = body.get('baseVersion', 0)
                 if isinstance(base_version, bool):
                     raise ValueError('baseVersion must be an integer')
@@ -4358,6 +4582,8 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 'ok': True,
                 'time': _now_iso(),
                 'storageBackend': SHARED_STORAGE_BACKEND,
+                'datasetStorageBackend': DATASET_STORAGE_BACKEND,
+                'annotationStorageBackend': ANNOTATION_STORAGE_BACKEND,
                 'usage': usage,
                 'disk': disk,
                 'limits': {
@@ -4377,7 +4603,7 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 except Exception:
                     database_ready = False
             minio_ready = False
-            if SHARED_STORAGE_BACKEND == 'minio':
+            if 'minio' in (SHARED_STORAGE_BACKEND, DATASET_STORAGE_BACKEND, ANNOTATION_STORAGE_BACKEND):
                 try:
                     minio_ready = bool(_get_minio_client())
                 except Exception:
@@ -4400,7 +4626,9 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 }
             except Exception:
                 disk = {}
-            minio_ok = (SHARED_STORAGE_BACKEND != 'minio') or minio_ready
+            minio_ok = (
+                'minio' not in (SHARED_STORAGE_BACKEND, DATASET_STORAGE_BACKEND, ANNOTATION_STORAGE_BACKEND)
+            ) or minio_ready
             disk_ok = disk.get('usedPercent', 0) < 90
             # ready=依赖就绪；ok 保持进程存活（liveness），避免依赖抖动触发重启风暴
             ready = bool(database_ready and minio_ok and disk_ok)
@@ -4417,6 +4645,8 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 'dataBackend': DATA_BACKEND,
                 'databaseReady': database_ready,
                 'storageBackend': SHARED_STORAGE_BACKEND,
+                'datasetStorageBackend': DATASET_STORAGE_BACKEND,
+                'annotationStorageBackend': ANNOTATION_STORAGE_BACKEND,
                 'minioReady': minio_ready,
                 'presignEnabled': presign_enabled,
                 'presignHttpsOk': presign_https_ok,
@@ -4437,12 +4667,17 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             return
 
         if path.startswith('/api/dataset/health'):
+            dataset_minio_ready = (
+                bool(_get_minio_client()) if DATASET_STORAGE_BACKEND == 'minio' else False
+            )
             self._json(200, {
                 'ok': True,
                 'service': 'dataset',
                 'tokenRequired': bool(DATASET_UPLOAD_TOKEN),
                 'maxBytes': MAX_DATASET_BYTES,
                 'chunkSize': DATASET_CHUNK_SIZE,
+                'storageBackend': DATASET_STORAGE_BACKEND,
+                'minioReady': dataset_minio_ready,
                 'time': _now_iso(),
             })
             return
@@ -4527,7 +4762,10 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             file_id = (qs.get('fileId') or [''])[0]
             try:
                 meta = get_dataset_file_meta(file_id)
-                inspect = inspect_dataset_file(meta.get('path'), meta.get('fileName'))
+                # complete 时已把解析结果存入注册表；minio 对象无本地路径，优先用缓存。
+                inspect = meta.get('inspect')
+                if not isinstance(inspect, dict) or not inspect:
+                    inspect = inspect_dataset_file(meta.get('path'), meta.get('fileName'))
                 self._json(200, {'ok': True, 'fileId': file_id, 'inspect': inspect, 'meta': {
                     'fileName': meta.get('fileName'), 'size': meta.get('size'), 'md5': meta.get('md5')
                 }})
@@ -4561,9 +4799,20 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
             file_id = (qs.get('fileId') or [''])[0]
             try:
                 meta = get_dataset_file_meta(file_id)
+                filename = meta.get('fileName') or file_id
+                if meta.get('storage') == 'minio' and meta.get('objectKey'):
+                    client = _get_minio_client()
+                    if not client:
+                        raise FileNotFoundError('minio unavailable')
+                    _stream_minio_download(
+                        self,
+                        client,
+                        meta['objectKey'],
+                        filename,
+                    )
+                    return
                 path_file = meta.get('path')
                 size = os.path.getsize(path_file)
-                filename = meta.get('fileName') or os.path.basename(path_file)
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream')
                 self.send_header('Content-Length', str(size))

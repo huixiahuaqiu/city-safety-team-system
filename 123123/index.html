@@ -33,7 +33,7 @@
         }
     </script>
     <link href="vendor/fonts/fonts-local.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/app-shell.css?v=e7764556ba">
+    <link rel="stylesheet" href="css/app-shell.css?v=9665f59c99">
     <link rel="stylesheet" href="css/portal-public.css?v=2cf647d824">
     <script src="js/vendor-lazy.js?v=960c38a41e"></script>
 </head>
@@ -310,6 +310,9 @@
                 <div class="nav-item" onclick="showModule('my_projects')">
                     <span>📁</span> 我的项目
                 </div>
+                <div class="nav-item" onclick="showModule('project_application')">
+                    <span>📝</span> 已申请项目
+                </div>
                 <div class="nav-item" onclick="showModule('longitudinal_project')">
                     <span>📋</span> 纵向项目
                 </div>
@@ -546,6 +549,7 @@
             
             <!-- 纵向项目 -->
             <div id="my_projects" class="module" data-lazy="1" data-loaded="0" style="padding:0;"><!-- lazy: modules/my_projects.html --></div>
+            <div id="project_application" class="module" data-lazy="1" data-loaded="0"><!-- lazy: modules/project_application.html --></div>
             <div id="longitudinal_project" class="module" data-lazy="1" data-loaded="0"><!-- lazy: modules/longitudinal_project.html --></div>
             
             <!-- 横向项目 -->
@@ -1243,10 +1247,10 @@
     <script src="config.runtime.js"></script>
     <!-- GitHub Pages：关闭网关鉴权并注入 data/pages-snapshot.json -->
     <script src="js/pages-static-boot.js?v=33f9b797b8"></script>
-    <script src="js/module-manifest.js?v=89b25e6ed9"></script>
+    <script src="js/module-manifest.js?v=849172cf83"></script>
     <script src="js/module-loader.js?v=5c5afae487"></script>
-    <script src="js/app-core.js?v=b088996f0b"></script>
-    <script src="js/achievements-modules.js?v=c5c37c3776"></script>
+    <script src="js/app-core.js?v=18ff26b488"></script>
+    <script src="js/achievements-modules.js?v=de21855049"></script>
     
     <!-- 文献管理模块 -->
     <div id="literature" class="module">
@@ -1461,12 +1465,12 @@
         </div>
     </div>
     
-    <script src="js/app-legacy-a.js?v=7a71092496"></script>
+    <script src="js/app-legacy-a.js?v=c1039eab37"></script>
 
     <!-- ==================== 账号体系 JavaScript（按规范重写） ==================== -->
-    <script src="js/app-legacy-b.js?v=bd7be47332"></script>
+    <script src="js/app-legacy-b.js?v=640b6a4c4c"></script>
     <script src="js/news-management.js?v=73df64f9b8"></script>
-    <script src="js/home-dashboard-p3.js?v=daa824fc08"></script>
+    <script src="js/home-dashboard-p3.js?v=56bd2f4b21"></script>
     <script src="js/portal-public.js?v=17f4556571"></script>
     <script>
         (function () {

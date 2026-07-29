@@ -472,6 +472,8 @@
     var gatewayAccountDraftPending = false;
     const GATEWAY_ACCOUNTS_DIGEST_KEY = 'citysafeGatewayAccountsDigest';
     const GATEWAY_ACCOUNTS_DRAFT_KEY = 'citysafeGatewayAccountsDraft';
+    // 网关模式下明文临时密码不能落盘；用内存表保存「待同步密码」，避免 localStorage 脱敏后同步丢密码
+    var pendingGatewayPasswords = Object.create(null);
 
     function sanitizeGatewayAccountsForBrowser(accounts) {
         return (Array.isArray(accounts) ? accounts : []).map(function(account) {
@@ -479,6 +481,47 @@
             ['password', 'passwordScheme', 'passwordSalt', 'passwordIterations', 'passwordHash', 'passwordUpdatedAt']
                 .forEach(function(field) { delete safe[field]; });
             return safe;
+        });
+    }
+
+    function rememberGatewayPassword(studentId, password) {
+        var sid = String(studentId || '').trim();
+        var pwd = String(password || '');
+        if (!sid || !pwd) return;
+        pendingGatewayPasswords[sid] = pwd;
+        // 同步写回内存账号，保证 debounced sync 前本轮仍可读到
+        try {
+            var hit = (Array.isArray(accountData) ? accountData : []).find(function(a) {
+                return a && String(a.studentId || '') === sid;
+            });
+            if (hit) hit.password = pwd;
+        } catch (eMem) {}
+    }
+
+    function clearPendingGatewayPassword(studentId) {
+        var sid = String(studentId || '').trim();
+        if (sid) delete pendingGatewayPasswords[sid];
+    }
+
+    function accountsPayloadForGatewaySync() {
+        return (Array.isArray(accountData) ? accountData : []).map(function(account) {
+            var next = Object.assign({}, account || {});
+            var sid = String(next.studentId || '').trim();
+            var pending = sid ? pendingGatewayPasswords[sid] : '';
+            if (pending) {
+                next.password = pending;
+                // 浏览器不得长期持有 verifier；有明文待同步时清掉残缺 hash，让服务端重建
+                ['passwordScheme', 'passwordSalt', 'passwordIterations', 'passwordHash']
+                    .forEach(function(field) { delete next[field]; });
+            }
+            return next;
+        });
+    }
+
+    function clearSyncedPendingPasswords(accounts) {
+        (Array.isArray(accounts) ? accounts : []).forEach(function(account) {
+            var sid = String((account && account.studentId) || '').trim();
+            if (sid && pendingGatewayPasswords[sid]) delete pendingGatewayPasswords[sid];
         });
     }
 
@@ -501,7 +544,8 @@
         ) return;
         var storageKey = gatewayAccountDraftStorageKey();
         if (!storageKey) return;
-        var requiresCredentials = (Array.isArray(accountData) ? accountData : []).some(function(account) {
+        var requiresCredentials = Object.keys(pendingGatewayPasswords).length > 0 ||
+            (Array.isArray(accountData) ? accountData : []).some(function(account) {
             return !!(account && (
                 account.password
                 || account.passwordHash
@@ -596,12 +640,27 @@
             || !window.GatewayAuth.hasSession()
             || !currentUser
             || currentUser.role !== 'admin'
-        ) return;
+        ) return { ok: false, reason: 'skip' };
         var digest = sessionStorage.getItem(GATEWAY_ACCOUNTS_DIGEST_KEY) || '';
         if (!digest) {
-            var digestError = new Error('account base version is unavailable; refresh before editing');
-            digestError.status = 409;
-            throw digestError;
+            // 直接拉基线 digest，避免与 pullGatewayAccountsFromServer 互相递归
+            var baseRes = await window.GatewayAuth.fetch('/api/auth/admin/accounts', {
+                method: 'GET',
+                cache: 'no-store'
+            });
+            var baseData = {};
+            try { baseData = await baseRes.json(); } catch (eBase) {}
+            if (!baseRes.ok || !baseData.digest) {
+                var digestError = new Error(baseData.error || 'account base version is unavailable; refresh before editing');
+                digestError.status = baseRes.status || 409;
+                throw digestError;
+            }
+            digest = String(baseData.digest);
+            sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, digest);
+            // 若本地还没有待同步新账号，可用服务端列表作为底稿；有 pending 密码时保留本地账号以免丢新建
+            if (Object.keys(pendingGatewayPasswords).length === 0 && Array.isArray(baseData.accounts)) {
+                accountData = baseData.accounts;
+            }
         }
         var response = await window.GatewayAuth.fetch('/api/auth/admin/accounts/replace', {
             method: 'POST',
@@ -609,7 +668,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 expectedDigest: digest,
-                accounts: accountData
+                accounts: accountsPayloadForGatewaySync()
             })
         });
         var data = {};
@@ -621,6 +680,7 @@
         }
         sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, String(data.digest));
         if (Array.isArray(data.accounts)) {
+            clearSyncedPendingPasswords(data.accounts);
             accountData = data.accounts;
             if (window.AppStorage) window.AppStorage.setJson('accountData', accountData);
             else Storage.prototype.setItem.call(localStorage, 'accountData', JSON.stringify(accountData));
@@ -632,6 +692,20 @@
             try { renderAccountTable(); } catch (eRender) {}
         }
         clearGatewayAccountDraft();
+        return { ok: true, digest: data.digest, count: Array.isArray(data.accounts) ? data.accounts.length : 0 };
+    }
+
+    function describeGatewayAccountSyncError(err) {
+        var detail = String((err && err.message) || '');
+        if (err && err.status === 409) return '账号列表已被他人更新，请刷新后再修改';
+        if (/password does not meet/i.test(detail)) {
+            return '账号密码不符合服务器策略（至少8位且含字母和数字，不能使用123456），请重置后再同步';
+        }
+        if (/new accounts require a password/i.test(detail)) {
+            return '新账号临时密码未同步成功，系统已保留待同步密码；请勿刷新，正在重试';
+        }
+        if (detail) return '账号变更暂未同步到服务器：' + detail;
+        return '账号变更暂未同步到服务器';
     }
 
     function scheduleGatewayAccountSync() {
@@ -641,47 +715,92 @@
             || !window.GatewayAuth.hasSession()
             || !currentUser
             || currentUser.role !== 'admin'
-        ) return;
+        ) return Promise.resolve({ ok: false, reason: 'skip' });
         clearTimeout(gatewayAccountSyncTimer);
-        gatewayAccountSyncTimer = setTimeout(function() {
-            syncGatewayAccountsNow().catch(function(err) {
-                console.warn('[auth] account collaboration sync failed', err);
-                if (typeof showCloudSyncBanner === 'function') {
-                    var syncMsg = '账号变更暂未同步到服务器';
-                    var detail = String((err && err.message) || '');
-                    if (err && err.status === 409) {
-                        syncMsg = '账号列表已被他人更新，请刷新后再修改';
-                    } else if (/password does not meet/i.test(detail)) {
-                        syncMsg = '账号密码不符合服务器策略（至少8位且含字母和数字，不能使用123456），请重置后再同步';
-                    } else if (/new accounts require a password/i.test(detail)) {
-                        syncMsg = '新账号缺少可同步的密码，请重新设置临时密码后再保存';
-                    } else if (detail) {
-                        syncMsg = '账号变更暂未同步到服务器：' + detail;
+        return new Promise(function(resolve) {
+            gatewayAccountSyncTimer = setTimeout(function() {
+                syncGatewayAccountsNow().then(function(result) {
+                    resolve(result || { ok: true });
+                }).catch(function(err) {
+                    console.warn('[auth] account collaboration sync failed', err);
+                    if (typeof showCloudSyncBanner === 'function') {
+                        showCloudSyncBanner(describeGatewayAccountSyncError(err), true);
                     }
-                    showCloudSyncBanner(syncMsg, true);
-                }
-                if (err && err.status !== 409 && err.status !== 400 && err.status !== 403) {
-                    gatewayAccountSyncFailures += 1;
-                    var retryDelay = Math.min(60000, 2000 * Math.pow(2, Math.min(gatewayAccountSyncFailures - 1, 5)));
-                    clearTimeout(gatewayAccountSyncTimer);
-                    gatewayAccountSyncTimer = setTimeout(function() {
-                        syncGatewayAccountsNow().catch(function(retryError) {
-                            console.warn('[auth] account collaboration retry failed', retryError);
-                        });
-                    }, retryDelay);
-                }
-            });
-        }, 500);
+                    if (err && err.status === 409) {
+                        // 冲突需用户刷新，不自动重试
+                    } else if (err && (err.status === 403)) {
+                        // 权限问题不重试
+                    } else if (Object.keys(pendingGatewayPasswords).length > 0 || (err && err.status !== 400)) {
+                        gatewayAccountSyncFailures += 1;
+                        var retryDelay = Math.min(60000, 2000 * Math.pow(2, Math.min(gatewayAccountSyncFailures - 1, 5)));
+                        clearTimeout(gatewayAccountSyncTimer);
+                        gatewayAccountSyncTimer = setTimeout(function() {
+                            syncGatewayAccountsNow().catch(function(retryError) {
+                                console.warn('[auth] account collaboration retry failed', retryError);
+                            });
+                        }, retryDelay);
+                    }
+                    resolve({ ok: false, error: err });
+                });
+            }, 500);
+        });
     }
 
-    function generateTemporaryPassword() {
-        var bytes = new Uint8Array(9);
-        window.crypto.getRandomValues(bytes);
-        var text = Array.from(bytes).map(function (b) {
-            return (b % 36).toString(36);
-        }).join('');
-        return 'Tmp-' + text + 'A9';
+    /** 强制立刻同步账号到服务器（创建/开通/匹配等必须等成功） */
+    async function flushGatewayAccountSyncNow() {
+        if (
+            !window.GatewayAuth
+            || !window.GatewayAuth.enabled
+            || !window.GatewayAuth.hasSession()
+            || !currentUser
+            || currentUser.role !== 'admin'
+        ) return { ok: false, reason: 'skip' };
+        clearTimeout(gatewayAccountSyncTimer);
+        var attempts = 0;
+        var lastErr = null;
+        while (attempts < 3) {
+            attempts += 1;
+            try {
+                var result = await syncGatewayAccountsNow();
+                if (typeof showCloudSyncBanner === 'function') {
+                    showCloudSyncBanner('账号已同步到服务器（全局生效）', false);
+                }
+                return result || { ok: true };
+            } catch (err) {
+                lastErr = err;
+                if (err && err.status === 409) {
+                    try { await pullGatewayAccountsFromServer(); } catch (ePull) {}
+                    // 409 后本地草稿可能被冲掉；若仍有待同步密码则再试一次合并写回
+                    if (Object.keys(pendingGatewayPasswords).length === 0) break;
+                    continue;
+                }
+                if (err && err.status === 403) break;
+                await new Promise(function(r) { setTimeout(r, 400 * attempts); });
+            }
+        }
+        if (typeof showCloudSyncBanner === 'function') {
+            showCloudSyncBanner(describeGatewayAccountSyncError(lastErr), true);
+        }
+        throw lastErr || new Error('account sync failed');
     }
+    try { window.flushGatewayAccountSyncNow = flushGatewayAccountSyncNow; } catch (eFlush) {}
+
+    function generateTemporaryPassword() {
+        // 始终满足网关可收紧到的最严策略：大小写+数字+特殊字符，长度≥12
+        var bytes = new Uint8Array(12);
+        window.crypto.getRandomValues(bytes);
+        var alphabet = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        var body = Array.from(bytes).map(function (b) {
+            return alphabet.charAt(b % alphabet.length);
+        }).join('');
+        return 'Tmp-' + body + 'A9!';
+    }
+    try {
+        window.rememberGatewayPassword = rememberGatewayPassword;
+        window.clearPendingGatewayPassword = clearPendingGatewayPassword;
+        window.sanitizeGatewayAccountsForBrowser = sanitizeGatewayAccountsForBrowser;
+        window.generateTemporaryPassword = generateTemporaryPassword;
+    } catch (eExposePwd) {}
 
     function schedulePasswordHardening() {
         if (window.GatewayAuth && window.GatewayAuth.enabled) return;
@@ -717,7 +836,8 @@
         }, 0);
     }
 
-    function saveAccountData() {
+    function saveAccountData(options) {
+        options = options || {};
         var gatewayManaged = !!(window.GatewayAuth && window.GatewayAuth.enabled);
         var persistedAccounts = accountData;
         if (gatewayManaged) {
@@ -728,10 +848,15 @@
         if (!gatewayManaged) {
             try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
             schedulePasswordHardening();
-        } else {
-            persistGatewayAccountDraft();
+            return Promise.resolve({ ok: true, reason: 'local' });
         }
-        scheduleGatewayAccountSync();
+        persistGatewayAccountDraft();
+        // 有待同步密码 / 显式要求立即同步：必须等服务器确认，保证全局生效
+        var needImmediate = options.immediate === true || Object.keys(pendingGatewayPasswords).length > 0;
+        if (needImmediate) {
+            return flushGatewayAccountSyncNow();
+        }
+        return scheduleGatewayAccountSync();
     }
     function savePermissionData() {
         localStorage.setItem('permissionMatrix', JSON.stringify(permissionMatrix));
@@ -2253,6 +2378,7 @@
             'weekly_report': hasPermission('团队工作周报（查看全部）') || hasPermission('团队工作周报（提交自己的）'),
             'application_center': hasPermission('请假与申请（提交自己的）') || hasPermission('请假与申请（本组审批）') || hasPermission('请假与申请（审批/查看全部）'),
             'my_projects': hasPermission('项目管理（查看）'),
+            'project_application': hasPermission('项目管理（查看）'),
             'longitudinal_project': hasPermission('项目管理（查看）'),
             'horizontal_project': hasPermission('项目管理（查看）'),
             'school_project': hasPermission('项目管理（查看）'),
@@ -2499,6 +2625,7 @@
             if (!acc) {
                 // sync 应已创建；若仍缺失则补建
                 var newId = accountData.length ? Math.max.apply(null, accountData.map(function(x) { return Number(x.id) || 0; })) + 1 : 1;
+                var bootPassword = generateTemporaryPassword();
                 acc = {
                     id: newId,
                     studentId: preferred,
@@ -2510,7 +2637,7 @@
                     phone: m.phone || '',
                     email: m.email || '',
                     status: 'active',
-                    password: generateTemporaryPassword(),
+                    password: bootPassword,
                     mustChangePwd: true,
                     firstLogin: true,
                     lastLogin: '',
@@ -2523,6 +2650,7 @@
                     loginAliases: []
                 };
                 accountData.push(acc);
+                rememberGatewayPassword(preferred, bootPassword);
                 created++;
             } else {
                 linked++;
@@ -2531,6 +2659,7 @@
             if (!isSelfReg) {
                 if (!acc.mustChangePwd || !acc.firstLogin) reset++;
                 acc.password = generateTemporaryPassword();
+                rememberGatewayPassword(acc.studentId || preferred, acc.password);
                 acc.mustChangePwd = true;
                 acc.firstLogin = true;
             }
@@ -2546,19 +2675,26 @@
             if (isSelfReg) acc.preserveLoginId = true;
         });
 
-        saveAccountData();
-        try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (e2) {}
-        accountPage = 1;
-        renderAccountTable();
-        recordOperationLog('账号管理', '匹配开通', '一键匹配学生账号密码：成员' + students.length + '人', { count: students.length, created: created, reset: reset }, { success: true }, 1, '', 0);
-
-        var msg = '匹配完成！\n\n团队学生：' + students.length +
-            ' 人\n新开通：' + created + ' 人\n已对齐并重置密码：' + (linked + created) +
-            ' 人\n\n每位成员的临时密码均不相同，且只在本次操作中可导出。' +
-            '\n请立即下载清单并通过安全渠道分别发给学生。';
-        if (confirm(msg + '\n\n是否立即导出？')) {
-            exportStudentCredentials();
-        }
+        saveAccountData({ immediate: true }).then(function() {
+            try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem(); } catch (e2) {}
+            accountPage = 1;
+            renderAccountTable();
+            recordOperationLog('账号管理', '匹配开通', '一键匹配学生账号密码：成员' + students.length + '人', { count: students.length, created: created, reset: reset }, { success: true }, 1, '', 0);
+            var msg = '匹配完成（已同步到服务器）！\n\n团队学生：' + students.length +
+                ' 人\n新开通：' + created + ' 人\n已对齐并重置密码：' + (linked + created) +
+                ' 人\n\n每位成员的临时密码均不相同，且只在本次操作中可导出。' +
+                '\n请立即下载清单并通过安全渠道分别发给学生。';
+            if (confirm(msg + '\n\n是否立即导出？')) {
+                exportStudentCredentials();
+            }
+        }).catch(function(err) {
+            accountPage = 1;
+            renderAccountTable();
+            alert('匹配已完成本地处理，但同步服务器失败：' + ((err && err.message) || '未知错误') +
+                '\n请勿刷新，系统会自动重试。可先导出密码清单。');
+            scheduleGatewayAccountSync();
+            try { exportStudentCredentials(); } catch (eExp) {}
+        });
     }
 
     /** 导出学生专属账号 + 初始密码（仅导师） */
@@ -2901,11 +3037,23 @@
             loginFailCount: 0,
             lockedUntil: null
         });
-        saveAccountData();
+        rememberGatewayPassword(studentId, temporaryPassword);
         document.getElementById(modalId)?.remove();
         renderAccountTable();
         recordOperationLog('账号管理', '新增', '从团队开通账号：' + m.name + '(' + studentId + ')', { studentId: studentId, realName: m.name, role: role }, { success: true }, 1, '', 0);
-        alert('已为「' + m.name + '」开通账号\n登录账号：' + studentId + '\n初始密码：' + temporaryPassword);
+        Promise.resolve(saveAccountData({ immediate: true })).then(function() {
+            alert('已为「' + m.name + '」开通账号（已同步到服务器）\n登录账号：' + studentId + '\n初始密码：' + temporaryPassword + '\n\n请立即复制保存。');
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText('账号：' + studentId + '\n临时密码：' + temporaryPassword);
+                }
+            } catch (eClip) {}
+        }).catch(function(err) {
+            alert('账号已在本机创建，但同步服务器失败：' + ((err && err.message) || '未知错误') +
+                '\n登录账号：' + studentId + '\n初始密码：' + temporaryPassword +
+                '\n请勿刷新页面，系统会自动重试同步。');
+            scheduleGatewayAccountSync();
+        });
     }
 
     function showEditAccountModal(id) {
@@ -2998,7 +3146,7 @@
                         <label style="display:flex;align-items:center;gap:6px;font-weight:normal;cursor:pointer;"><input type="radio" name="modalStatusRadio" value="disabled" ${isEdit && account.status==='disabled'?'checked':''}> 禁用</label>
                     </div>
                 </div>
-                ${!isEdit ? `<div style="background:#f5f5f5;padding:10px;border-radius:6px;font-size:13px;color:#666;margin-bottom:16px;">新账号将自动生成独立随机临时密码，首次登录需修改密码</div>` : ''}
+                ${!isEdit ? `<div style="background:#f0f7ff;padding:10px;border-radius:6px;font-size:13px;color:#1d4ed8;margin-bottom:16px;border:1px solid #bfdbfe;">新账号将自动生成符合安全策略的随机临时密码，创建后立即同步到服务器；首次登录需修改密码。请注意复制保存。</div>` : ''}
                 <input type="hidden" id="modalAccountMode" value="${isVisitorMode ? 'visitor' : 'team'}">
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
                     <button class="btn btn-secondary" onclick="document.getElementById('${modalId}').remove()">取消</button>
@@ -3106,22 +3254,42 @@
                 lastLogin: '', lastLoginIp: '', createdAt: new Date().toISOString().split('T')[0],
                 loginFailCount: 0, lockedUntil: null, avatar: ''
             });
+            rememberGatewayPassword(studentId, temporaryPassword);
         }
-        saveAccountData();
         if (modalId) {
             document.getElementById(modalId)?.remove();
         } else {
             document.querySelector('div[style*="z-index:5000"]')?.remove();
         }
         renderAccountTable();
-        
+
         if (editId) {
             recordOperationLog('账号管理', '修改', `编辑账号：${realName}(${studentId})`, { studentId, realName, role }, { success: true }, 1, '', 0);
-        } else {
-            recordOperationLog('账号管理', '新增', `创建访客账号：${realName}(${studentId})`, { studentId, realName, role: 'visitor' }, { success: true }, 1, '', 0);
+            Promise.resolve(saveAccountData({ immediate: true })).then(function() {
+                alert('账号已更新（已同步到服务器）');
+            }).catch(function(err) {
+                alert('账号已本地更新，同步服务器失败：' + ((err && err.message) || '未知错误') + '\n系统会自动重试。');
+                scheduleGatewayAccountSync();
+            });
+            return;
         }
-        
-        alert(editId ? '账号已更新' : `访客账号创建成功！\n学号：${studentId}\n初始密码：${temporaryPassword}\n首次登录需修改密码`);
+
+        recordOperationLog('账号管理', '新增', `创建访客账号：${realName}(${studentId})`, { studentId, realName, role: 'visitor' }, { success: true }, 1, '', 0);
+        Promise.resolve(saveAccountData({ immediate: true })).then(function() {
+            var tip = '访客账号创建成功（已同步到服务器）！\n学号：' + studentId + '\n初始密码：' + temporaryPassword +
+                '\n首次登录需修改密码\n\n请立即复制保存，关闭后浏览器不再显示明文密码。';
+            alert(tip);
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText('账号：' + studentId + '\n临时密码：' + temporaryPassword);
+                }
+            } catch (eClip) {}
+        }).catch(function(err) {
+            alert('访客账号已在本机创建，但同步服务器失败：' + ((err && err.message) || '未知错误') +
+                '\n学号：' + studentId + '\n初始密码：' + temporaryPassword +
+                '\n请勿刷新页面，系统会自动重试同步。');
+            scheduleGatewayAccountSync();
+        });
     }
 
     async function resetAccountPassword(id) {
@@ -3134,6 +3302,8 @@
                     studentId: account.studentId,
                     newPassword: resetPassword
                 });
+                // 专用重置接口已写入服务端；勿再塞进 pending replace，避免重复覆盖
+                clearPendingGatewayPassword(account.studentId);
                 await setAccountPassword(account, resetPassword);
             } catch (err) {
                 alert(err.message || '密码重置失败');
@@ -3151,8 +3321,12 @@
         const account = accountData.find(a => a.id === id);
         if (!account) return;
         account.status = account.status === 'active' ? 'disabled' : 'active';
-        saveAccountData();
-        renderAccountTable();
+        Promise.resolve(saveAccountData({ immediate: true })).then(function() {
+            renderAccountTable();
+        }).catch(function() {
+            renderAccountTable();
+            scheduleGatewayAccountSync();
+        });
     }
 
     function graduateAccount(id) {
@@ -3170,9 +3344,14 @@
                 if (typeof renderTeamMembers === 'function') renderTeamMembers();
             }
         } catch (eGrad) {}
-        saveAccountData();
-        renderAccountTable();
-        alert(`"${account.realName}" 已毕业归档，账号已禁用，且不再接收通知`);
+        Promise.resolve(saveAccountData({ immediate: true })).then(function() {
+            renderAccountTable();
+            alert(`"${account.realName}" 已毕业归档，账号已禁用，且不再接收通知（已同步）`);
+        }).catch(function() {
+            renderAccountTable();
+            alert(`"${account.realName}" 已本地归档，服务器同步将自动重试`);
+            scheduleGatewayAccountSync();
+        });
     }
 
     function deleteAccount(id) {
@@ -3185,9 +3364,15 @@
             if (!confirm('确定要删除此账号吗？此操作不可恢复。')) return;
         }
         accountData = accountData.filter(a => a.id !== id);
-        saveAccountData();
-        renderAccountTable();
-        recordOperationLog('账号管理', '删除', `删除账号：${account.realName}(${account.studentId})`, { studentId: account.studentId }, { success: true }, 1, '', 0);
+        clearPendingGatewayPassword(account.studentId);
+        Promise.resolve(saveAccountData({ immediate: true })).then(function() {
+            renderAccountTable();
+            recordOperationLog('账号管理', '删除', `删除账号：${account.realName}(${account.studentId})`, { studentId: account.studentId }, { success: true }, 1, '', 0);
+        }).catch(function() {
+            renderAccountTable();
+            scheduleGatewayAccountSync();
+            recordOperationLog('账号管理', '删除', `删除账号：${account.realName}(${account.studentId})`, { studentId: account.studentId }, { success: true }, 1, '', 0);
+        });
     }
 
     function showLoginLogModal(studentId) {
@@ -6289,6 +6474,7 @@
             patent_management: function () { return hasPermission('成果管理（查看）'); },
             paper_management: function () { return hasPermission('成果管理（查看）'); },
             my_projects: function () { return hasPermission('项目管理（查看）'); },
+            project_application: function () { return hasPermission('项目管理（查看）'); },
             longitudinal_project: function () { return hasPermission('项目管理（查看）'); },
             achievements: function () { return true; },
             openai: function () { return hasPermission('智能工具（全部）'); },
@@ -6884,9 +7070,24 @@
     }
     window.getHomeQuickDefaults = getHomeQuickDefaults;
 
+    function homeQuickPrefBucketKey(roleKind) {
+        // 按人分桶（与网关会话身份 sid/sub 对齐），未登录时回退角色桶。
+        try {
+            var session = window.GatewayAuth && window.GatewayAuth.read ? window.GatewayAuth.read() : null;
+            var user = (session && session.user) || window.currentUser || null;
+            var id = user && (user.studentId || user.id);
+            if (id !== undefined && id !== null && String(id).trim()) return String(id).trim();
+        } catch (e) {}
+        return String(roleKind || 'guest');
+    }
+    window.homeQuickPrefBucketKey = homeQuickPrefBucketKey;
+
     function loadHomeQuickPrefs(roleKind) {
         try {
             var raw = JSON.parse(localStorage.getItem(HOME_QUICK_PREF_KEY) || '{}');
+            var bucket = homeQuickPrefBucketKey(roleKind);
+            if (raw && Array.isArray(raw[bucket]) && raw[bucket].length) return raw[bucket];
+            // 旧版按角色存储的偏好：作为首次迁移的初始值。
             if (raw && Array.isArray(raw[roleKind]) && raw[roleKind].length) return raw[roleKind];
         } catch (e) {}
         return getHomeQuickDefaults(roleKind);
@@ -6897,7 +7098,7 @@
         try {
             var raw = {};
             try { raw = JSON.parse(localStorage.getItem(HOME_QUICK_PREF_KEY) || '{}') || {}; } catch (e0) { raw = {}; }
-            raw[roleKind] = list;
+            raw[homeQuickPrefBucketKey(roleKind)] = list;
             localStorage.setItem(HOME_QUICK_PREF_KEY, JSON.stringify(raw));
         } catch (e) {}
     }
@@ -12254,6 +12455,8 @@
         '数据集资源': 'dataset_library',
         '项目报告': 'project_report',
         '共享文件': 'shared_files',
+        '已申请项目': 'project_application',
+        '项目申报': 'project_application',
         '纵向项目': 'longitudinal_project',
         '横向项目': 'horizontal_project',
         '校级项目': 'school_project',

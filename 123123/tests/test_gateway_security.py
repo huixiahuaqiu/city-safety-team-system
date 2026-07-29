@@ -25,6 +25,10 @@ def load_gateway():
         "SUPABASE_URL": "",
         "SUPABASE_KEY": "",
         "SUPABASE_SERVICE_ROLE_KEY": "",
+        # 固定本地后端：防止开发机 .env 的 minio 配置泄入测试进程。
+        "SHARED_STORAGE_BACKEND": "local",
+        "DATASET_STORAGE_BACKEND": "local",
+        "ANNOTATION_STORAGE_BACKEND": "local",
     }
     os.environ.update(secure_env)
     spec = importlib.util.spec_from_file_location(
@@ -44,6 +48,57 @@ class FakeHandler:
 
     def send_header(self, name, value):
         self.response_headers[name] = value
+
+
+class FakeMinioGetResponse:
+    def __init__(self, data):
+        self._data = data
+        self.closed = False
+        self.released = False
+
+    def read(self, size=-1):
+        if size is None or size < 0:
+            out, self._data = self._data, b""
+        else:
+            out, self._data = self._data[:size], self._data[size:]
+        return out
+
+    def close(self):
+        self.closed = True
+
+    def release_conn(self):
+        self.released = True
+
+
+class FakeMinioClient:
+    """In-memory MinIO double covering fput/stat/get/list used by the gateway."""
+
+    def __init__(self):
+        self.objects = {}
+        self.fput_calls = []
+        self.fail_puts = False
+
+    def fput_object(self, bucket, object_key, file_path, content_type=None, part_size=None):
+        if self.fail_puts:
+            raise RuntimeError("minio unavailable")
+        with open(file_path, "rb") as handle:
+            self.objects[object_key] = handle.read()
+        self.fput_calls.append((bucket, object_key, part_size))
+
+    def stat_object(self, bucket, object_key):
+        if object_key not in self.objects:
+            raise FileNotFoundError(object_key)
+        return type("Stat", (), {"size": len(self.objects[object_key])})()
+
+    def get_object(self, bucket, object_key, offset=0, length=None):
+        data = self.objects[object_key]
+        chunk = data[offset:] if length is None else data[offset:offset + length]
+        return FakeMinioGetResponse(chunk)
+
+    def list_objects(self, bucket, prefix="", recursive=False):
+        for key in sorted(self.objects):
+            if key.startswith(prefix):
+                yield type("Obj", (), {"object_name": key, "size": len(self.objects[key])})()
 
 
 class GatewaySecurityTests(unittest.TestCase):
@@ -382,6 +437,137 @@ class GatewaySecurityTests(unittest.TestCase):
                 self.assertTrue(
                     Path(registry["files"]["happy-file"]["path"]).is_file()
                 )
+
+    def _complete_dataset_with_backend(self, minio_client, expect_storage):
+        import hashlib
+
+        content = b"name,value\nsample,1\n"
+        digest = hashlib.md5(content).hexdigest()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset_root = Path(temp_dir) / "datasets"
+            registry_path = dataset_root / "_registry.json"
+            with (
+                mock.patch.object(
+                    self.gateway, "DATASET_UPLOAD_ROOT", str(dataset_root)
+                ),
+                mock.patch.object(
+                    self.gateway, "DATASET_META_PATH", str(registry_path)
+                ),
+                mock.patch.object(self.gateway, "CLAMAV_SCAN", False),
+                mock.patch.object(
+                    self.gateway, "DATASET_STORAGE_BACKEND", "minio"
+                ),
+                mock.patch.object(
+                    self.gateway, "_get_minio_client", return_value=minio_client
+                ),
+            ):
+                self.gateway.init_dataset_upload(
+                    {
+                        "uploadId": "minio-upload",
+                        "fileName": "sample.csv",
+                        "size": len(content),
+                        "md5": digest,
+                        "chunkSize": self.gateway.DATASET_CHUNK_SIZE,
+                    },
+                    actor="alice",
+                    role="student",
+                )
+                self.gateway.save_dataset_chunk(
+                    "minio-upload",
+                    0,
+                    content,
+                    total_chunks=1,
+                    actor="alice",
+                    role="student",
+                )
+                completed = self.gateway.complete_dataset_upload(
+                    {"uploadId": "minio-upload", "fileId": "minio-file"},
+                    actor="alice",
+                    role="student",
+                )
+                self.assertEqual(expect_storage, completed["storage"])
+                registry = self.gateway._dataset_registry_load()
+                meta = dict(registry["files"]["minio-file"])
+                # tempdir 退出前判定本地副本状态，供调用方断言
+                local_exists = bool(meta.get("path")) and Path(meta["path"]).is_file()
+                return meta, content, local_exists
+
+    def test_dataset_complete_uploads_binary_to_minio_and_clears_local_copy(self):
+        client = FakeMinioClient()
+        meta, content, local_exists = self._complete_dataset_with_backend(client, "minio")
+        self.assertEqual("minio", meta["storage"])
+        self.assertTrue(meta["objectKey"].startswith("datasets/"))
+        self.assertEqual(meta["objectKey"], meta["savedAs"])
+        self.assertEqual("", meta["path"])
+        self.assertEqual(content, client.objects[meta["objectKey"]])
+        # 本地副本已清理：对象存储是唯一真源
+        self.assertFalse(local_exists)
+        self.assertEqual(1, len(client.fput_calls))
+
+    def test_dataset_complete_falls_back_to_local_when_minio_upload_fails(self):
+        client = FakeMinioClient()
+        client.fail_puts = True
+        meta, _content, local_exists = self._complete_dataset_with_backend(client, "local")
+        self.assertEqual("local", meta["storage"])
+        self.assertNotIn("objectKey", meta)
+        self.assertTrue(local_exists)
+
+    def test_minio_ranged_file_supports_seekable_zip_reads(self):
+        import zipfile
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("images/a.txt", "hello-ranged-read")
+            zf.writestr("labels/b.txt", "labels")
+        client = FakeMinioClient()
+        client.objects["datasets/202607/sample.zip"] = buf.getvalue()
+
+        source = self.gateway._MinioRangedFile(
+            client, "team-shared", "datasets/202607/sample.zip"
+        )
+        with zipfile.ZipFile(source, "r") as zf:
+            self.assertEqual(
+                b"hello-ranged-read", zf.read("images/a.txt")
+            )
+
+    def test_annotation_upload_dual_writes_and_remote_files_stay_visible(self):
+        import zipfile
+
+        client = FakeMinioClient()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            anno_root = Path(temp_dir) / "annotations"
+            with (
+                mock.patch.object(
+                    self.gateway, "ANNOTATION_UPLOAD_ROOT", str(anno_root)
+                ),
+                mock.patch.object(
+                    self.gateway, "ANNOTATION_STORAGE_BACKEND", "minio"
+                ),
+                mock.patch.object(
+                    self.gateway, "_get_minio_client", return_value=client
+                ),
+            ):
+                saved = self.gateway.save_annotation_file(
+                    "task9", "labels/a.txt", b"label-a"
+                )
+                self.assertEqual("minio", saved["storage"])
+                self.assertEqual(
+                    b"label-a", client.objects["annotations/task9/labels/a.txt"]
+                )
+
+                # 模拟异机：仅存在于 MinIO 的文件也必须可见、可导出
+                client.objects["annotations/task9/labels/remote.txt"] = b"remote"
+                files = {
+                    item["path"]: item["size"]
+                    for item in self.gateway.list_annotation_files("task9")
+                }
+                self.assertIn("labels/a.txt", files)
+                self.assertIn("labels/remote.txt", files)
+
+                raw = self.gateway.zip_annotation_task("task9")
+                with zipfile.ZipFile(io.BytesIO(raw), "r") as zf:
+                    self.assertEqual(b"label-a", zf.read("labels/a.txt"))
+                    self.assertEqual(b"remote", zf.read("labels/remote.txt"))
 
     def test_minio_download_is_streamed_in_bounded_chunks(self):
         payload = (b"streamed-data-" * 100_000) + b"done"

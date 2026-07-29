@@ -22,6 +22,7 @@ APP_SYNC_KEYS = frozenset(
         "horizontalData",
         "schoolData",
         "researchProjectExtra",
+        "projectApplicationData",
         "taskData",
         "weeklyReportData",
         "applicationData",
@@ -61,6 +62,12 @@ APP_SYNC_KEYS = frozenset(
         "devlogEntries",
         "backupData",
         "autoBackupConfig",
+        "datasetGroups",
+        "datasetCustomTags",
+        "datasetDownloadLogs",
+        "sharedFileDownloadLogs",
+        "datasetFavorites",
+        "homeQuickNavPrefs_v1",
     }
 )
 
@@ -108,6 +115,7 @@ STUDENT_READ_KEYS = PUBLIC_READ_KEYS | frozenset(
         "horizontalData",
         "schoolData",
         "researchProjectExtra",
+        "projectApplicationData",
         "taskData",
         "weeklyReportData",
         "applicationData",
@@ -126,6 +134,12 @@ STUDENT_READ_KEYS = PUBLIC_READ_KEYS | frozenset(
         "literatureCompareDimTemplate",
         "literatureCompareNamedDimTemplates",
         "customInstructionTemplates",
+        "datasetGroups",
+        "datasetCustomTags",
+        "datasetDownloadLogs",
+        "sharedFileDownloadLogs",
+        "datasetFavorites",
+        "homeQuickNavPrefs_v1",
     }
 )
 
@@ -177,6 +191,7 @@ KEY_WRITE_FEATURES = {
     "horizontalData": ("项目管理（编辑）",),
     "schoolData": ("项目管理（编辑）",),
     "researchProjectExtra": ("项目管理（编辑）",),
+    "projectApplicationData": ("项目管理（编辑）",),
     "patentData": ("成果管理（编辑）",),
     "patentMgmtData": ("成果管理（编辑）",),
     "paperData": ("成果管理（编辑）",),
@@ -212,11 +227,21 @@ KEY_WRITE_FEATURES = {
     "autoBackupConfig": ("数据备份",),
     "categoryData": ("成果管理（编辑）",),
     "memberData": ("成果管理（编辑）",),
+    "datasetGroups": ("资源中心（上传/编辑）",),
+    "datasetCustomTags": ("资源中心（上传/编辑）",),
 }
 
 STUDENT_SCOPED_WRITE_KEYS = frozenset(
     {"taskData", "weeklyReportData", "applicationData", "annotationData"}
 )
+
+# 全员可写的协作对象键：不走权限矩阵，由 merge_object_write 实施
+# “下载记录只增不删 / 按人分桶只能改自己桶”的服务端约束。
+TEAM_MERGE_KEYS = frozenset({"datasetDownloadLogs", "sharedFileDownloadLogs"})
+PER_USER_BUCKET_KEYS = frozenset({"datasetFavorites", "homeQuickNavPrefs_v1"})
+OBJECT_MERGE_KEYS = TEAM_MERGE_KEYS | PER_USER_BUCKET_KEYS
+DOWNLOAD_LOG_LIMITS = {"datasetDownloadLogs": 100, "sharedFileDownloadLogs": 200}
+OBJECT_MERGE_MAX_FIELDS = 200
 
 ARRAY_KEYS = APP_SYNC_KEYS - frozenset(
     {
@@ -234,6 +259,11 @@ ARRAY_KEYS = APP_SYNC_KEYS - frozenset(
         # 扩展元数据为 {id: meta} 对象，不是数组
         "researchAchievementExtra",
         "researchProjectExtra",
+        # 协作对象键：{fileId: [记录]} / {用户: 桶}
+        "datasetDownloadLogs",
+        "sharedFileDownloadLogs",
+        "datasetFavorites",
+        "homeQuickNavPrefs_v1",
     }
 )
 
@@ -305,6 +335,10 @@ def can_write(
         return False
     if role == "admin":
         return True
+    if key in OBJECT_MERGE_KEYS:
+        # merge_object_write 会强制“只能改自己桶 / 下载记录只增不删”，
+        # 所以这里对已登录角色直接放行，不依赖功能矩阵。
+        return role in ("leader", "student")
     features = KEY_WRITE_FEATURES.get(key)
     if not features:
         return False
@@ -390,6 +424,24 @@ def validate_value(key: str, value: Any) -> Any:
     elif key in ("researchAchievementExtra", "researchProjectExtra"):
         if not isinstance(value, dict):
             raise SyncPolicyError(f"{key} must be a JSON object")
+    elif key in TEAM_MERGE_KEYS:
+        if not isinstance(value, dict):
+            raise SyncPolicyError(f"{key} must be a JSON object")
+        for field, entries in value.items():
+            if not isinstance(field, str) or not isinstance(entries, list):
+                raise SyncPolicyError(f"{key} must map ids to arrays of log entries")
+    elif key == "datasetFavorites":
+        if not isinstance(value, dict):
+            raise SyncPolicyError("datasetFavorites must be a JSON object")
+        for bucket, favorites in value.items():
+            if not isinstance(bucket, str) or not isinstance(favorites, dict):
+                raise SyncPolicyError("datasetFavorites must map users to favorite maps")
+    elif key == "homeQuickNavPrefs_v1":
+        if not isinstance(value, dict):
+            raise SyncPolicyError("homeQuickNavPrefs_v1 must be a JSON object")
+        for bucket, prefs in value.items():
+            if not isinstance(bucket, str) or not isinstance(prefs, list):
+                raise SyncPolicyError("homeQuickNavPrefs_v1 must map users to preference arrays")
     elif key == "literatureData":
         for record in value:
             if not isinstance(record, dict):
@@ -516,3 +568,68 @@ def merge_scoped_write(
         if not is_owned_record(key, row, claims)
     ]
     return preserved + own_incoming
+
+
+def merge_object_write(
+    key: str,
+    incoming: Any,
+    current: Any,
+    claims: dict[str, Any] | None,
+) -> Any:
+    """Merge collaborative object documents with server-side ownership rules.
+
+    * Per-user bucket keys: non-admins may only add/update/remove their own
+      top-level bucket; every other user's bucket is preserved verbatim.
+    * Team download logs: students merge-append per file id so a stale write
+      can never wipe entries recorded by other members.
+    """
+
+    if key not in OBJECT_MERGE_KEYS:
+        return incoming
+    if not isinstance(incoming, dict):
+        raise SyncPolicyError(f"{key} must be a JSON object")
+    role = _role(claims)
+    base = current if isinstance(current, dict) else {}
+
+    if key in PER_USER_BUCKET_KEYS:
+        if role == "admin":
+            return deepcopy(incoming)
+        identities = _identity_values(claims)
+        if not identities:
+            raise SyncPolicyError("cannot determine the sync identity for this session")
+        merged = deepcopy(base)
+        for bucket, bucket_value in incoming.items():
+            if str(bucket).strip().casefold() in identities:
+                merged[bucket] = deepcopy(bucket_value)
+        for bucket in list(merged.keys()):
+            if (
+                str(bucket).strip().casefold() in identities
+                and bucket not in incoming
+            ):
+                # 用户在前端清空了自己的桶：允许删除本人桶。
+                del merged[bucket]
+        return merged
+
+    # 团队下载记录：学生只能追加合并；leader/admin 可整体替换（清理旧记录）。
+    if role != "student":
+        return deepcopy(incoming)
+    limit = DOWNLOAD_LOG_LIMITS.get(key, 200)
+    merged = deepcopy(base)
+    for file_id, entries in incoming.items():
+        if not isinstance(entries, list):
+            raise SyncPolicyError(f"{key} entries must be arrays")
+        combined = [deepcopy(entry) for entry in entries]
+        existing = merged.get(file_id)
+        if isinstance(existing, list):
+            for entry in existing:
+                if entry not in combined:
+                    combined.append(deepcopy(entry))
+        merged[file_id] = combined[:limit]
+    if len(merged) > OBJECT_MERGE_MAX_FIELDS:
+        # 防止对象超出同步体积限制：优先保留本次写入涉及的文件。
+        keep = list(incoming.keys())
+        for file_id in merged.keys():
+            if file_id not in incoming and len(keep) < OBJECT_MERGE_MAX_FIELDS:
+                keep.append(file_id)
+        merged = {file_id: merged[file_id] for file_id in keep[:OBJECT_MERGE_MAX_FIELDS]}
+    return merged

@@ -123,7 +123,7 @@
         var hot = {
             patentData: 1, patentMgmtData: 1, paperData: 1, taskData: 1, noticeData: 1, newsData: 1,
             weeklyReportData: 1, applicationData: 1, meetingData: 1, teamMemberData: 1,
-            longitudinalData: 1, horizontalData: 1, schoolData: 1
+            longitudinalData: 1, horizontalData: 1, schoolData: 1, projectApplicationData: 1
         };
         if (ev.key && hot[ev.key]) {
             invalidateHomeOverviewCache('storage:' + ev.key);
@@ -329,6 +329,12 @@
     }
     global.openHomeQuickCustomize = openHomeQuickCustomize;
 
+    function quickPrefBucket(role) {
+        // 与 app-legacy-b 保持同一分桶规则：登录后按人，未登录回退角色。
+        if (typeof global.homeQuickPrefBucketKey === 'function') return global.homeQuickPrefBucketKey(role);
+        return String(role || 'guest');
+    }
+
     function saveHomeQuickCustomize() {
         var role = getRoleKind();
         var list = document.getElementById('homeQuickCustomizeList');
@@ -350,7 +356,7 @@
         else {
             try {
                 var raw = JSON.parse(localStorage.getItem('homeQuickNavPrefs_v1') || '{}') || {};
-                raw[role] = out;
+                raw[quickPrefBucket(role)] = out;
                 localStorage.setItem('homeQuickNavPrefs_v1', JSON.stringify(raw));
             } catch (e) {}
         }
@@ -374,7 +380,8 @@
         var role = getRoleKind();
         try {
             var raw = JSON.parse(localStorage.getItem('homeQuickNavPrefs_v1') || '{}') || {};
-            delete raw[role];
+            delete raw[quickPrefBucket(role)];
+            delete raw[role]; // 同时清掉旧版角色桶，避免迁移回流
             localStorage.setItem('homeQuickNavPrefs_v1', JSON.stringify(raw));
         } catch (e) {}
         closeHomeQuickCustomize();
@@ -698,7 +705,7 @@
             global.saveHomeQuickPrefs = function (roleKind, list) {
                 try {
                     var raw = JSON.parse(localStorage.getItem('homeQuickNavPrefs_v1') || '{}') || {};
-                    raw[roleKind] = list;
+                    raw[quickPrefBucket(roleKind)] = list;
                     localStorage.setItem('homeQuickNavPrefs_v1', JSON.stringify(raw));
                 } catch (e) {}
             };
