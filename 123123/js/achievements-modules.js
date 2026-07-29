@@ -130,6 +130,7 @@
         function saveLongitudinalData() {
             localStorage.setItem('longitudinalData', JSON.stringify(longitudinalData));
             try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('longitudinal'); } catch (eHome) {}
+            try { if (typeof flushCloudOutbox === 'function') flushCloudOutbox(); } catch (eFlush) {}
         }
         
         function updateLongitudinalFilterCounts() {
@@ -137,9 +138,8 @@
             if (!document.getElementById('longitudinalCountAll')) return;
             document.getElementById('longitudinalCountAll').textContent = longitudinalData.length;
             document.getElementById('longitudinalCountCurrentYear').textContent = longitudinalData.filter(d => d.startDate && d.startDate.startsWith(currentYear)).length;
-            document.getElementById('longitudinalCountReviewing').textContent = longitudinalData.filter(d => d.status === '审核中').length;
-            document.getElementById('longitudinalCountApproved').textContent = longitudinalData.filter(d => d.status === '已通过').length;
-            document.getElementById('longitudinalCountRejected').textContent = longitudinalData.filter(d => d.status === '已驳回').length;
+            document.getElementById('longitudinalCountOngoing').textContent = longitudinalData.filter(d => d.status === '在研').length;
+            document.getElementById('longitudinalCountFinished').textContent = longitudinalData.filter(d => d.status === '已结题').length;
         }
         
         function renderLongitudinalTable() {
@@ -152,9 +152,10 @@
             emptyMsg.style.display = 'none';
             rows.forEach(item => {
                 const row = document.createElement('tr');
-                let statusClass = 'tag-warning';
-                if (item.status === '已通过') statusClass = 'tag-success';
+                let statusClass = 'tag-success';
+                if (item.status === '已结题') statusClass = 'tag-info';
                 else if (item.status === '已驳回') statusClass = 'tag-danger';
+                else if (item.status === '审核中') statusClass = 'tag-warning';
                 row.innerHTML = `
                     <td><input type="checkbox" ${selectedLongitudinalIds.has(item.id) ? 'checked' : ''} onchange="toggleLongitudinalSelect(${item.id}, this)"></td>
                     <td>${item.startDate ? item.startDate.substring(0, 4) : '-'}</td>
@@ -185,7 +186,7 @@
             document.getElementById('longitudinalLevel').value = '';
             document.getElementById('longitudinalStartDate').value = '';
             document.getElementById('longitudinalFunding').value = '';
-            document.getElementById('longitudinalStatus').value = '审核中';
+            document.getElementById('longitudinalStatus').value = '在研';
             document.getElementById('longitudinalFile').value = '';
             document.getElementById('longitudinalRemark').value = '';
             document.getElementById('longitudinalModal').style.display = 'flex';
@@ -263,9 +264,8 @@
             switch(tag) {
                 case 'all': filteredLongitudinalData = [...longitudinalData]; break;
                 case 'current_year': filteredLongitudinalData = longitudinalData.filter(d => d.startDate && d.startDate.startsWith(currentYear)); break;
-                case 'reviewing': filteredLongitudinalData = longitudinalData.filter(d => d.status === '审核中'); break;
-                case 'approved': filteredLongitudinalData = longitudinalData.filter(d => d.status === '已通过'); break;
-                case 'rejected': filteredLongitudinalData = longitudinalData.filter(d => d.status === '已驳回'); break;
+                case 'ongoing': filteredLongitudinalData = longitudinalData.filter(d => d.status === '在研'); break;
+                case 'finished': filteredLongitudinalData = longitudinalData.filter(d => d.status === '已结题'); break;
             }
             renderLongitudinalTable();
         }
@@ -339,14 +339,14 @@
         }
         
         function batchAuditLongitudinal() {
-            if (selectedLongitudinalIds.size === 0) { alert('请先选择要审核的记录'); return; }
+            if (selectedLongitudinalIds.size === 0) { alert('请先选择要改状态的记录'); return; }
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
             modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:400px;">
-                <h3 style="margin-bottom:20px;color:#333;">批量审核</h3>
+                <h3 style="margin-bottom:20px;color:#333;">批量改状态</h3>
                 <div class="form-group"><label>新状态</label>
                     <select id="batchAuditLongitudinalStatusSelect" class="form-control">
-                        <option value="审核中">审核中</option><option value="已通过">已通过</option><option value="已驳回">已驳回</option>
+                        <option value="在研">在研</option><option value="已结题">已结题</option>
                     </select>
                 </div>
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
@@ -363,7 +363,7 @@
             selectedLongitudinalIds.clear();
             saveLongitudinalData(); updateLongitudinalFilterCounts(); applyLongitudinalFilters();
             btn.closest('div[style*="fixed"]').remove();
-            alert('批量审核完成！');
+            alert('批量改状态完成！');
         }
         
         function exportLongitudinal() {
@@ -393,7 +393,7 @@
                         const cols = lines[i].split(',');
                         if (cols.length >= 9) {
                             const newId = longitudinalData.length > 0 ? Math.max(...longitudinalData.map(d => d.id)) + 1 : 1;
-                            longitudinalData.push({ id: newId, name: cols[2] || '', projectNumber: cols[1] || '', level: cols[3] || '', leader: cols[4] || '', unit: cols[5] || '', startDate: cols[6] || '', funding: cols[7] || '', status: cols[8] || '审核中', remark: '', fileName: '' });
+                            longitudinalData.push({ id: newId, name: cols[2] || '', projectNumber: cols[1] || '', level: cols[3] || '', leader: cols[4] || '', unit: cols[5] || '', startDate: cols[6] || '', funding: cols[7] || '', status: (cols[8] || '在研').trim() || '在研', remark: '', fileName: '' });
                             count++;
                         }
                     }
@@ -409,9 +409,8 @@
             const total = longitudinalData.length;
             const currentYear = new Date().getFullYear().toString();
             const thisYear = longitudinalData.filter(d => d.startDate && d.startDate.startsWith(currentYear)).length;
-            const approved = longitudinalData.filter(d => d.status === '已通过').length;
-            const reviewing = longitudinalData.filter(d => d.status === '审核中').length;
-            const rejected = longitudinalData.filter(d => d.status === '已驳回').length;
+            const ongoing = longitudinalData.filter(d => d.status === '在研').length;
+            const finished = longitudinalData.filter(d => d.status === '已结题').length;
             const totalFunding = longitudinalData.reduce((sum, d) => sum + (parseFloat(d.funding) || 0), 0);
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
@@ -421,9 +420,8 @@
                     <p>总数：<strong>${total}</strong></p>
                     <p>当年立项：<strong>${thisYear}</strong></p>
                     <p>总经费：<strong style="color:#17a2b8;">${totalFunding.toFixed(2)} 万元</strong></p>
-                    <p>已通过：<strong style="color:#28a745;">${approved}</strong></p>
-                    <p>审核中：<strong style="color:#ffc107;">${reviewing}</strong></p>
-                    <p>已驳回：<strong style="color:#dc3545;">${rejected}</strong></p>
+                    <p>在研：<strong style="color:#28a745;">${ongoing}</strong></p>
+                    <p>已结题：<strong style="color:#17a2b8;">${finished}</strong></p>
                 </div>
                 <div style="display:flex;justify-content:flex-end;margin-top:20px;">
                     <button class="btn" onclick="this.closest('div[style*=fixed]').remove()">关闭</button>
@@ -453,6 +451,7 @@
         function saveHorizontalData() {
             localStorage.setItem('horizontalData', JSON.stringify(horizontalData));
             try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('horizontal'); } catch (eHome) {}
+            try { if (typeof flushCloudOutbox === 'function') flushCloudOutbox(); } catch (eFlush) {}
         }
         
         function updateHorizontalFilterCounts() {
@@ -460,9 +459,8 @@
             if (!document.getElementById('horizontalCountAll')) return;
             document.getElementById('horizontalCountAll').textContent = horizontalData.length;
             document.getElementById('horizontalCountCurrentYear').textContent = horizontalData.filter(d => d.startDate && d.startDate.startsWith(currentYear)).length;
-            document.getElementById('horizontalCountReviewing').textContent = horizontalData.filter(d => d.status === '审核中').length;
-            document.getElementById('horizontalCountApproved').textContent = horizontalData.filter(d => d.status === '已通过').length;
-            document.getElementById('horizontalCountRejected').textContent = horizontalData.filter(d => d.status === '已驳回').length;
+            document.getElementById('horizontalCountOngoing').textContent = horizontalData.filter(d => d.status === '在研').length;
+            document.getElementById('horizontalCountFinished').textContent = horizontalData.filter(d => d.status === '已结题').length;
         }
         
         function renderHorizontalTable() {
@@ -475,9 +473,10 @@
             emptyMsg.style.display = 'none';
             rows.forEach(item => {
                 const row = document.createElement('tr');
-                let statusClass = 'tag-warning';
-                if (item.status === '已通过') statusClass = 'tag-success';
+                let statusClass = 'tag-success';
+                if (item.status === '已结题') statusClass = 'tag-info';
                 else if (item.status === '已驳回') statusClass = 'tag-danger';
+                else if (item.status === '审核中') statusClass = 'tag-warning';
                 row.innerHTML = `
                     <td><input type="checkbox" ${selectedHorizontalIds.has(item.id) ? 'checked' : ''} onchange="toggleHorizontalSelect(${item.id}, this)"></td>
                     <td>${item.startDate ? item.startDate.substring(0, 4) : '-'}</td>
@@ -508,7 +507,7 @@
             document.getElementById('horizontalUnit').value = '';
             document.getElementById('horizontalStartDate').value = '';
             document.getElementById('horizontalFunding').value = '';
-            document.getElementById('horizontalStatus').value = '审核中';
+            document.getElementById('horizontalStatus').value = '在研';
             document.getElementById('horizontalFile').value = '';
             document.getElementById('horizontalRemark').value = '';
             document.getElementById('horizontalModal').style.display = 'flex';
@@ -586,9 +585,8 @@
             switch(tag) {
                 case 'all': filteredHorizontalData = [...horizontalData]; break;
                 case 'current_year': filteredHorizontalData = horizontalData.filter(d => d.startDate && d.startDate.startsWith(currentYear)); break;
-                case 'reviewing': filteredHorizontalData = horizontalData.filter(d => d.status === '审核中'); break;
-                case 'approved': filteredHorizontalData = horizontalData.filter(d => d.status === '已通过'); break;
-                case 'rejected': filteredHorizontalData = horizontalData.filter(d => d.status === '已驳回'); break;
+                case 'ongoing': filteredHorizontalData = horizontalData.filter(d => d.status === '在研'); break;
+                case 'finished': filteredHorizontalData = horizontalData.filter(d => d.status === '已结题'); break;
             }
             renderHorizontalTable();
         }
@@ -662,14 +660,14 @@
         }
         
         function batchAuditHorizontal() {
-            if (selectedHorizontalIds.size === 0) { alert('请先选择要审核的记录'); return; }
+            if (selectedHorizontalIds.size === 0) { alert('请先选择要改状态的记录'); return; }
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
             modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:400px;">
-                <h3 style="margin-bottom:20px;color:#333;">批量审核</h3>
+                <h3 style="margin-bottom:20px;color:#333;">批量改状态</h3>
                 <div class="form-group"><label>新状态</label>
                     <select id="batchAuditHorizontalStatusSelect" class="form-control">
-                        <option value="审核中">审核中</option><option value="已通过">已通过</option><option value="已驳回">已驳回</option>
+                        <option value="在研">在研</option><option value="已结题">已结题</option>
                     </select>
                 </div>
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
@@ -686,7 +684,7 @@
             selectedHorizontalIds.clear();
             saveHorizontalData(); updateHorizontalFilterCounts(); applyHorizontalFilters();
             btn.closest('div[style*="fixed"]').remove();
-            alert('批量审核完成！');
+            alert('批量改状态完成！');
         }
         
         function exportHorizontal() {
@@ -716,7 +714,7 @@
                         const cols = lines[i].split(',');
                         if (cols.length >= 9) {
                             const newId = horizontalData.length > 0 ? Math.max(...horizontalData.map(d => d.id)) + 1 : 1;
-                            horizontalData.push({ id: newId, name: cols[2] || '', projectNumber: cols[1] || '', company: cols[3] || '', leader: cols[4] || '', unit: cols[5] || '', startDate: cols[6] || '', funding: cols[7] || '', status: cols[8] || '审核中', remark: '', fileName: '' });
+                            horizontalData.push({ id: newId, name: cols[2] || '', projectNumber: cols[1] || '', company: cols[3] || '', leader: cols[4] || '', unit: cols[5] || '', startDate: cols[6] || '', funding: cols[7] || '', status: (cols[8] || '在研').trim() || '在研', remark: '', fileName: '' });
                             count++;
                         }
                     }
@@ -732,9 +730,8 @@
             const total = horizontalData.length;
             const currentYear = new Date().getFullYear().toString();
             const thisYear = horizontalData.filter(d => d.startDate && d.startDate.startsWith(currentYear)).length;
-            const approved = horizontalData.filter(d => d.status === '已通过').length;
-            const reviewing = horizontalData.filter(d => d.status === '审核中').length;
-            const rejected = horizontalData.filter(d => d.status === '已驳回').length;
+            const ongoing = horizontalData.filter(d => d.status === '在研').length;
+            const finished = horizontalData.filter(d => d.status === '已结题').length;
             const totalFunding = horizontalData.reduce((sum, d) => sum + (parseFloat(d.funding) || 0), 0);
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
@@ -744,9 +741,8 @@
                     <p>总数：<strong>${total}</strong></p>
                     <p>当年立项：<strong>${thisYear}</strong></p>
                     <p>总经费：<strong style="color:#17a2b8;">${totalFunding.toFixed(2)} 万元</strong></p>
-                    <p>已通过：<strong style="color:#28a745;">${approved}</strong></p>
-                    <p>审核中：<strong style="color:#ffc107;">${reviewing}</strong></p>
-                    <p>已驳回：<strong style="color:#dc3545;">${rejected}</strong></p>
+                    <p>在研：<strong style="color:#28a745;">${ongoing}</strong></p>
+                    <p>已结题：<strong style="color:#17a2b8;">${finished}</strong></p>
                 </div>
                 <div style="display:flex;justify-content:flex-end;margin-top:20px;">
                     <button class="btn" onclick="this.closest('div[style*=fixed]').remove()">关闭</button>
@@ -776,6 +772,7 @@
         function saveSchoolData() {
             localStorage.setItem('schoolData', JSON.stringify(schoolData));
             try { if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('school'); } catch (eHome) {}
+            try { if (typeof flushCloudOutbox === 'function') flushCloudOutbox(); } catch (eFlush) {}
         }
         
         function updateSchoolFilterCounts() {
@@ -783,9 +780,8 @@
             if (!document.getElementById('schoolCountAll')) return;
             document.getElementById('schoolCountAll').textContent = schoolData.length;
             document.getElementById('schoolCountCurrentYear').textContent = schoolData.filter(d => d.startDate && d.startDate.startsWith(currentYear)).length;
-            document.getElementById('schoolCountReviewing').textContent = schoolData.filter(d => d.status === '审核中').length;
-            document.getElementById('schoolCountApproved').textContent = schoolData.filter(d => d.status === '已通过').length;
-            document.getElementById('schoolCountRejected').textContent = schoolData.filter(d => d.status === '已驳回').length;
+            document.getElementById('schoolCountOngoing').textContent = schoolData.filter(d => d.status === '在研').length;
+            document.getElementById('schoolCountFinished').textContent = schoolData.filter(d => d.status === '已结题').length;
         }
         
         function renderSchoolTable() {
@@ -798,9 +794,10 @@
             emptyMsg.style.display = 'none';
             rows.forEach(item => {
                 const row = document.createElement('tr');
-                let statusClass = 'tag-warning';
-                if (item.status === '已通过') statusClass = 'tag-success';
+                let statusClass = 'tag-success';
+                if (item.status === '已结题') statusClass = 'tag-info';
                 else if (item.status === '已驳回') statusClass = 'tag-danger';
+                else if (item.status === '审核中') statusClass = 'tag-warning';
                 row.innerHTML = `
                     <td><input type="checkbox" ${selectedSchoolIds.has(item.id) ? 'checked' : ''} onchange="toggleSchoolSelect(${item.id}, this)"></td>
                     <td>${item.startDate ? item.startDate.substring(0, 4) : '-'}</td>
@@ -831,7 +828,7 @@
             document.getElementById('schoolType').value = '';
             document.getElementById('schoolStartDate').value = '';
             document.getElementById('schoolFunding').value = '';
-            document.getElementById('schoolStatus').value = '审核中';
+            document.getElementById('schoolStatus').value = '在研';
             document.getElementById('schoolFile').value = '';
             document.getElementById('schoolRemark').value = '';
             document.getElementById('schoolModal').style.display = 'flex';
@@ -909,9 +906,8 @@
             switch(tag) {
                 case 'all': filteredSchoolData = [...schoolData]; break;
                 case 'current_year': filteredSchoolData = schoolData.filter(d => d.startDate && d.startDate.startsWith(currentYear)); break;
-                case 'reviewing': filteredSchoolData = schoolData.filter(d => d.status === '审核中'); break;
-                case 'approved': filteredSchoolData = schoolData.filter(d => d.status === '已通过'); break;
-                case 'rejected': filteredSchoolData = schoolData.filter(d => d.status === '已驳回'); break;
+                case 'ongoing': filteredSchoolData = schoolData.filter(d => d.status === '在研'); break;
+                case 'finished': filteredSchoolData = schoolData.filter(d => d.status === '已结题'); break;
             }
             renderSchoolTable();
         }
@@ -985,14 +981,14 @@
         }
         
         function batchAuditSchool() {
-            if (selectedSchoolIds.size === 0) { alert('请先选择要审核的记录'); return; }
+            if (selectedSchoolIds.size === 0) { alert('请先选择要改状态的记录'); return; }
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
             modal.innerHTML = `<div style="background:#fff;padding:30px;border-radius:12px;width:400px;">
-                <h3 style="margin-bottom:20px;color:#333;">批量审核</h3>
+                <h3 style="margin-bottom:20px;color:#333;">批量改状态</h3>
                 <div class="form-group"><label>新状态</label>
                     <select id="batchAuditSchoolStatusSelect" class="form-control">
-                        <option value="审核中">审核中</option><option value="已通过">已通过</option><option value="已驳回">已驳回</option>
+                        <option value="在研">在研</option><option value="已结题">已结题</option>
                     </select>
                 </div>
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
@@ -1009,7 +1005,7 @@
             selectedSchoolIds.clear();
             saveSchoolData(); updateSchoolFilterCounts(); applySchoolFilters();
             btn.closest('div[style*="fixed"]').remove();
-            alert('批量审核完成！');
+            alert('批量改状态完成！');
         }
         
         function exportSchool() {
@@ -1039,7 +1035,7 @@
                         const cols = lines[i].split(',');
                         if (cols.length >= 9) {
                             const newId = schoolData.length > 0 ? Math.max(...schoolData.map(d => d.id)) + 1 : 1;
-                            schoolData.push({ id: newId, name: cols[2] || '', projectNumber: cols[1] || '', type: cols[3] || '', leader: cols[4] || '', unit: cols[5] || '', startDate: cols[6] || '', funding: cols[7] || '', status: cols[8] || '审核中', remark: '', fileName: '' });
+                            schoolData.push({ id: newId, name: cols[2] || '', projectNumber: cols[1] || '', type: cols[3] || '', leader: cols[4] || '', unit: cols[5] || '', startDate: cols[6] || '', funding: cols[7] || '', status: (cols[8] || '在研').trim() || '在研', remark: '', fileName: '' });
                             count++;
                         }
                     }
@@ -1055,9 +1051,8 @@
             const total = schoolData.length;
             const currentYear = new Date().getFullYear().toString();
             const thisYear = schoolData.filter(d => d.startDate && d.startDate.startsWith(currentYear)).length;
-            const approved = schoolData.filter(d => d.status === '已通过').length;
-            const reviewing = schoolData.filter(d => d.status === '审核中').length;
-            const rejected = schoolData.filter(d => d.status === '已驳回').length;
+            const ongoing = schoolData.filter(d => d.status === '在研').length;
+            const finished = schoolData.filter(d => d.status === '已结题').length;
             const totalFunding = schoolData.reduce((sum, d) => sum + (parseFloat(d.funding) || 0), 0);
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
@@ -1067,9 +1062,8 @@
                     <p>总数：<strong>${total}</strong></p>
                     <p>当年立项：<strong>${thisYear}</strong></p>
                     <p>总经费：<strong style="color:#17a2b8;">${totalFunding.toFixed(2)} 万元</strong></p>
-                    <p>已通过：<strong style="color:#28a745;">${approved}</strong></p>
-                    <p>审核中：<strong style="color:#ffc107;">${reviewing}</strong></p>
-                    <p>已驳回：<strong style="color:#dc3545;">${rejected}</strong></p>
+                    <p>在研：<strong style="color:#28a745;">${ongoing}</strong></p>
+                    <p>已结题：<strong style="color:#17a2b8;">${finished}</strong></p>
                 </div>
                 <div style="display:flex;justify-content:flex-end;margin-top:20px;">
                     <button class="btn" onclick="this.closest('div[style*=fixed]').remove()">关闭</button>
@@ -1077,7 +1071,482 @@
             document.body.appendChild(modal);
             modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
         }
-        
+
+        // ========== 项目申报台账（已申请项目） ==========
+        // 与纵向/横向/校级「正式台账」分离：这里记录每一次申报（含同一项目多次申报），
+        // 状态只有 申报中/已立项/未立项；立项后可一键转入对应正式台账（状态=在研）。
+
+        var projectApplicationData = [];
+        var filteredProjectApplicationData = [];
+        var selectedProjectApplicationIds = new Set();
+        var editingProjectApplicationId = null;
+        var projectApplicationLoaded = false;
+
+        function _projAppEsc(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+            });
+        }
+
+        function ensureProjectApplicationLoaded() {
+            if (projectApplicationLoaded) return;
+            try {
+                var saved = localStorage.getItem('projectApplicationData');
+                projectApplicationData = saved ? (JSON.parse(saved) || []) : [];
+            } catch (e) { projectApplicationData = []; }
+            if (!Array.isArray(projectApplicationData)) projectApplicationData = [];
+            projectApplicationLoaded = true;
+        }
+
+        function initProjectApplicationData() {
+            ensureProjectApplicationLoaded();
+            filteredProjectApplicationData = [...projectApplicationData];
+            updateProjectApplicationFilterCounts();
+            populateProjectApplicationYearFilter();
+            renderProjectApplicationTable();
+        }
+
+        function saveProjectApplicationData() {
+            localStorage.setItem('projectApplicationData', JSON.stringify(projectApplicationData));
+            try { window.projectApplicationData = projectApplicationData; } catch (eW) {}
+            try {
+                if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('project-application');
+            } catch (eHome) {}
+            try {
+                if (typeof flushCloudOutbox === 'function') flushCloudOutbox();
+            } catch (eFlush) {}
+        }
+
+        // 同名申报次数（用于「第 N 次申报」标记与多次申报筛选）
+        function _projAppNameKey(name) { return String(name || '').replace(/\s+/g, '').toLowerCase(); }
+        function _projAppCountByName() {
+            var map = {};
+            projectApplicationData.forEach(function (d) {
+                var k = _projAppNameKey(d && d.name);
+                if (!k) return;
+                map[k] = (map[k] || 0) + 1;
+            });
+            return map;
+        }
+
+        function updateProjectApplicationFilterCounts() {
+            if (!document.getElementById('projAppCountAll')) return;
+            var currentYear = String(new Date().getFullYear());
+            var nameCounts = _projAppCountByName();
+            document.getElementById('projAppCountAll').textContent = projectApplicationData.length;
+            document.getElementById('projAppCountCurrentYear').textContent = projectApplicationData.filter(function (d) { return String(d.year || '') === currentYear; }).length;
+            document.getElementById('projAppCountPending').textContent = projectApplicationData.filter(function (d) { return d.status === '申报中'; }).length;
+            document.getElementById('projAppCountGranted').textContent = projectApplicationData.filter(function (d) { return d.status === '已立项'; }).length;
+            document.getElementById('projAppCountRejected').textContent = projectApplicationData.filter(function (d) { return d.status === '未立项'; }).length;
+            document.getElementById('projAppCountMulti').textContent = projectApplicationData.filter(function (d) { return (nameCounts[_projAppNameKey(d.name)] || 0) > 1; }).length;
+        }
+
+        function populateProjectApplicationYearFilter() {
+            var sel = document.getElementById('projAppFilterYear');
+            if (!sel) return;
+            var prev = sel.value;
+            var years = Array.from(new Set(projectApplicationData.map(function (d) { return String(d.year || '').trim(); }).filter(Boolean)));
+            years.sort(function (a, b) { return b.localeCompare(a); });
+            sel.innerHTML = '<option value="">全部</option>' + years.map(function (y) { return '<option value="' + _projAppEsc(y) + '">' + _projAppEsc(y) + '</option>'; }).join('');
+            if (years.indexOf(prev) >= 0) sel.value = prev;
+        }
+
+        function renderProjectApplicationTable() {
+            var tbody = document.getElementById('projAppTableBody');
+            var emptyMsg = document.getElementById('projAppEmptyMessage');
+            if (!tbody || !emptyMsg) return;
+            tbody.innerHTML = '';
+            var nameCounts = _projAppCountByName();
+            var rows = [...filteredProjectApplicationData].sort(function (a, b) {
+                var ya = String(b.year || ''), yb = String(a.year || '');
+                if (ya !== yb) return ya.localeCompare(yb);
+                return String(b.applyDate || '').localeCompare(String(a.applyDate || ''));
+            });
+            if (rows.length === 0) { emptyMsg.style.display = 'block'; return; }
+            emptyMsg.style.display = 'none';
+            rows.forEach(function (item) {
+                var statusClass = 'tag-warning';
+                if (item.status === '已立项') statusClass = 'tag-success';
+                else if (item.status === '未立项') statusClass = 'tag-danger';
+                var times = nameCounts[_projAppNameKey(item.name)] || 1;
+                var timesBadge = times > 1
+                    ? ' <span title="该项目共申报 ' + times + ' 次" style="display:inline-block;padding:1px 6px;border-radius:10px;background:#fff1f0;color:#cf1322;font-size:11px;">申报×' + times + '</span>'
+                    : '';
+                var transferBtn = '';
+                if (item.status === '已立项') {
+                    transferBtn = item.transferredAt
+                        ? '<span class="tag tag-success" style="margin-right:5px;" title="已于 ' + _projAppEsc(item.transferredAt) + ' 转入正式台账">已转台账</span>'
+                        : '<button class="btn" style="padding:4px 8px;font-size:12px;margin-right:5px;background:#28a745;" onclick="transferProjectApplicationToLedger(' + item.id + ')">转入台账</button>';
+                }
+                var row = document.createElement('tr');
+                row.innerHTML = '<td><input type="checkbox" ' + (selectedProjectApplicationIds.has(item.id) ? 'checked' : '') + ' onchange="toggleProjectApplicationSelect(' + item.id + ', this)"></td>' +
+                    '<td>' + _projAppEsc(item.year || '-') + '</td>' +
+                    '<td>' + _projAppEsc(item.name) + timesBadge + '</td>' +
+                    '<td>' + _projAppEsc(item.category || '-') + '</td>' +
+                    '<td>' + _projAppEsc(item.leader || '-') + '</td>' +
+                    '<td>' + _projAppEsc(item.filler || '-') + '</td>' +
+                    '<td>' + _projAppEsc(item.unit || '-') + '</td>' +
+                    '<td>' + _projAppEsc(item.acceptOrg || '-') + '</td>' +
+                    '<td>' + _projAppEsc(item.applyDate || '-') + '</td>' +
+                    '<td>' + _projAppEsc(item.totalBudget || '-') + '</td>' +
+                    '<td>' + _projAppEsc(item.fiscalBudget || '-') + '</td>' +
+                    '<td><span class="tag ' + statusClass + '">' + _projAppEsc(item.status || '申报中') + '</span></td>' +
+                    '<td>' +
+                        '<button class="btn" style="padding:4px 8px;font-size:12px;margin-right:5px;" onclick="editProjectApplication(' + item.id + ')">编辑</button>' +
+                        transferBtn +
+                        (item.status === '未立项' ? '<button class="btn" style="padding:4px 8px;font-size:12px;margin-right:5px;background:#17a2b8;" title="以本条为模板新建一条新年度申报" onclick="reapplyProjectApplication(' + item.id + ')">再次申报</button>' : '') +
+                        '<button class="btn btn-danger" style="padding:4px 8px;font-size:12px;" onclick="deleteProjectApplication(' + item.id + ')">删除</button>' +
+                    '</td>';
+                tbody.appendChild(row);
+            });
+        }
+
+        function checkProjectApplicationRepeat() {
+            var hint = document.getElementById('projAppRepeatHint');
+            var nameEl = document.getElementById('projAppName');
+            if (!hint || !nameEl) return;
+            var key = _projAppNameKey(nameEl.value);
+            if (!key) { hint.style.display = 'none'; return; }
+            var history = projectApplicationData.filter(function (d) {
+                return _projAppNameKey(d.name) === key && d.id !== editingProjectApplicationId;
+            });
+            if (!history.length) { hint.style.display = 'none'; return; }
+            var parts = history.map(function (d) { return (d.year || '?') + '年' + (d.status || '申报中'); });
+            hint.textContent = '⚠️ 该项目已有 ' + history.length + ' 次申报记录：' + parts.join('、') + '。本次保存将记为第 ' + (history.length + 1) + ' 次申报。';
+            hint.style.display = 'block';
+        }
+
+        function showAddProjectApplicationModal(preset) {
+            ensureProjectApplicationLoaded();
+            editingProjectApplicationId = null;
+            document.getElementById('projAppModalTitle').textContent = '新增项目申报';
+            document.getElementById('projAppName').value = (preset && preset.name) || '';
+            document.getElementById('projAppCategory').value = (preset && preset.category) || '纵向';
+            document.getElementById('projAppYear').value = (preset && preset.year) || String(new Date().getFullYear());
+            document.getElementById('projAppLeader').value = (preset && preset.leader) || '';
+            var filler = '';
+            try { filler = (window.currentUser && (currentUser.realName || currentUser.username)) || ''; } catch (e) {}
+            document.getElementById('projAppFiller').value = (preset && preset.filler) || filler;
+            document.getElementById('projAppUnit').value = (preset && preset.unit) || '';
+            document.getElementById('projAppAcceptOrg').value = (preset && preset.acceptOrg) || '';
+            document.getElementById('projAppApplyDate').value = (preset && preset.applyDate) || '';
+            document.getElementById('projAppPlannedEnd').value = (preset && preset.plannedEnd) || '';
+            document.getElementById('projAppTotalBudget').value = (preset && preset.totalBudget) || '';
+            document.getElementById('projAppFiscalBudget').value = (preset && preset.fiscalBudget) || '';
+            document.getElementById('projAppStatus').value = '申报中';
+            document.getElementById('projAppRemark').value = (preset && preset.remark) || '';
+            document.getElementById('projAppModal').style.display = 'flex';
+            checkProjectApplicationRepeat();
+        }
+
+        function closeProjectApplicationModal() { document.getElementById('projAppModal').style.display = 'none'; }
+
+        function saveProjectApplication() {
+            ensureProjectApplicationLoaded();
+            var name = document.getElementById('projAppName').value.trim();
+            var category = document.getElementById('projAppCategory').value;
+            var year = document.getElementById('projAppYear').value.trim();
+            var leader = document.getElementById('projAppLeader').value.trim();
+            if (!name || !category || !year || !leader) { alert('请填写项目名称、类别、申报年度和负责人'); return; }
+            if (!/^\d{4}$/.test(year)) { alert('申报年度格式应为 4 位年份，如 2026'); return; }
+            var record = {
+                name: name,
+                category: category,
+                year: year,
+                leader: leader,
+                filler: document.getElementById('projAppFiller').value.trim(),
+                unit: document.getElementById('projAppUnit').value.trim(),
+                acceptOrg: document.getElementById('projAppAcceptOrg').value.trim(),
+                applyDate: document.getElementById('projAppApplyDate').value,
+                plannedEnd: document.getElementById('projAppPlannedEnd').value,
+                totalBudget: document.getElementById('projAppTotalBudget').value,
+                fiscalBudget: document.getElementById('projAppFiscalBudget').value,
+                status: document.getElementById('projAppStatus').value,
+                remark: document.getElementById('projAppRemark').value.trim()
+            };
+            if (editingProjectApplicationId) {
+                var idx = projectApplicationData.findIndex(function (d) { return d.id === editingProjectApplicationId; });
+                if (idx !== -1) {
+                    // 状态被人工改离「已立项」时清除转台账标记，允许后续重新转入
+                    if (projectApplicationData[idx].status === '已立项' && record.status !== '已立项') delete projectApplicationData[idx].transferredAt;
+                    projectApplicationData[idx] = Object.assign({}, projectApplicationData[idx], record);
+                }
+            } else {
+                var newId = projectApplicationData.length > 0 ? Math.max.apply(null, projectApplicationData.map(function (d) { return Number(d.id) || 0; })) + 1 : 1;
+                record.id = newId;
+                record.createdAt = new Date().toISOString().slice(0, 10);
+                projectApplicationData.push(record);
+            }
+            saveProjectApplicationData();
+            initProjectApplicationData();
+            closeProjectApplicationModal();
+            alert('保存成功！');
+        }
+
+        function editProjectApplication(id) {
+            var item = projectApplicationData.find(function (d) { return d.id === id; });
+            if (!item) return;
+            showAddProjectApplicationModal(item);
+            editingProjectApplicationId = id;
+            document.getElementById('projAppModalTitle').textContent = '编辑项目申报';
+            document.getElementById('projAppStatus').value = item.status || '申报中';
+            checkProjectApplicationRepeat();
+        }
+
+        // 未立项 → 以原信息为模板新建一条新年度申报记录（保留历史）
+        function reapplyProjectApplication(id) {
+            var item = projectApplicationData.find(function (d) { return d.id === id; });
+            if (!item) return;
+            var preset = Object.assign({}, item, {
+                year: String(new Date().getFullYear()),
+                applyDate: '',
+                status: '申报中',
+                remark: (item.remark ? item.remark + '；' : '') + '基于 ' + (item.year || '?') + ' 年申报记录再次申报'
+            });
+            showAddProjectApplicationModal(preset);
+        }
+
+        // 已立项 → 转入对应正式台账（纵向/横向/校级），状态记为「在研」
+        function transferProjectApplicationToLedger(id) {
+            var item = projectApplicationData.find(function (d) { return d.id === id; });
+            if (!item) return;
+            if (item.status !== '已立项') { alert('只有「已立项」的申报才能转入正式台账'); return; }
+            if (item.transferredAt) { alert('该申报已转入过正式台账，请勿重复转入'); return; }
+            if (!confirm('确定将「' + item.name + '」转入' + item.category + '项目正式台账吗？\n转入后请在正式台账中补充项目编号等信息。')) return;
+            var startDate = (item.applyDate ? item.applyDate + '-01' : new Date().toISOString().slice(0, 10));
+            var base = {
+                name: item.name,
+                projectNumber: '',
+                leader: item.leader || '',
+                unit: item.unit || '',
+                startDate: startDate,
+                funding: item.totalBudget || '',
+                status: '在研',
+                remark: '由申报台账转入（' + (item.year || '?') + ' 年申报）' + (item.remark ? '；' + item.remark : ''),
+                fileName: ''
+            };
+            var targetArr, saveFn, refreshFn;
+            if (item.category === '横向') {
+                targetArr = horizontalData; saveFn = saveHorizontalData;
+                base.company = item.acceptOrg || '';
+                refreshFn = function () { updateHorizontalFilterCounts(); if (typeof applyHorizontalFilters === 'function') applyHorizontalFilters(); };
+            } else if (item.category === '校级') {
+                targetArr = schoolData; saveFn = saveSchoolData;
+                base.type = '校级项目';
+                refreshFn = function () { updateSchoolFilterCounts(); if (typeof applySchoolFilters === 'function') applySchoolFilters(); };
+            } else {
+                targetArr = longitudinalData; saveFn = saveLongitudinalData;
+                base.level = '';
+                refreshFn = function () { updateLongitudinalFilterCounts(); if (typeof applyLongitudinalFilters === 'function') applyLongitudinalFilters(); };
+            }
+            base.id = targetArr.length > 0 ? Math.max.apply(null, targetArr.map(function (d) { return Number(d.id) || 0; })) + 1 : 1;
+            targetArr.push(base);
+            saveFn();
+            try { refreshFn(); } catch (e) {}
+            item.transferredAt = new Date().toISOString().slice(0, 10);
+            saveProjectApplicationData();
+            initProjectApplicationData();
+            alert('已转入' + item.category + '项目台账（状态：在研）。');
+        }
+
+        function deleteProjectApplication(id) {
+            if (!confirm('确定要删除这条申报记录吗？删除后无法追溯该次申报历史。')) return;
+            projectApplicationData = projectApplicationData.filter(function (d) { return d.id !== id; });
+            selectedProjectApplicationIds.delete(id);
+            saveProjectApplicationData();
+            initProjectApplicationData();
+        }
+
+        function batchDeleteProjectApplication() {
+            if (selectedProjectApplicationIds.size === 0) { alert('请先选择要删除的记录'); return; }
+            if (!confirm('确定要删除选中的 ' + selectedProjectApplicationIds.size + ' 条申报记录吗？')) return;
+            projectApplicationData = projectApplicationData.filter(function (d) { return !selectedProjectApplicationIds.has(d.id); });
+            selectedProjectApplicationIds.clear();
+            saveProjectApplicationData();
+            initProjectApplicationData();
+        }
+
+        function toggleProjectApplicationSelectAll(checkbox) {
+            if (checkbox.checked) filteredProjectApplicationData.forEach(function (d) { selectedProjectApplicationIds.add(d.id); });
+            else selectedProjectApplicationIds.clear();
+            renderProjectApplicationTable();
+        }
+
+        function toggleProjectApplicationSelect(id, checkbox) {
+            if (checkbox.checked) selectedProjectApplicationIds.add(id); else selectedProjectApplicationIds.delete(id);
+        }
+
+        function filterProjectApplicationByTag(tag, element) {
+            document.querySelectorAll('#projAppFilterTags .filter-tag').forEach(function (t) { t.classList.remove('active'); });
+            element.classList.add('active');
+            var currentYear = String(new Date().getFullYear());
+            var nameCounts = _projAppCountByName();
+            switch (tag) {
+                case 'all': filteredProjectApplicationData = [...projectApplicationData]; break;
+                case 'current_year': filteredProjectApplicationData = projectApplicationData.filter(function (d) { return String(d.year || '') === currentYear; }); break;
+                case 'pending': filteredProjectApplicationData = projectApplicationData.filter(function (d) { return d.status === '申报中'; }); break;
+                case 'granted': filteredProjectApplicationData = projectApplicationData.filter(function (d) { return d.status === '已立项'; }); break;
+                case 'rejected': filteredProjectApplicationData = projectApplicationData.filter(function (d) { return d.status === '未立项'; }); break;
+                case 'multi': filteredProjectApplicationData = projectApplicationData.filter(function (d) { return (nameCounts[_projAppNameKey(d.name)] || 0) > 1; }); break;
+            }
+            renderProjectApplicationTable();
+        }
+
+        function applyProjectApplicationFilters() {
+            var name = document.getElementById('projAppFilterName').value.trim().toLowerCase();
+            var leader = document.getElementById('projAppFilterLeader').value.trim().toLowerCase();
+            var year = document.getElementById('projAppFilterYear').value;
+            var category = document.getElementById('projAppFilterCategory').value;
+            var status = document.getElementById('projAppFilterStatus').value;
+            filteredProjectApplicationData = projectApplicationData.filter(function (d) {
+                if (name && String(d.name || '').toLowerCase().indexOf(name) < 0) return false;
+                if (leader && String(d.leader || '').toLowerCase().indexOf(leader) < 0) return false;
+                if (year && String(d.year || '') !== year) return false;
+                if (category && d.category !== category) return false;
+                if (status && d.status !== status) return false;
+                return true;
+            });
+            renderProjectApplicationTable();
+        }
+
+        function resetProjectApplicationFilters() {
+            ['projAppFilterName', 'projAppFilterLeader'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+            ['projAppFilterYear', 'projAppFilterCategory', 'projAppFilterStatus'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+            document.querySelectorAll('#projAppFilterTags .filter-tag').forEach(function (t) { t.classList.remove('active'); });
+            var first = document.querySelector('#projAppFilterTags .filter-tag');
+            if (first) first.classList.add('active');
+            filteredProjectApplicationData = [...projectApplicationData];
+            renderProjectApplicationTable();
+        }
+
+        function exportProjectApplication() {
+            if (filteredProjectApplicationData.length === 0) { alert('没有可导出的数据'); return; }
+            var esc = function (v) {
+                var s = String(v == null ? '' : v);
+                return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            };
+            var csv = '\ufeff年度,项目名称,类别,负责人,填报人,依托单位,申报/受理单位,申报时间,拟结题时间,总经费(万),财政资金(万),状态,备注\n';
+            filteredProjectApplicationData.forEach(function (d) {
+                csv += [d.year, d.name, d.category, d.leader, d.filler, d.unit, d.acceptOrg, d.applyDate, d.plannedEnd, d.totalBudget, d.fiscalBudget, d.status, d.remark].map(esc).join(',') + '\n';
+            });
+            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '项目申报台账_' + new Date().toISOString().slice(0, 10) + '.csv';
+            link.click();
+        }
+
+        function viewProjectApplicationStats() {
+            ensureProjectApplicationLoaded();
+            var total = projectApplicationData.length;
+            var pending = projectApplicationData.filter(function (d) { return d.status === '申报中'; }).length;
+            var granted = projectApplicationData.filter(function (d) { return d.status === '已立项'; }).length;
+            var rejected = projectApplicationData.filter(function (d) { return d.status === '未立项'; }).length;
+            var decided = granted + rejected;
+            var rate = decided > 0 ? Math.round(granted * 100 / decided) : 0;
+            var byYear = {};
+            projectApplicationData.forEach(function (d) {
+                var y = String(d.year || '未知');
+                byYear[y] = byYear[y] || { total: 0, granted: 0, rejected: 0 };
+                byYear[y].total++;
+                if (d.status === '已立项') byYear[y].granted++;
+                if (d.status === '未立项') byYear[y].rejected++;
+            });
+            var yearRows = Object.keys(byYear).sort(function (a, b) { return b.localeCompare(a); }).map(function (y) {
+                var s = byYear[y];
+                return '<tr><td style="padding:4px 10px;">' + _projAppEsc(y) + '</td><td style="padding:4px 10px;">' + s.total + '</td><td style="padding:4px 10px;color:#28a745;">' + s.granted + '</td><td style="padding:4px 10px;color:#dc3545;">' + s.rejected + '</td></tr>';
+            }).join('');
+            var modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;';
+            modal.innerHTML = '<div style="background:#fff;padding:30px;border-radius:12px;width:460px;max-height:80vh;overflow-y:auto;">' +
+                '<h3 style="margin-bottom:20px;color:#333;">项目申报统计</h3>' +
+                '<div style="line-height:2;font-size:15px;">' +
+                '<p>累计申报：<strong>' + total + '</strong> 次</p>' +
+                '<p>申报中：<strong style="color:#ffc107;">' + pending + '</strong>　已立项：<strong style="color:#28a745;">' + granted + '</strong>　未立项：<strong style="color:#dc3545;">' + rejected + '</strong></p>' +
+                '<p>立项率（已出结果部分）：<strong style="color:#17a2b8;">' + rate + '%</strong></p>' +
+                '</div>' +
+                '<table style="width:100%;margin-top:10px;border-collapse:collapse;font-size:14px;">' +
+                '<thead><tr style="border-bottom:1px solid #eee;text-align:left;"><th style="padding:4px 10px;">年度</th><th style="padding:4px 10px;">申报</th><th style="padding:4px 10px;">立项</th><th style="padding:4px 10px;">未立项</th></tr></thead>' +
+                '<tbody>' + (yearRows || '<tr><td colspan="4" style="padding:8px 10px;color:#999;">暂无数据</td></tr>') + '</tbody></table>' +
+                '<div style="display:flex;justify-content:flex-end;margin-top:20px;">' +
+                '<button class="btn" onclick="this.closest(\'div[style*=fixed]\').remove()">关闭</button>' +
+                '</div></div>';
+            document.body.appendChild(modal);
+            modal.onclick = function (e) { if (e.target === modal) modal.remove(); };
+        }
+
+        // 历史数据迁移：正式台账中遗留的「审核中/已驳回」搬入申报台账，「已通过」改为「在研」。
+        // 只有具备项目编辑权限的角色执行（避免只读角色触发无权限的云端写入被拒）。幂等，可重复调用。
+        function migrateProjectLedgerStatuses() {
+            var canEdit = false;
+            try { canEdit = typeof hasPermission === 'function' && hasPermission('项目管理（编辑）'); } catch (e) {}
+            if (!canEdit) return;
+            ensureProjectApplicationLoaded();
+            var movedTotal = 0;
+            var groups = [
+                { arr: longitudinalData, category: '纵向', save: saveLongitudinalData, setArr: function (v) { longitudinalData = v; filteredLongitudinalData = [...v]; } },
+                { arr: horizontalData, category: '横向', save: saveHorizontalData, setArr: function (v) { horizontalData = v; filteredHorizontalData = [...v]; } },
+                { arr: schoolData, category: '校级', save: saveSchoolData, setArr: function (v) { schoolData = v; filteredSchoolData = [...v]; } }
+            ];
+            groups.forEach(function (g) {
+                if (!Array.isArray(g.arr) || !g.arr.length) return;
+                var changed = false;
+                var keep = [];
+                g.arr.forEach(function (d) {
+                    if (!d) return;
+                    if (d.status === '已通过' || !d.status) { d.status = '在研'; changed = true; keep.push(d); return; }
+                    if (d.status === '审核中' || d.status === '已驳回') {
+                        var year = (d.startDate ? String(d.startDate).slice(0, 4) : String(new Date().getFullYear()));
+                        var dup = projectApplicationData.some(function (a) {
+                            return _projAppNameKey(a.name) === _projAppNameKey(d.name) && String(a.year || '') === year && a.category === g.category;
+                        });
+                        if (!dup) {
+                            var newId = projectApplicationData.length > 0 ? Math.max.apply(null, projectApplicationData.map(function (a) { return Number(a.id) || 0; })) + 1 : 1;
+                            projectApplicationData.push({
+                                id: newId,
+                                name: d.name || '',
+                                category: g.category,
+                                year: year,
+                                leader: d.leader || '',
+                                filler: '',
+                                unit: d.unit || '',
+                                acceptOrg: d.company || '',
+                                applyDate: d.startDate ? String(d.startDate).slice(0, 7) : '',
+                                plannedEnd: '',
+                                totalBudget: d.funding || '',
+                                fiscalBudget: '',
+                                status: d.status === '审核中' ? '申报中' : '未立项',
+                                remark: ((d.remark || '') + (d.remark ? '；' : '') + '由' + g.category + '项目台账迁移').trim(),
+                                createdAt: new Date().toISOString().slice(0, 10)
+                            });
+                        }
+                        movedTotal++;
+                        changed = true;
+                        return; // 不保留在正式台账
+                    }
+                    keep.push(d);
+                });
+                if (changed) {
+                    g.setArr(keep);
+                    g.save();
+                }
+            });
+            if (movedTotal > 0) {
+                saveProjectApplicationData();
+                try { initProjectApplicationData(); } catch (e) {}
+                console.info('[project-migrate] 已将 ' + movedTotal + ' 条审核中/已驳回记录迁入项目申报台账');
+            }
+        }
+        try {
+            window.initProjectApplicationData = initProjectApplicationData;
+            window.migrateProjectLedgerStatuses = migrateProjectLedgerStatuses;
+            // 云端拉取写回 localStorage 后调用：丢弃内存缓存并重渲染
+            window.reloadProjectApplicationFromStorage = function () {
+                projectApplicationLoaded = false;
+                initProjectApplicationData();
+            };
+        } catch (eExpose) {}
+
         // ========== 团队成员档案模块 ==========
         
         var teamMemberData = [];
@@ -1771,12 +2240,16 @@
                         }
                     });
                 } else {
+                    var bootPwd = (typeof generateTemporaryPassword === 'function')
+                        ? generateTemporaryPassword()
+                        : ('Tmp-' + Date.now().toString(36) + 'A9!');
+                    // 禁止再用 123456：网关会拒绝弱口令，导致「新账号无法同步」
                     primary = Object.assign({
                         id: nextId++,
                         studentId: preferredStudentId,
                         group: '',
                         status: 'active',
-                        password: (typeof DEFAULT_PASSWORD !== 'undefined' ? DEFAULT_PASSWORD : '123456'),
+                        password: bootPwd,
                         mustChangePwd: true,
                         firstLogin: true,
                         lastLogin: '',
@@ -1787,6 +2260,11 @@
                         loginAliases: []
                     }, patch);
                     accountData.push(primary);
+                    try {
+                        if (typeof rememberGatewayPassword === 'function') {
+                            rememberGatewayPassword(preferredStudentId, bootPwd);
+                        }
+                    } catch (ePwd) {}
                     changed = true;
                 }
                 // 演示别名：保证 admin / stu001 等仍可登录（即使学号已是手机号）
@@ -1835,8 +2313,19 @@
             }
 
             if (changed) {
-                localStorage.setItem('accountData', JSON.stringify(accountData));
-                try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
+                // 网关模式下走 saveAccountData：脱敏落盘 + 待同步密码表 + 调度 replace
+                if (typeof saveAccountData === 'function') {
+                    try { saveAccountData(); } catch (eSaveAcc) {
+                        localStorage.setItem('accountData', JSON.stringify(
+                            (typeof sanitizeGatewayAccountsForBrowser === 'function')
+                                ? sanitizeGatewayAccountsForBrowser(accountData)
+                                : accountData
+                        ));
+                    }
+                } else {
+                    localStorage.setItem('accountData', JSON.stringify(accountData));
+                    try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
+                }
             }
 
             try { window.accountData = accountData; } catch (eWinAcc) {}

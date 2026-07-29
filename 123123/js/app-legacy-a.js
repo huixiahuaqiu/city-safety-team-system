@@ -470,6 +470,9 @@
             initLongitudinalData();
             initHorizontalData();
             initSchoolData();
+            try { if (typeof initProjectApplicationData === 'function') initProjectApplicationData(); } catch (ePA) {}
+            // 老数据一次性归位：正式台账里的「审核中/已驳回」迁入申报台账（幂等，仅编辑角色执行）
+            try { if (typeof migrateProjectLedgerStatuses === 'function') migrateProjectLedgerStatuses(); } catch (eMig) {}
             initPatentMgmtData();
             initPaperData();
             initStandardData();

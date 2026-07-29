@@ -9,7 +9,7 @@
                             <button class="btn btn-secondary" onclick="exportSchool()">📤 导出</button>
                             <button class="btn btn-secondary" onclick="importSchool()"> 导入</button>
                             <button class="btn btn-secondary" onclick="viewSchoolStats()"> 统计</button>
-                            <button class="btn btn-secondary" onclick="batchAuditSchool()">✅ 批量审核</button>
+                            <button class="btn btn-secondary" onclick="batchAuditSchool()">✅ 批量改状态</button>
                         </div>
                         <button class="btn" style="background: #17a2b8;" onclick="toggleSchoolMoreFilters()">️ 更多条件</button>
                     </div>
@@ -18,9 +18,8 @@
                     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;" id="schoolFilterTags">
                         <span class="filter-tag active" onclick="filterSchoolByTag('all', this)">全部(<span id="schoolCountAll">0</span>)</span>
                         <span class="filter-tag" onclick="filterSchoolByTag('current_year', this)">当年立项(<span id="schoolCountCurrentYear">0</span>)</span>
-                        <span class="filter-tag" onclick="filterSchoolByTag('reviewing', this)">审核中(<span id="schoolCountReviewing">0</span>)</span>
-                        <span class="filter-tag" onclick="filterSchoolByTag('approved', this)">已通过(<span id="schoolCountApproved">0</span>)</span>
-                        <span class="filter-tag" onclick="filterSchoolByTag('rejected', this)">已驳回(<span id="schoolCountRejected">0</span>)</span>
+                        <span class="filter-tag" onclick="filterSchoolByTag('ongoing', this)">在研(<span id="schoolCountOngoing">0</span>)</span>
+                        <span class="filter-tag" onclick="filterSchoolByTag('finished', this)">已结题(<span id="schoolCountFinished">0</span>)</span>
                     </div>
                     
                     <!-- 查询条件区 -->
@@ -51,9 +50,8 @@
                                 <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">状态</label>
                                 <select id="schoolFilterStatus" class="form-control">
                                     <option value="">全部</option>
-                                    <option value="审核中">审核中</option>
-                                    <option value="已通过">已通过</option>
-                                    <option value="已驳回">已驳回</option>
+                                    <option value="在研">在研</option>
+                                    <option value="已结题">已结题</option>
                                 </select>
                             </div>
                             <button class="btn" onclick="applySchoolFilters()" style="height: 38px;"> 快捷查询</button>
@@ -158,10 +156,10 @@
                         <div class="form-group">
                             <label>状态</label>
                             <select id="schoolStatus" class="form-control">
-                                <option value="审核中">审核中</option>
-                                <option value="已通过">已通过</option>
-                                <option value="已驳回">已驳回</option>
+                                <option value="在研">在研</option>
+                                <option value="已结题">已结题</option>
                             </select>
+                            <small style="color:#8c8c8c;">正式台账只登记已立项的项目；申报中或未立项的请记录到「已申请项目」台账</small>
                         </div>
                         <div class="form-group">
                             <label>上传附件</label>

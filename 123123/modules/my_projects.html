@@ -66,7 +66,7 @@
                 <th>批准经费(万元) <span data-acfilter="myprojects" data-acfield="funding" onclick="openMpColFilter(event,'funding','批准经费(万元)')" title="按此列筛选" class="kx-col-filter">▼</span></th>
                 <th>立项日期 <span data-acfilter="myprojects" data-acfield="startDate" onclick="openMpColFilter(event,'startDate','立项日期')" title="按此列筛选" class="kx-col-filter">▼</span></th>
                 <th>所属单位 <span data-acfilter="myprojects" data-acfield="unit" onclick="openMpColFilter(event,'unit','所属单位')" title="按此列筛选" class="kx-col-filter">▼</span></th>
-                <th>审核状态 <span data-acfilter="myprojects" data-acfield="auditStatus" onclick="openMpColFilter(event,'auditStatus','审核状态')" title="按此列筛选" class="kx-col-filter">▼</span></th>
+                <th>立项确认 <span data-acfilter="myprojects" data-acfield="auditStatus" onclick="openMpColFilter(event,'auditStatus','立项确认')" title="按此列筛选" class="kx-col-filter">▼</span></th>
                 <th style="min-width:300px">操作</th>
               </tr>
             </thead>
@@ -151,7 +151,7 @@
         </tr>
         <tr>
           <td class="lab">配套经费(万元)</td><td><input id="mpMatchFunding" type="number" step="0.01" value="0"></td>
-          <td class="lab">审核状态</td><td><select id="mpAudit"><option>学校通过</option><option>审核中</option><option>已通过</option><option>已驳回</option></select></td>
+          <td class="lab">立项确认</td><td><select id="mpAudit"><option>学校通过</option><option>已立项</option><option>合同已签订</option></select></td>
         </tr>
         <tr>
           <td class="lab">项目来源单位</td><td><input id="mpSourceOrg"></td>

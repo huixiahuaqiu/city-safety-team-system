@@ -275,6 +275,26 @@
     var extraMap = loadExtra();
     extraMap[key] = Object.assign({}, extraMap[key] || {}, patch);
     saveExtra(extraMap);
+    if (patch && patch.lifeStatus) persistLedgerStatus(key, lifeToLedgerStatus(patch.lifeStatus));
+  }
+
+  // 生命周期变化（中检/结项）必须回写正式台账 status，否则纵向/横向/校级台账与门户仍显示旧状态
+  function persistLedgerStatus(key, status) {
+    var parts = String(key || '').split(':');
+    var sk = storeKey(parts[0]);
+    var id = Number(parts[1]);
+    if (!sk || !isFinite(id)) return;
+    var arr = loadArr(sk);
+    var idx = arr.findIndex(function (d) { return Number(d.id) === id; });
+    if (idx < 0 || arr[idx].status === status) return;
+    arr[idx] = Object.assign({}, arr[idx], { status: status });
+    saveArr(sk, arr);
+    try {
+      global[sk] = arr;
+      if (sk === 'longitudinalData' && typeof saveLongitudinalData === 'function') saveLongitudinalData();
+      if (sk === 'horizontalData' && typeof saveHorizontalData === 'function') saveHorizontalData();
+      if (sk === 'schoolData' && typeof saveSchoolData === 'function') saveSchoolData();
+    } catch (e) {}
   }
 
   function listFromFileList(fileList) {
@@ -493,14 +513,19 @@
     var st = String(item.status || '') + ' ' + String(item.remark || '');
     if (/结题/.test(st)) return '结题';
     if (/完成|已结|结项/.test(st)) return '完成';
-    if (item.status === '已驳回') return '完成';
     return '进行';
+  }
+
+  // 正式台账 status 只有 在研/已结题，申报态（申报中/未立项）由「已申请项目」台账管理
+  function lifeToLedgerStatus(life) {
+    return (life === '完成' || life === '结题') ? '已结题' : '在研';
   }
 
   function normalizeAudit(item, extra) {
     var a = (extra && extra.auditStatus) || item.auditStatus || '';
     if (a) return a;
-    if (item.status === '审核中' || item.status === '已驳回' || item.status === '已通过') return item.status;
+    // 尚未迁移的历史记录可能仍带申报态，原样展示以便识别并处理
+    if (item.status === '审核中' || item.status === '已驳回') return item.status;
     return '学校通过';
   }
 
@@ -1472,6 +1497,7 @@
 
   function mpSave() {
     var nature = getVal('mpNature') || '纵向';
+    var life = getVal('mpLife') || '进行';
     var payload = {
       projectNumber: getVal('mpNumber'),
       name: getVal('mpName'),
@@ -1479,7 +1505,7 @@
       unit: getVal('mpUnit'),
       startDate: getVal('mpStartDate'),
       funding: getVal('mpFunding'),
-      status: getVal('mpAudit') || '学校通过',
+      status: lifeToLedgerStatus(life),
       remark: getVal('mpRemark')
     };
     if (!payload.name || !payload.projectNumber || !payload.leader || !payload.unit || !payload.startDate || !payload.funding) {
@@ -1510,7 +1536,7 @@
     var extraMap = loadExtra();
     extraMap[key] = Object.assign({}, extraMap[key] || {}, {
       roleType: getVal('mpRole') || '主持',
-      lifeStatus: getVal('mpLife') || '进行',
+      lifeStatus: life,
       auditStatus: getVal('mpAudit') || '学校通过',
       endDate: getVal('mpEndDate'),
       outFunding: getVal('mpOutFunding') || 0,

@@ -1,0 +1,172 @@
+<div style="padding: 20px;">
+                    <h2 style="margin-bottom: 8px; color: #333;">📝 已申请项目（申报台账）</h2>
+                    <p style="margin-bottom: 20px; color: #6b7280; font-size: 13px;">记录每一次项目申报（含多次申报同一项目）。申报成功后可一键转入纵向 / 横向 / 校级正式台账；未立项的记录长期保留，便于复盘再申报。</p>
+
+                    <!-- 顶部操作栏 -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn" onclick="showAddProjectApplicationModal()"> 新增申报</button>
+                            <button class="btn btn-danger" onclick="batchDeleteProjectApplication()">🗑️ 删除</button>
+                            <button class="btn btn-secondary" onclick="exportProjectApplication()">📤 导出</button>
+                            <button class="btn btn-secondary" onclick="viewProjectApplicationStats()">📊 统计</button>
+                        </div>
+                    </div>
+
+                    <!-- 快捷筛选标签 -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;" id="projAppFilterTags">
+                        <span class="filter-tag active" onclick="filterProjectApplicationByTag('all', this)">全部(<span id="projAppCountAll">0</span>)</span>
+                        <span class="filter-tag" onclick="filterProjectApplicationByTag('current_year', this)">今年申报(<span id="projAppCountCurrentYear">0</span>)</span>
+                        <span class="filter-tag" onclick="filterProjectApplicationByTag('pending', this)">申报中(<span id="projAppCountPending">0</span>)</span>
+                        <span class="filter-tag" onclick="filterProjectApplicationByTag('granted', this)">已立项(<span id="projAppCountGranted">0</span>)</span>
+                        <span class="filter-tag" onclick="filterProjectApplicationByTag('rejected', this)">未立项(<span id="projAppCountRejected">0</span>)</span>
+                        <span class="filter-tag" onclick="filterProjectApplicationByTag('multi', this)">多次申报(<span id="projAppCountMulti">0</span>)</span>
+                    </div>
+
+                    <!-- 查询条件区 -->
+                    <div style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">项目名称</label>
+                                <input type="text" id="projAppFilterName" class="form-control" placeholder="请输入项目名称">
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">负责人</label>
+                                <input type="text" id="projAppFilterLeader" class="form-control" placeholder="请输入负责人">
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">申报年度</label>
+                                <select id="projAppFilterYear" class="form-control">
+                                    <option value="">全部</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">项目类别</label>
+                                <select id="projAppFilterCategory" class="form-control">
+                                    <option value="">全部</option>
+                                    <option value="纵向">纵向</option>
+                                    <option value="横向">横向</option>
+                                    <option value="校级">校级</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1; min-width: 120px;">
+                                <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">申报状态</label>
+                                <select id="projAppFilterStatus" class="form-control">
+                                    <option value="">全部</option>
+                                    <option value="申报中">申报中</option>
+                                    <option value="已立项">已立项</option>
+                                    <option value="未立项">未立项</option>
+                                </select>
+                            </div>
+                            <button class="btn" onclick="applyProjectApplicationFilters()" style="height: 38px;">🔍 快捷查询</button>
+                            <button class="btn btn-secondary" onclick="resetProjectApplicationFilters()" style="height: 38px;">🔄 重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 数据表格 -->
+                    <div style="background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;">
+                        <table class="table" style="margin: 0; min-width: 1100px;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="projAppSelectAll" onchange="toggleProjectApplicationSelectAll(this)"></th>
+                                    <th>年度</th>
+                                    <th>项目名称</th>
+                                    <th>类别</th>
+                                    <th>负责人</th>
+                                    <th>填报人</th>
+                                    <th>依托单位</th>
+                                    <th>申报/受理单位</th>
+                                    <th>申报时间</th>
+                                    <th>总经费(万)</th>
+                                    <th>财政资金(万)</th>
+                                    <th>状态</th>
+                                    <th style="min-width: 210px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="projAppTableBody">
+                            </tbody>
+                        </table>
+                        <div style="padding: 15px; text-align: center; color: #666; border-top: 1px solid #eee;" id="projAppEmptyMessage">
+                            暂无申报记录，点击「新增申报」开始登记
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新增/编辑申报弹窗 -->
+                <div id="projAppModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+                    <div style="background: #fff; padding: 30px; border-radius: 12px; width: 640px; max-height: 85vh; overflow-y: auto;">
+                        <h3 style="margin-bottom: 6px; color: #333;" id="projAppModalTitle">新增项目申报</h3>
+                        <p id="projAppRepeatHint" style="display:none; margin-bottom: 12px; padding: 8px 12px; background: #fff7e6; border: 1px solid #ffd591; border-radius: 8px; color: #ad6800; font-size: 13px;"></p>
+                        <div class="form-group">
+                            <label>项目名称 *</label>
+                            <input type="text" id="projAppName" class="form-control" placeholder="请输入申报项目名称" oninput="checkProjectApplicationRepeat()">
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>项目类别 *</label>
+                                <select id="projAppCategory" class="form-control">
+                                    <option value="纵向">纵向</option>
+                                    <option value="横向">横向</option>
+                                    <option value="校级">校级</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>申报年度 *</label>
+                                <input type="number" id="projAppYear" class="form-control" placeholder="如 2026" min="2000" max="2100">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>项目负责人 *</label>
+                                <input type="text" id="projAppLeader" class="form-control" placeholder="请输入负责人">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>填报人</label>
+                                <input type="text" id="projAppFiller" class="form-control" placeholder="默认当前登录人">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>项目依托单位</label>
+                            <input type="text" id="projAppUnit" class="form-control" placeholder="如：重庆科技大学">
+                        </div>
+                        <div class="form-group">
+                            <label>申报/受理单位</label>
+                            <input type="text" id="projAppAcceptOrg" class="form-control" placeholder="如：重庆市科技局、市教委、企业名称">
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>申报时间</label>
+                                <input type="month" id="projAppApplyDate" class="form-control">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>拟结题时间</label>
+                                <input type="month" id="projAppPlannedEnd" class="form-control">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>总经费预算(万元)</label>
+                                <input type="number" id="projAppTotalBudget" class="form-control" placeholder="如 5" step="0.01">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>财政资金申请(万元)</label>
+                                <input type="number" id="projAppFiscalBudget" class="form-control" placeholder="如 5" step="0.01">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>申报状态</label>
+                            <select id="projAppStatus" class="form-control">
+                                <option value="申报中">申报中</option>
+                                <option value="已立项">已立项</option>
+                                <option value="未立项">未立项</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>备注</label>
+                            <textarea id="projAppRemark" class="form-control" rows="3" placeholder="如：第 2 次申报；上次未立项原因等"></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="closeProjectApplicationModal()">取消</button>
+                            <button class="btn" onclick="saveProjectApplication()">保存</button>
+                        </div>
+                    </div>
+                </div>

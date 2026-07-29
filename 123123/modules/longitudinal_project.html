@@ -9,7 +9,7 @@
                             <button class="btn btn-secondary" onclick="exportLongitudinal()">📤 导出</button>
                             <button class="btn btn-secondary" onclick="importLongitudinal()">📥 导入</button>
                             <button class="btn btn-secondary" onclick="viewLongitudinalStats()">📊 统计</button>
-                            <button class="btn btn-secondary" onclick="batchAuditLongitudinal()">✅ 批量审核</button>
+                            <button class="btn btn-secondary" onclick="batchAuditLongitudinal()">✅ 批量改状态</button>
                         </div>
                         <button class="btn" style="background: #17a2b8;" onclick="toggleLongitudinalMoreFilters()">️ 更多条件</button>
                     </div>
@@ -18,9 +18,8 @@
                     <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;" id="longitudinalFilterTags">
                         <span class="filter-tag active" onclick="filterLongitudinalByTag('all', this)">全部(<span id="longitudinalCountAll">0</span>)</span>
                         <span class="filter-tag" onclick="filterLongitudinalByTag('current_year', this)">当年立项(<span id="longitudinalCountCurrentYear">0</span>)</span>
-                        <span class="filter-tag" onclick="filterLongitudinalByTag('reviewing', this)">审核中(<span id="longitudinalCountReviewing">0</span>)</span>
-                        <span class="filter-tag" onclick="filterLongitudinalByTag('approved', this)">已通过(<span id="longitudinalCountApproved">0</span>)</span>
-                        <span class="filter-tag" onclick="filterLongitudinalByTag('rejected', this)">已驳回(<span id="longitudinalCountRejected">0</span>)</span>
+                        <span class="filter-tag" onclick="filterLongitudinalByTag('ongoing', this)">在研(<span id="longitudinalCountOngoing">0</span>)</span>
+                        <span class="filter-tag" onclick="filterLongitudinalByTag('finished', this)">已结题(<span id="longitudinalCountFinished">0</span>)</span>
                     </div>
                     
                     <!-- 查询条件区 -->
@@ -51,9 +50,8 @@
                                 <label style="display: block; margin-bottom: 5px; font-size: 14px; color: #666;">状态</label>
                                 <select id="longitudinalFilterStatus" class="form-control">
                                     <option value="">全部</option>
-                                    <option value="审核中">审核中</option>
-                                    <option value="已通过">已通过</option>
-                                    <option value="已驳回">已驳回</option>
+                                    <option value="在研">在研</option>
+                                    <option value="已结题">已结题</option>
                                 </select>
                             </div>
                             <button class="btn" onclick="applyLongitudinalFilters()" style="height: 38px;">🔍 快捷查询</button>
@@ -156,10 +154,10 @@
                         <div class="form-group">
                             <label>状态</label>
                             <select id="longitudinalStatus" class="form-control">
-                                <option value="审核中">审核中</option>
-                                <option value="已通过">已通过</option>
-                                <option value="已驳回">已驳回</option>
+                                <option value="在研">在研</option>
+                                <option value="已结题">已结题</option>
                             </select>
+                            <small style="color:#8c8c8c;">正式台账只登记已立项 / 合同已签订的项目；申报中或未立项的请记录到「已申请项目」台账</small>
                         </div>
                         <div class="form-group">
                             <label>上传附件</label>
