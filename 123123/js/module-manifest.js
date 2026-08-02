@@ -45,7 +45,7 @@ window.__ASSET_VERSIONS = {
   "js/achievements-modules.js": "de21855049",
   "js/app-core.js": "18ff26b488",
   "js/app-legacy-a.js": "c1039eab37",
-  "js/app-legacy-b.js": "640b6a4c4c",
+  "js/app-legacy-b.js": "98825eeaee",
   "js/application-center.js": "a8046caf79",
   "js/competition-management.js": "89100d10bf",
   "js/dataset-library.js": "34d71d88b1",

@@ -434,6 +434,23 @@
         }
     }
 
+    function citysafeCurrentOrigin() {
+        try {
+            var origin = String(location.origin || '').trim();
+            if (origin) return origin;
+        } catch (e) {}
+        return '当前网站';
+    }
+
+    function citysafeAccessHint() {
+        var host = '';
+        try { host = String(location.hostname || ''); } catch (e) {}
+        if (host === '127.0.0.1' || host === 'localhost') {
+            return '请确认通过完整 Docker 入口打开本站，不要使用裸进程 :8000';
+        }
+        return '请强制刷新或使用无痕窗口重新打开 ' + citysafeCurrentOrigin();
+    }
+
     async function gatewayPasswordRequest(path, payload) {
         // GitHub Pages / 纯静态演示没有后端，改密只写本机 localStorage
         if (isStaticPagesDemoHost()) return { ok: true, disabled: true, localOnly: true };
@@ -457,7 +474,7 @@
             };
             var msg = localizedErrors[rawError] || rawError || ('HTTP ' + response.status);
             if (response.status === 405 || response.status === 404) {
-                msg = '当前页面没有可用的改密接口（静态站点请用本地改密）。请刷新后重试，或改用 http://127.0.0.1:8080';
+                msg = '当前页面没有可用的改密接口。请刷新后重试；若仍失败，' + citysafeAccessHint();
             }
             throw new Error(msg);
         }
@@ -1171,9 +1188,9 @@
                 var detail = String((gatewayError && gatewayError.message) || '').trim();
                 var friendly = '服务端身份验证失败';
                 if (/not configured|AUTH_SIGNING_SECRET/i.test(detail)) {
-                    friendly = '当前页面连到的网关未配置登录密钥。请改用 Docker 入口 http://127.0.0.1:8080 ，不要用裸进程 :8000';
+                    friendly = '当前页面连到的网关未配置登录密钥。' + citysafeAccessHint();
                 } else if (/account service unavailable|DatabaseDriver|psycopg|database/i.test(detail)) {
-                    friendly = '账号服务不可用（数据库未就绪）。请用 http://127.0.0.1:8080 访问完整栈';
+                    friendly = '账号服务不可用（数据库未就绪）。' + citysafeAccessHint();
                 } else if (/invalid username or password/i.test(detail)) {
                     friendly = '账号或密码错误';
                 } else if (/registration pending approval/i.test(detail)) {
