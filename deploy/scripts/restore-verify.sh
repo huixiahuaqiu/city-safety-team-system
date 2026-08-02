@@ -457,7 +457,7 @@ restore_volume_archive() {
   local logical_name="$1"
   local volume="$2"
   assert_isolated_volume "${volume}"
-  docker run --rm --network none --entrypoint sh \
+  docker run --rm -i --network none --entrypoint sh \
     --mount "type=volume,src=${volume},dst=/target" \
     "${ARCHIVER_IMAGE}" \
     -ceu 'exec tar -C /target -xzf -' \

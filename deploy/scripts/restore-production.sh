@@ -27,7 +27,7 @@ ENV_FILE="${CITYSAFE_ENV_FILE:-/etc/citysafe/server.env}"
 HEALTH_TIMEOUT="${RESTORE_PRODUCTION_HEALTH_TIMEOUT_SECONDS:-300}"
 MAINTENANCE_LOCK_DIR="/run/lock/citysafe"
 MAINTENANCE_LOCK_FILE="${MAINTENANCE_LOCK_DIR}/maintenance.lock"
-ARCHIVER_IMAGE="${CITYSAFE_ARCHIVER_IMAGE:-alpine:3.20}"
+ARCHIVER_IMAGE="${CITYSAFE_ARCHIVER_IMAGE:-}"
 
 log() {
   printf '[%s] %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*"
@@ -186,7 +186,7 @@ restore_volume_archive() {
   local logical_name="$1"
   local volume="$2"
   assert_project_volume "${volume}"
-  docker run --rm --network none --entrypoint sh \
+  docker run --rm -i --network none --entrypoint sh \
     --mount "type=volume,src=${volume},dst=/target" \
     "${ARCHIVER_IMAGE}" \
     -ceu 'rm -rf /target/..?* /target/.[!.]* /target/* 2>/dev/null || true; exec tar -C /target -xzf -' \
@@ -253,6 +253,11 @@ MINIO_CID="$("${COMPOSE[@]}" ps -aq minio)"
 [[ -n "${DB_CID}" && -n "${MINIO_CID}" ]] || die "could not create db/minio"
 MINIO_VOLUME="$(mount_volume_name "${MINIO_CID}" "/data")"
 assert_project_volume "${MINIO_VOLUME}"
+if [[ -z "${ARCHIVER_IMAGE}" ]]; then
+  ARCHIVER_IMAGE="$(docker inspect --format '{{.Config.Image}}' "${DB_CID}")"
+fi
+[[ "${ARCHIVER_IMAGE}" =~ ^[A-Za-z0-9._/@:+-]+$ ]] \
+  || die "database container uses an unsafe image reference"
 
 log "restoring MinIO volume"
 restore_volume_archive minio "${MINIO_VOLUME}"

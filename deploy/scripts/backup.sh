@@ -264,7 +264,7 @@ archive_volume() {
   local volume_name="$2"
   local output="${PAYLOAD}/volumes/${logical_name}.tar.gz"
   log "archiving ${logical_name} volume"
-  docker run --rm --network none --entrypoint sh \
+  docker run --rm -i --network none --entrypoint sh \
     --mount "type=volume,src=${volume_name},dst=/source,readonly" \
     "${ARCHIVER_IMAGE}" \
     -ceu 'exec tar -C /source -cf - .' \
