@@ -249,8 +249,9 @@ try {
             $hash = (Get-FileHash -LiteralPath $winRel -Algorithm SHA256).Hash.ToLowerInvariant()
             $sums.Add("$hash  $rel")
         }
-        Set-Content -LiteralPath 'SHA256SUMS' -Value ($sums -join "`n") -Encoding ascii -NoNewline
-        Add-Content -LiteralPath 'SHA256SUMS' -Value "`n" -Encoding ascii
+        # Unix LF only — restore-verify path sorting rejects CR endings.
+        $sumsText = (($sums -join "`n") + "`n")
+        [System.IO.File]::WriteAllText((Join-Path (Get-Location) 'SHA256SUMS'), $sumsText, [System.Text.ASCIIEncoding]::new())
     } finally {
         Pop-Location
     }
@@ -274,14 +275,14 @@ try {
 
     $archiveSha = (Get-FileHash -LiteralPath $plainArchive -Algorithm SHA256).Hash.ToLowerInvariant()
     Move-Item -LiteralPath $plainArchive -Destination $finalArchive
-    Set-Content -LiteralPath $finalChecksum -Value "$archiveSha  $archiveName`n" -Encoding ascii -NoNewline
-    $marker = @"
-format=citysafe-backup-v2
-archive=$archiveName
-sha256=$archiveSha
-verified_at_utc=$([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))
-"@
-    Set-Content -LiteralPath $finalMarker -Value $marker -Encoding ascii
+    [System.IO.File]::WriteAllText($finalChecksum, "$archiveSha  $archiveName`n", [System.Text.ASCIIEncoding]::new())
+    $marker = @(
+        'format=citysafe-backup-v2'
+        "archive=$archiveName"
+        "sha256=$archiveSha"
+        "verified_at_utc=$([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
+    ) -join "`n"
+    [System.IO.File]::WriteAllText($finalMarker, ($marker + "`n"), [System.Text.ASCIIEncoding]::new())
 
     Write-Log "backup complete: $finalArchive"
     Write-Host "BACKUP_ARCHIVE=$finalArchive"

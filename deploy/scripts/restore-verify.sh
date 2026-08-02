@@ -306,6 +306,8 @@ safe_tar_list() {
   tar -tvzf "${tarball}" > "${verbose_file}"
   [[ -s "${list_file}" ]] || die "archive contains no entries"
   while IFS= read -r entry; do
+    # GNU/BSD tar often emits a lone "./" root entry; that is safe.
+    [[ "${entry}" == "." || "${entry}" == "./" ]] && continue
     clean="${entry#./}"
     [[ -n "${clean}" && "${clean}" != /* ]] || die "archive contains an absolute or empty path"
     case "/${clean}/" in
