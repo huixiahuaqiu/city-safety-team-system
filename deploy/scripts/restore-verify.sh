@@ -441,7 +441,7 @@ run_isolated_oneshot() {
   local service="$1"
   local cid exit_code
   log "running isolated one-shot service: ${service}"
-  "${COMPOSE[@]}" create --no-build --no-deps "${service}"
+  "${COMPOSE[@]}" create --no-build "${service}"
   cid="$("${COMPOSE[@]}" ps -aq "${service}")"
   [[ -n "${cid}" ]] || die "could not create isolated ${service} service"
   assert_isolated_container "${cid}"

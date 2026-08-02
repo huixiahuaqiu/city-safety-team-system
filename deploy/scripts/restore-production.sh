@@ -221,7 +221,7 @@ run_oneshot() {
   local service="$1"
   local cid exit_code
   log "running one-shot service: ${service}"
-  "${COMPOSE[@]}" create --no-build --no-deps "${service}"
+  "${COMPOSE[@]}" create --no-build "${service}"
   cid="$("${COMPOSE[@]}" ps -aq "${service}")"
   [[ -n "${cid}" ]] || die "could not create ${service}"
   docker start --attach "${cid}" || die "${service} failed to start"
