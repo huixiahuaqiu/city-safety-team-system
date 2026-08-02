@@ -15,6 +15,7 @@ ENV_FILE="${CITYSAFE_SERVER_ENV:-/etc/citysafe/server.env}"
 TLS_ROOT="${CITYSAFE_TLS_CERT_ROOT:-/etc/letsencrypt}"
 PREPARE_ONLY=0
 ISSUE_CERT=0
+SELF_SIGNED=0
 CREATED_ADMIN_PASSWORD=""
 MAINTENANCE_LOCK_HELD="${CITYSAFE_MAINTENANCE_LOCK_HELD:-0}"
 MAINTENANCE_LOCK_DIR="/run/lock/citysafe"
@@ -24,18 +25,21 @@ usage() {
   cat <<'EOF'
 Usage:
   sudo bash deploy/scripts/bootstrap-server.sh --domain citysafe.example.com [options]
+  sudo bash deploy/scripts/bootstrap-server.sh --domain 203.0.113.10 --self-signed
 
 Options:
   --email ADDRESS       Email used by certbot with --issue-cert
   --env-file PATH       Server environment path (default /etc/citysafe/server.env)
   --tls-root PATH       Certificate root (default /etc/letsencrypt)
   --issue-cert          Issue a Let's Encrypt certificate with certbot standalone
+  --self-signed         Generate a local self-signed certificate (IP or hostname)
   --prepare-only        Create/check configuration but do not start the stack
   -h, --help            Show this help
 
 Prerequisites:
-  Docker Engine with the Compose plugin, OpenSSL, DNS already pointing at this
-  host, and either an existing certificate or certbot when --issue-cert is used.
+  Docker Engine with the Compose plugin, OpenSSL, and either an existing
+  certificate, certbot when --issue-cert is used, or --self-signed for
+  temporary IP/hostname access without a public domain.
 EOF
 }
 
@@ -61,6 +65,10 @@ while (($#)); do
       ISSUE_CERT=1
       shift
       ;;
+    --self-signed)
+      SELF_SIGNED=1
+      shift
+      ;;
     --prepare-only)
       PREPARE_ONLY=1
       shift
@@ -83,6 +91,10 @@ if [[ "${EUID}" -ne 0 ]]; then
 fi
 if [[ ! "${DOMAIN}" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]]; then
   echo "ERROR: provide a valid --domain" >&2
+  exit 1
+fi
+if (( ISSUE_CERT == 1 && SELF_SIGNED == 1 )); then
+  echo "ERROR: --issue-cert and --self-signed are mutually exclusive" >&2
   exit 1
 fi
 
@@ -129,6 +141,27 @@ SERVER_COMPOSE="${DEPLOY_DIR}/compose.server.yaml"
 
 random_hex() {
   openssl rand -hex "${1:-32}"
+}
+
+generate_self_signed_cert() {
+  local cert_dir="$1"
+  local name="$2"
+  local san
+  install -d -m 0755 "${cert_dir}"
+  if [[ "${name}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    san="IP:${name}"
+  else
+    san="DNS:${name}"
+  fi
+  openssl req -x509 -nodes -newkey rsa:2048 \
+    -keyout "${cert_dir}/privkey.pem" \
+    -out "${cert_dir}/fullchain.pem" \
+    -days 825 \
+    -subj "/CN=${name}" \
+    -addext "subjectAltName=${san}"
+  chmod 0644 "${cert_dir}/fullchain.pem"
+  chmod 0600 "${cert_dir}/privkey.pem"
+  echo "[bootstrap] generated self-signed TLS certificate for ${name}"
 }
 
 set_env() {
@@ -189,7 +222,9 @@ fi
 
 CERT_DIR="${TLS_ROOT}/live/${DOMAIN}"
 if [[ ! -s "${CERT_DIR}/fullchain.pem" || ! -s "${CERT_DIR}/privkey.pem" ]]; then
-  if (( ISSUE_CERT == 1 )); then
+  if (( SELF_SIGNED == 1 )); then
+    generate_self_signed_cert "${CERT_DIR}" "${DOMAIN}"
+  elif (( ISSUE_CERT == 1 )); then
     [[ -n "${EMAIL}" ]] || {
       echo "ERROR: --email is required with --issue-cert" >&2
       exit 1
@@ -203,7 +238,8 @@ if [[ ! -s "${CERT_DIR}/fullchain.pem" || ! -s "${CERT_DIR}/privkey.pem" ]]; the
       --email "${EMAIL}" -d "${DOMAIN}"
   else
     echo "ERROR: TLS certificate not found under ${CERT_DIR}" >&2
-    echo "Provide the company certificate there, or rerun with --issue-cert --email ADDRESS." >&2
+    echo "Provide the company certificate there, rerun with --issue-cert --email ADDRESS," >&2
+    echo "or use --self-signed for temporary IP/hostname HTTPS." >&2
     exit 1
   fi
 fi
@@ -234,12 +270,20 @@ compose up -d --build --wait
 # hash. Recreate it on every rollout so routing/security changes cannot stay
 # stale after a successful application rebuild.
 compose up -d --no-deps --force-recreate --wait edge
+CURL_EXTRA=()
+if (( SELF_SIGNED == 1 )); then
+  CURL_EXTRA+=(-k)
+fi
 curl --fail --silent --show-error --max-time 15 \
+  "${CURL_EXTRA[@]}" \
   --resolve "${DOMAIN}:443:127.0.0.1" \
   "https://${DOMAIN}/api/health" >/dev/null
 
 echo "[bootstrap] CitySafe is ready at https://${DOMAIN}"
 echo "[bootstrap] DB, MinIO, and gateway have no host-published ports."
+if (( SELF_SIGNED == 1 )); then
+  echo "[bootstrap] TLS uses a self-signed certificate; browsers will warn until you proceed anyway or install a public certificate."
+fi
 if [[ -n "${CREATED_ADMIN_PASSWORD}" ]]; then
   echo "[bootstrap] initial administrator: admin"
   echo "[bootstrap] initial password: ${CREATED_ADMIN_PASSWORD}"

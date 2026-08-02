@@ -37,6 +37,8 @@ param(
 
     [switch]$IssueCert,
 
+    [switch]$SelfSigned,
+
     [string]$Email = '',
 
     [switch]$PrepareOnly
@@ -189,7 +191,19 @@ function ConvertTo-RemoteSingleQuoted {
 }
 
 Assert-ServerTarget -Value $Server
-Assert-DnsName -Value $Domain -ParameterName 'Domain' -RequireDot
+$domainIsIpv4 = $false
+if ($Domain -match '^[0-9.]+$') {
+    $parsedDomainAddress = $null
+    if (
+        -not [System.Net.IPAddress]::TryParse($Domain, [ref]$parsedDomainAddress) -or
+        $parsedDomainAddress.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork
+    ) {
+        throw 'Domain contains an invalid IPv4 address.'
+    }
+    $domainIsIpv4 = $true
+} else {
+    Assert-DnsName -Value $Domain -ParameterName 'Domain' -RequireDot
+}
 Assert-LinuxAbsolutePath -Value $RemotePath -ParameterName 'RemotePath'
 Assert-GitRef -Value $Ref
 
@@ -199,7 +213,13 @@ if (-not [string]::IsNullOrWhiteSpace($EnvFile)) {
 if (-not [string]::IsNullOrWhiteSpace($TlsRoot)) {
     Assert-LinuxAbsolutePath -Value $TlsRoot -ParameterName 'TlsRoot'
 }
+if ($IssueCert -and $SelfSigned) {
+    throw 'IssueCert and SelfSigned are mutually exclusive.'
+}
 if ($IssueCert) {
+    if ($domainIsIpv4) {
+        throw 'IssueCert requires a DNS domain name, not an IPv4 address.'
+    }
     if (
         [string]::IsNullOrWhiteSpace($Email) -or
         $Email.Length -gt 254 -or
@@ -212,7 +232,13 @@ if ($IssueCert) {
 }
 
 $deploymentMode = if ($PrepareOnly) { 'configuration only' } else { 'configuration and service rollout' }
-$certificateMode = if ($IssueCert) { 'request a certificate' } else { 'use the existing certificate' }
+$certificateMode = if ($IssueCert) {
+    'request a certificate'
+} elseif ($SelfSigned) {
+    'use or create a self-signed certificate'
+} else {
+    'use the existing certificate'
+}
 $operationSummary = (
     "Fetch origin, update '$RemotePath' to '$Ref' only from a clean, " +
     "fast-forward-safe checkout, then run server bootstrap for '$Domain' " +
@@ -241,6 +267,7 @@ tls_root="$5"
 issue_cert="$6"
 email="$7"
 prepare_only="$8"
+self_signed="$9"
 
 fail() {
   echo "[deploy] ERROR: $*" >&2
@@ -390,8 +417,14 @@ fi
 if [[ -n "${tls_root}" ]]; then
   bootstrap_args+=(--tls-root "${tls_root}")
 fi
+if [[ "${issue_cert}" == "1" && "${self_signed}" == "1" ]]; then
+  fail "IssueCert and SelfSigned are mutually exclusive"
+fi
 if [[ "${issue_cert}" == "1" ]]; then
   bootstrap_args+=(--issue-cert --email "${email}")
+fi
+if [[ "${self_signed}" == "1" ]]; then
+  bootstrap_args+=(--self-signed)
 fi
 if [[ "${prepare_only}" == "1" ]]; then
   bootstrap_args+=(--prepare-only)
@@ -428,7 +461,8 @@ $remoteArguments = @(
     $TlsRoot,
     $(if ($IssueCert) { '1' } else { '0' }),
     $Email,
-    $(if ($PrepareOnly) { '1' } else { '0' })
+    $(if ($PrepareOnly) { '1' } else { '0' }),
+    $(if ($SelfSigned) { '1' } else { '0' })
 ) | ForEach-Object { ConvertTo-RemoteSingleQuoted -Value ([string]$_) }
 
 # The encoded payload contains only this public deployment routine. User

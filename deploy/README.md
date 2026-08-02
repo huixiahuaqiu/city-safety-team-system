@@ -90,6 +90,18 @@ sudo bash deploy/scripts/bootstrap-server.sh \
 
 然后去掉 `--issue-cert --email`。服务器密钥保存在 `/etc/citysafe/server.env`；脚本重复运行不会轮换现有密钥、清空数据库或删除对象。
 
+### 无域名：IP + 自签 HTTPS
+
+暂时没有公网域名时，可用服务器公网 IP 部署自签证书（浏览器会提示证书不受信任，团队内点「继续访问」即可）：
+
+```bash
+sudo bash deploy/scripts/bootstrap-server.sh \
+  --domain 203.0.113.10 \
+  --self-signed
+```
+
+后续更新请继续带上 `--self-signed`，以便健康检查跳过自签证书校验。有正式域名后，再改为 `--issue-cert` 或挂载公司证书。
+
 服务器已有仓库并配置好 SSH/sudo 后，也可以从 Windows 本机触发后续更新：
 
 ```powershell
@@ -98,6 +110,17 @@ sudo bash deploy/scripts/bootstrap-server.sh \
   -Domain citysafe.example.com `
   -RemotePath /opt/city-safety-team-system `
   -Ref refs/tags/v1.0.0
+```
+
+IP 自签场景：
+
+```powershell
+.\deploy\scripts\deploy-server.ps1 `
+  -Server root@203.0.113.10 `
+  -Domain 203.0.113.10 `
+  -RemotePath /opt/city-safety-team-system `
+  -Ref main `
+  -SelfSigned
 ```
 
 该入口只接受安全格式的服务器、路径和 Git 引用；服务器工作区不干净或分支不能

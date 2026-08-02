@@ -153,6 +153,18 @@ sudo bash deploy/scripts/bootstrap-server.sh \
   --domain citysafe.example.com
 ```
 
+无公网域名、先用公网 IP 访问时，使用自签证书（浏览器会告警，团队内可继续访问）：
+
+```bash
+sudo bash deploy/scripts/bootstrap-server.sh \
+  --domain 203.0.113.10 \
+  --self-signed
+```
+
+`--self-signed` 与 `--issue-cert` 互斥；证书写入
+`/etc/letsencrypt/live/<IP或主机名>/`，与 Nginx 模板路径一致。后续更新请继续带上
+`--self-signed`。
+
 脚本首次运行会创建权限为 `0600` 的 `/etc/citysafe/server.env`，生成随机密钥，构建并
 等待所有容器就绪。初始管理员为 `admin`，临时密码只在首次创建环境文件时显示。
 
