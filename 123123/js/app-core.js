@@ -852,6 +852,13 @@
         }
 
         function showCloudSyncBanner(msg, isError) {
+            var text = String(msg || '');
+            // 自动同步模式下不展示例行同步/冲突/手动操作提示
+            if (
+                /增量同步|全量同步|正在自动|请刷新|已被他人更新|同步完成|无变更|点击|连通|一致性|账号列表|账号已同步|账号正在自动/i.test(text)
+            ) {
+                return;
+            }
             if (!cloudSyncBannerEl) {
                 cloudSyncBannerEl = document.createElement('div');
                 cloudSyncBannerEl.id = 'cloudSyncBanner';
@@ -861,7 +868,7 @@
             cloudSyncBannerEl.style.background = isError ? '#fff1f0' : '#f0fff4';
             cloudSyncBannerEl.style.color = isError ? '#cf1322' : '#389e0d';
             cloudSyncBannerEl.style.border = isError ? '1px solid #ffa39e' : '1px solid #b7eb8f';
-            cloudSyncBannerEl.textContent = msg;
+            cloudSyncBannerEl.textContent = text;
             cloudSyncBannerEl.style.opacity = '1';
             clearTimeout(showCloudSyncBanner._t);
             showCloudSyncBanner._t = setTimeout(function() {
@@ -1181,19 +1188,15 @@
                                         scheduleCloudPullSoon(400);
                                         return { ok: true, key: key, deduplicated: true };
                                     }
-                                    // 服务端已有更新：学生 scoped 键与协作对象键可安全 rebase（服务端合并）；
-                                    // 全量文档禁止盲写覆盖，先拉远端并标记冲突。
-                                    var canAutoRebase = CLOUD_STUDENT_SCOPED_KEYS.has(key) || CLOUD_OBJECT_MERGE_KEYS.has(key);
+                                    // 版本冲突：自动以最新版本为基线重试（后写覆盖），保证一人修改全局可见
                                     if (
-                                        canAutoRebase
-                                        && Number.isFinite(currentVersion)
+                                        Number.isFinite(currentVersion)
                                         && rebaseCloudMutationVersion(key, revision, currentVersion)
                                     ) {
                                         continue;
                                     }
                                     if (
-                                        canAutoRebase
-                                        && currentItem
+                                        currentItem
                                         && Number.isFinite(Number(currentItem.version))
                                         && rebaseCloudMutationVersion(key, revision, currentItem.version)
                                     ) {
@@ -1202,16 +1205,14 @@
                                 } catch (compareError) {
                                     console.warn('sync conflict comparison failed', key, compareError);
                                     if (
-                                        CLOUD_STUDENT_SCOPED_KEYS.has(key)
-                                        && Number.isFinite(currentVersion)
+                                        Number.isFinite(currentVersion)
                                         && rebaseCloudMutationVersion(key, revision, currentVersion)
                                     ) {
                                         continue;
                                     }
                                 }
                             } else if (
-                                CLOUD_STUDENT_SCOPED_KEYS.has(key)
-                                && Number.isFinite(currentVersion)
+                                Number.isFinite(currentVersion)
                                 && rebaseCloudMutationVersion(key, revision, currentVersion)
                             ) {
                                 continue;
@@ -1223,14 +1224,8 @@
                                 lastReason: 'conflict',
                                 lastError: '数据版本冲突：' + key
                             });
-                            showCloudSyncBanner(
-                                CLOUD_STUDENT_SCOPED_KEYS.has(key)
-                                    ? ('检测到多人同时修改“' + key + '”，正在自动合并重试；若仍失败请点“全量同步”')
-                                    : ('检测到多人同时修改“' + key + '”，已保留双方版本，请点“全量同步”后再保存，避免覆盖他人修改'),
-                                true
-                            );
-                            scheduleCloudPullSoon(800);
-                            return;
+                            scheduleCloudPullSoon(400);
+                            continue;
                         }
                         if (status === 400 || status === 403 || status === 413) {
                             var latest = loadCloudMap(storageKey)[key];

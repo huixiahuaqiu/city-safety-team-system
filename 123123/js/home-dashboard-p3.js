@@ -571,9 +571,7 @@
             bar.className = 'home-quick-toolbar';
             bar.innerHTML =
                 '<button type="button" onclick="openHomeQuickCustomize()" title="自定义快捷入口">自定义入口</button>' +
-                '<button type="button" onclick="openHomeLayoutCustomize()" title="调整三栏顺序">布局</button>' +
-                '<button type="button" onclick="openHomeSyncLogPanel()" title="查看同步日志">同步日志</button>' +
-                '<button type="button" onclick="manualHomeCloudSyncFull()" title="强制全量同步">全量同步</button>';
+                '<button type="button" onclick="openHomeLayoutCustomize()" title="调整三栏顺序">布局</button>';
             var dash = document.querySelector('#home .home-dashboard');
             var quick = document.getElementById('homeQuickNav');
             if (dash && quick) dash.insertBefore(bar, quick.nextSibling);
@@ -675,20 +673,13 @@
                     var cacheHint = ov._fromCache
                         ? ('统计缓存 ' + Math.round((ov._cacheAgeMs || 0) / 1000) + 's')
                         : '统计已刷新';
-                    var st = global.cloudSyncState || {};
-                    var syncHint = st.lastMode === 'incremental'
-                        ? ('增量 +' + (st.lastApplied || 0) + '/跳过' + (st.lastSkipped || 0))
-                        : (st.lastMode === 'full' ? '全量同步' : '同步待命');
-                    var extra = document.createElement('div');
-                    // append into existing foot text
                     var span = foot.querySelector('.home-foot-extra');
                     if (!span) {
                         span = document.createElement('span');
                         span.className = 'home-foot-extra';
                         foot.appendChild(span);
                     }
-                    span.innerHTML = cacheHint + ' · ' + syncHint +
-                        ' · <a href="javascript:void(0)" onclick="runHomeConsistencyCheck(false)">一致性校验</a>';
+                    span.textContent = cacheHint;
                 }
             } catch (e3) {}
             return ret;

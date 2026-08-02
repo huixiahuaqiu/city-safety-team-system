@@ -205,7 +205,7 @@
                 <a href="#" data-portal="projects" onclick="showModule('projects');return false;">团队项目</a>
                 <a href="#" data-portal="members" onclick="showModule('members');return false;">团队成员</a>
                 <a href="#" data-portal="contact" onclick="showModule('contact');return false;">联系我们</a>
-                <button type="button" class="nav-sync-chip" id="navSyncChip" onclick="manualHomeCloudSync()" title="云端同步状态，点击立即同步">
+                <button type="button" class="nav-sync-chip" id="navSyncChip" onclick="manualHomeCloudSync()" title="云端同步状态" hidden aria-hidden="true" style="display:none">
                     <span class="dot"></span>
                     <span id="navSyncChipText">同步</span>
                 </button>
@@ -236,11 +236,11 @@
             </div>
         </div>
     
-    <button type="button" class="cloud-sync-fab" id="cloudSyncFab" onclick="manualHomeCloudSync()" title="点击增量同步；悬停可看更多操作">
+    <button type="button" class="cloud-sync-fab" id="cloudSyncFab" onclick="manualHomeCloudSync()" title="云端自动同步" hidden aria-hidden="true" style="display:none">
         <span class="fab-dot"></span>
         <span>
             <span id="cloudSyncFabLabel">云端同步</span>
-            <div class="fab-sub" id="cloudSyncFabSub">点击同步</div>
+            <div class="fab-sub" id="cloudSyncFabSub">自动同步中</div>
         </span>
         <div class="fab-menu" onclick="event.stopPropagation()">
             <button type="button" onclick="manualHomeCloudSync()">增量同步</button>

@@ -658,68 +658,75 @@
             || !currentUser
             || currentUser.role !== 'admin'
         ) return { ok: false, reason: 'skip' };
-        var digest = sessionStorage.getItem(GATEWAY_ACCOUNTS_DIGEST_KEY) || '';
-        if (!digest) {
-            // 直接拉基线 digest，避免与 pullGatewayAccountsFromServer 互相递归
-            var baseRes = await window.GatewayAuth.fetch('/api/auth/admin/accounts', {
-                method: 'GET',
-                cache: 'no-store'
+        var lastError = null;
+        // 版本冲突时用最新 digest 自动重试（后写覆盖），无需用户手动刷新
+        for (var attempt = 1; attempt <= 6; attempt++) {
+            var digest = sessionStorage.getItem(GATEWAY_ACCOUNTS_DIGEST_KEY) || '';
+            if (!digest) {
+                var baseRes = await window.GatewayAuth.fetch('/api/auth/admin/accounts', {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                var baseData = {};
+                try { baseData = await baseRes.json(); } catch (eBase) {}
+                if (!baseRes.ok || !baseData.digest) {
+                    var digestError = new Error(baseData.error || 'account base version is unavailable');
+                    digestError.status = baseRes.status || 409;
+                    throw digestError;
+                }
+                digest = String(baseData.digest);
+                sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, digest);
+                if (Object.keys(pendingGatewayPasswords).length === 0 && Array.isArray(baseData.accounts)) {
+                    accountData = baseData.accounts;
+                }
+            }
+            var response = await window.GatewayAuth.fetch('/api/auth/admin/accounts/replace', {
+                method: 'POST',
+                cache: 'no-store',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    expectedDigest: digest,
+                    accounts: accountsPayloadForGatewaySync()
+                })
             });
-            var baseData = {};
-            try { baseData = await baseRes.json(); } catch (eBase) {}
-            if (!baseRes.ok || !baseData.digest) {
-                var digestError = new Error(baseData.error || 'account base version is unavailable; refresh before editing');
-                digestError.status = baseRes.status || 409;
-                throw digestError;
+            var data = {};
+            try { data = await response.json(); } catch (e) {}
+            if (response.ok && data.digest) {
+                sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, String(data.digest));
+                if (Array.isArray(data.accounts)) {
+                    clearSyncedPendingPasswords(data.accounts);
+                    accountData = data.accounts;
+                    if (window.AppStorage) window.AppStorage.setJson('accountData', accountData);
+                    else Storage.prototype.setItem.call(localStorage, 'accountData', JSON.stringify(accountData));
+                    var fresh = findAccountRecordForUser(currentUser);
+                    if (fresh) {
+                        currentUser = fresh;
+                        try { window.currentUser = currentUser; } catch (eSync) {}
+                    }
+                    try { renderAccountTable(); } catch (eRender) {}
+                }
+                clearGatewayAccountDraft();
+                return { ok: true, digest: data.digest, count: Array.isArray(data.accounts) ? data.accounts.length : 0 };
             }
-            digest = String(baseData.digest);
-            sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, digest);
-            // 若本地还没有待同步新账号，可用服务端列表作为底稿；有 pending 密码时保留本地账号以免丢新建
-            if (Object.keys(pendingGatewayPasswords).length === 0 && Array.isArray(baseData.accounts)) {
-                accountData = baseData.accounts;
+            lastError = new Error(data.error || ('HTTP ' + response.status));
+            lastError.status = response.status;
+            if (response.status === 409 && data.currentDigest) {
+                sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, String(data.currentDigest));
+                continue;
             }
+            throw lastError;
         }
-        var response = await window.GatewayAuth.fetch('/api/auth/admin/accounts/replace', {
-            method: 'POST',
-            cache: 'no-store',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                expectedDigest: digest,
-                accounts: accountsPayloadForGatewaySync()
-            })
-        });
-        var data = {};
-        try { data = await response.json(); } catch (e) {}
-        if (!response.ok || !data.digest) {
-            var error = new Error(data.error || ('HTTP ' + response.status));
-            error.status = response.status;
-            throw error;
-        }
-        sessionStorage.setItem(GATEWAY_ACCOUNTS_DIGEST_KEY, String(data.digest));
-        if (Array.isArray(data.accounts)) {
-            clearSyncedPendingPasswords(data.accounts);
-            accountData = data.accounts;
-            if (window.AppStorage) window.AppStorage.setJson('accountData', accountData);
-            else Storage.prototype.setItem.call(localStorage, 'accountData', JSON.stringify(accountData));
-            var fresh = findAccountRecordForUser(currentUser);
-            if (fresh) {
-                currentUser = fresh;
-                try { window.currentUser = currentUser; } catch (eSync) {}
-            }
-            try { renderAccountTable(); } catch (eRender) {}
-        }
-        clearGatewayAccountDraft();
-        return { ok: true, digest: data.digest, count: Array.isArray(data.accounts) ? data.accounts.length : 0 };
+        throw lastError || new Error('account sync conflict');
     }
 
     function describeGatewayAccountSyncError(err) {
         var detail = String((err && err.message) || '');
-        if (err && err.status === 409) return '账号列表已被他人更新，请刷新后再修改';
+        if (err && err.status === 409) return '账号正在自动同步，请稍候';
         if (/password does not meet/i.test(detail)) {
             return '账号密码不符合服务器策略（至少8位且含字母和数字，不能使用123456），请重置后再同步';
         }
         if (/new accounts require a password/i.test(detail)) {
-            return '新账号临时密码未同步成功，系统已保留待同步密码；请勿刷新，正在重试';
+            return '新账号临时密码未同步成功，系统已保留待同步密码并自动重试';
         }
         if (detail) return '账号变更暂未同步到服务器：' + detail;
         return '账号变更暂未同步到服务器';
@@ -740,23 +747,21 @@
                     resolve(result || { ok: true });
                 }).catch(function(err) {
                     console.warn('[auth] account collaboration sync failed', err);
-                    if (typeof showCloudSyncBanner === 'function') {
-                        showCloudSyncBanner(describeGatewayAccountSyncError(err), true);
+                    if (err && err.status === 403) {
+                        resolve({ ok: false, error: err });
+                        return;
                     }
-                    if (err && err.status === 409) {
-                        // 冲突需用户刷新，不自动重试
-                    } else if (err && (err.status === 403)) {
-                        // 权限问题不重试
-                    } else if (Object.keys(pendingGatewayPasswords).length > 0 || (err && err.status !== 400)) {
-                        gatewayAccountSyncFailures += 1;
-                        var retryDelay = Math.min(60000, 2000 * Math.pow(2, Math.min(gatewayAccountSyncFailures - 1, 5)));
-                        clearTimeout(gatewayAccountSyncTimer);
-                        gatewayAccountSyncTimer = setTimeout(function() {
-                            syncGatewayAccountsNow().catch(function(retryError) {
-                                console.warn('[auth] account collaboration retry failed', retryError);
-                            });
-                        }, retryDelay);
-                    }
+                    // 冲突与瞬时失败均静默自动重试，不打断用户
+                    gatewayAccountSyncFailures += 1;
+                    var retryDelay = Math.min(30000, 800 * Math.pow(2, Math.min(gatewayAccountSyncFailures - 1, 5)));
+                    clearTimeout(gatewayAccountSyncTimer);
+                    gatewayAccountSyncTimer = setTimeout(function() {
+                        syncGatewayAccountsNow().then(function() {
+                            gatewayAccountSyncFailures = 0;
+                        }).catch(function(retryError) {
+                            console.warn('[auth] account collaboration retry failed', retryError);
+                        });
+                    }, retryDelay);
                     resolve({ ok: false, error: err });
                 });
             }, 500);
@@ -775,29 +780,18 @@
         clearTimeout(gatewayAccountSyncTimer);
         var attempts = 0;
         var lastErr = null;
-        while (attempts < 3) {
+        while (attempts < 4) {
             attempts += 1;
             try {
                 var result = await syncGatewayAccountsNow();
-                if (typeof showCloudSyncBanner === 'function') {
-                    showCloudSyncBanner('账号已同步到服务器（全局生效）', false);
-                }
                 return result || { ok: true };
             } catch (err) {
                 lastErr = err;
-                if (err && err.status === 409) {
-                    try { await pullGatewayAccountsFromServer(); } catch (ePull) {}
-                    // 409 后本地草稿可能被冲掉；若仍有待同步密码则再试一次合并写回
-                    if (Object.keys(pendingGatewayPasswords).length === 0) break;
-                    continue;
-                }
                 if (err && err.status === 403) break;
-                await new Promise(function(r) { setTimeout(r, 400 * attempts); });
+                await new Promise(function(r) { setTimeout(r, 300 * attempts); });
             }
         }
-        if (typeof showCloudSyncBanner === 'function') {
-            showCloudSyncBanner(describeGatewayAccountSyncError(lastErr), true);
-        }
+        console.warn('[auth] account flush failed', describeGatewayAccountSyncError(lastErr), lastErr);
         throw lastErr || new Error('account sync failed');
     }
     try { window.flushGatewayAccountSyncNow = flushGatewayAccountSyncNow; } catch (eFlush) {}

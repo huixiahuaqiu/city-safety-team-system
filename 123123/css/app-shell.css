@@ -731,6 +731,12 @@
         .nav-sync-chip.is-syncing .dot { background: #93c5fd; animation: homeSyncPulse 1s ease-in-out infinite; }
         @keyframes homeSyncPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
 
+        /* 云端自动同步：隐藏手动同步入口，后台静默推送/拉取 */
+        .cloud-sync-fab,
+        .nav-sync-chip {
+            display: none !important;
+        }
+
         .cloud-sync-fab {
             position: fixed; right: 24px; bottom: 28px; z-index: 1210;
             display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px;
