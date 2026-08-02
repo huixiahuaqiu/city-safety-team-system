@@ -129,8 +129,10 @@ AUTH_ACCOUNT_CACHE_SECONDS = max(
     5,
     min(int(os.environ.get('AUTH_ACCOUNT_CACHE_SECONDS', '30')), 300),
 )
-AUTH_LOGIN_MAX_ATTEMPTS = max(3, min(int(os.environ.get('AUTH_LOGIN_MAX_ATTEMPTS', '5')), 20))
-AUTH_LOGIN_LOCK_SECONDS = max(30, min(int(os.environ.get('AUTH_LOGIN_LOCK_SECONDS', '900')), 86400))
+# 0 disables lockout (useful for small trusted teams). Positive values are clamped.
+AUTH_LOGIN_MAX_ATTEMPTS = max(0, min(int(os.environ.get('AUTH_LOGIN_MAX_ATTEMPTS', '5')), 100))
+AUTH_LOGIN_LOCK_SECONDS = max(0, min(int(os.environ.get('AUTH_LOGIN_LOCK_SECONDS', '900')), 86400))
+AUTH_LOGIN_LOCKOUT_ENABLED = AUTH_LOGIN_MAX_ATTEMPTS > 0 and AUTH_LOGIN_LOCK_SECONDS > 0
 # Only honor X-Real-IP / X-Forwarded-For when the immediate peer is a trusted
 # reverse proxy (Compose edge by default). Comma-separated IPs or CIDRs.
 _TRUSTED_PROXY_RAW = (
@@ -3054,6 +3056,8 @@ def _auth_attempt_key(handler, username):
 
 
 def auth_attempt_status(handler, username):
+    if not AUTH_LOGIN_LOCKOUT_ENABLED:
+        return True, 0
     key = _auth_attempt_key(handler, username)
     now = time.time()
     with _auth_lock:
@@ -3066,6 +3070,8 @@ def auth_attempt_status(handler, username):
 
 
 def record_auth_attempt(handler, username, success):
+    if not AUTH_LOGIN_LOCKOUT_ENABLED:
+        return
     key = _auth_attempt_key(handler, username)
     with _auth_lock:
         if success:
