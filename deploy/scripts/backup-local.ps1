@@ -46,8 +46,14 @@ function Write-Log {
 }
 
 function Invoke-Compose {
-    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$ComposeArgs)
-    & docker compose --env-file $EnvFile -f $baseCompose -f $localCompose @ComposeArgs
+    param([Parameter(Mandatory = $true)][string[]]$ComposeArgs)
+    $dockerArgs = @(
+        'compose',
+        '--env-file', $EnvFile,
+        '-f', $baseCompose,
+        '-f', $localCompose
+    ) + $ComposeArgs
+    & docker @dockerArgs
     if ($LASTEXITCODE -ne 0) {
         throw "docker compose failed: $($ComposeArgs -join ' ')"
     }
@@ -55,7 +61,10 @@ function Invoke-Compose {
 
 function Get-RunningServiceId {
     param([string]$Service)
-    $cid = (& docker compose --env-file $EnvFile -f $baseCompose -f $localCompose ps --status running -q $Service | Select-Object -First 1)
+    $cid = (& docker @(
+        'compose', '--env-file', $EnvFile, '-f', $baseCompose, '-f', $localCompose,
+        'ps', '--status', 'running', '-q', $Service
+    ) | Select-Object -First 1)
     if ([string]::IsNullOrWhiteSpace($cid)) {
         throw "Compose service is not running: $Service"
     }
@@ -64,8 +73,15 @@ function Get-RunningServiceId {
 
 function Get-MountVolumeName {
     param([string]$ContainerId, [string]$Destination)
-    $format = "{{range .Mounts}}{{if eq .Destination `"$Destination`"}}{{.Name}}{{end}}{{end}}"
-    $volume = (& docker inspect --format $format $ContainerId | Select-Object -First 1)
+    # Only request Mounts JSON — full inspect can contain non-UTF8 env values that
+    # break ConvertFrom-Json on Windows PowerShell.
+    $mountsJson = & docker inspect --format '{{json .Mounts}}' $ContainerId
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($mountsJson)) {
+        throw "docker inspect Mounts failed for $ContainerId"
+    }
+    $mounts = $mountsJson | ConvertFrom-Json
+    $mount = @($mounts) | Where-Object { $_.Destination -eq $Destination } | Select-Object -First 1
+    $volume = if ($null -ne $mount) { [string]$mount.Name } else { '' }
     if ([string]::IsNullOrWhiteSpace($volume) -or $volume -notmatch '^[A-Za-z0-9_.-]+$') {
         throw "Could not resolve named volume for $Destination"
     }
@@ -76,7 +92,10 @@ function Wait-ServiceHealthy {
     param([string]$Service)
     $deadline = [DateTime]::UtcNow.AddSeconds($HealthTimeoutSeconds)
     while ([DateTime]::UtcNow -lt $deadline) {
-        $cid = (& docker compose --env-file $EnvFile -f $baseCompose -f $localCompose ps -q $Service | Select-Object -First 1)
+        $cid = (& docker @(
+            'compose', '--env-file', $EnvFile, '-f', $baseCompose, '-f', $localCompose,
+            'ps', '-q', $Service
+        ) | Select-Object -First 1)
         if (-not [string]::IsNullOrWhiteSpace($cid)) {
             $status = (& docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' $cid.Trim())
             if ($status -eq 'healthy' -or $status -eq 'running') { return }
@@ -114,7 +133,7 @@ function Archive-Volume {
 }
 
 docker compose version | Out-Null
-Invoke-Compose @('config', '--quiet')
+Invoke-Compose -ComposeArgs @('config', '--quiet')
 
 $dbCid = Get-RunningServiceId 'db'
 $gatewayCid = Get-RunningServiceId 'gateway'
@@ -143,13 +162,13 @@ $minioStopped = $false
 function Resume-Services {
     if ($minioStopped) {
         Write-Log 'restarting MinIO'
-        Invoke-Compose @('start', 'minio')
+        Invoke-Compose -ComposeArgs @('start', 'minio')
         Wait-ServiceHealthy 'minio'
         $script:minioStopped = $false
     }
     if ($gatewayStopped) {
         Write-Log 'restarting gateway'
-        Invoke-Compose @('start', 'gateway')
+        Invoke-Compose -ComposeArgs @('start', 'gateway')
         Wait-ServiceHealthy 'gateway'
         $script:gatewayStopped = $false
     }
@@ -157,7 +176,7 @@ function Resume-Services {
 
 try {
     Write-Log 'quiescing gateway before the coordinated backup'
-    Invoke-Compose @('stop', '--timeout', "$QuiesceTimeoutSeconds", 'gateway')
+    Invoke-Compose -ComposeArgs @('stop', '--timeout', "$QuiesceTimeoutSeconds", 'gateway')
     $gatewayStopped = $true
 
     Write-Log 'creating transaction-consistent PostgreSQL dump'
@@ -179,7 +198,7 @@ try {
     }
 
     Write-Log 'stopping MinIO before its volume snapshot'
-    Invoke-Compose @('stop', '--timeout', "$QuiesceTimeoutSeconds", 'minio')
+    Invoke-Compose -ComposeArgs @('stop', '--timeout', "$QuiesceTimeoutSeconds", 'minio')
     $minioStopped = $true
 
     Archive-Volume -LogicalName 'minio' -VolumeName $minioVolume `
