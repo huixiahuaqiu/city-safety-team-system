@@ -1232,7 +1232,12 @@
             var text = String(msg || '');
             window.__citysafeBootErrors.push(text);
             if (/Cannot redefine property|moduleNavSkipHistory/i.test(text)) {
-                window.__citysafeShowBootBanner('页面脚本加载失败（缓存了旧版本）。请按 Ctrl+F5 强制刷新，或使用 InPrivate/无密窗口打开 http://127.0.0.1:8080');
+                var originA = '';
+                try { originA = String(location.origin || ''); } catch (e0) {}
+                window.__citysafeShowBootBanner(
+                    '页面脚本加载失败（缓存了旧版本）。请强制刷新当前页面，或用无痕/InPrivate 窗口重新打开 '
+                    + (originA || '本站地址')
+                );
             }
             return true;
         };
@@ -1476,7 +1481,12 @@
         (function () {
             if (typeof window.showModule !== 'function' || typeof window.handleLogin !== 'function') {
                 if (typeof window.__citysafeShowBootBanner === 'function') {
-                    window.__citysafeShowBootBanner('关键功能未就绪（多半是浏览器缓存了旧脚本）。请按 Ctrl+F5 强制刷新，或用 InPrivate 窗口打开 http://127.0.0.1:8080');
+                    var originB = '';
+                    try { originB = String(location.origin || ''); } catch (e1) {}
+                    window.__citysafeShowBootBanner(
+                        '关键功能未就绪（多半是浏览器缓存了旧脚本）。请强制刷新当前页面，或用无痕/InPrivate 窗口重新打开 '
+                        + (originB || '本站地址')
+                    );
                 }
             }
         })();
