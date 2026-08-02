@@ -412,6 +412,52 @@ sudo env \
 
 禁止直接复制 Docker 内部卷目录或只迁移 PostgreSQL 而遗漏 MinIO、上传和状态卷。
 
+### 7.1 本机 Windows Docker → 已部署 Linux 服务器
+
+前置：服务器已用 `bootstrap-server.sh` 跑通；本机 `stack.ps1 -Action up` 正常。
+
+1. 本机导出（不打包 `.env.local`）：
+
+```powershell
+.\deploy\scripts\stack.ps1 -Action up
+.\deploy\scripts\backup-local.ps1
+```
+
+备份写在 `deploy/backups/citysafe_*.tar.gz`（及 `.sha256` / `.verified`）。
+
+2. 上传到服务器并隔离验证（验证时传入本机 MinIO 根账号，因 MinIO 卷里仍是本机根凭据）：
+
+```powershell
+scp deploy\backups\citysafe_XXXX.tar.gz* root@服务器:/srv/citysafe/backups/
+```
+
+```bash
+cd /opt/city-safety-team-system
+git pull --ff-only origin main
+sudo env \
+  SOURCE_MINIO_ROOT_USER='本机.env.local中的MINIO_ROOT_USER' \
+  SOURCE_MINIO_ROOT_PASSWORD='本机.env.local中的MINIO_ROOT_PASSWORD' \
+  RESTORE_VERIFY_MAX_AGE_HOURS=168 \
+  bash deploy/scripts/restore-verify.sh \
+  /srv/citysafe/backups/citysafe_XXXX.tar.gz
+```
+
+必须出现 `restore verification PASS`。
+
+3. 维护窗口写入生产（会清空当前生产数据卷并覆盖）：
+
+```bash
+sudo env \
+  CONFIRM_PRODUCTION_RESTORE=YES \
+  SOURCE_MINIO_ROOT_USER='...' \
+  SOURCE_MINIO_ROOT_PASSWORD='...' \
+  bash deploy/scripts/restore-production.sh \
+  /srv/citysafe/backups/citysafe_XXXX.tar.gz
+```
+
+脚本会保留服务器 `AUTH_*`、上传令牌和 `MINIO_ACCESS_KEY/SECRET`，并把
+`MINIO_ROOT_*` 更新为与备份卷一致的本机根凭据。恢复后用**本机原账号**登录核对。
+
 ## 8. 密钥与证书轮换
 
 服务器密钥保存在 `/etc/citysafe/server.env`，文件权限必须保持 `0600`。修改环境文件

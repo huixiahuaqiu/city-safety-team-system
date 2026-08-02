@@ -159,16 +159,31 @@ fi
 VERIFY_PROJECT="citysafe-restore-verify-$(date -u '+%Y%m%d%H%M%S')-$(printf '%04x%04x' "${RANDOM}" "${RANDOM}")"
 [[ "${VERIFY_PROJECT}" =~ ^citysafe-restore-verify-[0-9]{14}-[0-9a-f]{8}$ ]] \
   || die "could not create a safe isolated Compose project name"
+WORK="$(mktemp -d "${VERIFY_TMP_ROOT}/citysafe-restore-verify.XXXXXX")"
+chmod 700 "${WORK}"
+
+# Optional: when verifying a workstation backup whose MinIO volume was created
+# with different root credentials than the server env, overlay SOURCE_MINIO_ROOT_*.
+EFFECTIVE_ENV_FILE="${ENV_FILE}"
+if [[ -n "${SOURCE_MINIO_ROOT_USER:-}" || -n "${SOURCE_MINIO_ROOT_PASSWORD:-}" ]]; then
+  [[ -n "${SOURCE_MINIO_ROOT_USER:-}" && -n "${SOURCE_MINIO_ROOT_PASSWORD:-}" ]] \
+    || die "SOURCE_MINIO_ROOT_USER and SOURCE_MINIO_ROOT_PASSWORD must be set together"
+  EFFECTIVE_ENV_FILE="${WORK}/verify.env"
+  grep -vE '^(MINIO_ROOT_USER|MINIO_ROOT_PASSWORD)=' "${ENV_FILE}" > "${EFFECTIVE_ENV_FILE}"
+  printf 'MINIO_ROOT_USER=%s\n' "${SOURCE_MINIO_ROOT_USER}" >> "${EFFECTIVE_ENV_FILE}"
+  printf 'MINIO_ROOT_PASSWORD=%s\n' "${SOURCE_MINIO_ROOT_PASSWORD}" >> "${EFFECTIVE_ENV_FILE}"
+  chmod 0600 "${EFFECTIVE_ENV_FILE}"
+  log "using SOURCE_MINIO_ROOT_* overlay for isolated MinIO authentication"
+fi
+
 COMPOSE=(
   docker compose
   --project-name "${VERIFY_PROJECT}"
-  --env-file "${ENV_FILE}"
+  --env-file "${EFFECTIVE_ENV_FILE}"
   -f "${COMPOSE_FILE}"
   -f "${SERVER_OVERRIDE}"
 )
 "${COMPOSE[@]}" config --quiet
-WORK="$(mktemp -d "${VERIFY_TMP_ROOT}/citysafe-restore-verify.XXXXXX")"
-chmod 700 "${WORK}"
 
 ISOLATED_STACK_CREATED=0
 VERIFY_DB_VOLUME=""

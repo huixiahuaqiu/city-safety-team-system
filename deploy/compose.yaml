@@ -121,7 +121,12 @@ services:
         printf '%s\n' \
           '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetBucketLocation","s3:ListBucket","s3:ListBucketMultipartUploads"],"Resource":["arn:aws:s3:::'"$${bucket}"'"]},{"Effect":"Allow","Action":["s3:AbortMultipartUpload","s3:DeleteObject","s3:GetObject","s3:ListMultipartUploadParts","s3:PutObject"],"Resource":["arn:aws:s3:::'"$${bucket}"'/*"]}]}' \
           > /tmp/citysafe-app-policy.json
-        mc admin policy create citysafe citysafe-app /tmp/citysafe-app-policy.json
+        # Idempotent for re-init and backup-restore cutovers.
+        mc admin policy create citysafe citysafe-app /tmp/citysafe-app-policy.json \
+          || mc admin policy put citysafe citysafe-app /tmp/citysafe-app-policy.json
+        if mc admin user info citysafe "$${MINIO_ACCESS_KEY}" >/dev/null 2>&1; then
+          mc admin user remove citysafe "$${MINIO_ACCESS_KEY}"
+        fi
         mc admin user add citysafe "$${MINIO_ACCESS_KEY}" "$${MINIO_SECRET_KEY}"
         mc admin policy attach citysafe citysafe-app --user "$${MINIO_ACCESS_KEY}"
     environment:
