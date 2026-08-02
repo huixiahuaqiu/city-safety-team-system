@@ -281,7 +281,7 @@ run_oneshot migrate
 run_oneshot minio-init
 
 log "creating gateway and restoring application volumes"
-"${COMPOSE[@]}" create --no-build --no-deps gateway
+"${COMPOSE[@]}" create --no-build gateway
 GATEWAY_CID="$("${COMPOSE[@]}" ps -aq gateway)"
 [[ -n "${GATEWAY_CID}" ]] || die "could not create gateway"
 STATE_VOLUME="$(mount_volume_name "${GATEWAY_CID}" "/data")"
