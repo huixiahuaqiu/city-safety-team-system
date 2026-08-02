@@ -94,6 +94,7 @@ temp/
 # ---- 备份文件 ----
 *.backup
 *.orig
+deploy/backups/
 
 # ---- 本地敏感配置 ----
 123123/.env
