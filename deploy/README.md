@@ -102,7 +102,21 @@ sudo bash deploy/scripts/bootstrap-server.sh \
 
 后续更新请继续带上 `--self-signed`，以便健康检查跳过自签证书校验。有正式域名后，再改为 `--issue-cert` 或挂载公司证书。
 
-服务器已有仓库并配置好 SSH/sudo 后，也可以从 Windows 本机触发后续更新：
+### 本机改代码 → 直接同步到阿里云（推荐日常开发）
+
+服务器访问 GitHub 不稳定时，用本机直传（SSH 别名默认 `citysafe-ecs`）：
+
+```powershell
+# 单次上传并重建网关
+.\deploy\scripts\sync-to-cloud.ps1
+
+# 监听模式：保存文件后自动上传（边改边看云上效果）
+.\deploy\scripts\sync-to-cloud.ps1 -Watch
+```
+
+说明：只同步代码与部署配置，不覆盖云上业务数据与服务器密钥；浏览器需 Ctrl+F5 强刷。
+
+服务器已有仓库并配置好 SSH/sudo 后，也可以从 Windows 本机走 Git 引用更新：
 
 ```powershell
 .\deploy\scripts\deploy-server.ps1 `
