@@ -642,10 +642,13 @@
             });
 
             if (pendingRpFile) {
-                if (typeof global.saveFileForTeam !== 'function') {
+                var cloud = typeof global.requireCloudUpload === 'function'
+                    ? await global.requireCloudUpload()
+                    : null;
+                if (!cloud || typeof cloud.saveFileForTeam !== 'function') {
                     throw new Error('云端上传未就绪，请刷新后重试');
                 }
-                var cloudMeta = await global.saveFileForTeam(pendingRpFile, {
+                var cloudMeta = await cloud.saveFileForTeam(pendingRpFile, {
                     fileName: pendingRpFile.name,
                     fileType: 'report',
                     remark: '来自项目报告：' + name,

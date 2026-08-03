@@ -370,13 +370,17 @@
             </div>
             
             <!-- 公告动态大类 -->
-            <div class="nav-item nav-category" onclick="toggleSubMenu(this)">
-                <span>📢</span> 公告动态
+            <div class="nav-item nav-category" id="navCategoryAnnounce" onclick="toggleSubMenu(this)">
+                <span>📢</span>
+                <span class="nav-label">公告动态</span>
+                <span class="sidebar-unread-badge" id="navAnnounceBadge" hidden aria-label="未读通知">0</span>
                 <span class="submenu-toggle">▼</span>
             </div>
             <div class="submenu">
-                <div class="nav-item" onclick="showModule('notice_publish')">
-                    <span>📝</span> 内部通知发布
+                <div class="nav-item" id="navItemNoticePublish" onclick="typeof goToNoticeModule==='function'?goToNoticeModule(false):showModule('notice_publish')">
+                    <span>📝</span>
+                    <span class="nav-label">内部通知发布</span>
+                    <span class="sidebar-unread-badge" id="navNoticePublishBadge" hidden aria-label="未读通知">0</span>
                 </div>
                 <div class="nav-item" onclick="showModule('news_management')">
                     <span>📰</span> 新闻动态管理
@@ -1244,6 +1248,8 @@
     <script src="js/pages-static-boot.js?v=33f9b797b8"></script>
     <script src="js/module-manifest.js?v=f8234ad93f"></script>
     <script src="js/module-loader.js?v=5c5afae487"></script>
+    <!-- 云端上传核心：必须早于成员/成果等会上传附件的脚本 -->
+    <script src="js/shared-file-library.js?v=778e65d051"></script>
     <script src="js/app-core.js?v=18ff26b488"></script>
     <script src="js/achievements-modules.js?v=de21855049"></script>
     

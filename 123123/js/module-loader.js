@@ -4,18 +4,18 @@
   var prefetchCache = Object.create(null);
   var scriptPromises = Object.create(null);
   var MODULE_SCRIPTS = {
-    excel: ['js/excel-tools.js'],
+    shared_files: ['js/shared-file-library.js'],
+    notice_publish: ['js/shared-file-library.js', 'js/notice-enhance.js'],
+    competition_management: ['js/competition-management.js'],
+    application_center: ['js/shared-file-library.js', 'js/holiday-leave.js', 'js/application-center.js'],
+    literature_library: ['js/shared-file-library.js', 'js/literature-library.js'],
+    literature_analysis: ['js/shared-file-library.js', 'js/literature-compare.js'],
+    document_analysis: ['js/shared-file-library.js', 'js/document-analysis.js'],
+    project_report: ['js/shared-file-library.js', 'js/project-report.js'],
+    dataset_library: ['js/dataset-library.js'],
     my_projects: ['js/my-projects.js'],
     my_achievements: ['js/my-achievements.js'],
-    literature_analysis: ['js/literature-compare.js'],
-    document_analysis: ['js/document-analysis.js'],
-    literature_library: ['js/literature-library.js'],
-    dataset_library: ['js/dataset-library.js'],
-    project_report: ['js/project-report.js'],
-    shared_files: ['js/shared-file-library.js'],
-    notice_publish: ['js/notice-enhance.js'],
-    competition_management: ['js/competition-management.js'],
-    application_center: ['js/holiday-leave.js', 'js/application-center.js']
+    excel: ['js/excel-tools.js']
   };
 
   // 依据构建期生成的 __MODULE_VERSIONS（见 js/module-manifest.js）拼接带内容哈希的
@@ -30,20 +30,47 @@
     return path + (v ? '?v=' + v : '');
   }
 
+  function findScriptByPath(path) {
+    var byData = document.querySelector('script[data-module-asset="' + path + '"]');
+    if (byData) return byData;
+    var nodes = document.getElementsByTagName('script');
+    for (var i = 0; i < nodes.length; i++) {
+      var src = nodes[i].getAttribute('src') || '';
+      if (src.indexOf(path) !== -1) return nodes[i];
+    }
+    return null;
+  }
+
+  function isRealCloudUploadApi() {
+    return typeof window.saveFileForTeam === 'function'
+      && window.saveFileForTeam.__isCloudStub !== true
+      && typeof window.cloudFileDownloadUrl === 'function'
+      && window.cloudFileDownloadUrl.__isCloudStub !== true;
+  }
+
   function loadScript(path) {
     if (scriptPromises[path]) return scriptPromises[path];
     scriptPromises[path] = new Promise(function (resolve, reject) {
-      var existing = document.querySelector('script[data-module-asset="' + path + '"]');
+      // 共享上传库：若真实 API 已挂好，无需再注入
+      if (path === 'js/shared-file-library.js' && isRealCloudUploadApi()) {
+        var readyTag = findScriptByPath(path);
+        if (readyTag) readyTag.dataset.loaded = '1';
+        resolve(true);
+        return;
+      }
+      var existing = findScriptByPath(path);
       if (existing && existing.dataset.loaded === '1') {
         resolve(true);
         return;
       }
-      var script = existing || document.createElement('script');
+      // 不复用已完成的 script 标签（onload 不会再次触发，会导致 Promise 挂死）
+      var script = document.createElement('script');
       script.src = assetUrl(path);
       script.async = false;
       script.dataset.moduleAsset = path;
       script.onload = function () {
         script.dataset.loaded = '1';
+        script.dataset.moduleAssetLoaded = '1';
         resolve(true);
       };
       script.onerror = function () {
@@ -51,7 +78,7 @@
         if (script.parentNode) script.parentNode.removeChild(script);
         reject(new Error('模块脚本加载失败：' + path));
       };
-      if (!existing) document.head.appendChild(script);
+      document.head.appendChild(script);
     });
     return scriptPromises[path];
   }
@@ -63,6 +90,76 @@
     }
     return true;
   }
+
+  /** 确保云端上传 API 可用（头像/附件等入口可能早于共享文件模块） */
+  async function ensureCloudUploadReady() {
+    if (isRealCloudUploadApi()) return true;
+    await loadScript('js/shared-file-library.js');
+    if (!isRealCloudUploadApi()) {
+      await new Promise(function (r) { setTimeout(r, 0); });
+    }
+    if (!isRealCloudUploadApi()) {
+      throw new Error('云端上传模块加载失败，请强制刷新（Ctrl+F5）后重试');
+    }
+    return true;
+  }
+
+  async function saveFileForTeamAuto(file, options) {
+    await ensureCloudUploadReady();
+    var impl = window.saveFileForTeam;
+    if (!impl || impl.__isCloudStub === true) {
+      throw new Error('云端上传模块加载失败，请强制刷新（Ctrl+F5）后重试');
+    }
+    return impl(file, options);
+  }
+  saveFileForTeamAuto.__isCloudStub = true;
+
+  function cloudFileDownloadUrlAuto(fileId) {
+    if (isRealCloudUploadApi()) return window.cloudFileDownloadUrl(fileId);
+    // 同步场景：先拼基础 URL，token 在模块加载后由真实实现补齐
+    var id = String(fileId || '').trim();
+    if (!id) return '';
+    var url = '/api/shared-file/download?fileId=' + encodeURIComponent(id);
+    try {
+      var session = window.GatewayAuth && window.GatewayAuth.read
+        ? window.GatewayAuth.read()
+        : null;
+      if (session && session.token) url += '&access=' + encodeURIComponent(session.token);
+    } catch (e) { /* ignore */ }
+    return url;
+  }
+  cloudFileDownloadUrlAuto.__isCloudStub = true;
+
+  async function uploadFileToCloudAuto(file, options) {
+    await ensureCloudUploadReady();
+    var impl = window.uploadFileToCloud;
+    if (!impl || impl.__isCloudStub === true) {
+      throw new Error('云端上传接口不可用');
+    }
+    return impl(file, options);
+  }
+  uploadFileToCloudAuto.__isCloudStub = true;
+
+  // 在共享库脚本加载前提供可调用的全局入口，避免「未打开共享文件就上传」失败
+  if (typeof window.saveFileForTeam !== 'function') {
+    window.saveFileForTeam = saveFileForTeamAuto;
+  }
+  if (typeof window.cloudFileDownloadUrl !== 'function') {
+    window.cloudFileDownloadUrl = cloudFileDownloadUrlAuto;
+  }
+  if (typeof window.uploadFileToCloud !== 'function') {
+    window.uploadFileToCloud = uploadFileToCloudAuto;
+  }
+  window.ensureCloudUploadReady = ensureCloudUploadReady;
+  window.requireCloudUpload = async function requireCloudUpload() {
+    await ensureCloudUploadReady();
+    return {
+      saveFileForTeam: window.saveFileForTeam,
+      cloudFileDownloadUrl: window.cloudFileDownloadUrl,
+      uploadFileToCloud: window.uploadFileToCloud
+    };
+  };
+  window.loadModuleAssetScript = loadScript;
 
   async function loadModuleHtml(id) {
     var el = document.getElementById(id);

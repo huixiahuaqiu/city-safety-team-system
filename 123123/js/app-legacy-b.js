@@ -34,6 +34,7 @@
         ['账号管理（查看列表）', true, true, false, false],
         ['系统设置', true, false, false, false],
         ['内部通知发布', true, true, false, false],
+        ['新闻动态管理', true, true, false, false],
         ['操作日志', true, false, false, false],
         ['数据备份', true, false, false, false],
     ];
@@ -3971,15 +3972,18 @@
             return;
         }
         try {
-            if (typeof window.saveFileForTeam !== 'function') throw new Error('云端上传未就绪，请刷新后重试');
-            var meta = await window.saveFileForTeam(file, {
+            var cloud = typeof window.requireCloudUpload === 'function'
+                ? await window.requireCloudUpload()
+                : null;
+            if (!cloud || typeof cloud.saveFileForTeam !== 'function') throw new Error('云端上传未就绪，请刷新后重试');
+            var meta = await cloud.saveFileForTeam(file, {
                 fileName: file.name,
                 fileType: 'other',
                 remark: '账号头像|' + (currentUser && (currentUser.realName || currentUser.studentId) || ''),
                 hiddenInLibrary: true
             });
-            var url = (typeof window.cloudFileDownloadUrl === 'function')
-                ? window.cloudFileDownloadUrl(meta.serverFileId)
+            var url = (typeof cloud.cloudFileDownloadUrl === 'function')
+                ? cloud.cloudFileDownloadUrl(meta.serverFileId)
                 : meta.url;
             currentUser.avatar = url;
             currentUser.avatarFileId = meta.serverFileId;
@@ -4170,12 +4174,19 @@
     function saveTaskData() {
         taskData = (taskData || []).map(t => ({ ...t, visibility: 'all', publisher: t.publisher || (currentUser?.realName || '系统') }));
         localStorage.setItem('taskData', JSON.stringify(taskData));
+        try { window.taskData = taskData; } catch (eW) {}
         try { if (typeof cloudUpsert === 'function') cloudUpsert('taskData', JSON.stringify(taskData)); } catch (e) {}
         try {
             if (typeof bumpHomeDashboard === 'function') bumpHomeDashboard('task');
             else if (typeof renderHomeDashboard === 'function') renderHomeDashboard();
         } catch (e2) {}
     }
+    function applyIncomingTaskData(incoming) {
+        taskData = Array.isArray(incoming) ? incoming : [];
+        try { window.taskData = taskData; } catch (e) {}
+        return taskData;
+    }
+    window.applyIncomingTaskData = applyIncomingTaskData;
 
     function populateOwnerSelects() {
         const allOwners = getRealTeamOwnerNames();
@@ -4804,8 +4815,15 @@
     function saveWeeklyReportData() {
         weeklyReportData = (weeklyReportData || []).map(r => ({ ...r, visibility: 'all' }));
         localStorage.setItem('weeklyReportData', JSON.stringify(weeklyReportData));
+        try { window.weeklyReportData = weeklyReportData; } catch (eW) {}
         try { if (typeof cloudUpsert === 'function') cloudUpsert('weeklyReportData', JSON.stringify(weeklyReportData)); } catch (e) {}
     }
+    function applyIncomingWeeklyReportData(incoming) {
+        weeklyReportData = Array.isArray(incoming) ? incoming : [];
+        try { window.weeklyReportData = weeklyReportData; } catch (e) {}
+        return weeklyReportData;
+    }
+    window.applyIncomingWeeklyReportData = applyIncomingWeeklyReportData;
 
     function populateWeeklyReportOwnerSelects() {
         const allOwners = getRealTeamOwnerNames();
@@ -6356,20 +6374,72 @@
     }
 
     function updateSidebarNoticeBadge(count) {
-        var nav = document.querySelector('.nav-item[onclick*="notice_publish"]');
-        if (!nav) return;
-        var tip = nav.querySelector('.sidebar-notice-badge');
-        if (!tip) {
-            tip = document.createElement('span');
-            tip.className = 'sidebar-notice-badge';
-            tip.style.cssText = 'margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;';
-            nav.style.display = 'flex';
-            nav.style.alignItems = 'center';
-            nav.appendChild(tip);
+        count = Number(count) || 0;
+        var text = count > 99 ? '99+' : String(count);
+        var show = count > 0;
+
+        function paint(el) {
+            if (!el) return;
+            el.textContent = text;
+            el.classList.toggle('show', show);
+            if (show) el.removeAttribute('hidden');
+            else el.setAttribute('hidden', 'hidden');
+            el.title = show ? ('有 ' + count + ' 条未读通知') : '';
         }
-        tip.textContent = count > 99 ? '99+' : String(count);
-        tip.style.display = count > 0 ? 'inline-flex' : 'none';
+
+        // 父级「公告动态」：折叠时也能看到未读
+        paint(document.getElementById('navAnnounceBadge'));
+        // 子项「内部通知发布」
+        paint(document.getElementById('navNoticePublishBadge'));
+
+        // 兼容旧 DOM（无 id 时兜底）
+        var legacyNav = document.querySelector('.nav-item[onclick*="notice_publish"]');
+        if (legacyNav && !document.getElementById('navNoticePublishBadge')) {
+            var tip = legacyNav.querySelector('.sidebar-notice-badge, .sidebar-unread-badge');
+            if (!tip) {
+                tip = document.createElement('span');
+                tip.className = 'sidebar-unread-badge';
+                legacyNav.appendChild(tip);
+            }
+            paint(tip);
+        }
+
+        // 有未读时，若父菜单仍折叠，保持角标可见即可（不强行展开，避免打扰）
+        var cat = document.getElementById('navCategoryAnnounce');
+        if (cat) cat.classList.toggle('has-unread', show);
     }
+    window.updateSidebarNoticeBadge = updateSidebarNoticeBadge;
+
+    // 实时刷新侧栏/铃铛未读：云端写入、跨标签页、定时探测
+    (function bindNoticeUnreadLiveUpdates() {
+        var timer = null;
+        function tick() {
+            try {
+                if (typeof refreshGlobalNoticeCenter === 'function') refreshGlobalNoticeCenter();
+            } catch (e) {}
+        }
+        try {
+            window.addEventListener('citysafe:cloud-applied', function (ev) {
+                var keys = (ev && ev.detail && ev.detail.keys) || [];
+                if (!keys.length || keys.indexOf('noticeData') >= 0) tick();
+            });
+        } catch (e1) {}
+        try {
+            window.addEventListener('storage', function (ev) {
+                if (ev && ev.key === 'noticeData') tick();
+            });
+        } catch (e2) {}
+        try {
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) tick();
+            });
+        } catch (e3) {}
+        // 轻量轮询：即使当前页不在首页，也保持未读角标近实时
+        try {
+            if (!timer) timer = setInterval(tick, 8000);
+        } catch (e4) {}
+        setTimeout(tick, 600);
+    })();
 
     function positionGlobalNoticePanel() {
         var bell = document.getElementById('globalNoticeBell');

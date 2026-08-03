@@ -600,7 +600,7 @@
             literatureCompareNamedDimTemplates: ['智能工具（全部）'],
             customInstructionTemplates: ['智能工具（全部）'],
             noticeData: ['内部通知发布', '系统设置'],
-            newsData: ['系统设置'],
+            newsData: ['新闻动态管理', '系统设置', '内部通知发布'],
             meetingData: ['系统设置'],
             portalContentConfig_v1: ['系统设置'],
             portalHomeCarousel_v1: ['系统设置'],
@@ -651,7 +651,7 @@
                     return Array.isArray(item) && item[0] === feature;
                 });
                 if (row) return row[column] === true;
-                if (feature === '内部通知发布') return role === 'admin' || role === 'leader';
+                if (feature === '内部通知发布' || feature === '新闻动态管理') return role === 'admin' || role === 'leader';
                 if (feature === '系统设置') return role === 'admin';
                 return false;
             });
@@ -1562,15 +1562,33 @@
                     setter(JSON.parse(raw));
                 } catch (e) {}
             }
-            try { apply('teamMemberData', function(v){ teamMemberData = v; }); } catch(e){}
-            try { apply('accountData', function(v){ accountData = v; }); } catch(e){}
+            try { apply('teamMemberData', function(v){
+                try { teamMemberData = v; } catch (eTm) {}
+                try { window.teamMemberData = v; } catch (eTm2) {}
+            }); } catch(e){}
+            try { apply('accountData', function(v){
+                try { accountData = v; } catch (eAcc) {}
+                try { window.accountData = v; } catch (eAcc2) {}
+            }); } catch(e){}
             try { apply('permissionMatrix', function(v){ permissionMatrix = v; }); } catch(e){}
             try { apply('sharedFileData', function(v){ sharedFileData = v; }); } catch(e){}
             try { apply('longitudinalData', function(v){ longitudinalData = v; }); } catch(e){}
             try { apply('horizontalData', function(v){ horizontalData = v; }); } catch(e){}
             try { apply('schoolData', function(v){ schoolData = v; }); } catch(e){}
-            try { apply('taskData', function(v){ taskData = v; }); } catch(e){}
-            try { apply('weeklyReportData', function(v){ weeklyReportData = v; }); } catch(e){}
+            try { apply('taskData', function(v){
+                if (typeof window.applyIncomingTaskData === 'function') window.applyIncomingTaskData(v);
+                else {
+                    try { taskData = v; } catch (eT) {}
+                    try { window.taskData = v; } catch (eT2) {}
+                }
+            }); } catch(e){}
+            try { apply('weeklyReportData', function(v){
+                if (typeof window.applyIncomingWeeklyReportData === 'function') window.applyIncomingWeeklyReportData(v);
+                else {
+                    try { weeklyReportData = v; } catch (eW) {}
+                    try { window.weeklyReportData = v; } catch (eW2) {}
+                }
+            }); } catch(e){}
             try { apply('applicationData', function(v){
                 if (typeof window.mergeIncomingApplicationData === 'function') window.applicationData = window.mergeIncomingApplicationData(v);
                 else window.applicationData = v;
@@ -1640,6 +1658,11 @@
             try { apply('standardData', function(v){ if (typeof standardData !== 'undefined') standardData = v; try { window.standardData = v; } catch (eW) {} }); } catch(e){}
             try { apply('competitionData', function(v){ try { window.competitionData = v; } catch (eW) {} }); } catch(e){}
             try { apply('portalContentConfig_v1', function(v){ try { window.portalContentConfig_v1 = v; } catch (eW) {} }); } catch(e){}
+            try {
+                if (typeof window.syncGlobalsForExternalModules === 'function') {
+                    window.syncGlobalsForExternalModules();
+                }
+            } catch (eSyncGlob) {}
         }
 
         async function syncFromCloudAndRefresh(options) {

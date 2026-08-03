@@ -1370,10 +1370,13 @@
     async function storeLiteraturePdfToShared(file, options) {
         options = options || {};
         if (!file) return null;
-        if (typeof global.saveFileForTeam !== 'function') {
+        var cloud = typeof global.requireCloudUpload === 'function'
+            ? await global.requireCloudUpload()
+            : null;
+        if (!cloud || typeof cloud.saveFileForTeam !== 'function') {
             throw new Error('云端上传未就绪，请刷新页面后重试');
         }
-        var meta = await global.saveFileForTeam(file, {
+        var meta = await cloud.saveFileForTeam(file, {
             fileName: file.name || ('literature_' + Date.now() + '.pdf'),
             fileType: 'document',
             remark: '文献资料 PDF',
@@ -2352,12 +2355,15 @@
         var fileName = '文献_' + item.title.slice(0, 40).replace(/[\\/:*?"<>|]/g, '_') + '.md';
         var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
         var file = new File([blob], fileName, { type: 'text/markdown' });
-        if (typeof global.saveFileForTeam !== 'function') {
-            alert('云端上传未就绪，请刷新后重试');
-            return;
-        }
         try {
-            var meta = await global.saveFileForTeam(file, {
+            var cloud = typeof global.requireCloudUpload === 'function'
+                ? await global.requireCloudUpload()
+                : null;
+            if (!cloud || typeof cloud.saveFileForTeam !== 'function') {
+                alert('云端上传未就绪，请刷新后重试');
+                return;
+            }
+            var meta = await cloud.saveFileForTeam(file, {
                 fileName: fileName,
                 fileType: 'document',
                 remark: '文献导出：' + item.title

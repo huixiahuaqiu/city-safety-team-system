@@ -73,15 +73,20 @@
                             uploadImage: {
                                 customUpload: async function (file, insertFn) {
                                     try {
-                                        if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
-                                        var meta = await global.saveFileForTeam(file, {
+                                        var cloud = typeof global.requireCloudUpload === 'function'
+                                            ? await global.requireCloudUpload()
+                                            : null;
+                                        if (!cloud || typeof cloud.saveFileForTeam !== 'function') {
+                                            throw new Error('云端上传未就绪');
+                                        }
+                                        var meta = await cloud.saveFileForTeam(file, {
                                             fileName: file.name,
                                             fileType: 'other',
                                             remark: '通知正文插图',
                                             hiddenInLibrary: true
                                         });
-                                        var url = (typeof global.cloudFileDownloadUrl === 'function')
-                                            ? global.cloudFileDownloadUrl(meta.serverFileId)
+                                        var url = (typeof cloud.cloudFileDownloadUrl === 'function')
+                                            ? cloud.cloudFileDownloadUrl(meta.serverFileId)
                                             : meta.url;
                                         insertFn(url, file.name, url);
                                     } catch (e) {
@@ -171,8 +176,11 @@
                 continue;
             }
             try {
-                if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
-                var meta = await global.saveFileForTeam(file, {
+                var cloud = typeof global.requireCloudUpload === 'function'
+                    ? await global.requireCloudUpload()
+                    : null;
+                if (!cloud || typeof cloud.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+                var meta = await cloud.saveFileForTeam(file, {
                     fileName: file.name,
                     fileType: 'document',
                     remark: '通知附件',
@@ -180,8 +188,8 @@
                 });
                 noticePendingAttachments.push({
                     name: file.name,
-                    url: (typeof global.cloudFileDownloadUrl === 'function')
-                        ? global.cloudFileDownloadUrl(meta.serverFileId)
+                    url: (typeof cloud.cloudFileDownloadUrl === 'function')
+                        ? cloud.cloudFileDownloadUrl(meta.serverFileId)
                         : meta.url,
                     size: file.size,
                     serverFileId: meta.serverFileId,

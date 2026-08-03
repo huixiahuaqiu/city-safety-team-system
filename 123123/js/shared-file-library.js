@@ -920,6 +920,7 @@
         global.uploadFileToCloud = uploadToServer;
         global.saveFileForTeam = saveFileForTeam;
         global.cloudFileDownloadUrl = cloudDownloadUrl;
+        global.__citysafeCloudUploadReady = true;
 
         enhanceSortSelect();
         enhanceBatchBar();
@@ -986,5 +987,11 @@
     global.uploadFileToCloud = uploadToServer;
     global.saveFileForTeam = saveFileForTeam;
     global.cloudFileDownloadUrl = cloudDownloadUrl;
+    try {
+        delete global.saveFileForTeam.__isCloudStub;
+        delete global.cloudFileDownloadUrl.__isCloudStub;
+        delete global.uploadFileToCloud.__isCloudStub;
+    } catch (eFlag) { /* ignore */ }
+    global.__citysafeCloudUploadReady = true;
 
 })(typeof window !== 'undefined' ? window : this);

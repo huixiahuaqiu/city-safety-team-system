@@ -1680,6 +1680,7 @@
             ensureMemberGradeYearsFromMembers();
             syncTeamMembersAcrossSystem();
             localStorage.setItem('teamMemberData', JSON.stringify(teamMemberData));
+            try { window.teamMemberData = teamMemberData; } catch (eWin) {}
             try { if (typeof cloudUpsert === 'function') cloudUpsert('teamMemberData', JSON.stringify(teamMemberData)); } catch (e) {}
             if (typeof populateOwnerSelects === 'function') populateOwnerSelects();
             if (typeof populateWeeklyReportOwnerFilter === 'function') populateWeeklyReportOwnerFilter();
@@ -2902,17 +2903,20 @@
                 saveBtn.textContent = '上传中…';
             }
             try {
-                if (typeof window.saveFileForTeam !== 'function') {
+                var cloud = typeof window.requireCloudUpload === 'function'
+                    ? await window.requireCloudUpload()
+                    : null;
+                if (!cloud || typeof cloud.saveFileForTeam !== 'function') {
                     throw new Error('云端上传未就绪，请刷新后重试');
                 }
-                var meta = await window.saveFileForTeam(pendingMemberAvatar.file, {
+                var meta = await cloud.saveFileForTeam(pendingMemberAvatar.file, {
                     fileName: pendingMemberAvatar.fileName || ('avatar_' + member.id + '.jpg'),
                     fileType: 'other',
                     remark: '成员头像|' + (member.name || member.id),
                     hiddenInLibrary: true
                 });
-                var url = (typeof window.cloudFileDownloadUrl === 'function')
-                    ? window.cloudFileDownloadUrl(meta.serverFileId)
+                var url = (typeof cloud.cloudFileDownloadUrl === 'function')
+                    ? cloud.cloudFileDownloadUrl(meta.serverFileId)
                     : meta.url;
                 member.avatar = url;
                 member.avatarFileId = meta.serverFileId;

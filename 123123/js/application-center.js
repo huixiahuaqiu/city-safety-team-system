@@ -1100,15 +1100,18 @@
             if (pendingAttachments.length >= 5) { alert('最多 5 个附件'); break; }
             if (file.size > 50 * 1024 * 1024) { alert(file.name + ' 超过 50MB，已跳过'); continue; }
             try {
-                if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
-                var meta = await global.saveFileForTeam(file, {
+                var cloud = typeof global.requireCloudUpload === 'function'
+                    ? await global.requireCloudUpload()
+                    : null;
+                if (!cloud || typeof cloud.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+                var meta = await cloud.saveFileForTeam(file, {
                     fileName: file.name,
                     fileType: 'document',
                     remark: '请假/申请附件',
                     hiddenInLibrary: true
                 });
-                var url = (typeof global.cloudFileDownloadUrl === 'function')
-                    ? global.cloudFileDownloadUrl(meta.serverFileId)
+                var url = (typeof cloud.cloudFileDownloadUrl === 'function')
+                    ? cloud.cloudFileDownloadUrl(meta.serverFileId)
                     : meta.url;
                 pendingAttachments.push({
                     name: file.name,
@@ -1138,15 +1141,18 @@
             }
             if (file.size > 20 * 1024 * 1024) { alert(file.name + ' 超过 20MB，已跳过'); continue; }
             try {
-                if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
-                var meta = await global.saveFileForTeam(file, {
+                var cloud = typeof global.requireCloudUpload === 'function'
+                    ? await global.requireCloudUpload()
+                    : null;
+                if (!cloud || typeof cloud.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+                var meta = await cloud.saveFileForTeam(file, {
                     fileName: file.name,
                     fileType: 'other',
                     remark: '申请明细图片',
                     hiddenInLibrary: true
                 });
-                var url = (typeof global.cloudFileDownloadUrl === 'function')
-                    ? global.cloudFileDownloadUrl(meta.serverFileId)
+                var url = (typeof cloud.cloudFileDownloadUrl === 'function')
+                    ? cloud.cloudFileDownloadUrl(meta.serverFileId)
                     : meta.url;
                 pendingDetailImages.push({
                     name: file.name,

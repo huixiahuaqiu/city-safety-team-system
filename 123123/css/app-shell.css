@@ -994,6 +994,40 @@
             justify-content: space-between;
             align-items: center;
             font-weight: 700;
+            gap: 6px;
+        }
+
+        .nav-category .nav-label,
+        .submenu .nav-item .nav-label {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* 侧栏未读角标：折叠时父级「公告动态」也能看见 */
+        .sidebar-unread-badge {
+            display: none;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 18px;
+            text-align: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18);
+        }
+        .sidebar-unread-badge.show {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            animation: noticeBadgePulse 1.6s ease-in-out infinite;
+        }
+        @keyframes noticeBadgePulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18); }
+            50% { transform: scale(1.08); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.28); }
         }
         
         /* 子菜单样式 */

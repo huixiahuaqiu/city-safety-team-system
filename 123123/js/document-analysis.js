@@ -1608,12 +1608,15 @@
         var fileName = '文档解析_' + currentDocument.name.replace(/\.[^.]+$/, '') + '_' + new Date().toISOString().slice(0, 10) + '.md';
         var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
         var file = new File([blob], fileName, { type: 'text/markdown' });
-        if (typeof global.saveFileForTeam !== 'function') {
-            alert('云端上传未就绪，请刷新后重试');
-            return;
-        }
         try {
-            await global.saveFileForTeam(file, {
+            var cloud = typeof global.requireCloudUpload === 'function'
+                ? await global.requireCloudUpload()
+                : null;
+            if (!cloud || typeof cloud.saveFileForTeam !== 'function') {
+                alert('云端上传未就绪，请刷新后重试');
+                return;
+            }
+            await cloud.saveFileForTeam(file, {
                 fileName: fileName,
                 fileType: 'document',
                 remark: '由文档智能解析导出'
