@@ -54,6 +54,15 @@
 
     window.addEventListener('citysafe:auth-expired', function() {
         if (gatewayAuthReloading) return;
+        // 登录后极短窗口内的偶发 401（账号列表冲突重试等）不要整页踢出
+        try {
+            var sess = null;
+            try { sess = JSON.parse(localStorage.getItem('currentSession') || 'null'); } catch (e0) { sess = null; }
+            if (sess && sess.loginTime && (Date.now() - Number(sess.loginTime) < 8000)) {
+                console.warn('[auth] ignored transient auth-expired shortly after login');
+                return;
+            }
+        } catch (eGrace) {}
         gatewayAuthReloading = true;
         gatewaySessionValidated = false;
         currentUser = null;
@@ -497,7 +506,7 @@
     function sanitizeGatewayAccountsForBrowser(accounts) {
         return (Array.isArray(accounts) ? accounts : []).map(function(account) {
             var safe = Object.assign({}, account || {});
-            ['password', 'passwordScheme', 'passwordSalt', 'passwordIterations', 'passwordHash', 'passwordUpdatedAt']
+            ['password', 'passwordScheme', 'passwordSalt', 'passwordIterations', 'passwordHash', 'passwordUpdatedAt', 'sessionVersion']
                 .forEach(function(field) { delete safe[field]; });
             return safe;
         });
@@ -527,12 +536,10 @@
             var next = Object.assign({}, account || {});
             var sid = String(next.studentId || '').trim();
             var pending = sid ? pendingGatewayPasswords[sid] : '';
-            if (pending) {
-                next.password = pending;
-                // 浏览器不得长期持有 verifier；有明文待同步时清掉残缺 hash，让服务端重建
-                ['passwordScheme', 'passwordSalt', 'passwordIterations', 'passwordHash']
-                    .forEach(function(field) { delete next[field]; });
-            }
+            // 永远不要把浏览器里残留的 hash/pwu/sv 回写服务器，否则会把刚登录的会话立刻踢掉
+            ['password', 'passwordScheme', 'passwordSalt', 'passwordIterations', 'passwordHash', 'passwordUpdatedAt', 'sessionVersion']
+                .forEach(function(field) { delete next[field]; });
+            if (pending) next.password = pending;
             return next;
         });
     }
@@ -855,6 +862,9 @@
         var persistedAccounts = accountData;
         if (gatewayManaged) {
             persistedAccounts = sanitizeGatewayAccountsForBrowser(accountData);
+            // 内存态也去掉 verifier，避免后续 sync 把旧 hash 推回服务器
+            accountData = persistedAccounts;
+            try { window.accountData = accountData; } catch (eAccBind) {}
         }
         if (window.AppStorage) window.AppStorage.setJson('accountData', persistedAccounts);
         else localStorage.setItem('accountData', JSON.stringify(persistedAccounts));
@@ -862,6 +872,9 @@
             try { if (typeof cloudUpsert === 'function') cloudUpsert('accountData', JSON.stringify(accountData)); } catch (e) {}
             schedulePasswordHardening();
             return Promise.resolve({ ok: true, reason: 'local' });
+        }
+        if (options.skipGatewaySync === true) {
+            return Promise.resolve({ ok: true, reason: 'skipped-gateway-sync' });
         }
         persistGatewayAccountDraft();
         // 有待同步密码 / 显式要求立即同步：必须等服务器确认，保证全局生效
@@ -1303,8 +1316,9 @@
             }
         }
         const attemptKey = account.studentId || studentId;
-        // 成功登录可能刚完成历史密码迁移，立即保存哈希后的账号记录。
-        saveAccountData();
+        // 登录成功只更新本机会话元数据，禁止立刻把本地账号列表回写服务器
+        // （否则旧 passwordHash/pwu 会覆盖刚签发的会话，导致闪退登录页）
+        saveAccountData({ skipGatewaySync: true });
 
         try {
             const remember = document.getElementById('loginRemember');
@@ -1320,7 +1334,7 @@
         account.lastLoginIp = '127.0.0.1';
         account.loginFailCount = 0;
         account.lockedUntil = null;
-        saveAccountData();
+        saveAccountData({ skipGatewaySync: true });
 
         // 记录登录日志
         loginLogData.push({ studentId: account.studentId, realName: account.realName, role: account.role, loginTime: new Date().toLocaleString('zh-CN'), ip: '127.0.0.1', result: '成功' });
@@ -2153,7 +2167,7 @@
             var hit = null;
             var personName = String(person.name || person.realName || '').trim();
 
-            function memberNameOk(m) {
+            var memberNameOk = function(m) {
                 if (personName) {
                     var mn = String((m && m.name) || '').trim();
                     return !mn || mn === personName;
@@ -2165,7 +2179,7 @@
                 var ph = String(person.phone || person.studentId || '').replace(/\D/g, '');
                 var mph = String((m && m.phone) || '').replace(/\D/g, '');
                 return ph.length >= 11 && mph === ph;
-            }
+            };
 
             // 1) 显式团队成员绑定（禁止用账号 id 冒充成员 id）
             var teamId = person.teamMemberId != null
@@ -3715,7 +3729,10 @@
         });
         
         saveAccountData();
-        
+
+        // 先清理预览，再写入最终结果；clearImportPreview 会清空结果容器。
+        // 原顺序会让刚生成的独立临时密码瞬间消失，管理员无法分发账号。
+        clearImportPreview();
         const resultDiv = document.getElementById('accountImportResult');
         let html = `<div style="padding:12px;background:#e8f5e9;border-radius:6px;color:#2e7d32;">导入完成：成功 ${success} 条，失败 ${failed} 条。每个账号均使用独立随机临时密码，首次登录需修改。</div>`;
         if (createdCredentials.length) {
@@ -3731,7 +3748,6 @@
         }
         resultDiv.innerHTML = html;
         
-        clearImportPreview();
         passwordInput.value = '';
         renderAccountTable();
     }

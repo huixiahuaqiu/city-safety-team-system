@@ -531,7 +531,7 @@ run_isolated_oneshot minio-init
 '
 
 log "restoring application volumes and starting an isolated gateway"
-"${COMPOSE[@]}" create --no-build gateway
+"${COMPOSE[@]}" create --no-build --no-deps gateway
 VERIFY_GATEWAY_CID="$("${COMPOSE[@]}" ps -aq gateway)"
 [[ -n "${VERIFY_GATEWAY_CID}" ]] || die "could not create isolated gateway"
 assert_isolated_container "${VERIFY_GATEWAY_CID}"

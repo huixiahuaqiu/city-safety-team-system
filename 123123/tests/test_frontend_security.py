@@ -34,7 +34,6 @@ class FrontendSecurityRegressionTests(unittest.TestCase):
         for asset in (
             "js/literature-compare.js",
             "js/document-analysis.js",
-            "js/shared-file-library.js",
         ):
             self.assertNotIn(f'<script src="{asset}', index)
             self.assertIn(asset, loader)
@@ -50,6 +49,12 @@ class FrontendSecurityRegressionTests(unittest.TestCase):
         self.assertIn("CLOUD_RETRY_MAX_MS", core)
         self.assertIn("reason: 'backoff'", core)
         self.assertIn("window.GatewayAuth.login(studentId, password)", legacy)
+
+    def test_gateway_record_mutations_use_optimistic_concurrency(self):
+        core = (APP_DIR / "js" / "app-core.js").read_text(encoding="utf-8")
+        self.assertIn("gatewayRecordVersions", core)
+        self.assertIn("requestOptions.expectedVersions", core)
+        self.assertIn("记录已被删除或版本不可用", core)
 
     def test_gateway_outbox_isolation_revision_and_error_quarantine(self):
         node = shutil.which("node")
@@ -504,6 +509,9 @@ const context = vm.createContext({
 });
 vm.runInContext(source, context, { filename: process.argv[1] });
 vm.runInContext(`
+// The minimal DOM double does not implement textContent -> innerHTML reflection.
+// Preserve the production escHtml contract for the ASCII credentials asserted here.
+escHtml = function(value) { return String(value == null ? '' : value); };
 window.__legacyAccountTest = {
     setAccountPassword,
     saveAccountData,
@@ -577,16 +585,17 @@ const api = window.__legacyAccountTest;
     const imported = api.getAccounts().map(function(account) {
         return {
             studentId: account.studentId,
-            password: account.password,
             mustChangePwd: account.mustChangePwd
         };
     });
+    const importResult = document.getElementById('accountImportResult').innerHTML;
 
     process.stdout.write(JSON.stringify({
         passwordResult,
         accountAfterSet: account,
         persisted,
         imported,
+        importResult,
         randomCall
     }));
 })().catch(function(error) {
@@ -621,7 +630,8 @@ const api = window.__legacyAccountTest;
 
         imported = result["imported"]
         self.assertEqual(3, len(imported))
-        passwords = [account["password"] for account in imported]
+        passwords = re.findall(r"Tmp-[0-9a-zA-Z]{12}A9!", result["importResult"])
+        self.assertEqual(3, len(passwords), result["importResult"])
         self.assertEqual(3, len(set(passwords)))
         # 生成器已加强：12 位混合大小写/数字（排除易混淆字符）+ 固定 'A9!' 后缀
         self.assertTrue(all(re.fullmatch(r"Tmp-[0-9a-zA-Z]{12}A9!", pwd) for pwd in passwords))

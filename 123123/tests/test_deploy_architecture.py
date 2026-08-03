@@ -95,6 +95,14 @@ class DeployArchitectureTests(unittest.TestCase):
         self.assertIn("https://${SERVER_NAME}$request_uri", nginx)
         self.assertNotIn("https://$host$request_uri", nginx)
 
+    def test_location_cache_rules_do_not_shadow_security_headers(self):
+        locations = read("deploy/nginx/container/citysafe-locations.conf")
+        # Nginx stops inheriting every server-level add_header as soon as a
+        # location declares one. Cache directives must therefore use expires
+        # (or upstream headers) so CSP/HSTS/frame protection reaches clients.
+        self.assertNotIn("add_header", locations)
+        self.assertIn("expires epoch", locations)
+
     def test_environment_templates_separate_root_and_application_secrets(self):
         for relative_path in (
             "deploy/env/local.example",

@@ -420,6 +420,42 @@ class DataStoreTests(unittest.TestCase):
         self.assertIn("INSERT INTO audit_events", audit_query)
         self.assertEqual(json.loads(audit_params[-1]), {"count": 2})
 
+    def test_record_update_uses_compare_and_swap_version(self):
+        now = datetime(2026, 7, 26, tzinfo=timezone.utc)
+        updated_row = (
+            12, "paper", {"title": "New"}, 4, now, now, "leader", "leader"
+        )
+        connection = FakeConnection([{"all": [updated_row]}])
+        with self.patch_connection(connection):
+            rows = self.store.update_records(
+                "paper",
+                {"title": "New"},
+                actor="leader",
+                record_ids=[12],
+                expected_versions={12: 3},
+            )
+        self.assertEqual(rows[0]["version"], 4)
+        query, params = connection.cursor_instance.statements[0]
+        self.assertIn("id = %s AND version = %s", query)
+        self.assertEqual(params[-2:], [12, 3])
+
+    def test_stale_record_update_rolls_back_and_reports_current_version(self):
+        connection = FakeConnection([
+            {"all": []},
+            {"all": [(12, 5)]},
+        ])
+        with self.patch_connection(connection):
+            with self.assertRaises(self.store.RecordVersionConflict) as caught:
+                self.store.update_records(
+                    "paper",
+                    {"title": "Stale"},
+                    actor="leader",
+                    record_ids=[12],
+                    expected_versions={12: 3},
+                )
+        self.assertTrue(connection.rolled_back)
+        self.assertEqual(caught.exception.as_dict()["currentVersions"], {"12": 5})
+
     def test_non_finite_json_is_rejected_before_opening_database(self):
         with mock.patch.object(
             self.store,

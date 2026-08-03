@@ -730,6 +730,7 @@ class GatewaySecurityTests(unittest.TestCase):
             "passwordIterations": 210000,
             "passwordHash": "existing-verifier",
             "passwordUpdatedAt": 1700000000000,
+            "sessionVersion": 3,
         }
         incoming = {
             "id": 7,
@@ -749,10 +750,82 @@ class GatewaySecurityTests(unittest.TestCase):
             "passwordIterations",
             "passwordHash",
             "passwordUpdatedAt",
+            "sessionVersion",
         ):
             self.assertEqual(prepared[field], existing[field])
         self.assertEqual(prepared["realName"], "Renamed Member")
 
+    def test_prepare_gateway_accounts_ignores_stale_browser_verifiers(self):
+        existing = {
+            "id": 1,
+            "studentId": "admin",
+            "realName": "Admin",
+            "role": "admin",
+            "status": "active",
+            "passwordScheme": "pbkdf2-sha256",
+            "passwordSalt": "live-salt",
+            "passwordIterations": 210000,
+            "passwordHash": "live-verifier",
+            "passwordUpdatedAt": 2000000000000,
+            "sessionVersion": 5,
+        }
+        incoming = {
+            "id": 1,
+            "studentId": "admin",
+            "realName": "Admin",
+            "role": "admin",
+            "status": "active",
+            # Browser still holding pre-reset verifier — must not overwrite live auth.
+            "passwordScheme": "pbkdf2-sha256",
+            "passwordSalt": "stale-salt",
+            "passwordIterations": 210000,
+            "passwordHash": "stale-verifier",
+            "passwordUpdatedAt": 1000000000000,
+            "sessionVersion": 0,
+        }
+        prepared = self.gateway._prepare_gateway_accounts([incoming], [existing])[0]
+        self.assertEqual(prepared["passwordHash"], "live-verifier")
+        self.assertEqual(prepared["passwordSalt"], "live-salt")
+        self.assertEqual(prepared["passwordUpdatedAt"], 2000000000000)
+        self.assertEqual(prepared["sessionVersion"], 5)
+
+    def test_public_records_expose_server_version_without_persisting_it(self):
+        public = self.gateway._public_record({
+            "id": 8,
+            "version": 4,
+            "payload": {"title": "Paper", "_version": 999, "id": 999},
+        })
+        self.assertEqual(public["id"], 8)
+        self.assertEqual(public["_version"], 4)
+
+    def test_record_mutation_requires_and_forwards_expected_version(self):
+        claims = {"sid": "leader-1", "role": "leader"}
+        stored = {
+            "id": 8,
+            "version": 5,
+            "payload": {"title": "Updated"},
+        }
+        with mock.patch.object(
+            self.gateway.data_store,
+            "update_records",
+            return_value=[stored],
+        ) as update:
+            rows = self.gateway._handle_record_operation(
+                "PATCH",
+                "papers?id=eq.8",
+                {"id": 8, "_version": 4, "title": "Updated"},
+                {"expectedVersions": {"8": 4}},
+                claims,
+            )
+        self.assertEqual(rows[0]["_version"], 5)
+        self.assertEqual(update.call_args.kwargs["expected_versions"], {8: 4})
+        self.assertNotIn("id", update.call_args.args[1])
+        self.assertNotIn("_version", update.call_args.args[1])
+
+        with self.assertRaisesRegex(ValueError, "expectedVersions is required"):
+            self.gateway._handle_record_operation(
+                "DELETE", "papers?id=eq.8", None, {}, claims
+            )
     def test_sync_write_permissions_follow_role_boundaries(self):
         roles = ("admin", "leader", "student", "visitor")
 

@@ -304,6 +304,42 @@
         const SUPABASE_KEY = String(getAppConfig('SUPABASE_KEY', '') || '').trim();
         const DATA_BACKEND = String(getAppConfig('DATA_BACKEND', 'gateway') || 'gateway').trim().toLowerCase();
         const GATEWAY_DATA_BACKEND = DATA_BACKEND === 'gateway';
+        const gatewayRecordVersions = Object.create(null);
+
+        function gatewayRecordSelector(resource) {
+            var parsed = new URL(String(resource || ''), location.origin + '/');
+            var type = parsed.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+            var expression = parsed.searchParams.get('id') || '';
+            var ids = [];
+            if (expression.indexOf('eq.') === 0) {
+                ids = [Number(expression.slice(3))];
+            } else if (expression.indexOf('in.(') === 0 && expression.endsWith(')')) {
+                ids = expression.slice(4, -1).split(',').map(Number);
+            }
+            ids = ids.filter(function(id) { return Number.isInteger(id) && id > 0; });
+            return { type: type, ids: ids };
+        }
+
+        function rememberGatewayRecordVersions(resource, rows) {
+            var selector = gatewayRecordSelector(resource);
+            (Array.isArray(rows) ? rows : []).forEach(function(row) {
+                var id = Number(row && row.id);
+                var version = Number(row && row._version);
+                if (Number.isInteger(id) && id > 0 && Number.isInteger(version) && version > 0) {
+                    gatewayRecordVersions[selector.type + ':' + id] = version;
+                }
+            });
+        }
+
+        function expectedGatewayRecordVersions(resource) {
+            var selector = gatewayRecordSelector(resource);
+            var versions = {};
+            selector.ids.forEach(function(id) {
+                var version = gatewayRecordVersions[selector.type + ':' + id];
+                if (Number.isInteger(version) && version > 0) versions[String(id)] = version;
+            });
+            return { selector: selector, versions: versions };
+        }
 
         async function gatewayJsonRequest(url, options) {
             options = Object.assign({}, options || {});
@@ -333,17 +369,49 @@
                     authPendingError.code = 'AUTH_PENDING';
                     return Promise.reject(authPendingError);
                 }
-                return gatewayJsonRequest('/api/data/records', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        operation: String(method || 'GET').toUpperCase(),
-                        resource: String(table || ''),
-                        data: data == null ? null : data,
-                        options: options
-                    })
-                }).then(function(payload) {
-                    return payload && Array.isArray(payload.rows) ? payload.rows : [];
-                });
+                return (async function() {
+                    var operation = String(method || 'GET').toUpperCase();
+                    var requestOptions = Object.assign({}, options);
+                    var versionState = expectedGatewayRecordVersions(table);
+                    if ((operation === 'PATCH' || operation === 'DELETE') && versionState.selector.ids.length) {
+                        if (Object.keys(versionState.versions).length !== versionState.selector.ids.length) {
+                            var current = await gatewayJsonRequest('/api/data/records', {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    operation: 'GET',
+                                    resource: String(table || ''),
+                                    data: { select: 'id' },
+                                    options: {}
+                                })
+                            });
+                            rememberGatewayRecordVersions(table, current && current.rows);
+                            versionState = expectedGatewayRecordVersions(table);
+                        }
+                        if (Object.keys(versionState.versions).length !== versionState.selector.ids.length) {
+                            var staleError = new Error('记录已被删除或版本不可用，请刷新后重试');
+                            staleError.status = 409;
+                            throw staleError;
+                        }
+                        requestOptions.expectedVersions = versionState.versions;
+                    }
+                    var payload = await gatewayJsonRequest('/api/data/records', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            operation: operation,
+                            resource: String(table || ''),
+                            data: data == null ? null : data,
+                            options: requestOptions
+                        })
+                    });
+                    var rows = payload && Array.isArray(payload.rows) ? payload.rows : [];
+                    rememberGatewayRecordVersions(table, rows);
+                    if (operation === 'DELETE') {
+                        versionState.selector.ids.forEach(function(id) {
+                            delete gatewayRecordVersions[versionState.selector.type + ':' + id];
+                        });
+                    }
+                    return rows;
+                })();
             }
             var maxRetry = options.retries != null ? Number(options.retries) : 2;
             if (!isFinite(maxRetry) || maxRetry < 0) maxRetry = 0;

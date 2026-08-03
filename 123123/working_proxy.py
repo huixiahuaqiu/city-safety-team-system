@@ -2697,12 +2697,19 @@ def _prepare_gateway_accounts(incoming, existing):
             raise ValueError('every account requires a login identifier')
         previous = existing_by_key.get(key) or {}
         plaintext = str(account.pop('password', '') or '')
-        supplied_verifier = bool(account.get('passwordHash') and account.get('passwordSalt'))
+        # Never trust browser-echoed verifiers / session counters. Clients may still
+        # hold stale passwordHash from localStorage and would otherwise invalidate
+        # the just-issued login session (pwu/sv mismatch → instant logout).
+        for field in _ACCOUNT_AUTH_FIELDS:
+            if field != 'password':
+                account.pop(field, None)
         if plaintext:
             if not validate_new_password(plaintext):
                 raise ValueError('account password does not meet the password policy')
             account.update(create_gateway_password_record(plaintext))
-        elif not supplied_verifier:
+            # Password rotation must invalidate other sessions for this account.
+            account['sessionVersion'] = int(previous.get('sessionVersion') or 0) + 1
+        elif previous:
             for field in _ACCOUNT_AUTH_FIELDS:
                 if field != 'password' and previous.get(field) is not None:
                     account[field] = previous[field]
@@ -3345,7 +3352,28 @@ def _record_selector(resource):
 def _public_record(record):
     payload = dict((record or {}).get('payload') or {})
     payload['id'] = int(record['id'])
+    payload['_version'] = int(record['version'])
     return payload
+
+
+def _expected_record_versions(options, record_ids):
+    if not record_ids:
+        return None
+    raw = (options or {}).get('expectedVersions')
+    if not isinstance(raw, dict) or not raw:
+        raise ValueError('expectedVersions is required for record updates and deletes')
+    normalized = {}
+    for record_id in record_ids:
+        value = raw.get(str(record_id), raw.get(record_id))
+        if isinstance(value, bool) or value is None:
+            raise ValueError('expectedVersions must cover every selected record id')
+        version = int(value)
+        if version <= 0:
+            raise ValueError('record versions must be positive integers')
+        normalized[int(record_id)] = version
+    if len(normalized) != len(raw):
+        raise ValueError('expectedVersions contains an unselected record id')
+    return normalized
 
 
 def _handle_record_operation(operation, resource, body_data, request_options, claims):
@@ -3394,24 +3422,38 @@ def _handle_record_operation(operation, resource, body_data, request_options, cl
     if operation == 'POST':
         if not isinstance(body_data, dict):
             raise ValueError('record data must be a JSON object')
-        return [_public_record(data_store.create_record(record_type, body_data, actor))]
+        payload = dict(body_data)
+        payload.pop('id', None)
+        payload.pop('_version', None)
+        return [_public_record(data_store.create_record(record_type, payload, actor))]
     if operation == 'PATCH':
         if not isinstance(body_data, dict):
             raise ValueError('record data must be a JSON object')
+        if not record_ids:
+            raise ValueError('record updates require an explicit id selector')
+        expected_versions = _expected_record_versions(options, record_ids)
+        payload = dict(body_data)
+        payload.pop('id', None)
+        payload.pop('_version', None)
         rows = data_store.update_records(
             record_type,
-            body_data,
+            payload,
             actor=actor,
             record_ids=record_ids,
             filters=filters or None,
+            expected_versions=expected_versions,
         )
         return [_public_record(row) for row in rows]
     if operation == 'DELETE':
+        if not record_ids:
+            raise ValueError('record deletes require an explicit id selector')
+        expected_versions = _expected_record_versions(options, record_ids)
         deleted = data_store.delete_records(
             record_type,
             actor=actor,
             record_ids=record_ids,
             filters=filters or None,
+            expected_versions=expected_versions,
         )
         return [], deleted
     raise ValueError('unsupported data operation')
@@ -3723,6 +3765,8 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 self._json(200, {'ok': True, 'rows': rows, 'deleted': deleted})
             except PermissionError as exc:
                 self._json(403, {'ok': False, 'error': str(exc)})
+            except data_store.RecordVersionConflict as conflict:
+                self._json(409, {'ok': False, **conflict.as_dict()})
             except (ValueError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
                 self._json(400, {'ok': False, 'error': str(exc)})
             except Exception as exc:
