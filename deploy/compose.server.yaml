@@ -6,6 +6,8 @@ services:
       GATEWAY_AUTH_ENABLED: "true"
       SERVER_NAME: ${SERVER_NAME:?SERVER_NAME is required}
       SERVER_NAME_ALIASES: ${SERVER_NAME_ALIASES:-}
+      WWW_HOST: ${WWW_HOST:-www.invalid}
+      PUBLIC_HOST: ${PUBLIC_HOST:-${SERVER_NAME}}
     ports:
       - ${CITYSAFE_HTTP_BIND:-0.0.0.0}:80:8080
       - ${CITYSAFE_HTTPS_BIND:-0.0.0.0}:443:8443

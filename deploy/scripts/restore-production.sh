@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Restore a verified CitySafe v2 backup into the LIVE production Compose project.
 #
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# DANGER — 这不是日常部署脚本。
+# 会用备份内容覆盖线上 PostgreSQL / MinIO 业务数据（账号、通知、上传文件等）。
+# 日常只改代码请用：deploy/scripts/sync-to-cloud.ps1
+# 没有明确灾难恢复需求时，不要运行本脚本。
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
 # Required:
 #   CONFIRM_PRODUCTION_RESTORE=YES
 #   SOURCE_MINIO_ROOT_USER / SOURCE_MINIO_ROOT_PASSWORD
@@ -61,6 +68,8 @@ replace_env_keys() {
 [[ "${EUID}" -eq 0 ]] || die "run production restore with sudo/root"
 [[ "${CONFIRM_PRODUCTION_RESTORE:-}" == "YES" ]] \
   || die "refusing to modify production; set CONFIRM_PRODUCTION_RESTORE=YES"
+log "WARNING: production data restore starting — this OVERWRITES live PostgreSQL/MinIO business data"
+log "WARNING: for routine code updates use sync-to-cloud.ps1 instead"
 [[ -n "${SOURCE_MINIO_ROOT_USER:-}" && -n "${SOURCE_MINIO_ROOT_PASSWORD:-}" ]] \
   || die "SOURCE_MINIO_ROOT_USER and SOURCE_MINIO_ROOT_PASSWORD are required"
 require_command docker

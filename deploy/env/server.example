@@ -33,11 +33,16 @@ MLOPS_TOKEN=CHANGE_ME_SERVER_MLOPS
 ANNOTATION_UPLOAD_TOKEN=CHANGE_ME_SERVER_ANNOTATION
 DATASET_UPLOAD_TOKEN=CHANGE_ME_SERVER_DATASET
 
-# Primary host used for TLS cert directory: /etc/letsencrypt/live/$SERVER_NAME/
+# TLS cert directory name: /etc/letsencrypt/live/$SERVER_NAME/
+# Until a domain certificate is issued, this may temporarily be the public IP.
 SERVER_NAME=citysafe.example.com
-# Optional space-separated extra Host names accepted by Nginx (www / temporary IP).
-SERVER_NAME_ALIASES=www.citysafe.example.com
+# Apex/business hosts accepted by the main HTTPS server (space-separated). Do not put www here.
+SERVER_NAME_ALIASES=
+# www only redirects to PUBLIC_HOST; not a business entrypoint.
+WWW_HOST=www.citysafe.example.com
+PUBLIC_HOST=citysafe.example.com
 PUBLIC_ORIGIN=https://citysafe.example.com
+# Include apex; optionally keep IP for ops; www is redirected but may appear briefly.
 CORS_ALLOW_ORIGINS=https://citysafe.example.com,https://www.citysafe.example.com
 MINIO_PUBLIC_UPLOAD_PREFIX=https://citysafe.example.com/minio-upload
 MINIO_ALLOW_INSECURE_PRESIGN=0

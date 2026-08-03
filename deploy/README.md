@@ -114,7 +114,21 @@ sudo bash deploy/scripts/bootstrap-server.sh \
 .\deploy\scripts\sync-to-cloud.ps1 -Watch
 ```
 
-说明：只同步代码与部署配置，不覆盖云上业务数据与服务器密钥；浏览器需 Ctrl+F5 强刷。
+**数据安全（必读）**
+
+| 操作 | 会不会动线上业务数据 |
+|------|----------------------|
+| `sync-to-cloud.ps1`（日常改代码） | **不会**。只更新程序；同学产生的账号/通知/上传文件仍在 PostgreSQL + MinIO |
+| `restore-production.sh`（灾难恢复） | **会覆盖**。仅在有备份回滚需求且设置 `CONFIRM_PRODUCTION_RESTORE=YES` 时使用 |
+| 手工清库、删除 Docker 数据卷、把本地空数据整包灌云端 | **会丢数据**。日常禁止 |
+
+同学在域名里试用产生的内容，与你本机改代码部署是分开的；部署后让他们 Ctrl+F5 即可看到新功能。
+
+**对外入口约定**
+
+- 同学正式入口：`https://cqust-citysafe.online`
+- `www` 自动 301 到根域名
+- 公网 IP 仅运维/部署排查使用，不要发给同学
 
 服务器已有仓库并配置好 SSH/sudo 后，也可以从 Windows 本机走 Git 引用更新：
 

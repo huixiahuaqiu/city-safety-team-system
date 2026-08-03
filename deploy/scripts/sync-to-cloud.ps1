@@ -3,6 +3,13 @@
 .SYNOPSIS
 Sync local code to Aliyun ECS and rebuild the gateway (no GitHub pull on server).
 
+.DESCRIPTION
+只同步代码与部署配置，不会覆盖云上 PostgreSQL / MinIO 业务数据，也不会改 /etc/citysafe/server.env。
+
+切勿把本脚本当成「数据恢复」。会覆盖线上账号、通知、上传文件的是：
+  deploy/scripts/restore-production.sh
+以及任何手工清库、删 Docker 数据卷、把本地空数据整包灌进云端的操作。
+
 .EXAMPLE
 .\deploy\scripts\sync-to-cloud.ps1
 
@@ -30,6 +37,16 @@ $Pending = $false
 function Write-Step {
     param([string]$Message)
     Write-Host ('[{0}] {1}' -f (Get-Date -Format 'HH:mm:ss'), $Message) -ForegroundColor Cyan
+}
+
+function Write-DataSafetyBanner {
+    Write-Host ''
+    Write-Host '============================================================' -ForegroundColor Yellow
+    Write-Host '  安全提示：本脚本只更新代码，不会清空同学已产生的数据' -ForegroundColor Yellow
+    Write-Host '  保留：数据库账号/通知/任务等 + MinIO 上传文件' -ForegroundColor Yellow
+    Write-Host '  危险（勿与日常部署混淆）：restore-production.sh、清库、删卷' -ForegroundColor Red
+    Write-Host '============================================================' -ForegroundColor Yellow
+    Write-Host ''
 }
 
 function Assert-Command {
@@ -76,6 +93,7 @@ function Invoke-CloudSync {
     $script:Syncing = $true
     $script:Pending = $false
     try {
+        Write-DataSafetyBanner
         Assert-Command scp
         Assert-Command ssh
         Assert-Command tar
@@ -94,10 +112,10 @@ function Invoke-CloudSync {
         )
         if (-not $SkipRebuild) {
             $remoteLines += @(
-                "cd '$RemotePath'"
-                'docker compose --env-file /etc/citysafe/server.env -f deploy/compose.yaml -f deploy/compose.server.yaml build gateway'
-                'docker compose --env-file /etc/citysafe/server.env -f deploy/compose.yaml -f deploy/compose.server.yaml up -d --force-recreate gateway'
-                'docker compose --env-file /etc/citysafe/server.env -f deploy/compose.yaml -f deploy/compose.server.yaml ps gateway'
+                "cd '$RemotePath/deploy'"
+                'docker compose --env-file /etc/citysafe/server.env -f compose.yaml -f compose.server.yaml build gateway'
+                'docker compose --env-file /etc/citysafe/server.env -f compose.yaml -f compose.server.yaml up -d --no-deps --force-recreate gateway'
+                'docker compose --env-file /etc/citysafe/server.env -f compose.yaml -f compose.server.yaml ps gateway'
             )
         }
 
@@ -105,7 +123,7 @@ function Invoke-CloudSync {
         $remoteCmd = ($remoteLines -join '; ')
         & ssh $Server $remoteCmd
         if ($LASTEXITCODE -ne 0) { throw "remote deploy failed (exit $LASTEXITCODE)" }
-        Write-Step 'Cloud updated. Hard-refresh browser (Ctrl+F5).'
+        Write-Step 'Cloud code updated (business data untouched). Hard-refresh browser (Ctrl+F5).'
     }
     finally {
         if ($LocalTar -and (Test-Path -LiteralPath $LocalTar)) {

@@ -1,6 +1,6 @@
 map $http_upgrade $connection_upgrade {
     default upgrade;
-    "" close;
+    '' close;
 }
 
 limit_req_zone $binary_remote_addr zone=citysafe_api:10m rate=20r/s;
@@ -15,8 +15,9 @@ upstream citysafe_gateway {
 log_format citysafe_safe '$remote_addr [$time_local] "$request_method $uri $server_protocol" '
                          '$status $body_bytes_sent $request_time';
 
+# 主域名 + IP 运维入口（default_server，保证 /healthz 不被 www 跳转抢走）
 server {
-    listen 8080;
+    listen 8080 default_server;
     server_name ${SERVER_NAME} ${SERVER_NAME_ALIASES};
     server_tokens off;
     access_log /var/log/nginx/access.log citysafe_safe;
@@ -28,21 +29,37 @@ server {
     }
 
     location / {
-        # Preserve visitor Host (IP or domain) instead of forcing SERVER_NAME,
-        # which may be the TLS certificate directory name (e.g. bare IP).
         return 301 https://$host$request_uri;
     }
 }
 
+# www → 主域名（HTTP）
 server {
-    listen 8443 ssl;
+    listen 8080;
+    server_name ${WWW_HOST};
+    server_tokens off;
+    access_log /var/log/nginx/access.log citysafe_safe;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        return 301 https://${PUBLIC_HOST}$request_uri;
+    }
+}
+
+# 主域名（同学入口）+ IP（运维入口）
+server {
+    listen 8443 ssl default_server;
     http2 on;
     server_name ${SERVER_NAME} ${SERVER_NAME_ALIASES};
     server_tokens off;
     access_log /var/log/nginx/access.log citysafe_safe;
 
-    # TLS path uses SERVER_NAME (cert identity). Aliases share this cert until
-    # a domain certificate is issued and SERVER_NAME is switched.
+    # TLS path uses SERVER_NAME (cert directory). Shared until domain cert is issued.
     ssl_certificate /etc/letsencrypt/live/${SERVER_NAME}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${SERVER_NAME}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -62,4 +79,22 @@ server {
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; report-uri /api/csp-report;" always;
 
     include /etc/nginx/citysafe-locations.conf;
+}
+
+# www → 主域名（HTTPS）
+server {
+    listen 8443 ssl;
+    http2 on;
+    server_name ${WWW_HOST};
+    server_tokens off;
+    access_log /var/log/nginx/access.log citysafe_safe;
+
+    ssl_certificate /etc/letsencrypt/live/${SERVER_NAME}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${SERVER_NAME}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    return 301 https://${PUBLIC_HOST}$request_uri;
 }
