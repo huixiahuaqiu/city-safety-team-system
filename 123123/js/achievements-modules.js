@@ -2839,33 +2839,28 @@
                     return;
                 }
 
-                const img = new Image();
-                const reader = new FileReader();
-                reader.onload = function(event) { img.src = event.target.result; };
-                img.onload = function() {
-                    // 压缩到可同步大小（约 120px / 0.55）
-                    let base64 = compressMemberAvatar(img, 128, 0.55);
-                    if (base64.length > 100000) {
-                        base64 = compressMemberAvatar(img, 96, 0.45);
-                    }
-                    pendingMemberAvatar = { id: id, dataUrl: base64, fileName: file.name };
-                    showMemberDetail(id);
-                    const tip = document.getElementById('memberAvatarPendingTip');
-                    if (tip) tip.style.display = 'block';
-                    const preview = document.getElementById('memberAvatarPreview');
-                    if (preview) {
-                        preview.innerHTML = `<img src="${base64}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #667eea;" />`;
-                    }
+                var previewUrl = '';
+                try { previewUrl = URL.createObjectURL(file); } catch (eUrl) { previewUrl = ''; }
+                pendingMemberAvatar = {
+                    id: id,
+                    file: file,
+                    fileName: file.name,
+                    previewUrl: previewUrl
                 };
-                reader.onerror = function() { alert('读取图片失败，请重试'); };
-                reader.readAsDataURL(file);
+                showMemberDetail(id);
+                const tip = document.getElementById('memberAvatarPendingTip');
+                if (tip) tip.style.display = 'block';
+                const preview = document.getElementById('memberAvatarPreview');
+                if (preview && previewUrl) {
+                    preview.innerHTML = `<img src="${previewUrl}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #667eea;" />`;
+                }
             };
             input.click();
         }
 
         var pendingMemberAvatar = null;
 
-        function saveMemberAvatar() {
+        async function saveMemberAvatar() {
             if (!pendingMemberAvatar) {
                 alert('请先点击“更换头像”选择图片');
                 return;
@@ -2879,34 +2874,86 @@
                 alert('成员不存在');
                 return;
             }
-            member.avatar = pendingMemberAvatar.dataUrl;
-            member.fileName = pendingMemberAvatar.fileName || '';
-            member.avatarSynced = true;
-            saveTeamMemberData();
-            // 立即强制上传云端（含压缩头像）
-            try {
-                if (typeof cloudUpsert === 'function') {
-                    cloudUpsert('teamMemberData', JSON.stringify(teamMemberData));
-                }
-            } catch (e) { console.warn(e); }
-            pendingMemberAvatar = null;
-            renderTeamMembers();
-            showMemberDetail(member.id);
-            try {
-                if (typeof invalidatePortalCache === 'function') invalidatePortalCache();
-                if (typeof renderMembersPortal === 'function' && document.getElementById('members') && document.getElementById('members').classList.contains('active')) {
-                    renderMembersPortal();
-                }
-            } catch (e2) {}
-            if (typeof showCloudSyncBanner === 'function') {
-                showCloudSyncBanner('头像已保存并同步到云端', false);
-            } else {
-                alert('头像已保存并同步到云端');
+            const saveBtn = document.getElementById('saveMemberAvatarBtn');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = '上传中…';
             }
-            if (typeof renderTaskList === 'function') renderTaskList();
+            try {
+                if (typeof window.saveFileForTeam !== 'function') {
+                    throw new Error('云端上传未就绪，请刷新后重试');
+                }
+                var meta = await window.saveFileForTeam(pendingMemberAvatar.file, {
+                    fileName: pendingMemberAvatar.fileName || ('avatar_' + member.id + '.jpg'),
+                    fileType: 'other',
+                    remark: '成员头像|' + (member.name || member.id),
+                    hiddenInLibrary: true
+                });
+                var url = (typeof window.cloudFileDownloadUrl === 'function')
+                    ? window.cloudFileDownloadUrl(meta.serverFileId)
+                    : meta.url;
+                member.avatar = url;
+                member.avatarFileId = meta.serverFileId;
+                member.fileName = pendingMemberAvatar.fileName || '';
+                member.avatarSynced = true;
+                // 同步到对应账号，保证顶栏/个人中心一致
+                try {
+                    if (typeof accountData !== 'undefined' && Array.isArray(accountData)) {
+                        var acc = accountData.find(function (a) {
+                            return a && (
+                                Number(a.teamMemberId) === Number(member.id)
+                                || (a.realName && member.name && String(a.realName) === String(member.name))
+                            );
+                        });
+                        if (acc) {
+                            acc.avatar = url;
+                            acc.avatarFileId = meta.serverFileId;
+                            if (typeof saveAccountData === 'function') saveAccountData();
+                        }
+                        if (typeof currentUser !== 'undefined' && currentUser && Number(currentUser.teamMemberId) === Number(member.id)) {
+                            currentUser.avatar = url;
+                            currentUser.avatarFileId = meta.serverFileId;
+                        }
+                    }
+                } catch (eAcc) { console.warn(eAcc); }
+                saveTeamMemberData();
+                try {
+                    if (typeof cloudUpsert === 'function') {
+                        cloudUpsert('teamMemberData', JSON.stringify(teamMemberData));
+                    }
+                } catch (e) { console.warn(e); }
+                if (pendingMemberAvatar.previewUrl) {
+                    try { URL.revokeObjectURL(pendingMemberAvatar.previewUrl); } catch (eRev) {}
+                }
+                pendingMemberAvatar = null;
+                renderTeamMembers();
+                showMemberDetail(member.id);
+                try {
+                    if (typeof invalidatePortalCache === 'function') invalidatePortalCache();
+                    if (typeof renderMembersPortal === 'function' && document.getElementById('members') && document.getElementById('members').classList.contains('active')) {
+                        renderMembersPortal();
+                    }
+                    if (typeof updateHeaderUserInfo === 'function') updateHeaderUserInfo();
+                } catch (e2) {}
+                if (typeof showCloudSyncBanner === 'function') {
+                    showCloudSyncBanner('头像已上传到服务器，全员可见', false);
+                } else {
+                    alert('头像已上传到服务器，全员可见');
+                }
+                if (typeof renderTaskList === 'function') renderTaskList();
+            } catch (err) {
+                alert('头像上传失败：' + (err && err.message ? err.message : err));
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '🖼️ 保存头像';
+                }
+            }
         }
 
         function cancelPendingMemberAvatar() {
+            if (pendingMemberAvatar && pendingMemberAvatar.previewUrl) {
+                try { URL.revokeObjectURL(pendingMemberAvatar.previewUrl); } catch (e) {}
+            }
             pendingMemberAvatar = null;
             const tip = document.getElementById('memberAvatarPendingTip');
             if (tip) tip.style.display = 'none';
@@ -2940,7 +2987,7 @@
             content.innerHTML = `
                 <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:-40px -40px 24px;padding:32px 40px 28px;border-radius:16px 16px 0 0;text-align:center;position:relative;">
                     <div id="memberAvatarPreview">
-                    ${(pendingMemberAvatar && pendingMemberAvatar.id === m.id && pendingMemberAvatar.dataUrl) ? `<img src="${pendingMemberAvatar.dataUrl}" style="width:88px;height:88px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:4px solid #52c41a;box-shadow:0 4px 16px rgba(82,196,26,0.3);" />` : (m.avatar ? `<img src="${m.avatar}" style="width:88px;height:88px;border-radius:50%;object-fit:cover;margin:0 auto 12px;${avatarCursor}border:4px solid rgba(255,255,255,0.9);box-shadow:0 4px 16px rgba(0,0,0,0.15);" ${avatarClick} />` : `<div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:36px;font-weight:bold;${avatarCursor}border:4px solid rgba(255,255,255,0.9);box-shadow:0 4px 16px rgba(0,0,0,0.15);backdrop-filter:blur(4px);" ${avatarClick}>${m.name.charAt(0)}</div>`)}
+                    ${(pendingMemberAvatar && pendingMemberAvatar.id === m.id && pendingMemberAvatar.previewUrl) ? `<img src="${pendingMemberAvatar.previewUrl}" style="width:88px;height:88px;border-radius:50%;object-fit:cover;margin:0 auto 12px;border:4px solid #52c41a;box-shadow:0 4px 16px rgba(82,196,26,0.3);" />` : ((function(){ var av = (typeof resolveMemberAvatarUrl === 'function') ? resolveMemberAvatarUrl(m) : (m.avatar || ''); return av ? `<img src="${av}" style="width:88px;height:88px;border-radius:50%;object-fit:cover;margin:0 auto 12px;${avatarCursor}border:4px solid rgba(255,255,255,0.9);box-shadow:0 4px 16px rgba(0,0,0,0.15);" ${avatarClick} />` : `<div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,0.2);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:36px;font-weight:bold;${avatarCursor}border:4px solid rgba(255,255,255,0.9);box-shadow:0 4px 16px rgba(0,0,0,0.15);backdrop-filter:blur(4px);" ${avatarClick}>${m.name.charAt(0)}</div>`; })())}
                     </div>
                     ${canEdit ? `<p style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:4px;cursor:pointer;" onclick="changeMemberAvatar(${m.id})">📷 点击更换头像</p>` : ''}
                     <div id="memberAvatarPendingTip" style="display:${(pendingMemberAvatar && pendingMemberAvatar.id === m.id) ? 'block' : 'none'};margin:10px auto 0;padding:8px 12px;background:#f6ffed;border:1px solid #b7eb8f;border-radius:8px;color:#389e0d;font-size:12px;width:fit-content;">✅ 已选择新头像，请点击下方「保存头像」完成保存与同步</div>

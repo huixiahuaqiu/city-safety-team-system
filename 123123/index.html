@@ -79,7 +79,7 @@
                 <div class="form-group">
                     <label for="loginUsername">学号 / 手机号 / 账号</label>
                     <div class="login-input-wrap">
-                        <input type="text" id="loginUsername" placeholder="学号、手机号或演示账号均可" autocomplete="username">
+                        <input type="text" id="loginUsername" placeholder="学号或手机号" autocomplete="username">
                     </div>
                 </div>
                 <div class="form-group">
@@ -100,16 +100,6 @@
                 <button class="login-btn" type="button" id="loginSubmitBtn" onclick="handleLogin()"><span>进入系统</span></button>
                 <div class="login-footer">
                     <button type="button" class="login-demo-toggle" id="loginRegisterToggle" onclick="toggleLoginRegisterPanel()">没有账号？申请注册</button>
-                    <button type="button" class="login-demo-toggle" onclick="toggleLoginDemoPanel()">演示账号 ▾</button>
-                    <div class="login-demo" id="loginDemoPanel" hidden>
-                        <div class="login-demo-note">密码均为 <code>123456</code> · 点击即可填入</div>
-                        <div class="login-demo-chips">
-                            <button type="button" onclick="fillLoginDemo('admin')">导师 admin</button>
-                            <button type="button" onclick="fillLoginDemo('leader01')">组长 leader01</button>
-                            <button type="button" onclick="fillLoginDemo('stu001')">学生 stu001</button>
-                            <button type="button" onclick="fillLoginDemo('visitor01')">访客 visitor01</button>
-                        </div>
-                    </div>
                 </div>
             </div>
             <div class="login-box login-register-box" id="loginRegisterBox" hidden>

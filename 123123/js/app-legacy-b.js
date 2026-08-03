@@ -989,8 +989,8 @@
     }
 
     function demoAccountsEnabled() {
-        try { return getAppConfig('SHOW_DEMO_ACCOUNTS', true) !== false; }
-        catch (e) { return true; }
+        try { return getAppConfig('SHOW_DEMO_ACCOUNTS', false) === true; }
+        catch (e) { return false; }
     }
 
     function toggleLoginDemoPanel() {
@@ -1128,11 +1128,19 @@
 
     function refreshLoginDemoChips() {
         var footer = document.querySelector('.login-footer');
+        var demoBtn = document.querySelector('.login-footer .login-demo-toggle:not(#loginRegisterToggle)');
+        var panel = document.getElementById('loginDemoPanel');
         if (!demoAccountsEnabled()) {
-            if (footer) footer.hidden = true;
+            if (demoBtn) demoBtn.hidden = true;
+            if (panel) {
+                panel.hidden = true;
+                panel.setAttribute('hidden', '');
+            }
+            if (footer) footer.hidden = false;
             return;
         }
         if (footer) footer.hidden = false;
+        if (demoBtn) demoBtn.hidden = false;
         ensureDemoLoginAliases();
         var box = document.querySelector('#loginDemoPanel .login-demo-chips');
         if (!box) return;
@@ -2115,10 +2123,28 @@
         return account;
     }
 
+    function avatarUrlFromRecord(rec) {
+        if (!rec) return '';
+        var fid = rec.avatarFileId || '';
+        if (fid && typeof window.cloudFileDownloadUrl === 'function') {
+            try {
+                var cloud = window.cloudFileDownloadUrl(fid);
+                if (cloud) return cloud;
+            } catch (eCloudAv) {}
+        }
+        var direct = rec.avatar || rec.dataUrl || '';
+        if (!direct) return '';
+        var s = String(direct);
+        // 云端直链 / 短 URL 优先；历史 dataURL 仍兼容
+        if (s.indexOf('/api/') === 0 || s.indexOf('http://') === 0 || s.indexOf('https://') === 0) return s;
+        if (s.length > 20) return s;
+        return '';
+    }
+
     function resolveMemberAvatarUrl(person) {
         if (!person) return '';
-        var direct = person.avatar || person.dataUrl || '';
-        if (direct && String(direct).length > 20) return String(direct);
+        var selfUrl = avatarUrlFromRecord(person);
+        if (selfUrl) return selfUrl;
         try {
             var list = (typeof teamMemberData !== 'undefined' && teamMemberData) ? teamMemberData : [];
             if (!Array.isArray(list) || !list.length) return '';
@@ -2179,11 +2205,12 @@
                 if (nameHits.length === 1) hit = nameHits[0];
             }
 
-            if (hit && hit.avatar && String(hit.avatar).length > 20) return String(hit.avatar);
+            if (hit) return avatarUrlFromRecord(hit);
         } catch (e) {}
         return '';
     }
     window.resolveMemberAvatarUrl = resolveMemberAvatarUrl;
+    window.avatarUrlFromRecord = avatarUrlFromRecord;
 
     function renderHomeMemberAvatarHtml(m) {
         var url = window.safeImageUrl ? window.safeImageUrl(resolveMemberAvatarUrl(m)) : '';
@@ -2209,14 +2236,12 @@
         if (avEl) {
             var avUrl = '';
             try {
-                if (currentUser.avatar && String(currentUser.avatar).length > 20) {
-                    avUrl = String(currentUser.avatar);
-                } else {
+                avUrl = resolveMemberAvatarUrl(currentUser) || '';
+                if (!avUrl) {
                     var meMember = typeof getCurrentUserTeamMember === 'function'
                         ? getCurrentUserTeamMember()
                         : null;
                     if (meMember) avUrl = resolveMemberAvatarUrl(meMember) || '';
-                    if (!avUrl) avUrl = resolveMemberAvatarUrl(currentUser) || '';
                 }
             } catch (eAvHdr) {}
             avUrl = window.safeImageUrl ? window.safeImageUrl(avUrl) : avUrl;
@@ -3904,7 +3929,7 @@
                 <h3 style="margin:0 0 20px;">个人账号中心</h3>
                 <div style="text-align:center;margin-bottom:20px;">
                     <div id="personalAvatar" style="width:80px;height:80px;border-radius:50%;background:#667eea;color:white;display:inline-flex;align-items:center;justify-content:center;font-size:32px;cursor:pointer;" onclick="document.getElementById('avatarUpload').click()" title="点击上传头像">
-                        ${currentUser.avatar ? `<img src="${currentUser.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : currentUser.realName.charAt(0)}
+                        ${(function(){ var u = resolveMemberAvatarUrl(currentUser) || ''; return u ? `<img src="${escHtml(u)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : escHtml(currentUser.realName.charAt(0)); })()}
                     </div>
                     <input type="file" id="avatarUpload" accept="image/*" style="display:none;" onchange="uploadAvatar(this)">
                     <p style="font-size:12px;color:#888;margin-top:6px;">点击上传头像</p>
@@ -3932,18 +3957,48 @@
         document.body.appendChild(div);
     }
 
-    function uploadAvatar(input) {
+    async function uploadAvatar(input) {
         const file = input.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            currentUser.avatar = e.target.result;
+        if (!file.type || file.type.indexOf('image/') !== 0) {
+            alert('请选择图片文件');
+            input.value = '';
+            return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            alert('图片不能超过 8MB');
+            input.value = '';
+            return;
+        }
+        try {
+            if (typeof window.saveFileForTeam !== 'function') throw new Error('云端上传未就绪，请刷新后重试');
+            var meta = await window.saveFileForTeam(file, {
+                fileName: file.name,
+                fileType: 'other',
+                remark: '账号头像|' + (currentUser && (currentUser.realName || currentUser.studentId) || ''),
+                hiddenInLibrary: true
+            });
+            var url = (typeof window.cloudFileDownloadUrl === 'function')
+                ? window.cloudFileDownloadUrl(meta.serverFileId)
+                : meta.url;
+            currentUser.avatar = url;
+            currentUser.avatarFileId = meta.serverFileId;
             const acc = accountData.find(a => a.id === currentUser.id);
-            if (acc) acc.avatar = e.target.result;
+            if (acc) {
+                acc.avatar = url;
+                acc.avatarFileId = meta.serverFileId;
+            }
             saveAccountData();
-            document.getElementById('personalAvatar').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+            var avEl = document.getElementById('personalAvatar');
+            if (avEl) avEl.innerHTML = `<img src="${url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
             updateHeaderUserInfo();
-        };
-        reader.readAsDataURL(file);
+            if (typeof showCloudSyncBanner === 'function') {
+                showCloudSyncBanner('头像已上传到服务器，全员可见', false);
+            }
+        } catch (e) {
+            alert('头像上传失败：' + (e && e.message ? e.message : e));
+        } finally {
+            input.value = '';
+        }
     }
 
     function savePersonalInfo() {
@@ -8541,15 +8596,15 @@
     }
 
     function handleDroppedSingleFile(file) {
-        const maxSizeMb = getConfigInt('file.maxSize', 10);
-        const allowTypes = getConfig('file.allowTypes', 'jpg,png,pdf,doc,docx,xls,xlsx,zip');
+        const maxSizeMb = Math.max(getConfigInt('file.maxSize', 200), 200);
+        const allowTypes = getConfig('file.allowTypes', 'jpg,jpeg,png,gif,bmp,webp,tif,tiff,pdf,doc,docx,xls,xlsx,csv,json,xml,txt,zip,rar,7z');
         const suffix = file.name.split('.').pop().toLowerCase();
 
         if (file.size > maxSizeMb * 1024 * 1024) {
             alert(`文件【${file.name}】大小不能超过 ${maxSizeMb}MB`);
             return;
         }
-        if (!allowTypes.split(',').includes(suffix)) {
+        if (!allowTypes.split(',').map(s => s.trim().toLowerCase()).includes(suffix)) {
             alert(`文件【${file.name}】类型不支持，允许：${allowTypes}`);
             return;
         }
@@ -8574,17 +8629,20 @@
     }
 
     function handleDroppedFolder(fileList) {
-        const maxSizeMb = getConfigInt('file.maxSize', 10);
-        const allowTypes = getConfig('file.allowTypes', 'jpg,png,pdf,doc,docx,xls,xlsx,zip');
-        const allowList = allowTypes.split(',').map(s => s.trim());
+        const maxSizeMb = Math.max(getConfigInt('file.maxSize', 200), 200);
+        const defaultTypes = 'jpg,jpeg,png,gif,bmp,webp,tif,tiff,pdf,doc,docx,xls,xlsx,csv,json,xml,txt,zip,rar,7z';
+        const allowTypes = getConfig('file.allowTypes', defaultTypes);
+        const allowList = Array.from(new Set(
+            (String(allowTypes) + ',' + defaultTypes).split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+        ));
 
         const validFiles = [];
         const skippedFiles = [];
 
         fileList.forEach(file => {
             const relPath = file.webkitRelativePath || file.name;
-            const suffix = file.name.split('.').pop().toLowerCase();
-            if (!allowList.includes(suffix)) {
+            const suffix = (file.name.split('.').pop() || '').toLowerCase();
+            if (!suffix || !allowList.includes(suffix)) {
                 skippedFiles.push({ name: relPath, reason: '类型不支持' });
                 return;
             }
@@ -8601,6 +8659,7 @@
         }
 
         selectedFolderFiles = validFiles;
+        try { window.selectedFolderFiles = selectedFolderFiles; } catch (eDrop) {}
         showAddFileModal();
         setTimeout(() => {
             switchUploadMode('folder');
@@ -9459,8 +9518,8 @@
     let selectedFolderFiles = []; // 文件夹模式下缓存的文件列表
 
     function showAddFileModal() {
-        const maxSize = getConfigInt('file.maxSize', 10);
-        const allowTypes = getConfig('file.allowTypes', 'jpg,png,pdf,doc,docx,xls,xlsx,zip');
+        const maxSize = Math.max(getConfigInt('file.maxSize', 200), 200);
+        const allowTypes = getConfig('file.allowTypes', 'jpg,jpeg,png,gif,bmp,webp,tif,tiff,pdf,doc,docx,xls,xlsx,csv,json,xml,txt,zip,rar,7z');
 
         const modal = document.createElement('div');
         modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(4px);';
@@ -9536,6 +9595,7 @@
         document.body.appendChild(modal);
         currentUploadMode = 'single';
         selectedFolderFiles = [];
+        try { window.selectedFolderFiles = selectedFolderFiles; } catch (eClr) {}
     }
 
     function switchUploadMode(mode) {
@@ -9582,29 +9642,49 @@
         const folderInput = document.getElementById('flFolder');
         if (!folderInput.files || folderInput.files.length === 0) return;
 
-        const maxSizeMb = getConfigInt('file.maxSize', 10);
-        const allowTypes = getConfig('file.allowTypes', 'jpg,png,pdf,doc,docx,xls,xlsx,zip');
-        const allowList = allowTypes.split(',').map(s => s.trim());
+        // 与服务端 MAX_UPLOAD_BYTES(200MB) 对齐；兼容旧配置里残留的 10MB
+        const maxSizeMb = Math.max(getConfigInt('file.maxSize', 200), 200);
+        const defaultTypes = 'jpg,jpeg,png,gif,bmp,webp,tif,tiff,pdf,doc,docx,xls,xlsx,csv,json,xml,txt,zip,rar,7z';
+        const allowTypes = getConfig('file.allowTypes', defaultTypes);
+        const allowList = Array.from(new Set(
+            (String(allowTypes) + ',' + defaultTypes).split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+        ));
 
         const allFiles = Array.from(folderInput.files);
         const validFiles = [];
         const skippedFiles = [];
+        const skipReasonCount = {};
 
         allFiles.forEach(file => {
             const relPath = file.webkitRelativePath || file.name;
-            const suffix = file.name.split('.').pop().toLowerCase();
-            if (!allowList.includes(suffix)) {
+            // 跳过系统隐藏文件
+            if (/(?:^|\/)\./.test(relPath) || /(?:^|\/)(Thumbs\.db|desktop\.ini)$/i.test(relPath)) {
+                skippedFiles.push({ name: relPath, reason: '系统/隐藏文件' });
+                skipReasonCount['系统/隐藏文件'] = (skipReasonCount['系统/隐藏文件'] || 0) + 1;
+                return;
+            }
+            const suffix = (file.name.split('.').pop() || '').toLowerCase();
+            if (!suffix || !allowList.includes(suffix)) {
                 skippedFiles.push({ name: relPath, reason: '类型不支持' });
+                skipReasonCount['类型不支持'] = (skipReasonCount['类型不支持'] || 0) + 1;
                 return;
             }
             if (file.size > maxSizeMb * 1024 * 1024) {
-                skippedFiles.push({ name: relPath, reason: `超过${maxSizeMb}MB` });
+                const reason = `超过${maxSizeMb}MB`;
+                skippedFiles.push({ name: relPath, reason: reason });
+                skipReasonCount[reason] = (skipReasonCount[reason] || 0) + 1;
+                return;
+            }
+            if (file.size <= 0) {
+                skippedFiles.push({ name: relPath, reason: '空文件' });
+                skipReasonCount['空文件'] = (skipReasonCount['空文件'] || 0) + 1;
                 return;
             }
             validFiles.push({ file: file, relPath: relPath });
         });
 
         selectedFolderFiles = validFiles;
+        try { window.selectedFolderFiles = selectedFolderFiles; } catch (eSel) {}
 
         const previewEl = document.getElementById('folderPreview');
         const listEl = document.getElementById('folderPreviewList');
@@ -9615,6 +9695,7 @@
             let html = `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #eee;">
                 <strong style="color:#7c3aed;">📁 ${folderName}</strong>
                 <span style="color:#888;margin-left:8px;">共 ${validFiles.length} 个文件，总计 ${formatFileSize(totalSize)}</span>
+                <div style="font-size:12px;color:#7c3aed;margin-top:6px;">将逐个上传到云端，请保持页面打开（1Mbps 下可能较久）</div>
             </div>`;
             validFiles.slice(0, 30).forEach(f => {
                 const relDisplay = f.relPath.split('/').slice(1).join('/') || f.file.name;
@@ -9627,7 +9708,11 @@
                 html += `<div style="padding:3px 0;color:#999;text-align:center;">... 还有 ${validFiles.length - 30} 个文件</div>`;
             }
             if (skippedFiles.length > 0) {
-                html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #eee;color:#e53935;">⚠️ 跳过 ${skippedFiles.length} 个文件（类型不支持或超大小限制）</div>`;
+                const reasonText = Object.keys(skipReasonCount).map(k => k + ' ' + skipReasonCount[k] + ' 个').join('，');
+                html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #eee;color:#e53935;">⚠️ 跳过 ${skippedFiles.length} 个（${reasonText}）</div>`;
+                skippedFiles.slice(0, 5).forEach(s => {
+                    html += `<div style="font-size:12px;color:#999;">· ${s.name} — ${s.reason}</div>`;
+                });
             }
             listEl.innerHTML = html;
         } else {
@@ -9651,15 +9736,15 @@
 
         const file = fileInput.files[0];
 
-        const maxSizeMb = getConfigInt('file.maxSize', 10);
+        const maxSizeMb = Math.max(getConfigInt('file.maxSize', 200), 200);
         if (file.size > maxSizeMb * 1024 * 1024) {
             alert(`文件大小不能超过 ${maxSizeMb}MB`);
             return;
         }
 
-        const allowTypes = getConfig('file.allowTypes', 'jpg,png,pdf,doc,docx,xls,xlsx,zip');
+        const allowTypes = getConfig('file.allowTypes', 'jpg,jpeg,png,gif,bmp,webp,tif,tiff,pdf,doc,docx,xls,xlsx,csv,json,xml,txt,zip,rar,7z');
         const suffix = getFileExt(file.name);
-        if (!allowTypes.split(',').map(s => s.trim()).includes(suffix)) {
+        if (!allowTypes.split(',').map(s => s.trim().toLowerCase()).includes(suffix)) {
             alert(`不支持的文件类型，允许：${allowTypes}`);
             return;
         }
@@ -13357,8 +13442,8 @@
         'business.autoGraduateArchive': 'false',
         'business.logKeepDays': '90',
         
-        'file.maxSize': '10',
-        'file.allowTypes': 'jpg,png,pdf,doc,docx,xls,xlsx,zip',
+        'file.maxSize': '200',
+        'file.allowTypes': 'jpg,jpeg,png,gif,bmp,webp,tif,tiff,pdf,doc,docx,xls,xlsx,csv,json,xml,txt,zip,rar,7z',
         'file.defaultAvatar': '/assets/default-avatar.png',
         
         'notice.siteMessage': 'true',
@@ -13373,6 +13458,14 @@
             const data = localStorage.getItem('systemConfigData');
             if (data) {
                 systemConfigData = JSON.parse(data);
+                // 升级旧默认：10MB 过小，导致数据集大图被批量跳过
+                if (String(systemConfigData['file.maxSize'] || '') === '10') {
+                    systemConfigData['file.maxSize'] = '200';
+                }
+                var types = String(systemConfigData['file.allowTypes'] || '');
+                if (types && types.indexOf('jpeg') < 0) {
+                    systemConfigData['file.allowTypes'] = types + ',jpeg,gif,bmp,webp,tif,tiff,csv,json,xml,txt,rar,7z';
+                }
             } else {
                 systemConfigData = { ...DEFAULT_CONFIG };
                 saveSystemConfig();

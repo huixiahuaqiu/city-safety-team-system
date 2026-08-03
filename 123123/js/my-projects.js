@@ -257,18 +257,8 @@
       };
     }
 
-    var blobUrl = '';
-    try { blobUrl = URL.createObjectURL(file); } catch (e2) {}
-    return {
-      name: file.name,
-      relativePath: file.webkitRelativePath || file.name,
-      size: file.size,
-      serverFileId: '',
-      blobUrl: blobUrl,
-      localOnly: true,
-      uploader: currentUploader(),
-      time: nowStr()
-    };
+    // 必须落到服务器，禁止“仅本机成功”假登记（其他人无法下载）
+    throw new Error('云端存储服务未就绪，无法上传。请确认已登录且网关正常后重试。');
   }
 
   function persistExtraPatch(key, patch) {
@@ -426,14 +416,14 @@
       }
     }
 
-    var msg = '完成：成功 ' + ok + ' 个' + (fail ? '，失败 ' + fail + ' 个' : '');
-    if (ok) {
-      var recent = docs.slice(-ok);
-      if (recent.some(function (d) { return d.localOnly; })) {
-        msg += '（存储服务未就绪，仅本地登记）';
-      }
+    var msg = '完成：成功 ' + ok + ' 个（已上传到服务器）' + (fail ? '，失败 ' + fail + ' 个' : '');
+    if (!ok && fail) {
+      msg = '上传失败：' + fail + ' 个文件未能写入服务器（其他人无法接收）';
     }
     setUploadStatus(msg, fail ? 'err' : 'ok');
+    if (!ok && fail) {
+      alert(msg + '\n\n请确认已登录且云端存储正常后重试。');
+    }
     mpSwitchTab(opts.refreshTab || 'docs');
   }
 

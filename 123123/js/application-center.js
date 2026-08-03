@@ -144,7 +144,14 @@
         try {
             var list = global.teamMemberData || [];
             var hit = list.find(function (m) { return m && m.name === name; });
-            if (hit && hit.avatar && String(hit.avatar).length > 20) return hit.avatar;
+            if (!hit) return '';
+            if (typeof global.resolveMemberAvatarUrl === 'function') {
+                return global.resolveMemberAvatarUrl(hit) || '';
+            }
+            if (hit.avatarFileId && typeof global.cloudFileDownloadUrl === 'function') {
+                return global.cloudFileDownloadUrl(hit.avatarFileId) || '';
+            }
+            if (hit.avatar && String(hit.avatar).length > 20) return hit.avatar;
         } catch (e) {}
         return '';
     }
@@ -1085,39 +1092,75 @@
         }
     }
 
-    function handleApplicationAttachUpload(event) {
+    async function handleApplicationAttachUpload(event) {
         var files = event.target.files;
         if (!files || !files.length) return;
-        Array.prototype.forEach.call(files, function (file) {
-            if (pendingAttachments.length >= 5) { alert('最多 5 个附件'); return; }
-            if (file.size > 2 * 1024 * 1024) { alert(file.name + ' 超过 2MB，已跳过'); return; }
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                pendingAttachments.push({ name: file.name, dataUrl: e.target.result, size: file.size });
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (pendingAttachments.length >= 5) { alert('最多 5 个附件'); break; }
+            if (file.size > 50 * 1024 * 1024) { alert(file.name + ' 超过 50MB，已跳过'); continue; }
+            try {
+                if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+                var meta = await global.saveFileForTeam(file, {
+                    fileName: file.name,
+                    fileType: 'document',
+                    remark: '请假/申请附件',
+                    hiddenInLibrary: true
+                });
+                var url = (typeof global.cloudFileDownloadUrl === 'function')
+                    ? global.cloudFileDownloadUrl(meta.serverFileId)
+                    : meta.url;
+                pendingAttachments.push({
+                    name: file.name,
+                    dataUrl: url,
+                    url: url,
+                    size: file.size,
+                    serverFileId: meta.serverFileId,
+                    from: 'cloud'
+                });
                 renderAttachList();
-            };
-            reader.readAsDataURL(file);
-        });
+            } catch (e) {
+                alert(file.name + ' 上传失败：' + (e && e.message ? e.message : e));
+            }
+        }
         event.target.value = '';
     }
 
-    function handleDetailImageUpload(event) {
+    async function handleDetailImageUpload(event) {
         var files = event.target.files;
         if (!files || !files.length) return;
-        Array.prototype.forEach.call(files, function (file) {
-            if (pendingDetailImages.length >= 8) { alert('明细图片最多 8 张'); return; }
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (pendingDetailImages.length >= 8) { alert('明细图片最多 8 张'); break; }
             if (!/^image\//.test(file.type) && !/\.(jpe?g|png|gif|webp)$/i.test(file.name)) {
                 alert(file.name + ' 不是图片，已跳过');
-                return;
+                continue;
             }
-            if (file.size > 2 * 1024 * 1024) { alert(file.name + ' 超过 2MB，已跳过'); return; }
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                pendingDetailImages.push({ name: file.name, dataUrl: e.target.result, size: file.size });
+            if (file.size > 20 * 1024 * 1024) { alert(file.name + ' 超过 20MB，已跳过'); continue; }
+            try {
+                if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+                var meta = await global.saveFileForTeam(file, {
+                    fileName: file.name,
+                    fileType: 'other',
+                    remark: '申请明细图片',
+                    hiddenInLibrary: true
+                });
+                var url = (typeof global.cloudFileDownloadUrl === 'function')
+                    ? global.cloudFileDownloadUrl(meta.serverFileId)
+                    : meta.url;
+                pendingDetailImages.push({
+                    name: file.name,
+                    dataUrl: url,
+                    url: url,
+                    size: file.size,
+                    serverFileId: meta.serverFileId,
+                    from: 'cloud'
+                });
                 renderDetailImageList();
-            };
-            reader.readAsDataURL(file);
-        });
+            } catch (e) {
+                alert(file.name + ' 上传失败：' + (e && e.message ? e.message : e));
+            }
+        }
         event.target.value = '';
     }
 

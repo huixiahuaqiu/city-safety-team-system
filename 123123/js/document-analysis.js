@@ -1608,32 +1608,21 @@
         var fileName = '文档解析_' + currentDocument.name.replace(/\.[^.]+$/, '') + '_' + new Date().toISOString().slice(0, 10) + '.md';
         var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
         var file = new File([blob], fileName, { type: 'text/markdown' });
-        var newId = global.sharedFileData.length
-            ? Math.max.apply(null, global.sharedFileData.map(function (f) { return Number(f.id) || 0; })) + 1
-            : 1;
+        if (typeof global.saveFileForTeam !== 'function') {
+            alert('云端上传未就绪，请刷新后重试');
+            return;
+        }
         try {
-            if (typeof global.saveSharedFileBlob === 'function') await global.saveSharedFileBlob(newId, file);
-        } catch (e) { console.warn(e); }
-        global.sharedFileData.push({
-            id: newId,
-            name: fileName,
-            size: _size(file.size),
-            fileSizeBytes: file.size,
-            type: 'md',
-            mimeType: 'text/markdown',
-            hasBlob: true,
-            category: '文档解析成果',
-            remark: '由文档智能解析导出',
-            uploader: _owner(),
-            uploaderId: (global.currentUser && global.currentUser.id) || 0,
-            uploadTime: new Date().toLocaleDateString('zh-CN'),
-            downloadCount: 0,
-            tags: ['文档解析']
-        });
-        localStorage.setItem('sharedFileData', JSON.stringify(global.sharedFileData));
-        try { if (typeof global.cloudUpsert === 'function') global.cloudUpsert('sharedFileData', JSON.stringify(global.sharedFileData)); } catch (e2) {}
-        alert('已保存到共享文件库：' + fileName);
-        if (typeof global.showModule === 'function') global.showModule('shared_files');
+            await global.saveFileForTeam(file, {
+                fileName: fileName,
+                fileType: 'document',
+                remark: '由文档智能解析导出'
+            });
+            alert('已上传到服务器，团队可在共享文件库下载：' + fileName);
+            if (typeof global.showModule === 'function') global.showModule('shared_files');
+        } catch (e) {
+            alert('上传失败：' + (e && e.message ? e.message : e));
+        }
     }
     global.saveDocResultToShared = saveDocResultToShared;
 

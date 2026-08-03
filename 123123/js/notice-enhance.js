@@ -71,10 +71,22 @@
                         placeholder: '请输入通知内容…',
                         MENU_CONF: {
                             uploadImage: {
-                                customUpload: function (file, insertFn) {
-                                    var reader = new FileReader();
-                                    reader.onload = function (e) { insertFn(e.target.result); };
-                                    reader.readAsDataURL(file);
+                                customUpload: async function (file, insertFn) {
+                                    try {
+                                        if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+                                        var meta = await global.saveFileForTeam(file, {
+                                            fileName: file.name,
+                                            fileType: 'other',
+                                            remark: '通知正文插图',
+                                            hiddenInLibrary: true
+                                        });
+                                        var url = (typeof global.cloudFileDownloadUrl === 'function')
+                                            ? global.cloudFileDownloadUrl(meta.serverFileId)
+                                            : meta.url;
+                                        insertFn(url, file.name, url);
+                                    } catch (e) {
+                                        alert('图片上传失败：' + (e && e.message ? e.message : e));
+                                    }
                                 }
                             }
                         }
@@ -145,30 +157,41 @@
         }).join('');
     }
 
-    function handleNoticeAttachUpload(event) {
+    async function handleNoticeAttachUpload(event) {
         var files = event.target.files;
         if (!files || !files.length) return;
-        Array.prototype.forEach.call(files, function (file) {
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
             if (noticePendingAttachments.length >= 5) {
                 alert('最多 5 个附件');
-                return;
+                break;
             }
-            if (file.size > 2 * 1024 * 1024) {
-                alert(file.name + ' 超过 2MB，已跳过');
-                return;
+            if (file.size > 50 * 1024 * 1024) {
+                alert(file.name + ' 超过 50MB，已跳过');
+                continue;
             }
-            var reader = new FileReader();
-            reader.onload = function (e) {
+            try {
+                if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+                var meta = await global.saveFileForTeam(file, {
+                    fileName: file.name,
+                    fileType: 'document',
+                    remark: '通知附件',
+                    hiddenInLibrary: true
+                });
                 noticePendingAttachments.push({
                     name: file.name,
-                    url: e.target.result,
+                    url: (typeof global.cloudFileDownloadUrl === 'function')
+                        ? global.cloudFileDownloadUrl(meta.serverFileId)
+                        : meta.url,
                     size: file.size,
-                    from: 'local'
+                    serverFileId: meta.serverFileId,
+                    from: 'cloud'
                 });
                 renderNoticeAttachList();
-            };
-            reader.readAsDataURL(file);
-        });
+            } catch (e) {
+                alert(file.name + ' 上传失败：' + (e && e.message ? e.message : e));
+            }
+        }
         event.target.value = '';
     }
     global.handleNoticeAttachUpload = handleNoticeAttachUpload;

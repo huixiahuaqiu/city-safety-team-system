@@ -1644,7 +1644,8 @@
         if (caps && caps.ok) {
             return runServerChunkedUpload(file, modalId, datasetId, text, bar);
         }
-        return runLocalChunkedUpload(file, modalId, datasetId, text, bar);
+        // 禁止“仅本机 IndexedDB 成功”：其他人收不到文件
+        throw new Error('云端数据集服务未就绪，无法上传。请确认已登录且网关正常后重试。');
     }
 
     function updateUploadProgress(bar, text, uploaded, total, startAt, extra) {

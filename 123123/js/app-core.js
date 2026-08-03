@@ -899,12 +899,19 @@
         }
 
         function compactSyncValue(key, parsed) {
-            // 保留压缩后的头像；仅当单张过大时才丢弃，避免撑爆字段
+            // 头像优先同步 avatarFileId（对象存储）；大 dataURL 裁掉，避免撑爆字段
             if (key === 'teamMemberData' && Array.isArray(parsed)) {
                 return parsed.map(function(m) {
                     var copy = Object.assign({}, m);
                     var av = copy.avatar ? String(copy.avatar) : '';
-                    if (av.length > 120000) {
+                    var hasFileId = !!(copy.avatarFileId);
+                    if (hasFileId) {
+                        // 有云端文件号时不同步巨型 dataURL，只保留短直链或清空
+                        if (av.indexOf('data:') === 0 || av.length > 4000) {
+                            copy.avatar = hasFileId ? '' : '';
+                        }
+                        copy.avatarSynced = true;
+                    } else if (av.length > 120000) {
                         copy.avatar = '';
                         copy.avatarSynced = false;
                     } else if (av) {
@@ -919,7 +926,11 @@
                     var copy = Object.assign({}, a);
                     delete copy.password;
                     var av = copy.avatar ? String(copy.avatar) : '';
-                    if (av.length > 80000) copy.avatar = '';
+                    if (copy.avatarFileId && (av.indexOf('data:') === 0 || av.length > 4000)) {
+                        copy.avatar = '';
+                    } else if (av.length > 80000) {
+                        copy.avatar = '';
+                    }
                     return copy;
                 });
             }
@@ -933,16 +944,26 @@
             var localAvatarByName = {};
             var localAvatarById = {};
             local.forEach(function(m) {
-                if (m && m.avatar && String(m.avatar).length > 50) {
-                    if (m.name) localAvatarByName[m.name] = m.avatar;
-                    if (m.id != null) localAvatarById[m.id] = m.avatar;
+                if (!m) return;
+                var pack = null;
+                if (m.avatarFileId || (m.avatar && String(m.avatar).length > 50)) {
+                    pack = { avatar: m.avatar || '', avatarFileId: m.avatarFileId || '' };
                 }
+                if (!pack) return;
+                if (m.name) localAvatarByName[m.name] = pack;
+                if (m.id != null) localAvatarById[m.id] = pack;
             });
             return cloudMembers.map(function(m) {
-                var hasCloudAvatar = m && m.avatar && String(m.avatar).length > 50;
+                var hasCloudAvatar = m && (m.avatarFileId || (m.avatar && String(m.avatar).length > 50));
                 if (hasCloudAvatar) return m;
                 var localAv = (m && m.id != null && localAvatarById[m.id]) || (m && m.name && localAvatarByName[m.name]);
-                if (localAv) return Object.assign({}, m, { avatar: localAv, avatarSynced: false });
+                if (localAv) {
+                    return Object.assign({}, m, {
+                        avatar: localAv.avatar || '',
+                        avatarFileId: localAv.avatarFileId || '',
+                        avatarSynced: false
+                    });
+                }
                 return m;
             });
         }

@@ -106,7 +106,22 @@
         var cfg = global.APP_CONFIG || {};
         var token = cfg.DATASET_UPLOAD_TOKEN || cfg.ANNOTATION_UPLOAD_TOKEN || '';
         if (token) h['X-Upload-Token'] = token;
+        try {
+            var session = global.GatewayAuth && global.GatewayAuth.read
+                ? global.GatewayAuth.read()
+                : null;
+            if (session && session.token) h.Authorization = 'Bearer ' + session.token;
+        } catch (eAuth) { /* ignore */ }
         return h;
+    }
+
+    function sharedFetch(url, options) {
+        options = options || {};
+        options.headers = authHeaders(options.headers || {});
+        if (global.GatewayAuth && typeof global.GatewayAuth.fetch === 'function' && global.GatewayAuth.hasSession && global.GatewayAuth.hasSession()) {
+            return global.GatewayAuth.fetch(url, options);
+        }
+        return fetch(url, options);
     }
 
     function triggerBlobDownload(blob, fileName) {
@@ -132,13 +147,13 @@
         var caps = await probeSharedServer();
         if (!caps || !caps.ok) return null;
 
-        // GB 级 / 大文件：优先预签名直传 MinIO（网关不碰文件体）；失败则回退 multipart
-        var PRESIGN_THRESHOLD = 8 * 1024 * 1024; // 8MB
+        // 较大文件优先预签名直传 MinIO；失败则回退 multipart（经网关）
+        var PRESIGN_THRESHOLD = 1 * 1024 * 1024; // 1MB
         if (caps.presignEnabled && file && file.size >= PRESIGN_THRESHOLD) {
             try {
-                var preResp = await fetch('/api/shared-file/presign', {
+                var preResp = await sharedFetch('/api/shared-file/presign', {
                     method: 'POST',
-                    headers: authHeaders({ 'Content-Type': 'application/json' }),
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         fileName: meta.fileName || file.name,
                         originalName: file.name,
@@ -157,9 +172,9 @@
                         body: file
                     });
                     if (!putResp.ok) throw new Error('直传对象存储失败 HTTP ' + putResp.status);
-                    var confResp = await fetch('/api/shared-file/confirm', {
+                    var confResp = await sharedFetch('/api/shared-file/confirm', {
                         method: 'POST',
-                        headers: authHeaders({ 'Content-Type': 'application/json' }),
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ fileId: pre.fileId, size: file.size })
                     });
                     var conf = await confResp.json().catch(function () { return {}; });
@@ -176,14 +191,204 @@
         fd.append('fileName', meta.fileName || file.name);
         fd.append('fileType', meta.fileType || 'other');
         fd.append('remark', meta.remark || '');
-        var resp = await fetch('/api/shared-file/upload', {
+        var resp = await sharedFetch('/api/shared-file/upload', {
             method: 'POST',
-            headers: authHeaders(),
             body: fd
         });
         var data = await resp.json().catch(function () { return {}; });
         if (!resp.ok || !data.ok) throw new Error((data && data.error) || '服务端上传失败');
         return data;
+    }
+
+    function cloudDownloadUrl(serverFileId) {
+        var id = String(serverFileId || '').trim();
+        if (!id) return '';
+        var url = '/api/shared-file/download?fileId=' + encodeURIComponent(id);
+        try {
+            var session = global.GatewayAuth && global.GatewayAuth.read
+                ? global.GatewayAuth.read()
+                : null;
+            if (session && session.token) {
+                url += '&access=' + encodeURIComponent(session.token);
+            }
+        } catch (e) { /* ignore */ }
+        return url;
+    }
+
+    function formatBytesLocal(n) {
+        n = Number(n) || 0;
+        if (typeof global.formatFileSize === 'function') return global.formatFileSize(n);
+        if (n < 1024) return n + ' B';
+        if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+        return (n / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    /**
+     * 上传文件到云端并登记共享元数据（全员可见/可下载）。
+     * options: { fileName, fileType, remark, hiddenInLibrary, skipLibrary }
+     */
+    async function saveFileForTeam(file, options) {
+        options = options || {};
+        if (!file) throw new Error('未选择文件');
+        if (!canUploadShared()) throw new Error('当前账号无权上传');
+
+        var displayName = uniqueDisplayName(options.fileName || file.name || ('file_' + Date.now()));
+        var serverMeta = await uploadToServer(file, {
+            fileName: displayName,
+            fileType: options.fileType || 'other',
+            remark: options.remark || ''
+        });
+        if (!serverMeta || !serverMeta.fileId) {
+            throw new Error('云端上传失败：未返回文件编号（请确认已登录且服务正常）');
+        }
+
+        var list = getSharedList();
+        var newId = list.length
+            ? Math.max.apply(null, list.map(function (f) { return Number(f.id) || 0; })) + 1
+            : 1;
+        var meta = {
+            id: newId,
+            name: displayName,
+            size: formatBytesLocal(file.size),
+            fileSizeBytes: file.size,
+            type: options.fileType || 'other',
+            mimeType: file.type || '',
+            hasBlob: false,
+            serverFileId: serverMeta.fileId,
+            storagePath: serverMeta.savedAs || '',
+            uploader: (currentUser() && (currentUser().realName || currentUser().username)) || '未知',
+            uploaderId: (currentUser() && currentUser().id) || 0,
+            uploadTime: new Date().toLocaleDateString('zh-CN'),
+            downloadCount: 0,
+            remark: options.remark || '',
+            hiddenInLibrary: !!options.hiddenInLibrary,
+            url: cloudDownloadUrl(serverMeta.fileId)
+        };
+        if (!options.skipLibrary) {
+            list.push(meta);
+            global.sharedFileData = list;
+            saveSharedMeta();
+            try {
+                if (!meta.hiddenInLibrary && typeof global.renderFileList === 'function') {
+                    global.renderFileList();
+                }
+            } catch (eRender) { /* ignore */ }
+        }
+        return meta;
+    }
+
+    async function uploadFolderToServer(btn, items) {
+        if (!canUploadShared()) { alert('访客不可上传'); return; }
+        if (!items || !items.length) { alert('请选择文件夹'); return; }
+
+        var progress = document.getElementById('flUploadProgress');
+        var bar = document.getElementById('flUploadBar');
+        var text = document.getElementById('flUploadText');
+        if (progress) progress.style.display = 'block';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '上传中…';
+        }
+
+        var typeSel = document.getElementById('flTypeFolder');
+        var fileType = (typeSel && typeSel.value) || 'dataset';
+        var list = getSharedList();
+        var baseId = list.length ? Math.max.apply(null, list.map(function (f) { return Number(f.id) || 0; })) + 1 : 1;
+        var folderName = String(items[0].relPath || items[0].file.name).split('/')[0] || 'folder';
+        var success = 0;
+        var failed = 0;
+        var failSamples = [];
+
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var file = item.file;
+            var relPath = item.relPath || file.name;
+            var pct = Math.max(2, Math.round(((i + 1) / items.length) * 100));
+            if (bar) bar.style.width = pct + '%';
+            if (text) {
+                text.textContent = '正在上传到云端 ' + (i + 1) + '/' + items.length + '：' + relPath;
+            }
+            var fileId = baseId++;
+            var serverMeta = null;
+            try {
+                serverMeta = await uploadToServer(file, {
+                    fileName: file.name,
+                    fileType: fileType,
+                    remark: 'folder:' + folderName + ' | ' + relPath
+                });
+            } catch (err) {
+                console.warn('[shared-file] folder item upload failed', relPath, err);
+            }
+
+            if (!serverMeta || !serverMeta.fileId) {
+                // 禁止回退本机 IndexedDB：仅本机登记时其他人无法接收
+                failed += 1;
+                if (failSamples.length < 8) failSamples.push(relPath);
+                continue;
+            }
+
+            list.push({
+                id: fileId,
+                name: file.name,
+                relativePath: relPath,
+                size: typeof global.formatFileSize === 'function'
+                    ? global.formatFileSize(file.size)
+                    : (Math.round(file.size / 1024) + ' KB'),
+                fileSizeBytes: file.size,
+                type: fileType,
+                mimeType: file.type || '',
+                hasBlob: false,
+                serverFileId: serverMeta.fileId,
+                storagePath: serverMeta.savedAs || '',
+                uploader: (currentUser() && (currentUser().realName || currentUser().username)) || '未知',
+                uploaderId: (currentUser() && currentUser().id) || 0,
+                uploadTime: new Date().toLocaleDateString('zh-CN'),
+                downloadCount: 0,
+                remark: 'folder:' + folderName
+            });
+            success += 1;
+
+            // 每 20 个落盘一次元数据，避免中途刷新全丢
+            if (success % 20 === 0) {
+                global.sharedFileData = list;
+                saveSharedMeta();
+            }
+        }
+
+        global.sharedFileData = list;
+        saveSharedMeta();
+        if (typeof global.renderFileList === 'function') global.renderFileList();
+        if (typeof global.recordOperationLog === 'function') {
+            global.recordOperationLog(
+                '资源中心',
+                '上传',
+                '上传文件夹：' + folderName + '（成功' + success + '/失败' + failed + '）',
+                { folderName: folderName, success: success, failed: failed },
+                { success: failed === 0 },
+                failed === 0 ? 1 : 0,
+                '',
+                0
+            );
+        }
+
+        if (bar) bar.style.width = '100%';
+        if (text) text.textContent = '完成：成功 ' + success + '，失败 ' + failed;
+        var modal = btn && btn.closest ? btn.closest('div[style*=fixed]') : null;
+        var msg = '文件夹上传完成（已写入服务器，全员可下载）！\n成功 ' + success + ' 个';
+        if (failed) {
+            msg += '，失败 ' + failed + ' 个（未写入服务器，其他人无法接收）';
+            if (failSamples.length) msg += '\n示例：\n- ' + failSamples.join('\n- ');
+        }
+        if (!success && failed) {
+            msg = '文件夹上传失败：全部 ' + failed + ' 个文件未能写入服务器。\n请确认已登录且云端存储正常后重试。';
+            if (failSamples.length) msg += '\n示例：\n- ' + failSamples.join('\n- ');
+        }
+        alert(msg);
+        if (modal) modal.remove();
+        else if (btn) {
+            btn.disabled = false;
+            btn.textContent = '上传';
+        }
     }
 
     function enhanceSortSelect() {
@@ -557,8 +762,21 @@
         }, 50);
     }
 
-    async function addFileEnhanced() {
+    async function addFileEnhanced(btn) {
         if (!canUploadShared()) { alert('访客不可上传'); return; }
+
+        // 文件夹模式：逐文件上传到云端（旧逻辑只写本机 IndexedDB，其他人看不见）
+        var folderSection = document.getElementById('folderFileSection');
+        var folderItems = global.selectedFolderFiles;
+        if (
+            folderSection
+            && folderSection.style.display !== 'none'
+            && Array.isArray(folderItems)
+            && folderItems.length
+        ) {
+            return uploadFolderToServer(btn, folderItems);
+        }
+
         var nameEl = document.getElementById('flName');
         var fileInput = document.getElementById('flFile');
         if (nameEl && nameEl.value) nameEl.value = uniqueDisplayName(nameEl.value.trim());
@@ -577,24 +795,26 @@
 
         var serverMeta = null;
         try {
-            if (file) {
-                if (bar) bar.style.width = '40%';
-                if (text) text.textContent = '尝试服务端落盘…';
-                serverMeta = await uploadToServer(file, {
-                    fileName: displayName,
-                    fileType: type,
-                    remark: remark
-                });
-            }
+            if (!file) throw new Error('请选择文件');
+            if (bar) bar.style.width = '40%';
+            if (text) text.textContent = '上传到云端…';
+            serverMeta = await uploadToServer(file, {
+                fileName: displayName,
+                fileType: type,
+                remark: remark
+            });
+            if (!serverMeta || !serverMeta.fileId) throw new Error('服务端未返回文件编号');
         } catch (e) {
-            console.warn('shared server upload fallback', e);
-            if (text) text.textContent = '服务端不可用，改用本机存储…';
+            console.error('shared server upload failed', e);
+            if (text) text.textContent = '云端上传失败';
+            alert('必须上传到服务器后其他人才能看到。\n失败原因：' + (e && e.message ? e.message : e));
+            return;
         }
 
         if (bar) bar.style.width = '70%';
         if (_origAddFile) {
             // 临时注入 remark：在 addFile 之后补写
-            await Promise.resolve(_origAddFile());
+            await Promise.resolve(_origAddFile(btn));
         }
 
         // 补写最近一条记录的 remark / serverFileId / 重名结果
@@ -690,6 +910,17 @@
         global.batchDownloadSharedFiles = batchDownloadSharedFiles;
         global.downloadSharedFile = handleFileDownloadEnhanced;
 
+        // 全站统一：任意模块把文件落到云端，全员可下载
+        global.CitySafeCloudFiles = {
+            upload: uploadToServer,
+            saveForTeam: saveFileForTeam,
+            downloadUrl: cloudDownloadUrl,
+            requireServer: true
+        };
+        global.uploadFileToCloud = uploadToServer;
+        global.saveFileForTeam = saveFileForTeam;
+        global.cloudFileDownloadUrl = cloudDownloadUrl;
+
         enhanceSortSelect();
         enhanceBatchBar();
 
@@ -744,5 +975,16 @@
         restoreSharedFile: restoreSharedFile,
         toggleSharedRecycleBin: toggleSharedRecycleBin
     };
+
+    // 尽早挂到全局，供文献/报告/新闻等模块调用（不依赖 enhance 时机）
+    global.CitySafeCloudFiles = {
+        upload: uploadToServer,
+        saveForTeam: saveFileForTeam,
+        downloadUrl: cloudDownloadUrl,
+        requireServer: true
+    };
+    global.uploadFileToCloud = uploadToServer;
+    global.saveFileForTeam = saveFileForTeam;
+    global.cloudFileDownloadUrl = cloudDownloadUrl;
 
 })(typeof window !== 'undefined' ? window : this);

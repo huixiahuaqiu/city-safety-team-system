@@ -774,6 +774,17 @@ def check_dataset_token(handler, roles=None):
     """所有文件写入/读取默认需要 token；仅可显式放开本机开发请求。"""
     if check_gateway_session(handler, roles):
         return True
+    # 允许 ?access=<session>，供 <img>/<a> 等无法带 Authorization 头的场景
+    try:
+        parsed = urllib.parse.urlparse(getattr(handler, 'path', '') or '')
+        qs = urllib.parse.parse_qs(parsed.query or '')
+        access = str((qs.get('access') or [''])[0] or '').strip()
+        if access:
+            payload = verify_session_token(access)
+            if payload and (not roles or payload.get('role') in set(roles)):
+                return True
+    except Exception:
+        pass
     if AUTH_REQUIRED:
         return False
     if not DATASET_UPLOAD_TOKEN:

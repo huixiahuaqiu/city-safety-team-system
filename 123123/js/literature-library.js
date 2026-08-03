@@ -1370,38 +1370,16 @@
     async function storeLiteraturePdfToShared(file, options) {
         options = options || {};
         if (!file) return null;
-        if (!Array.isArray(global.sharedFileData)) {
-            try { global.sharedFileData = JSON.parse(localStorage.getItem('sharedFileData') || '[]'); } catch (e) { global.sharedFileData = []; }
+        if (typeof global.saveFileForTeam !== 'function') {
+            throw new Error('云端上传未就绪，请刷新页面后重试');
         }
-        var newId = global.sharedFileData.length
-            ? Math.max.apply(null, global.sharedFileData.map(function (f) { return Number(f.id) || 0; })) + 1
-            : 1;
-        // 即使列表为空也要保证 id 递增：用时间戳兜底
-        if (!newId || newId < 1) newId = Date.now();
-        if (typeof global.saveSharedFileBlob !== 'function') {
-            throw new Error('共享文件存储未就绪，请刷新页面后重试');
-        }
-        await global.saveSharedFileBlob(newId, file);
-        var sizeKb = Math.max(1, Math.round(file.size / 1024));
-        var meta = {
-            id: newId,
-            name: file.name || ('literature_' + newId + '.pdf'),
-            size: sizeKb >= 1024 ? ((sizeKb / 1024).toFixed(1) + ' MB') : (sizeKb + ' KB'),
-            fileSizeBytes: file.size,
-            type: 'document',
-            uploader: currentOwner(),
-            uploaderId: (global.currentUser && global.currentUser.id) || 0,
-            uploadTime: new Date().toLocaleDateString('zh-CN'),
-            downloadCount: 0,
-            fromLiterature: true,
+        var meta = await global.saveFileForTeam(file, {
+            fileName: file.name || ('literature_' + Date.now() + '.pdf'),
+            fileType: 'document',
+            remark: '文献资料 PDF',
             hiddenInLibrary: !options.visibleInShared
-        };
-        // 始终写入元数据，下载才能找到；隐藏项不在共享库列表展示
-        global.sharedFileData.push(meta);
-        try {
-            localStorage.setItem('sharedFileData', JSON.stringify(global.sharedFileData));
-            if (typeof global.cloudUpsert === 'function') global.cloudUpsert('sharedFileData', JSON.stringify(global.sharedFileData));
-        } catch (e2) {}
+        });
+        meta.fromLiterature = true;
         try {
             if (options.visibleInShared && typeof global.renderFileList === 'function') global.renderFileList();
         } catch (e3) {}
@@ -2374,31 +2352,23 @@
         var fileName = '文献_' + item.title.slice(0, 40).replace(/[\\/:*?"<>|]/g, '_') + '.md';
         var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
         var file = new File([blob], fileName, { type: 'text/markdown' });
-        var newId = global.sharedFileData.length
-            ? Math.max.apply(null, global.sharedFileData.map(function (f) { return Number(f.id) || 0; })) + 1
-            : 1;
+        if (typeof global.saveFileForTeam !== 'function') {
+            alert('云端上传未就绪，请刷新后重试');
+            return;
+        }
         try {
-            if (typeof global.saveSharedFileBlob === 'function') await global.saveSharedFileBlob(newId, file);
-        } catch (e) { console.warn(e); }
-        global.sharedFileData.push({
-            id: newId,
-            name: fileName,
-            size: Math.round(blob.size / 1024) + ' KB',
-            fileSizeBytes: blob.size,
-            type: 'document',
-            uploader: currentOwner(),
-            uploaderId: (global.currentUser && global.currentUser.id) || 0,
-            uploadTime: new Date().toLocaleDateString('zh-CN'),
-            downloadCount: 0
-        });
-        try {
-            localStorage.setItem('sharedFileData', JSON.stringify(global.sharedFileData));
-            if (typeof global.cloudUpsert === 'function') global.cloudUpsert('sharedFileData', JSON.stringify(global.sharedFileData));
-        } catch (e2) {}
-        item.sharedFileId = newId;
-        saveLiteratureLibraryData({ log: { action: '导出', desc: '文献存入共享文件库：' + item.title } });
-        if (typeof global.showCloudSyncBanner === 'function') global.showCloudSyncBanner('已保存到共享文件库', false);
-        else alert('已保存到共享文件库');
+            var meta = await global.saveFileForTeam(file, {
+                fileName: fileName,
+                fileType: 'document',
+                remark: '文献导出：' + item.title
+            });
+            item.sharedFileId = meta.id;
+            item.serverFileId = meta.serverFileId || '';
+            saveLiteratureLibraryData({ log: { action: '导出', desc: '文献存入云端共享库：' + item.title } });
+            alert('已上传到服务器，团队成员可在共享文件库下载');
+        } catch (e) {
+            alert('上传失败：' + (e && e.message ? e.message : e));
+        }
     }
 
     function openLibraryLitInDocAnalysis(id) {

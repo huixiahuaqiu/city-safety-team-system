@@ -821,10 +821,22 @@
                 },
                 MENU_CONF: {
                     uploadImage: {
-                        customUpload: function (file, insertFn) {
-                            var reader = new FileReader();
-                            reader.onload = function (e) { insertFn(e.target.result); };
-                            reader.readAsDataURL(file);
+                        customUpload: async function (file, insertFn) {
+                            try {
+                                if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+                                var meta = await global.saveFileForTeam(file, {
+                                    fileName: file.name,
+                                    fileType: 'other',
+                                    remark: '新闻正文插图',
+                                    hiddenInLibrary: true
+                                });
+                                var url = (typeof global.cloudFileDownloadUrl === 'function')
+                                    ? global.cloudFileDownloadUrl(meta.serverFileId)
+                                    : meta.url;
+                                insertFn(url, file.name, url);
+                            } catch (e) {
+                                alert('图片上传失败：' + (e && e.message ? e.message : e));
+                            }
                         }
                     }
                 }
@@ -992,16 +1004,24 @@
         enableNewsEditorToolbarUsability(toolbarEl);
     }
 
-    function handleCoverUpload(event, modalId) {
+    async function handleCoverUpload(event, modalId) {
         var file = event.target.files && event.target.files[0];
         if (!file) return;
         if (!String(file.type || '').startsWith('image/')) {
             alert('请选择图片文件');
             return;
         }
-        var reader = new FileReader();
-        reader.onload = function (e) {
-            var url = e.target.result;
+        try {
+            if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+            var meta = await global.saveFileForTeam(file, {
+                fileName: file.name,
+                fileType: 'other',
+                remark: '新闻封面',
+                hiddenInLibrary: true
+            });
+            var url = (typeof global.cloudFileDownloadUrl === 'function')
+                ? global.cloudFileDownloadUrl(meta.serverFileId)
+                : meta.url;
             var coverInput = document.getElementById('newsCover');
             var img = document.getElementById('coverImage_' + modalId);
             var prev = document.getElementById('coverPreview_' + modalId);
@@ -1011,8 +1031,9 @@
             if (prev) prev.classList.remove('hidden');
             if (ph) ph.classList.add('hidden');
             markNewsModalDirty();
-        };
-        reader.readAsDataURL(file);
+        } catch (e) {
+            alert('封面上传失败：' + (e && e.message ? e.message : e));
+        }
     }
 
     function clearCoverImage(modalId) {
@@ -1029,22 +1050,38 @@
         markNewsModalDirty();
     }
 
-    function handleNewsAttachUpload(event) {
+    async function handleNewsAttachUpload(event) {
         var files = event.target.files;
         if (!files || !files.length) return;
-        Array.prototype.forEach.call(files, function (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                alert(file.name + ' 超过 2MB，已跳过');
-                return;
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (file.size > 50 * 1024 * 1024) {
+                alert(file.name + ' 超过 50MB，已跳过');
+                continue;
             }
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                newsPendingAttachments.push({ name: file.name, url: e.target.result, size: file.size, from: 'local' });
+            try {
+                if (typeof global.saveFileForTeam !== 'function') throw new Error('云端上传未就绪');
+                var meta = await global.saveFileForTeam(file, {
+                    fileName: file.name,
+                    fileType: 'document',
+                    remark: '新闻附件',
+                    hiddenInLibrary: true
+                });
+                newsPendingAttachments.push({
+                    name: file.name,
+                    url: (typeof global.cloudFileDownloadUrl === 'function')
+                        ? global.cloudFileDownloadUrl(meta.serverFileId)
+                        : meta.url,
+                    size: file.size,
+                    serverFileId: meta.serverFileId,
+                    from: 'cloud'
+                });
                 renderNewsAttachList();
                 markNewsModalDirty();
-            };
-            reader.readAsDataURL(file);
-        });
+            } catch (e) {
+                alert(file.name + ' 上传失败：' + (e && e.message ? e.message : e));
+            }
+        }
         event.target.value = '';
     }
 

@@ -3,7 +3,7 @@
 // Secrets must never be added to browser configuration.
 window.APP_CONFIG = Object.assign({}, window.APP_CONFIG || {}, {
     APP_ENV: 'local',
-    SHOW_DEMO_ACCOUNTS: true,
+    SHOW_DEMO_ACCOUNTS: false,
     GATEWAY_AUTH_ENABLED: true,
     DATA_BACKEND: 'gateway',
     API_PROXY: '',

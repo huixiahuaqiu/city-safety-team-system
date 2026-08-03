@@ -989,41 +989,24 @@
         var fileName = '文献对比综述_' + new Date().toISOString().slice(0, 10) + '.md';
         var blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
         var file = new File([blob], fileName, { type: 'text/markdown' });
-        var newId = global.sharedFileData.length
-            ? Math.max.apply(null, global.sharedFileData.map(function (f) { return Number(f.id) || 0; })) + 1
-            : 1;
+        if (typeof global.saveFileForTeam !== 'function') {
+            alert('云端上传未就绪，请刷新后重试');
+            return;
+        }
         try {
-            if (typeof global.saveSharedFileBlob === 'function') {
-                await global.saveSharedFileBlob(newId, file);
+            await global.saveFileForTeam(file, {
+                fileName: fileName,
+                fileType: 'document',
+                remark: '文献对比分析自动导出'
+            });
+            if (typeof global.recordOperationLog === 'function') {
+                global.recordOperationLog('文献对比', '导出共享', '综述已上传云端：' + fileName, { fileName: fileName }, { success: true }, 1, '', 0);
             }
+            alert('已上传到服务器，团队可在共享文件库下载：' + fileName);
+            if (typeof global.showModule === 'function') global.showModule('shared_files');
         } catch (e) {
-            console.warn(e);
+            alert('上传失败：' + (e && e.message ? e.message : e));
         }
-        global.sharedFileData.push({
-            id: newId,
-            name: fileName,
-            size: (typeof global.formatFileSize === 'function' ? global.formatFileSize(file.size) : (file.size + ' B')),
-            fileSizeBytes: file.size,
-            type: 'md',
-            mimeType: 'text/markdown',
-            hasBlob: true,
-            category: '文献调研成果',
-            remark: '文献对比分析自动导出',
-            uploader: _owner(),
-            uploaderId: (global.currentUser && global.currentUser.id) || 0,
-            uploadTime: new Date().toLocaleDateString('zh-CN'),
-            downloadCount: 0,
-            tags: ['文献对比', '调研']
-        });
-        localStorage.setItem('sharedFileData', JSON.stringify(global.sharedFileData));
-        try {
-            if (typeof global.cloudUpsert === 'function') global.cloudUpsert('sharedFileData', JSON.stringify(global.sharedFileData));
-        } catch (e2) {}
-        if (typeof global.recordOperationLog === 'function') {
-            global.recordOperationLog('文献对比', '导出共享', '保存综述到共享文件库：' + fileName, { fileName: fileName }, { success: true }, 1, '', 0);
-        }
-        alert('已保存到共享文件库：' + fileName);
-        if (typeof global.showModule === 'function') global.showModule('shared_files');
     }
     global.saveLitAiToSharedFiles = saveLitAiToSharedFiles;
 

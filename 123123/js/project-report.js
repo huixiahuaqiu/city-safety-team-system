@@ -641,41 +641,32 @@
                 hasLocalBlob: false
             });
 
-            if (pendingRpFile && pendingRpFile.size <= RP_BLOB_MAX) {
-                await idbPut(newId, pendingRpFile);
-                record.hasLocalBlob = true;
+            if (pendingRpFile) {
+                if (typeof global.saveFileForTeam !== 'function') {
+                    throw new Error('云端上传未就绪，请刷新后重试');
+                }
+                var cloudMeta = await global.saveFileForTeam(pendingRpFile, {
+                    fileName: pendingRpFile.name,
+                    fileType: 'report',
+                    remark: '来自项目报告：' + name,
+                    hiddenInLibrary: !(document.getElementById('rpToShared') || {}).checked
+                });
+                record.serverFileId = cloudMeta.serverFileId || '';
+                record.sharedFileId = cloudMeta.id;
+                record.hasLocalBlob = false;
+                // 本机缓存副本，便于离线预览；云端为准
+                if (pendingRpFile.size <= RP_BLOB_MAX) {
+                    try { await idbPut(newId, pendingRpFile); record.hasLocalBlob = true; } catch (eIdb) {}
+                }
             }
 
             getReportData().push(record);
             saveReportData();
 
-            if ((document.getElementById('rpToShared') || {}).checked && pendingRpFile && typeof global.saveSharedFileBlob === 'function') {
-                try {
-                    var shared = Array.isArray(global.sharedFileData) ? global.sharedFileData : JSON.parse(localStorage.getItem('sharedFileData') || '[]');
-                    var sid = shared.reduce(function (m, f) { return Math.max(m, Number(f.id) || 0); }, 0) + 1;
-                    shared.push({
-                        id: sid,
-                        name: pendingRpFile.name,
-                        size: formatBytes(pendingRpFile.size),
-                        fileSizeBytes: pendingRpFile.size,
-                        type: 'report',
-                        uploader: record.uploader,
-                        uploaderId: (global.currentUser && global.currentUser.id) || 0,
-                        uploadTime: record.date,
-                        downloadCount: 0,
-                        remark: '来自项目报告：' + name
-                    });
-                    global.sharedFileData = shared;
-                    localStorage.setItem('sharedFileData', JSON.stringify(shared));
-                    await global.saveSharedFileBlob(sid, pendingRpFile);
-                    if (typeof global.cloudUpsert === 'function') global.cloudUpsert('sharedFileData', JSON.stringify(shared));
-                } catch (eShare) { console.warn(eShare); }
-            }
-
             var m = document.getElementById(modalId);
             if (m) m.remove();
             renderReportList();
-            alert('报告已入库');
+            alert(pendingRpFile ? '报告已上传到服务器，团队成员可下载' : '报告已入库');
             showReportDetail(newId);
         } catch (e) {
             alert('保存失败：' + (e && e.message ? e.message : e));
@@ -753,6 +744,21 @@
         if (raw) {
             raw.downloadCount = (Number(raw.downloadCount) || 0) + 1;
             saveReportData();
+        }
+        // 优先从云端下载，确保团队成员都能拿到同一份附件
+        if (item.serverFileId && typeof global.cloudFileDownloadUrl === 'function') {
+            try {
+                var cloudUrl = global.cloudFileDownloadUrl(item.serverFileId);
+                var aCloud = document.createElement('a');
+                aCloud.href = cloudUrl;
+                aCloud.target = '_blank';
+                aCloud.rel = 'noopener';
+                document.body.appendChild(aCloud);
+                aCloud.click();
+                aCloud.remove();
+                renderReportList();
+                return;
+            } catch (eCloud) { console.warn(eCloud); }
         }
         try {
             var blob = await idbGet(id);
