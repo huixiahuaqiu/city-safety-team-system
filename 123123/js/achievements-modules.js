@@ -1645,7 +1645,7 @@
             // 从个人信息库导入三位导师，并同步到云端
             importProfileLibraryAdvisors(true);
             ensureMemberGradeYears();
-            var gradFixed = ensureGraduatedFlagsFromEnrollment();
+            var gradFixed = repairAutoGraduatedNoticeBlocks();
             if (gradFixed > 0) {
                 try { saveTeamMemberData(); } catch (eSave) {}
             }
@@ -1889,17 +1889,39 @@
 
         function isMemberGraduated(member) {
             if (!member || member.category === 'advisor') return false;
-            if (member.graduated === true || member.graduated === 'true' || member.graduated === 1) return true;
+            // 仅认手动标记「已毕业」。禁止按入学年自动推断，
+            // 否则一到毕业季会把在读同学误杀，导致收不到通知。
+            return member.graduated === true || member.graduated === 'true' || member.graduated === 1;
+        }
+
+        /** 预计已毕业（学制推算，仅展示提示，不阻断通知） */
+        function isMemberExpectedGraduated(member) {
+            if (!member || member.category === 'advisor') return false;
+            if (isMemberGraduated(member)) return true;
             return isEnrollmentYearGraduated(member.category);
         }
 
-        /** 按学制把应毕业年级的成员统一打上 graduated（持久化，供云端/通知使用） */
+        /**
+         * 历史版本曾按学制自动写 graduated=true，导致在读同学收不到通知。
+         * 这里只清理「仅因学制被自动打标」的误伤：保留顾问外、仍可由导师手动标记。
+         * 返回清理条数；调用方负责 save。
+         */
         function ensureGraduatedFlagsFromEnrollment() {
+            // 不再自动打标；保留函数名兼容旧调用点
+            return 0;
+        }
+
+        function repairAutoGraduatedNoticeBlocks() {
             var changed = 0;
             (Array.isArray(teamMemberData) ? teamMemberData : []).forEach(function (m) {
                 if (!m || m.category === 'advisor') return;
-                if (isEnrollmentYearGraduated(m.category) && !m.graduated) {
-                    m.graduated = true;
+                if (!m.graduated) return;
+                // 仍在常见在读窗口（入学后 0–3 年）的，清掉历史自动毕业标
+                var y = Number(m.category);
+                if (!isFinite(y)) return;
+                var cy = new Date().getFullYear();
+                if (cy - y <= 3) {
+                    m.graduated = false;
                     changed++;
                 }
             });
@@ -3026,9 +3048,12 @@
         window.closeMemberEditModal = closeMemberEditModal;
         window.saveMember = saveMember;
         window.isMemberGraduated = isMemberGraduated;
+        window.isMemberExpectedGraduated = isMemberExpectedGraduated;
         window.isEnrollmentYearGraduated = isEnrollmentYearGraduated;
+        window.isAccountGraduated = isAccountGraduated;
         window.markGradeAsGraduated = markGradeAsGraduated;
         window.ensureGraduatedFlagsFromEnrollment = ensureGraduatedFlagsFromEnrollment;
+        window.repairAutoGraduatedNoticeBlocks = repairAutoGraduatedNoticeBlocks;
         window.getMemberGradeYears = getMemberGradeYears;
         window.getMemberCategoryLabel = getMemberCategoryLabel;
         window.saveTeamMemberData = saveTeamMemberData;

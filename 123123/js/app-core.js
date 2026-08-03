@@ -599,7 +599,7 @@
             literatureCompareDimTemplate: ['智能工具（全部）'],
             literatureCompareNamedDimTemplates: ['智能工具（全部）'],
             customInstructionTemplates: ['智能工具（全部）'],
-            noticeData: ['系统设置'],
+            noticeData: ['内部通知发布', '系统设置'],
             newsData: ['系统设置'],
             meetingData: ['系统设置'],
             portalContentConfig_v1: ['系统设置'],
@@ -644,14 +644,19 @@
             if (!features.length) return false;
             var matrix = [];
             try { matrix = JSON.parse(localStorage.getItem('permissionMatrix') || '[]'); } catch (e) {}
+            // 矩阵缺行时回落到默认：内部通知发布允许导师/组长
             var column = { admin: 1, leader: 2, student: 3, visitor: 4 }[role];
-            return Array.isArray(matrix) && features.some(function(feature) {
-                var row = matrix.find(function(item) {
+            return features.some(function(feature) {
+                var row = Array.isArray(matrix) && matrix.find(function(item) {
                     return Array.isArray(item) && item[0] === feature;
                 });
-                return !!(row && row[column] === true);
+                if (row) return row[column] === true;
+                if (feature === '内部通知发布') return role === 'admin' || role === 'leader';
+                if (feature === '系统设置') return role === 'admin';
+                return false;
             });
         }
+        window.canCurrentRoleWriteSyncKey = canCurrentRoleWriteSyncKey;
 
         // Older builds used one global outbox. It is deliberately discarded instead
         // of being migrated, because replaying it under a different account is unsafe.
@@ -1579,9 +1584,14 @@
                 else window.holidayLeaveCampaigns = v;
             }); } catch(e){}
             try { apply('noticeData', function(v){
-                if (typeof window.mergeIncomingNoticeData === 'function') noticeData = window.mergeIncomingNoticeData(v);
-                else noticeData = v;
-                try { window.noticeData = noticeData; } catch (eN) {}
+                if (typeof window.applyIncomingNoticeData === 'function') {
+                    window.applyIncomingNoticeData(v);
+                } else if (typeof window.mergeIncomingNoticeData === 'function') {
+                    var mergedN = window.mergeIncomingNoticeData(v);
+                    try { window.noticeData = mergedN; } catch (eN0) {}
+                } else {
+                    try { window.noticeData = v; } catch (eN1) {}
+                }
             }); } catch(e){}
             try { apply('newsData', function(v){
                 if (typeof window.mergeIncomingNewsData === 'function') {
@@ -1643,6 +1653,13 @@
             }
             if (result && result.reason === 'backoff') return result;
             hydrateInMemoryFromLocalStorage();
+            try {
+                // 清掉历史「按学制自动毕业」误标，避免在读同学收不到通知
+                if (typeof repairAutoGraduatedNoticeBlocks === 'function') {
+                    var repairedGrad = repairAutoGraduatedNoticeBlocks();
+                    if (repairedGrad > 0 && typeof saveTeamMemberData === 'function') saveTeamMemberData();
+                }
+            } catch (eGradRepair) {}
             try { if (typeof onCloudAccountPermissionHydrated === 'function') onCloudAccountPermissionHydrated(); } catch (e) {}
             try { if (typeof syncTeamMembersAcrossSystem === 'function') syncTeamMembersAcrossSystem({ preserveSessionUser: true }); } catch (e) {}
             // 团队联动可能改写账号 id，必须立刻回写会话，否则刷新会变成「未登录」
@@ -1942,8 +1959,8 @@
             } else if (moduleId === 'member_archive') {
                 try {
                     if (typeof ensureMemberGradeYears === 'function') ensureMemberGradeYears();
-                    if (typeof ensureGraduatedFlagsFromEnrollment === 'function') {
-                        var _g = ensureGraduatedFlagsFromEnrollment();
+                    if (typeof repairAutoGraduatedNoticeBlocks === 'function') {
+                        var _g = repairAutoGraduatedNoticeBlocks();
                         if (_g > 0 && typeof saveTeamMemberData === 'function') saveTeamMemberData();
                     }
                     if (typeof renderMemberNav === 'function') renderMemberNav();

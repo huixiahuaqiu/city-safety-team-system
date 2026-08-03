@@ -169,6 +169,7 @@ DEFAULT_PERMISSION_ROWS = (
     ("账号管理（新建/删除）", True, False, False, False),
     ("账号管理（查看列表）", True, True, False, False),
     ("系统设置", True, False, False, False),
+    ("内部通知发布", True, True, False, False),
     ("操作日志", True, False, False, False),
     ("数据备份", True, False, False, False),
 )
@@ -214,7 +215,7 @@ KEY_WRITE_FEATURES = {
     "permissionMatrix": ("角色权限管理",),
     "passwordPolicy": ("系统设置",),
     "systemConfigData": ("系统设置",),
-    "noticeData": ("系统设置",),
+    "noticeData": ("内部通知发布", "系统设置"),
     "newsData": ("系统设置",),
     "meetingData": ("系统设置",),
     "portalContentConfig_v1": ("系统设置",),

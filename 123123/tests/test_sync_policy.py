@@ -19,6 +19,13 @@ class SyncPolicyTests(unittest.TestCase):
         self.assertFalse(sync_policy.can_read(self.visitor, "teamMemberData"))
         self.assertTrue(sync_policy.can_read(self.visitor, "literatureData"))
 
+    def test_notice_data_writable_by_admin_and_leader(self):
+        # 内部通知：导师与组长可发布并同步，学生只读
+        self.assertTrue(sync_policy.can_write(self.admin, "noticeData", self.matrix))
+        self.assertTrue(sync_policy.can_write(self.leader, "noticeData", self.matrix))
+        self.assertFalse(sync_policy.can_write(self.student, "noticeData", self.matrix))
+        self.assertTrue(sync_policy.can_read(self.student, "noticeData"))
+
     def test_permission_matrix_is_enforced_on_server_writes(self):
         self.assertTrue(
             sync_policy.can_write(self.leader, "sharedFileData", self.matrix)

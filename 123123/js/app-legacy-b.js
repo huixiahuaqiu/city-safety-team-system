@@ -33,6 +33,7 @@
         ['账号管理（新建/删除）', true, false, false, false],
         ['账号管理（查看列表）', true, true, false, false],
         ['系统设置', true, false, false, false],
+        ['内部通知发布', true, true, false, false],
         ['操作日志', true, false, false, false],
         ['数据备份', true, false, false, false],
     ];
@@ -5294,7 +5295,15 @@
         });
         return merged;
     }
+
+    /** 供 app-core hydrate 调用：必须写回本文件闭包内的 noticeData，不能只改 window */
+    function applyIncomingNoticeData(incoming) {
+        noticeData = mergeIncomingNoticeData(incoming);
+        try { window.noticeData = noticeData; } catch (e) {}
+        return noticeData;
+    }
     window.mergeIncomingNoticeData = mergeIncomingNoticeData;
+    window.applyIncomingNoticeData = applyIncomingNoticeData;
 
     function initNoticePublish() {
         loadNoticeData();
@@ -5324,6 +5333,7 @@
             noticeData = buildRealTeamDefaultNotices();
             saveNoticeData();
         }
+        try { window.noticeData = noticeData; } catch (eW) {}
     }
 
     function buildRealTeamDefaultNotices() {
@@ -5570,6 +5580,7 @@
     function getMyUnreadNotices() {
         if (!currentUser) return [];
         return (noticeData || []).filter(function (n) {
+            if (!n || n.status === 'draft' || n.status === 'scheduled') return false;
             return isNoticeVisibleToUser(n, currentUser) && isNoticeActive(n) && !hasUserReadNotice(n, currentUser);
         });
     }
@@ -6015,8 +6026,20 @@
         }
         closeNoticeModal();
         renderNoticeList();
-        if (typeof showCloudSyncBanner === 'function') showCloudSyncBanner('通知已发布并同步云端', false);
-        else alert('发布成功！');
+        var synced = true;
+        try {
+            if (typeof canCurrentRoleWriteSyncKey === 'function') {
+                synced = !!canCurrentRoleWriteSyncKey('noticeData');
+            }
+        } catch (eSyncChk) {}
+        if (typeof showCloudSyncBanner === 'function') {
+            showCloudSyncBanner(
+                synced ? '通知已发布并同步云端，接收人刷新后可见' : '通知已保存在本机，但当前账号无云端写入权限，其他人可能收不到',
+                !synced
+            );
+        } else {
+            alert(synced ? '发布成功！' : '已保存，但可能未同步到云端');
+        }
     }
 
     function buildNoticeReadPanelHtml(notice) {
@@ -6259,6 +6282,7 @@
         var dismissed = {};
         loadDismissedNoticeIds().forEach(function (id) { dismissed[id] = true; });
         var list = (noticeData || []).filter(function (n) {
+            if (!n || n.status === 'draft' || n.status === 'scheduled') return false;
             if (currentUser && !isNoticeVisibleToUser(n, currentUser)) return false;
             var id = String(n.id);
             var isUnread = currentUser && isNoticeActive(n) && !hasUserReadNotice(n, currentUser);
@@ -6279,7 +6303,14 @@
     }
 
     function refreshGlobalNoticeCenter() {
-        try { if (typeof loadNoticeData === 'function' && (!noticeData || !noticeData.length)) loadNoticeData(); } catch (e) {}
+        // 云端同步后必须以 localStorage 为准重载，避免内存里还是登录前的旧列表
+        try {
+            if (typeof loadNoticeData === 'function') {
+                var stored = localStorage.getItem('noticeData');
+                if (stored) loadNoticeData();
+                else if (!noticeData || !noticeData.length) loadNoticeData();
+            }
+        } catch (e) {}
         const badge = document.getElementById('globalNoticeBadge');
         const list = document.getElementById('globalNoticePanelList');
         const titleEl = document.getElementById('globalNoticePanelTitle');
