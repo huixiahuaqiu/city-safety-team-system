@@ -119,11 +119,11 @@ function Invoke-CloudSync {
             )
         }
 
-        Write-Step 'Extract on server and rebuild gateway...'
+        Write-Step "Extract on server and rebuild gateway..."
         $remoteCmd = ($remoteLines -join '; ')
         & ssh $Server $remoteCmd
         if ($LASTEXITCODE -ne 0) { throw "remote deploy failed (exit $LASTEXITCODE)" }
-        Write-Step 'Cloud code updated (business data untouched). Hard-refresh browser (Ctrl+F5).'
+        Write-Step "Cloud code updated (business data untouched). Hard-refresh browser (Ctrl+F5)."
     }
     finally {
         if ($LocalTar -and (Test-Path -LiteralPath $LocalTar)) {

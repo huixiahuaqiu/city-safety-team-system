@@ -4000,7 +4000,11 @@
                 showCloudSyncBanner('头像已上传到服务器，全员可见', false);
             }
         } catch (e) {
-            alert('头像上传失败：' + (e && e.message ? e.message : e));
+            var msg = String((e && e.message) || e || '');
+            if (/invalid upload token|login session required|valid session required|401/i.test(msg)) {
+                msg = '登录已失效，请退出后重新登录再上传';
+            }
+            alert('头像上传失败：' + msg);
         } finally {
             input.value = '';
         }

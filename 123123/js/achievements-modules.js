@@ -2968,7 +2968,12 @@
                 }
                 if (typeof renderTaskList === 'function') renderTaskList();
             } catch (err) {
-                alert('头像上传失败：' + (err && err.message ? err.message : err));
+                var msg = String((err && err.message) || err || '');
+                if (/invalid upload token|valid session required|401/i.test(msg)) {
+                    msg = '登录已失效，请退出后重新登录，再上传头像';
+                }
+                alert('头像上传失败：' + msg);
+            } finally {
                 if (saveBtn) {
                     saveBtn.disabled = false;
                     saveBtn.textContent = '🖼️ 保存头像';

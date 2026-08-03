@@ -147,6 +147,12 @@
         var caps = await probeSharedServer();
         if (!caps || !caps.ok) return null;
 
+        var hasSession = !!(global.GatewayAuth && global.GatewayAuth.enabled
+            && global.GatewayAuth.hasSession && global.GatewayAuth.hasSession());
+        if (global.GatewayAuth && global.GatewayAuth.enabled && !hasSession) {
+            throw new Error('登录已失效，请退出后重新登录再上传');
+        }
+
         // 较大文件优先预签名直传 MinIO；失败则回退 multipart（经网关）
         var PRESIGN_THRESHOLD = 1 * 1024 * 1024; // 1MB
         if (caps.presignEnabled && file && file.size >= PRESIGN_THRESHOLD) {
@@ -196,7 +202,13 @@
             body: fd
         });
         var data = await resp.json().catch(function () { return {}; });
-        if (!resp.ok || !data.ok) throw new Error((data && data.error) || '服务端上传失败');
+        if (!resp.ok || !data.ok) {
+            var errMsg = (data && data.error) || ('服务端上传失败 HTTP ' + resp.status);
+            if (resp.status === 401 || /invalid upload token|valid session required/i.test(String(errMsg))) {
+                errMsg = '登录已失效，请退出后重新登录再上传';
+            }
+            throw new Error(errMsg);
+        }
         return data;
     }
 

@@ -3574,7 +3574,11 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
                 return
         elif path.startswith('/api/shared-file/upload'):
             if not check_dataset_token(self, ('admin', 'leader', 'student')):
-                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                self._json(401, {
+                    'ok': False,
+                    'error': 'login session required',
+                    'code': 'session_required',
+                })
                 return
             if content_length > MAX_UPLOAD_BYTES:
                 self._json(413, {'ok': False, 'error': 'file too large'})
@@ -4113,7 +4117,11 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
         # 团队共享文件：multipart 上传到磁盘
         if path.startswith('/api/shared-file/upload'):
             if not check_dataset_token(self, ('admin', 'leader', 'student')):
-                self._json(401, {'ok': False, 'error': 'invalid upload token'})
+                self._json(401, {
+                    'ok': False,
+                    'error': 'login session required',
+                    'code': 'session_required',
+                })
                 return
             if content_length > MAX_UPLOAD_BYTES:
                 self._json(413, {'ok': False, 'error': 'file too large'})
