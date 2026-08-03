@@ -38,8 +38,14 @@
     <script src="js/vendor-lazy.js?v=960c38a41e"></script>
 </head>
 <body>
-    <!-- 登录页 -->
-    <div class="login-overlay" id="loginOverlay">
+    <!-- 登录页：默认即显示，避免 JS 未加载/证书拦截脚本时整页空白 -->
+    <div class="login-overlay active" id="loginOverlay">
+        <noscript>
+            <div style="position:fixed;inset:0;z-index:10001;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:16px;line-height:1.6;">
+                请启用浏览器 JavaScript 后访问本系统。<br>
+                若地址栏显示「不安全」，请先点击「继续访问 / Advanced → Proceed」。
+            </div>
+        </noscript>
         <div class="login-atmosphere" aria-hidden="true">
             <div class="login-mesh"></div>
             <div class="login-horizon"></div>

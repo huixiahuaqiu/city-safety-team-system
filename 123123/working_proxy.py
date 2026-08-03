@@ -3511,6 +3511,32 @@ class WorkingProxyHandler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
+    def do_HEAD(self):
+        """部分浏览器/探活会发 HEAD；原先未实现会返回 501，导致页面异常。"""
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path or '/'
+        if path.startswith('/api/'):
+            content_type = 'application/json; charset=utf-8'
+        elif path.endswith('.css'):
+            content_type = 'text/css; charset=utf-8'
+        elif path.endswith('.js'):
+            content_type = 'application/javascript; charset=utf-8'
+        elif path.endswith('.png'):
+            content_type = 'image/png'
+        elif path.endswith('.jpg') or path.endswith('.jpeg'):
+            content_type = 'image/jpeg'
+        elif path.endswith('.svg'):
+            content_type = 'image/svg+xml'
+        elif path.endswith('.ico'):
+            content_type = 'image/x-icon'
+        else:
+            content_type = 'text/html; charset=utf-8'
+        self.send_response(200)
+        self.send_header('Content-Type', content_type)
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self._cors()
+        self.end_headers()
+
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path

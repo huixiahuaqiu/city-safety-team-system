@@ -5,6 +5,7 @@ services:
       SHOW_DEMO_ACCOUNTS: "false"
       GATEWAY_AUTH_ENABLED: "true"
       SERVER_NAME: ${SERVER_NAME:?SERVER_NAME is required}
+      SERVER_NAME_ALIASES: ${SERVER_NAME_ALIASES:-}
     ports:
       - ${CITYSAFE_HTTP_BIND:-0.0.0.0}:80:8080
       - ${CITYSAFE_HTTPS_BIND:-0.0.0.0}:443:8443

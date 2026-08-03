@@ -17,7 +17,7 @@ log_format citysafe_safe '$remote_addr [$time_local] "$request_method $uri $serv
 
 server {
     listen 8080;
-    server_name ${SERVER_NAME};
+    server_name ${SERVER_NAME} ${SERVER_NAME_ALIASES};
     server_tokens off;
     access_log /var/log/nginx/access.log citysafe_safe;
 
@@ -28,17 +28,21 @@ server {
     }
 
     location / {
-        return 301 https://${SERVER_NAME}$request_uri;
+        # Preserve visitor Host (IP or domain) instead of forcing SERVER_NAME,
+        # which may be the TLS certificate directory name (e.g. bare IP).
+        return 301 https://$host$request_uri;
     }
 }
 
 server {
     listen 8443 ssl;
     http2 on;
-    server_name ${SERVER_NAME};
+    server_name ${SERVER_NAME} ${SERVER_NAME_ALIASES};
     server_tokens off;
     access_log /var/log/nginx/access.log citysafe_safe;
 
+    # TLS path uses SERVER_NAME (cert identity). Aliases share this cert until
+    # a domain certificate is issued and SERVER_NAME is switched.
     ssl_certificate /etc/letsencrypt/live/${SERVER_NAME}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${SERVER_NAME}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;

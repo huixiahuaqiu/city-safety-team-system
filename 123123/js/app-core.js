@@ -628,17 +628,32 @@
             return baseKey + ':' + principal;
         }
 
-        function canCurrentRoleWriteSyncKey(key) {
-            if (!CLOUD_SYNC_KEYS.has(key)) return false;
-            if (!GATEWAY_DATA_BACKEND || !GATEWAY_AUTH_ENABLED) return true;
+        function resolveCloudWriteRole() {
+            if (!GATEWAY_DATA_BACKEND || !GATEWAY_AUTH_ENABLED) return 'legacy';
             var session = window.GatewayAuth && window.GatewayAuth.read
                 ? window.GatewayAuth.read()
                 : null;
-            var role = String(session && session.user && session.user.role || 'visitor').toLowerCase();
+            if (!session || !session.token) return 'visitor';
+            var role = String(session.user && session.user.role || '').trim().toLowerCase();
+            // 网关会话存在但 user.role 偶发缺失时，回退到当前登录态，避免误判为 visitor
+            if (!role && window.currentUser && window.currentUser.role) {
+                role = String(window.currentUser.role || '').trim().toLowerCase();
+            }
+            return role || 'visitor';
+        }
+
+        function canCurrentRoleWriteSyncKey(key) {
+            if (!CLOUD_SYNC_KEYS.has(key)) return false;
+            if (!GATEWAY_DATA_BACKEND || !GATEWAY_AUTH_ENABLED) return true;
+            var role = resolveCloudWriteRole();
             if (role === 'visitor') return false;
             if (CLOUD_OBJECT_MERGE_KEYS.has(key)) return true;
             if (CLOUD_ADMIN_ONLY_KEYS.has(key)) return role === 'admin';
             if (role === 'admin') return true;
+            // 通知/新闻：与发布入口一致，导师与组长始终可写云端（不因本地矩阵缓存误拒）
+            if ((key === 'noticeData' || key === 'newsData') && (role === 'admin' || role === 'leader')) {
+                return true;
+            }
             if (role === 'student' && !CLOUD_STUDENT_SCOPED_KEYS.has(key)) return false;
             var features = CLOUD_KEY_WRITE_FEATURES[key] || [];
             if (!features.length) return false;
@@ -657,6 +672,7 @@
             });
         }
         window.canCurrentRoleWriteSyncKey = canCurrentRoleWriteSyncKey;
+        window.resolveCloudWriteRole = resolveCloudWriteRole;
 
         // Older builds used one global outbox. It is deliberately discarded instead
         // of being migrated, because replaying it under a different account is unsafe.

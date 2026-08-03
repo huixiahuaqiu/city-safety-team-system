@@ -5384,7 +5384,15 @@
         noticeData = (noticeData || []).map(normalizeNoticeRecord);
         localStorage.setItem('noticeData', JSON.stringify(noticeData));
         try { window.noticeData = noticeData; } catch (eW) {}
-        try { if (typeof cloudUpsert === 'function') cloudUpsert('noticeData', JSON.stringify(noticeData)); } catch (e) {}
+        var syncPromise = null;
+        try {
+            if (typeof cloudUpsert === 'function') {
+                // 显式 upsert，避免仅依赖 localStorage 钩子时把权限失败吞掉
+                syncPromise = cloudUpsert('noticeData', JSON.stringify(noticeData));
+            }
+        } catch (e) {
+            syncPromise = Promise.resolve({ ok: false, error: String(e && e.message || e || 'upsert-failed') });
+        }
         if (options.silent !== true) {
             refreshGlobalNoticeCenter();
             updateHomeNoticeBanner();
@@ -5395,6 +5403,7 @@
                 recordOperationLog('通知发布', options.log.action || '更新', options.log.desc || '更新通知', options.log.detail || {}, { success: true }, 1, '', 0);
             }
         } catch (e2) {}
+        return syncPromise;
     }
     window.normalizeNoticeRecord = normalizeNoticeRecord;
     window.saveNoticeData = saveNoticeData;
@@ -5967,9 +5976,19 @@
         document.getElementById('noticeModal').style.display = 'none';
     }
 
-    function saveNotice() {
+    async function saveNotice() {
         if (!canManageNotices()) {
             alert('仅导师/组长可发布通知');
+            return;
+        }
+        var gatewayEnabled = !!(window.GatewayAuth && window.GatewayAuth.enabled);
+        var hasGatewaySession = !!(gatewayEnabled && window.GatewayAuth.hasSession && window.GatewayAuth.hasSession());
+        if (gatewayEnabled && !hasGatewaySession) {
+            if (typeof showCloudSyncBanner === 'function') {
+                showCloudSyncBanner('登录已过期或未建立网关会话，请重新登录后再发布，否则其他人收不到', true);
+            } else {
+                alert('登录已过期，请重新登录后再发布通知');
+            }
             return;
         }
         const title = document.getElementById('noticeTitle').value.trim();
@@ -6007,6 +6026,7 @@
             audienceGrade: audienceGrade,
             audienceGroup: audienceGroup
         };
+        var syncResult = null;
         if (editingNoticeId) {
             const idx = noticeData.findIndex(n => n.id === editingNoticeId);
             if (idx !== -1) {
@@ -6017,7 +6037,7 @@
                     pinned
                 });
             }
-            saveNoticeData({ log: { action: '编辑', desc: '编辑通知：' + title } });
+            syncResult = await Promise.resolve(saveNoticeData({ log: { action: '编辑', desc: '编辑通知：' + title } }));
         } else {
             const newId = noticeData.length > 0 ? Math.max(...noticeData.map(n => Number(n.id) || 0)) + 1 : 1;
             noticeData.push(normalizeNoticeRecord({
@@ -6033,7 +6053,7 @@
                 pinned,
                 reads: []
             }));
-            saveNoticeData({ log: { action: '发布', desc: '发布通知：' + title } });
+            syncResult = await Promise.resolve(saveNoticeData({ log: { action: '发布', desc: '发布通知：' + title } }));
             try {
                 if (type === 'urgent' && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
                     new Notification('紧急通知', { body: title });
@@ -6044,19 +6064,34 @@
         }
         closeNoticeModal();
         renderNoticeList();
-        var synced = true;
+        var synced = false;
+        var failReason = '';
         try {
-            if (typeof canCurrentRoleWriteSyncKey === 'function') {
-                synced = !!canCurrentRoleWriteSyncKey('noticeData');
+            if (typeof canCurrentRoleWriteSyncKey === 'function' && !canCurrentRoleWriteSyncKey('noticeData')) {
+                failReason = 'no-acl';
+            } else if (syncResult && syncResult.ok === false && syncResult.skipped === 'not-authorized') {
+                failReason = 'no-acl';
+            } else if (syncResult && syncResult.ok === false) {
+                failReason = 'upsert-failed';
+            } else if (gatewayEnabled && !hasGatewaySession) {
+                failReason = 'no-session';
+            } else {
+                synced = true;
             }
-        } catch (eSyncChk) {}
+        } catch (eSyncChk) {
+            failReason = 'check-error';
+        }
+        var msg = synced
+            ? '通知已发布并同步云端，接收人刷新后可见'
+            : (failReason === 'no-session'
+                ? '通知已保存在本机，但登录已过期，请重新登录后再发布'
+                : (failReason === 'no-acl'
+                    ? '通知已保存在本机，但当前账号无云端写入权限，其他人可能收不到'
+                    : '通知已保存在本机，但云端同步失败，请检查网络后重试'));
         if (typeof showCloudSyncBanner === 'function') {
-            showCloudSyncBanner(
-                synced ? '通知已发布并同步云端，接收人刷新后可见' : '通知已保存在本机，但当前账号无云端写入权限，其他人可能收不到',
-                !synced
-            );
+            showCloudSyncBanner(msg, !synced);
         } else {
-            alert(synced ? '发布成功！' : '已保存，但可能未同步到云端');
+            alert(synced ? '发布成功！' : msg);
         }
     }
 
